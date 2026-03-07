@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Check, FileQuestion, Package } from 'lucide-vue-next';
+import { usePolling } from '@/composables/usePolling';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import type { BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
+
+usePolling();
 
 const props = defineProps<{
     commandes: {
@@ -22,12 +25,12 @@ const props = defineProps<{
             ordonnance_id?: number;
         }>;
     };
-    stats: { nouvelles: number; a_preparer: number; livrees: number };
+    stats: { nouvelles: number; a_preparer: number; retirees: number; livrees: number };
     onglet: string;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dok Board', href: dashboard() },
+    { title: 'Tableau de bord', href: dashboard() },
     { title: 'Dok Pharma', href: '/dok-pharma' },
 ];
 
@@ -55,6 +58,12 @@ function changeOnglet(o: string) {
                     @click="changeOnglet('a_preparer')"
                 >
                     {{ stats.a_preparer }} À préparer
+                </Button>
+                <Button
+                    :variant="onglet === 'retirees' ? 'default' : 'outline'"
+                    @click="changeOnglet('retirees')"
+                >
+                    {{ stats.retirees }} Retirées
                 </Button>
                 <Button
                     :variant="onglet === 'livrees' ? 'default' : 'outline'"

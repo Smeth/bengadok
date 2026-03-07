@@ -89,6 +89,47 @@
     }
 }
 
+/* Sidebar BengaDok - style maquette */
+[data-sidebar="sidebar"] [data-slot="sidebar-menu-button"],
+[data-slot="sidebar"] [data-slot="sidebar-menu-button"] {
+    border-radius: 9999px;
+}
+[data-sidebar="sidebar"] [data-slot="sidebar-menu-button"]:not([data-active="true"]),
+[data-slot="sidebar"] [data-slot="sidebar-menu-button"]:not([data-active="true"]) {
+    color: hsl(240 5.3% 26.1%);
+}
+[data-sidebar="sidebar"] [data-slot="sidebar-menu-button"]:not([data-active="true"]) svg,
+[data-slot="sidebar"] [data-slot="sidebar-menu-button"]:not([data-active="true"]) svg {
+    color: hsl(220 9% 66%);
+}
+[data-sidebar="sidebar"] [data-slot="sidebar-menu-button"][data-active="true"],
+[data-slot="sidebar"] [data-slot="sidebar-menu-button"][data-active="true"] {
+    background-color: #5BB034 !important;
+    color: white !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+[data-sidebar="sidebar"] [data-slot="sidebar-menu-button"][data-active="true"] svg,
+[data-slot="sidebar"] [data-slot="sidebar-menu-button"][data-active="true"] svg {
+    color: white !important;
+}
+[data-sidebar="sidebar"] [data-slot="sidebar-menu-button"]:not([data-active="true"]):hover,
+[data-slot="sidebar"] [data-slot="sidebar-menu-button"]:not([data-active="true"]):hover {
+    background-color: hsl(0 0% 96%) !important;
+    color: hsl(240 5.3% 26.1%) !important;
+}
+.dark [data-sidebar="sidebar"] [data-slot="sidebar-menu-button"]:not([data-active="true"]),
+.dark [data-slot="sidebar"] [data-slot="sidebar-menu-button"]:not([data-active="true"]) {
+    color: hsl(0 0% 95.9%);
+}
+.dark [data-sidebar="sidebar"] [data-slot="sidebar-menu-button"]:not([data-active="true"]) svg,
+.dark [data-slot="sidebar"] [data-slot="sidebar-menu-button"]:not([data-active="true"]) svg {
+    color: hsl(0 0% 70%);
+}
+.dark [data-sidebar="sidebar"] [data-slot="sidebar-menu-button"]:not([data-active="true"]):hover,
+.dark [data-slot="sidebar"] [data-slot="sidebar-menu-button"]:not([data-active="true"]):hover {
+    background-color: hsl(0 0% 15.9%) !important;
+}
+
 :root {
     --background: hsl(0 0% 100%);
     --foreground: hsl(0 0% 3.9%);

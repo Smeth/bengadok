@@ -21,9 +21,15 @@ class DashboardController extends Controller
         }
 
         $depuisSemaine = now()->startOfWeek();
+        $semainePrecedente = now()->subWeek()->startOfWeek();
 
         $revenuTotal = (clone $baseQuery)
             ->where('date', '>=', $depuisSemaine)
+            ->whereIn('status', ['validee', 'livree'])
+            ->sum('prix_total');
+
+        $revenuSemainePrec = (clone $baseQuery)
+            ->whereBetween('date', [$semainePrecedente, $depuisSemaine->copy()->subDay()->endOfDay()])
             ->whereIn('status', ['validee', 'livree'])
             ->sum('prix_total');
 
@@ -31,14 +37,39 @@ class DashboardController extends Controller
             ? 1
             : Pharmacie::whereHas('typePharmacie', fn($q) => $q->where('designation', 'like', '%Jour%'))->count();
 
+        $nbPharmaciesPrec = $nbPharmacies;
+
         $nbCommandes = (clone $baseQuery)
             ->where('date', '>=', $depuisSemaine)
+            ->count();
+
+        $nbCommandesPrec = (clone $baseQuery)
+            ->whereBetween('date', [$semainePrecedente, $depuisSemaine->copy()->subDay()->endOfDay()])
             ->count();
 
         $nbClients = (clone $baseQuery)
             ->where('date', '>=', $depuisSemaine)
             ->distinct('client_id')
             ->count('client_id');
+
+        $nbClientsPrec = (clone $baseQuery)
+            ->whereBetween('date', [$semainePrecedente, $depuisSemaine->copy()->subDay()->endOfDay()])
+            ->distinct('client_id')
+            ->count('client_id');
+
+        $evolutionRevenu = $revenuSemainePrec > 0
+            ? (int) round((($revenuTotal - $revenuSemainePrec) / $revenuSemainePrec) * 100)
+            : ($revenuTotal > 0 ? 100 : 0);
+
+        $evolutionCommandes = $nbCommandesPrec > 0
+            ? (int) round((($nbCommandes - $nbCommandesPrec) / $nbCommandesPrec) * 100)
+            : ($nbCommandes > 0 ? 100 : 0);
+
+        $evolutionClients = $nbClientsPrec > 0
+            ? (int) round((($nbClients - $nbClientsPrec) / $nbClientsPrec) * 100)
+            : ($nbClients > 0 ? 100 : 0);
+
+        $evolutionPharmacies = 0;
 
         $volumeParPharmacie = (clone $baseQuery)
             ->where('date', '>=', now()->startOfMonth())
@@ -49,6 +80,8 @@ class DashboardController extends Controller
                 'pharmacie' => $items->first()?->pharmacie,
                 'total' => $items->count(),
             ])
+            ->sortByDesc('total')
+            ->take(8)
             ->values();
 
         $volumeParZone = (clone $baseQuery)
@@ -65,6 +98,10 @@ class DashboardController extends Controller
                 'nbPharmacies' => $nbPharmacies,
                 'nbCommandes' => $nbCommandes,
                 'nbClients' => $nbClients,
+                'evolutionRevenu' => $evolutionRevenu,
+                'evolutionPharmacies' => $evolutionPharmacies,
+                'evolutionCommandes' => $evolutionCommandes,
+                'evolutionClients' => $evolutionClients,
             ],
             'volumeParPharmacie' => $volumeParPharmacie,
             'volumeParZone' => $volumeParZone,

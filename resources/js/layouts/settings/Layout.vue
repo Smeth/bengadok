@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
+import { Key, Palette, RotateCcw, Shield, ShieldCheck, User } from 'lucide-vue-next';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
+import { usePage } from '@inertiajs/vue3';
 import { toUrl } from '@/lib/utils';
 import type { NavItem } from '@/types';
 import { edit as editAppearance } from '@/routes/appearance';
@@ -11,24 +14,24 @@ import { edit as editProfile } from '@/routes/profile';
 import { show } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: editProfile(),
-    },
-    {
-        title: 'Password',
-        href: editPassword(),
-    },
-    {
-        title: 'Two-Factor Auth',
-        href: show(),
-    },
-    {
-        title: 'Appearance',
-        href: editAppearance(),
-    },
-];
+const page = usePage();
+const isSuperAdmin = computed(() =>
+    (page.props.auth as { user?: { roles?: string[] } })?.user?.roles?.includes('super_admin') ?? false
+);
+
+const sidebarNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [
+        { title: 'Profil', href: editProfile(), icon: User },
+        { title: 'Mot de passe', href: editPassword(), icon: Key },
+        { title: 'Authentification 2FA', href: show(), icon: Shield },
+        { title: 'Apparence', href: editAppearance(), icon: Palette },
+    ];
+    if (isSuperAdmin.value) {
+        items.push({ title: 'Gestion des rôles', href: '/settings/roles', icon: ShieldCheck });
+        items.push({ title: 'Réinitialiser l\'application', href: '/settings/reset', icon: RotateCcw });
+    }
+    return items;
+});
 
 const { isCurrentUrl } = useCurrentUrl();
 </script>
@@ -36,15 +39,15 @@ const { isCurrentUrl } = useCurrentUrl();
 <template>
     <div class="px-4 py-6">
         <Heading
-            title="Settings"
-            description="Manage your profile and account settings"
+            title="Réglages"
+            description="Gérez votre profil et les paramètres de votre compte"
         />
 
         <div class="flex flex-col lg:flex-row lg:space-x-12">
             <aside class="w-full max-w-xl lg:w-48">
                 <nav
                     class="flex flex-col space-y-1 space-x-0"
-                    aria-label="Settings"
+                    aria-label="Réglages"
                 >
                     <Button
                         v-for="item in sidebarNavItems"

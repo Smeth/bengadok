@@ -3,13 +3,23 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Client extends Model
 {
     protected $fillable = [
-        'nom', 'prenom', 'tel', 'adresse', 'sexe', 'email',
+        'nom', 'prenom', 'tel', 'tel_secondaire', 'adresse', 'sexe', 'email', 'zone_id', 'client_depuis',
     ];
+
+    protected $casts = [
+        'client_depuis' => 'date',
+    ];
+
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(Zone::class);
+    }
 
     public function commandes(): HasMany
     {

@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { Pill, Store, Users } from 'lucide-vue-next';
-import { home } from '@/routes';
+import LoginLogo from '@/components/LoginLogo.vue';
 
 defineProps<{
     title?: string;
@@ -11,77 +9,44 @@ defineProps<{
 
 <template>
     <div class="flex min-h-svh">
-        <!-- Partie gauche : gradient, illustrations, slogan -->
+        <!-- Partie gauche : dégradé bleu → vert, message marketing, logo (masqué sur mobile) -->
         <div
-            class="hidden flex-1 flex-col justify-between bg-gradient-to-b from-sky-200 via-sky-100 to-emerald-400 p-8 lg:flex dark:from-sky-900/40 dark:via-emerald-900/30 dark:to-emerald-800/50"
+            class="hidden flex-1 flex-col justify-between px-8 pb-10 pt-12 lg:flex lg:pl-14 lg:pr-12"
+            style="background: linear-gradient(to right, #459cd1 0%, #67cb88 100%);"
         >
-            <div class="flex flex-wrap gap-4">
-                <div
-                    class="flex size-24 items-center justify-center overflow-hidden rounded-full bg-white/60 shadow-lg dark:bg-white/10"
+            <div>
+                <p
+                    class="max-w-md text-3xl font-bold leading-tight text-[#333333] md:text-4xl lg:text-[2.5rem]"
+                    style="text-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);"
                 >
-                    <Store class="size-10 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div
-                    class="flex size-24 items-center justify-center overflow-hidden rounded-full bg-white/60 shadow-lg dark:bg-white/10"
-                >
-                    <Pill class="size-10 text-sky-600 dark:text-sky-400" />
-                </div>
-                <div
-                    class="flex size-24 items-center justify-center overflow-hidden rounded-full bg-white/60 shadow-lg dark:bg-white/10"
-                >
-                    <Users class="size-10 text-emerald-600 dark:text-emerald-400" />
-                </div>
+                    Votre pharmacie, connectée à plus de patients chaque jour.
+                </p>
             </div>
 
-            <p class="max-w-sm text-lg font-medium text-slate-700 dark:text-slate-200">
-                Votre pharmacie, connectée à plus de patients chaque jour.
-            </p>
-
             <div class="flex justify-center">
-                <Link
-                    :href="home()"
-                    class="flex flex-col items-center gap-2"
-                >
-                    <div
-                        class="flex size-14 items-center justify-center rounded-full bg-sky-600 shadow-lg dark:bg-sky-500"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="white"
-                            stroke-width="2.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            class="size-7"
-                        >
-                            <path d="M12 5v14M5 12h14" />
-                        </svg>
-                    </div>
-                    <span class="font-semibold text-slate-800 dark:text-white">BengaDok</span>
-                </Link>
+                <LoginLogo />
             </div>
         </div>
 
-        <!-- Partie droite : formulaire -->
+        <!-- Partie droite : zone pour la carte formulaire -->
         <div
-            class="flex flex-1 flex-col items-center justify-center bg-slate-50 p-6 dark:bg-slate-900 md:p-10"
+            class="flex w-full flex-col items-center justify-center px-4 py-8 md:w-[42%] md:min-w-[380px] md:px-8 md:py-12 lg:min-w-[420px]"
+            style="background: linear-gradient(to right, #459cd1 0%, #67cb88 100%);"
         >
-            <div class="w-full max-w-md">
-                <div
-                    class="rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl dark:border-slate-700 dark:bg-slate-800"
+            <div
+                class="w-full max-w-md rounded-2xl border-0 bg-white p-6 shadow-xl md:-ml-6 md:rounded-[22px] md:p-8"
+                style="box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 8px 32px rgba(0,0,0,0.06);"
+            >
+                <h1 class="mb-6 text-2xl font-bold text-[#333333] md:text-3xl">
+                    {{ title }}
+                </h1>
+                <p
+                    v-if="description"
+                    class="mb-6 text-sm text-slate-500"
                 >
-                    <h1 class="mb-2 text-2xl font-semibold text-slate-900 dark:text-white">
-                        {{ title }}
-                    </h1>
-                    <p
-                        v-if="description"
-                        class="mb-6 text-sm text-slate-500 dark:text-slate-400"
-                    >
-                        {{ description }}
-                    </p>
-                    <slot />
-                </div>
+                    {{ description }}
+                </p>
+                <slot />
             </div>
         </div>
     </div>

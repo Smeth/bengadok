@@ -11,8 +11,12 @@ class Pharmacie extends Model
 {
     protected $fillable = [
         'zone_id', 'type_pharmacie_id', 'heurs_id',
-        'designation', 'telephone', 'adresse', 'email',
-        'proprio_nom', 'proprio_tel', 'proprio_email',
+        'designation', 'telephone', 'adresse', 'latitude', 'longitude', 'email',
+        'de_garde', 'proprio_nom', 'proprio_tel', 'proprio_email',
+    ];
+
+    protected $casts = [
+        'de_garde' => 'boolean',
     ];
 
     public function zone(): BelongsTo

@@ -13,7 +13,7 @@ import { edit } from '@/routes/user-password';
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
-        title: 'Password settings',
+        title: 'Paramètres du mot de passe',
         href: edit(),
     },
 ];
@@ -21,16 +21,16 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbItems">
-        <Head title="Password settings" />
+        <Head title="Paramètres du mot de passe" />
 
-        <h1 class="sr-only">Password Settings</h1>
+        <h1 class="sr-only">Paramètres du mot de passe</h1>
 
         <SettingsLayout>
             <div class="space-y-6">
                 <Heading
                     variant="small"
-                    title="Update password"
-                    description="Ensure your account is using a long, random password to stay secure"
+                    title="Mettre à jour le mot de passe"
+                    description="Utilisez un mot de passe long et aléatoire pour sécuriser votre compte"
                 />
 
                 <Form
@@ -48,34 +48,34 @@ const breadcrumbItems: BreadcrumbItem[] = [
                     v-slot="{ errors, processing, recentlySuccessful }"
                 >
                     <div class="grid gap-2">
-                        <Label for="current_password">Current password</Label>
+                        <Label for="current_password">Mot de passe actuel</Label>
                         <Input
                             id="current_password"
                             name="current_password"
                             type="password"
                             class="mt-1 block w-full"
                             autocomplete="current-password"
-                            placeholder="Current password"
+                            placeholder="Mot de passe actuel"
                         />
                         <InputError :message="errors.current_password" />
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="password">New password</Label>
+                        <Label for="password">Nouveau mot de passe</Label>
                         <Input
                             id="password"
                             name="password"
                             type="password"
                             class="mt-1 block w-full"
                             autocomplete="new-password"
-                            placeholder="New password"
+                            placeholder="Nouveau mot de passe"
                         />
                         <InputError :message="errors.password" />
                     </div>
 
                     <div class="grid gap-2">
                         <Label for="password_confirmation"
-                            >Confirm password</Label
+                            >Confirmer le mot de passe</Label
                         >
                         <Input
                             id="password_confirmation"
@@ -83,7 +83,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
                             type="password"
                             class="mt-1 block w-full"
                             autocomplete="new-password"
-                            placeholder="Confirm password"
+                            placeholder="Confirmer le mot de passe"
                         />
                         <InputError :message="errors.password_confirmation" />
                     </div>
@@ -92,7 +92,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
                         <Button
                             :disabled="processing"
                             data-test="update-password-button"
-                            >Save password</Button
+                            >Enregistrer le mot de passe</Button
                         >
 
                         <Transition
@@ -105,7 +105,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
                                 v-show="recentlySuccessful"
                                 class="text-sm text-neutral-600"
                             >
-                                Saved.
+                                Enregistré.
                             </p>
                         </Transition>
                     </div>

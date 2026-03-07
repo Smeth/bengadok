@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import { Bell, ChevronDown } from 'lucide-vue-next';
 import { usePage } from '@inertiajs/vue3';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
@@ -9,12 +9,14 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuTrigger,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import type { BreadcrumbItem } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
-import AppLogo from './AppLogo.vue';
+import AppLogoIcon from './AppLogoIcon.vue';
 import UserMenuContent from './UserMenuContent.vue';
 import { dashboard } from '@/routes';
 
@@ -27,17 +29,48 @@ withDefaults(
     },
 );
 
+interface NotificationItem {
+    id: number;
+    numero: string;
+    status_label: string;
+    client?: { nom: string; prenom?: string };
+    pharmacie?: { designation: string };
+    url: string;
+    created_at: string;
+}
+
 const page = usePage();
 const user = computed(() => (page.props.auth as { user?: { name: string; roles?: string[] } })?.user);
+const notifications = computed(() => {
+    const n = (page.props as { notifications?: { count: number; items: NotificationItem[] } }).notifications;
+    return n ?? { count: 0, items: [] };
+});
 
 const { getInitials } = useInitials();
 const roleLabel = computed(() => {
     const roles = user.value?.roles ?? [];
-    if (roles.includes('gerant')) return 'Admin';
+    if (roles.includes('super_admin')) return 'Super Admin';
+    if (roles.includes('admin')) return 'Admin';
+    if (roles.includes('gerant')) return 'Gérant pharmacie';
     if (roles.includes('vendeur')) return 'Vendeur';
     if (roles.includes('agent_call_center')) return 'Agent';
     return roles[0] ?? '-';
 });
+
+const formatClientName = (client?: { nom: string; prenom?: string } | null) => {
+    if (!client) return '-';
+    return [client.nom, client.prenom].filter(Boolean).join(' ') || '-';
+};
+
+const formatDate = (iso?: string) => {
+    if (!iso) return '';
+    try {
+        const d = new Date(iso);
+        return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    } catch {
+        return '';
+    }
+};
 </script>
 
 <template>
@@ -45,15 +78,13 @@ const roleLabel = computed(() => {
         class="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-sidebar-border/70 bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4"
     >
         <div class="flex items-center gap-2">
-            <SidebarTrigger class="-ml-1 md:hidden" />
+            <SidebarTrigger class="-ml-1" />
             <Link
                 :href="dashboard()"
                 class="hidden items-center gap-2 md:flex"
             >
-                <div class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                    </svg>
+                <div class="flex aspect-square size-8 items-center justify-center rounded-md bg-[#34B0C7]">
+                    <AppLogoIcon class="size-4" />
                 </div>
                 <span class="font-semibold text-sidebar-foreground">BengaDok</span>
             </Link>
@@ -63,9 +94,58 @@ const roleLabel = computed(() => {
         </div>
 
         <div class="flex items-center gap-3">
-            <Button variant="ghost" size="icon" class="relative">
-                <Bell class="size-5" />
-            </Button>
+            <DropdownMenu v-if="user">
+                <DropdownMenuTrigger as-child>
+                    <Button variant="ghost" size="icon" class="relative">
+                        <Bell class="size-5" />
+                        <span
+                            v-if="notifications.count > 0"
+                            class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground"
+                        >
+                            {{ notifications.count > 99 ? '99+' : notifications.count }}
+                        </span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" class="w-80">
+                    <DropdownMenuLabel class="flex items-center justify-between">
+                        <span>Notifications</span>
+                        <span v-if="notifications.count > 0" class="text-xs font-normal text-muted-foreground">
+                            {{ notifications.count }} commande(s)
+                        </span>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <div v-if="notifications.items.length" class="max-h-72 overflow-y-auto">
+                        <button
+                            v-for="item in notifications.items"
+                            :key="item.id"
+                            type="button"
+                            class="block w-full cursor-pointer px-2 py-2 text-left text-sm hover:bg-accent"
+                            @click="router.visit(item.url)"
+                        >
+                            <div class="font-medium">Commande {{ item.numero }}</div>
+                            <div class="text-xs text-muted-foreground">
+                                {{ formatClientName(item.client) }} · {{ item.status_label }}
+                            </div>
+                            <div v-if="item.pharmacie" class="mt-0.5 text-xs text-muted-foreground">
+                                {{ item.pharmacie.designation }}
+                            </div>
+                            <div class="mt-0.5 text-xs text-muted-foreground">
+                                {{ formatDate(item.created_at) }}
+                            </div>
+                        </button>
+                    </div>
+                    <div v-else class="px-2 py-6 text-center text-sm text-muted-foreground">
+                        Aucune nouvelle commande
+                    </div>
+                    <DropdownMenuSeparator />
+                    <Link
+                        href="/commandes"
+                        class="block px-2 py-2 text-center text-sm font-medium text-primary hover:bg-accent"
+                    >
+                        Voir toutes les commandes
+                    </Link>
+                </DropdownMenuContent>
+            </DropdownMenu>
             <DropdownMenu v-if="user">
                 <DropdownMenuTrigger as-child>
                     <Button variant="ghost" class="flex items-center gap-2 px-2 py-1.5">

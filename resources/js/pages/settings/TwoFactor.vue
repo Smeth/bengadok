@@ -25,7 +25,7 @@ withDefaults(defineProps<Props>(), {
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Two-Factor Authentication',
+        title: 'Authentification à deux facteurs',
         href: show(),
     },
 ];
@@ -40,29 +40,26 @@ onUnmounted(() => {
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <Head title="Two-Factor Authentication" />
+        <Head title="Authentification à deux facteurs" />
 
-        <h1 class="sr-only">Two-Factor Authentication Settings</h1>
+        <h1 class="sr-only">Paramètres d'authentification à deux facteurs</h1>
 
         <SettingsLayout>
             <div class="space-y-6">
                 <Heading
                     variant="small"
-                    title="Two-Factor Authentication"
-                    description="Manage your two-factor authentication settings"
+                    title="Authentification à deux facteurs"
+                    description="Gérez vos paramètres d'authentification à deux facteurs"
                 />
 
                 <div
                     v-if="!twoFactorEnabled"
                     class="flex flex-col items-start justify-start space-y-4"
                 >
-                    <Badge variant="destructive">Disabled</Badge>
+                    <Badge variant="destructive">Désactivé</Badge>
 
                     <p class="text-muted-foreground">
-                        When you enable two-factor authentication, you will be
-                        prompted for a secure pin during login. This pin can be
-                        retrieved from a TOTP-supported application on your
-                        phone.
+                        Lorsque vous activez l'authentification à deux facteurs, un code sécurisé vous sera demandé lors de la connexion. Ce code peut être récupéré depuis une application compatible TOTP sur votre téléphone.
                     </p>
 
                     <div>
@@ -70,7 +67,7 @@ onUnmounted(() => {
                             v-if="hasSetupData"
                             @click="showSetupModal = true"
                         >
-                            <ShieldCheck />Continue Setup
+                            <ShieldCheck />Continuer la configuration
                         </Button>
                         <Form
                             v-else
@@ -79,7 +76,7 @@ onUnmounted(() => {
                             #default="{ processing }"
                         >
                             <Button type="submit" :disabled="processing">
-                                <ShieldCheck />Enable 2FA</Button
+                                <ShieldCheck />Activer la 2FA</Button
                             ></Form
                         >
                     </div>
@@ -89,13 +86,10 @@ onUnmounted(() => {
                     v-else
                     class="flex flex-col items-start justify-start space-y-4"
                 >
-                    <Badge variant="default">Enabled</Badge>
+                    <Badge variant="default">Activé</Badge>
 
                     <p class="text-muted-foreground">
-                        With two-factor authentication enabled, you will be
-                        prompted for a secure, random pin during login, which
-                        you can retrieve from the TOTP-supported application on
-                        your phone.
+                        Avec l'authentification à deux facteurs activée, un code aléatoire vous sera demandé lors de la connexion, que vous pouvez récupérer depuis l'application compatible TOTP sur votre téléphone.
                     </p>
 
                     <TwoFactorRecoveryCodes />
@@ -108,7 +102,7 @@ onUnmounted(() => {
                                 :disabled="processing"
                             >
                                 <ShieldBan />
-                                Disable 2FA
+                                Désactiver la 2FA
                             </Button>
                         </Form>
                     </div>

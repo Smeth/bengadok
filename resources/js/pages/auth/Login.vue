@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { Form, Head } from '@inertiajs/vue3';
+import { Eye, EyeOff, Smartphone } from 'lucide-vue-next';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -16,13 +17,12 @@ defineProps<{
     canResetPassword: boolean;
     canRegister: boolean;
 }>();
+
+const showPassword = ref(false);
 </script>
 
 <template>
-    <AuthSplitLayout
-        title="Se connecter"
-        description="Entrez votre email et mot de passe pour accéder à votre compte"
-    >
+    <AuthSplitLayout title="Se Connecter">
         <Head title="Connexion - BengaDok" />
 
         <div
@@ -39,61 +39,106 @@ defineProps<{
             class="flex flex-col gap-5"
         >
             <div class="grid gap-2">
-                <Label for="email">Email / Téléphone</Label>
+                <Label for="email" class="text-[#333333]">Identifiant</Label>
                 <Input
                     id="email"
-                    type="email"
+                    type="text"
                     name="email"
                     required
                     autofocus
                     :tabindex="1"
-                    autocomplete="email"
-                    placeholder="exemple@email.com"
+                    autocomplete="username"
+                    placeholder="Ex: centrale_gerant_misgs233"
+                    class="login-input rounded-lg border border-[#d1d5db] bg-white placeholder:italic"
                 />
                 <InputError :message="errors.email" />
             </div>
 
             <div class="grid gap-2">
-                <div class="flex items-center justify-between">
-                    <Label for="password">Mot de passe</Label>
+                <Label for="password" class="text-[#333333]">Mot de passe</Label>
+                <div class="relative">
+                    <Input
+                        id="password"
+                        :type="showPassword ? 'text' : 'password'"
+                        name="password"
+                        required
+                        :tabindex="2"
+                        autocomplete="current-password"
+                        placeholder="••••••••"
+                        class="login-input rounded-lg border border-[#d1d5db] bg-white pr-10"
+                    />
+                    <button
+                        type="button"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+                        @click="showPassword = !showPassword"
+                    >
+                        <EyeOff v-if="showPassword" class="size-4" />
+                        <Eye v-else class="size-4" />
+                    </button>
+                </div>
+                <div class="flex justify-end">
                     <TextLink
                         v-if="canResetPassword"
                         :href="request()"
-                        class="text-sm text-sky-600 hover:text-sky-700 dark:text-sky-400"
+                        class="text-sm text-[#459cd1] hover:text-[#3a8ab8]"
                         :tabindex="5"
                     >
                         Mot de passe oublié ?
                     </TextLink>
                 </div>
-                <Input
-                    id="password"
-                    type="password"
-                    name="password"
-                    required
-                    :tabindex="2"
-                    autocomplete="current-password"
-                    placeholder="••••••••"
-                />
                 <InputError :message="errors.password" />
-            </div>
-
-            <div class="flex items-center gap-3">
-                <Checkbox id="remember" name="remember" :tabindex="3" />
-                <Label for="remember" class="cursor-pointer text-sm font-normal">
-                    Se souvenir de moi
-                </Label>
             </div>
 
             <Button
                 type="submit"
-                class="w-full bg-sky-600 py-6 text-base font-medium hover:bg-sky-700"
+                class="login-btn w-full rounded-lg py-6 text-base font-bold text-white"
                 :tabindex="4"
                 :disabled="processing"
                 data-test="login-button"
             >
                 <Spinner v-if="processing" />
-                Se connecter
+                Connexion
             </Button>
+
+            <!-- Réinitialisation par SMS -->
+            <div
+                class="flex gap-3 rounded-lg border p-4"
+                style="background-color: #e6f7ed; border-color: #7ad894;"
+            >
+                <div
+                    class="flex size-10 shrink-0 items-center justify-center rounded-full text-white"
+                    style="background-color: #67cb88;"
+                >
+                    <Smartphone class="size-5" />
+                </div>
+                <div class="min-w-0 text-sm text-[#333333]">
+                    <p class="font-medium">Réinitialisation par SMS</p>
+                    <p class="mt-0.5 text-slate-600">
+                        En cas d'oubli, recevez un code de vérification par SMS sur votre numéro de téléphone ou celui de la pharmacie.
+                    </p>
+                </div>
+            </div>
         </Form>
     </AuthSplitLayout>
 </template>
+
+<style scoped>
+/* Maquette : champs blancs à fine bordure grise (sans fond jaune autofill) */
+.login-input {
+    background-color: #fff !important;
+}
+.login-input:-webkit-autofill,
+.login-input:-webkit-autofill:hover,
+.login-input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    box-shadow: 0 0 0 30px white inset !important;
+}
+/* Bouton bleu-vert (teal) comme sur la maquette */
+.login-btn {
+    background-color: #0d9488;
+}
+.login-btn:hover:not(:disabled) {
+    background-color: #0f766e;
+}
+</style>

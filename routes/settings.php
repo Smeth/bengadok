@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\Settings\ResetController;
+use App\Http\Controllers\Settings\RoleController;
 use App\Http\Controllers\Settings\TwoFactorAuthenticationController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,4 +27,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('settings/two-factor', [TwoFactorAuthenticationController::class, 'show'])
         ->name('two-factor.show');
+
+    Route::prefix('settings/roles')->name('roles.')->middleware('role:super_admin')->group(function () {
+        Route::get('/', [RoleController::class, 'index'])->name('index');
+        Route::post('/', [RoleController::class, 'store'])->name('store');
+        Route::patch('{role}', [RoleController::class, 'update'])->name('update');
+        Route::delete('{role}', [RoleController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::inertia('settings/reset', 'settings/Reset')
+        ->middleware('role:super_admin')
+        ->name('settings.reset');
+
+    Route::post('settings/reset', ResetController::class)
+        ->middleware('role:super_admin')
+        ->name('settings.reset.store');
 });

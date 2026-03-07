@@ -9,7 +9,7 @@ class CommandeProduit extends Model
 {
     protected $table = 'commande_produit';
 
-    protected $fillable = ['commande_id', 'produit_id', 'quantite', 'prix_unitaire', 'status'];
+    protected $fillable = ['commande_id', 'produit_id', 'quantite', 'quantite_confirmee', 'prix_unitaire', 'status'];
 
     protected $casts = [
         'prix_unitaire' => 'decimal:2',

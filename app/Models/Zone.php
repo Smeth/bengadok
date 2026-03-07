@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Zone extends Model
 {
-    protected $fillable = ['designation'];
+    protected $fillable = ['designation', 'latitude', 'longitude'];
 
     public function pharmacies(): HasMany
     {
