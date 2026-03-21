@@ -45,7 +45,7 @@ import RecuCommandeModal from '@/components/RecuCommandeModal.vue';
 import CommandeEnregistrementModal from '@/components/CommandeEnregistrementModal.vue';
 import CommandesTable from '@/components/commandes/CommandesTable.vue';
 import type { BreadcrumbItem, CommandeDetail } from '@/types';
-import { STATUTS_COMMANDE, MOTIFS_ANNULATION, MOTIFS_ANNULATION_LABELS } from '@/types';
+import { STATUTS_COMMANDE, type MotifAnnulationOption } from '@/types';
 import { dashboard } from '@/routes';
 
 usePolling();
@@ -109,6 +109,29 @@ const canCreateCommande = computed(() => {
     const roles = (page.props.auth as { user?: { roles?: string[] } })?.user?.roles ?? [];
     return roles.some((r) => ['admin', 'super_admin', 'agent_call_center'].includes(r));
 });
+
+const motifsAnnulation = computed(() => (page.props.motifs_annulation ?? []) as MotifAnnulationOption[]);
+
+const motifsRelance = computed(() =>
+    Object.fromEntries(motifsAnnulation.value.map((m) => [m.slug, m.autorise_relance]))
+);
+
+function motifAutoriseRelance(motif: string | undefined): boolean {
+    if (!motif) return false;
+    return !!motifsRelance.value[motif];
+}
+
+const motifOptions = computed(() =>
+    motifsAnnulation.value.map((m) => ({
+        key: m.slug,
+        label: m.label,
+        desc: m.autorise_relance
+            ? 'Après annulation, un agent pourra relancer la commande (ex. autre pharmacie).'
+            : 'Aucune relance proposée pour ce motif.',
+    }))
+);
+
+const motifLabelBySlug = computed(() => Object.fromEntries(motifsAnnulation.value.map((m) => [m.slug, m.label])));
 
 const searchQuery = ref(props.filters.search ?? '');
 const activeTab = ref<'gestion' | 'statistiques'>('gestion');
@@ -197,16 +220,36 @@ const errorsRelancer = ref<Record<string, string>>({});
 watch(() => props.filters.search, (v) => { searchQuery.value = v ?? ''; });
 
 const statuts = STATUTS_COMMANDE;
-const motifOptions = MOTIFS_ANNULATION;
 
 function getMotifAnnulationLabel(key: string | undefined): string {
-    return (key && MOTIFS_ANNULATION_LABELS[key]) || key || 'Non précisé';
+    return (key && motifLabelBySlug.value[key]) || key || 'Non précisé';
 }
 
 const beneficiaires = ['Soi-même', 'Sa mère', 'Son père', 'Son enfant', 'Autre'];
 
+type CommandeFilters = { search?: string; status?: string; periode?: string; date?: string };
+
 function filtrer(key: string, value: string) {
-    router.get('/commandes', { ...props.filters, [key]: value || undefined }, { preserveState: true });
+    const raw: CommandeFilters = { ...props.filters };
+    const v = value.trim() || undefined;
+
+    if (key === 'periode') {
+        raw.periode = v;
+        if (v) raw.date = undefined;
+    } else if (key === 'date') {
+        raw.date = v;
+        if (v) raw.periode = undefined;
+    } else {
+        (raw as Record<string, string | undefined>)[key] = v;
+    }
+
+    const params: Record<string, string> = {};
+    if (raw.search) params.search = raw.search;
+    if (raw.status) params.status = raw.status;
+    if (raw.periode) params.periode = raw.periode;
+    if (raw.date) params.date = raw.date;
+
+    router.get('/commandes', params, { preserveState: true });
 }
 
 function getStatusLabel(s: string) {
@@ -508,26 +551,27 @@ const nextPageUrl = computed(() => {
                                         class="w-full min-w-[240px] max-w-[420px] rounded-[13px] border-0 bg-white py-2.5 pl-10 pr-4 text-[14px] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3995d2]"
                                     />
                                 </div>
-                                <span class="text-[14px] font-bold text-white/90">Trier par Periode</span>
+                                <span class="text-[14px] font-bold text-white/90">Période</span>
                                 <select
-                                    :value="filters.periode"
+                                    :value="filters.periode ?? ''"
                                     class="rounded-[13px] border-0 bg-white px-4 py-2.5 text-[14px] font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3995d2]"
                                     @change="(e: Event) => filtrer('periode', (e.target as HTMLSelectElement).value)"
                                 >
-                                    <option value="">Période</option>
+                                    <option value="">Toutes les dates</option>
                                     <option value="aujourdhui">Aujourd'hui</option>
                                     <option value="semaine">Cette semaine</option>
                                     <option value="mois">Ce mois</option>
                                 </select>
                             </div>
-                            <div class="flex items-center gap-4">
+                            <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
                                 <input
-                                    :value="filters.date"
+                                    :value="filters.date ?? ''"
                                     type="date"
-                                    placeholder="Date MM:JJ:AAAA"
+                                    title="Une date précise remplace le filtre période"
                                     class="w-[180px] rounded-[13px] border-0 bg-white px-4 py-2.5 text-[14px] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3995d2]"
                                     @input="(e: Event) => filtrer('date', (e.target as HTMLInputElement).value)"
                                 />
+                                <span class="hidden text-[11px] text-white/70 sm:inline">ou date précise (exclut la période)</span>
                                 <button
                                     v-if="canCreateCommande"
                                     type="button"
@@ -733,7 +777,7 @@ const nextPageUrl = computed(() => {
                                 </div>
                             </div>
                             <button
-                                v-if="detailCommande.motif_annulation === 'medicaments_indisponibles' && canCreateCommande"
+                                v-if="motifAutoriseRelance(detailCommande.motif_annulation) && canCreateCommande"
                                 type="button"
                                 class="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#3B82F6] text-[15px] font-bold text-white transition-colors hover:bg-blue-600"
                                 @click="openRelancerModal"
@@ -870,7 +914,7 @@ const nextPageUrl = computed(() => {
                     </DialogTitle>
                 </DialogHeader>
                 <p class="shrink-0 text-[13px] text-black leading-snug">
-                    Sélectionner le motif d'annulation. Si les médicaments sont indisponibles, vous pouvez relancer la commande avec une autre pharmacie.
+                    Sélectionner le motif d'annulation. Selon la configuration, certains motifs permettent ensuite de relancer la commande (autre pharmacie, etc.).
                 </p>
                 <div class="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
                     <p class="text-sm font-black text-black">

@@ -74,22 +74,9 @@ export const STATUTS_COMMANDE = [
     { key: 'retiree', label: 'Livrée', statsKey: 'livrees', color: 'white', textColor: '#016630', borderColor: '#016630' },
 ] as const;
 
-export const MOTIFS_ANNULATION = [
-    { key: 'medicaments_indisponibles', label: 'Médicaments indisponibles', desc: 'Un ou plusieurs médicaments ne sont pas disponibles dans cette pharmacie' },
-    { key: 'demande_patient', label: 'Demande du patient', desc: 'Le patient a demandé l\'annulation de la commande' },
-    { key: 'erreur_commande', label: 'Erreur de commandes', desc: 'Une erreur a été détecté dans les informations de la commande' },
-    { key: 'probleme_paiement', label: 'Problème de paiement', desc: 'Le patient ne peut pas effectuer le paiement' },
-    { key: 'pharmacie_fermee', label: 'Pharmacie fermée', desc: 'La pharmacie est fermée ou ne peut pas traiter la commande' },
-    { key: 'probleme_livraison', label: 'Problème de livraison', desc: 'Impossible de livrer à l\'adresse indiquée' },
-    { key: 'autre_motif', label: 'Autre motif', desc: 'Autre raison non listée' },
-] as const;
-
-export const MOTIFS_ANNULATION_LABELS: Record<string, string> = {
-    medicaments_indisponibles: 'Médicaments indisponibles',
-    demande_patient: 'Demande du patient',
-    erreur_commande: 'Erreur de commande',
-    probleme_paiement: 'Problème de paiement',
-    pharmacie_fermee: 'Pharmacie fermée',
-    probleme_livraison: 'Problème de livraison',
-    autre_motif: 'Autre motif',
+/** Motif d’annulation (données partagées Inertia `motifs_annulation`) */
+export type MotifAnnulationOption = {
+    slug: string;
+    label: string;
+    autorise_relance: boolean;
 };

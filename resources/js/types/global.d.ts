@@ -19,6 +19,8 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            /** Motifs d’annulation configurés (slug, label, relance) */
+            motifs_annulation: Array<{ slug: string; label: string; autorise_relance: boolean }>;
             [key: string]: unknown;
         };
     }

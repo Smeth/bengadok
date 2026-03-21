@@ -80,5 +80,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('types-pharmacie', [ParametresController::class, 'storeTypePharmacie'])->name('types-pharmacie.store');
             Route::patch('types-pharmacie/{typePharmacie}', [ParametresController::class, 'updateTypePharmacie'])->name('types-pharmacie.update');
             Route::delete('types-pharmacie/{typePharmacie}', [ParametresController::class, 'destroyTypePharmacie'])->name('types-pharmacie.destroy');
+
+            // Motifs d'annulation (libellés, code, relance, ordre)
+            Route::post('motifs-annulation', [ParametresController::class, 'storeMotifAnnulation'])->name('motifs-annulation.store');
+            Route::patch('motifs-annulation/{motifAnnulation}', [ParametresController::class, 'updateMotifAnnulation'])->name('motifs-annulation.update');
+            Route::delete('motifs-annulation/{motifAnnulation}', [ParametresController::class, 'destroyMotifAnnulation'])->name('motifs-annulation.destroy');
         });
 });

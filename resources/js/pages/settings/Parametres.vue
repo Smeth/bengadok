@@ -4,7 +4,7 @@ import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
-import { Plus, Pencil, Trash2, Check, X, MapPin, CreditCard, Truck, User, Clock, Building2 } from 'lucide-vue-next';
+import { Plus, Pencil, Trash2, Check, X, MapPin, CreditCard, Truck, User, Clock, Building2, RefreshCw } from 'lucide-vue-next';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -14,15 +14,29 @@ interface MontantLivraison { id: number; designation: number; commandes_count: n
 interface Livreur       { id: number; nom: string; prenom: string; tel: string; commandes_count: number }
 interface Heur          { id: number; ouverture: string; fermeture: string; pharmacies_count: number }
 interface TypePharmacie { id: number; designation: string; heurs_id?: number; heurs?: Heur; pharmacies_count: number }
+interface MotifAnnulationRow {
+    id: number;
+    slug: string;
+    label: string;
+    autorise_relance: boolean;
+    sort_order: number;
+    commandes_count: number;
+}
 
-const props = defineProps<{
-    zones:             Zone[];
-    modesPaiement:     ModePaiement[];
-    montantsLivraison: MontantLivraison[];
-    livreurs:          Livreur[];
-    heurs:             Heur[];
-    typesPharmacie:    TypePharmacie[];
-}>();
+withDefaults(
+    defineProps<{
+        zones:               Zone[];
+        modesPaiement:       ModePaiement[];
+        montantsLivraison:   MontantLivraison[];
+        livreurs:            Livreur[];
+        heurs:               Heur[];
+        typesPharmacie:      TypePharmacie[];
+        motifsAnnulation:    MotifAnnulationRow[];
+    }>(),
+    {
+        motifsAnnulation: () => [],
+    }
+);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
@@ -38,6 +52,7 @@ const onglets = [
     { id: 'livreurs',          label: 'Livreurs',            icon: User },
     { id: 'horaires',          label: 'Horaires',            icon: Clock },
     { id: 'typesPharmacie',    label: 'Types pharmacie',     icon: Building2 },
+    { id: 'motifsAnnulation',  label: 'Motifs d\'annulation', icon: RefreshCw },
 ] as const;
 
 type OngletId = typeof onglets[number]['id'];
@@ -177,6 +192,49 @@ function sauvegarderType(id: number) {
 }
 function supprimerType(id: number) {
     if (confirm('Supprimer ce type de pharmacie ?')) submit(`/settings/parametres/types-pharmacie/${id}`, {}, 'delete');
+}
+
+// ─── Motifs d'annulation ─────────────────────────────────────────────────────
+
+const motifForm = ref({ slug: '', label: '', sort_order: '', autorise_relance: false });
+const motifEdit = ref({ slug: '', label: '', sort_order: '', autorise_relance: false });
+
+function ajouterMotif() {
+    const data: Record<string, unknown> = {
+        slug: motifForm.value.slug.trim(),
+        label: motifForm.value.label.trim(),
+        autorise_relance: motifForm.value.autorise_relance,
+    };
+    if (motifForm.value.sort_order !== '') {
+        data.sort_order = Number(motifForm.value.sort_order);
+    }
+    submit('/settings/parametres/motifs-annulation', data);
+    motifForm.value = { slug: '', label: '', sort_order: '', autorise_relance: false };
+}
+
+function ouvrirEditMotif(m: MotifAnnulationRow) {
+    motifEdit.value = {
+        slug: m.slug,
+        label: m.label,
+        sort_order: String(m.sort_order ?? 0),
+        autorise_relance: m.autorise_relance,
+    };
+    startEdit(m.id);
+}
+
+function sauvegarderMotif(id: number) {
+    submit(`/settings/parametres/motifs-annulation/${id}`, {
+        slug: motifEdit.value.slug.trim(),
+        label: motifEdit.value.label.trim(),
+        autorise_relance: motifEdit.value.autorise_relance,
+        sort_order: motifEdit.value.sort_order === '' ? undefined : Number(motifEdit.value.sort_order),
+    }, 'patch');
+}
+
+function supprimerMotif(id: number) {
+    if (confirm('Supprimer ce motif ? Impossible s’il est utilisé par des commandes.')) {
+        submit(`/settings/parametres/motifs-annulation/${id}`, {}, 'delete');
+    }
 }
 </script>
 
@@ -618,6 +676,153 @@ function supprimerType(id: number) {
                                 <template v-else>
                                     <button @click="ouvrirEditType(t)" class="mr-3 text-blue-500 hover:text-blue-700"><Pencil class="h-4 w-4" /></button>
                                     <button @click="supprimerType(t.id)" class="text-red-400 hover:text-red-600"><Trash2 class="h-4 w-4" /></button>
+                                </template>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- ══════════════════ MOTIFS D'ANNULATION ══════════════════ -->
+            <section v-if="ongletActif === 'motifsAnnulation'" class="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                <div class="border-b bg-gray-50 px-5 py-3 flex items-center justify-between">
+                    <h2 class="font-semibold text-gray-700 flex items-center gap-2">
+                        <RefreshCw class="h-4 w-4 text-blue-600" /> Motifs d'annulation
+                    </h2>
+                    <span class="text-xs text-gray-400">{{ motifsAnnulation.length }} motif(s)</span>
+                </div>
+                <div class="border-b px-5 py-4 bg-blue-50/40">
+                    <p class="text-sm text-gray-600 leading-relaxed">
+                        Le <span class="font-semibold">code</span> (ex. <code class="rounded bg-white/80 px-1 text-xs">medicaments_indisponibles</code>) est stocké sur les commandes : ne le changez que si aucune commande ne l’utilise encore.
+                        La <span class="font-semibold">relance</span> contrôle l’affichage du bouton « Relancer la commande » après annulation.
+                    </p>
+                </div>
+
+                <form @submit.prevent="ajouterMotif" class="border-b px-5 py-4 bg-blue-50/30">
+                    <p class="mb-3 text-xs font-medium uppercase tracking-wide text-gray-400">Nouveau motif</p>
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
+                        <div class="md:col-span-3">
+                            <label class="mb-1 block text-xs text-gray-500">Code * <span class="font-normal">(a-z, chiffres, _)</span></label>
+                            <input
+                                v-model="motifForm.slug"
+                                required
+                                pattern="[a-z][a-z0-9_]*"
+                                maxlength="100"
+                                placeholder="ex: stock_rupture"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            />
+                        </div>
+                        <div class="md:col-span-4">
+                            <label class="mb-1 block text-xs text-gray-500">Libellé affiché *</label>
+                            <input
+                                v-model="motifForm.label"
+                                required
+                                maxlength="255"
+                                placeholder="Ex. : Rupture de stock"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            />
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="mb-1 block text-xs text-gray-500">Ordre</label>
+                            <input
+                                v-model="motifForm.sort_order"
+                                type="number"
+                                min="0"
+                                placeholder="auto"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            />
+                        </div>
+                        <div class="md:col-span-2 flex items-center gap-2 pb-2">
+                            <input id="motif-new-relance" v-model="motifForm.autorise_relance" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600" />
+                            <label for="motif-new-relance" class="text-sm text-gray-700">Relance autorisée</label>
+                        </div>
+                        <div class="md:col-span-1">
+                            <button
+                                type="submit"
+                                :disabled="enCours"
+                                class="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                            >
+                                <Plus class="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <table class="w-full text-sm">
+                    <thead class="border-b bg-gray-50 text-xs text-gray-500">
+                        <tr>
+                            <th class="px-5 py-3 text-left font-medium">Libellé</th>
+                            <th class="px-5 py-3 text-left font-medium">Code</th>
+                            <th class="px-5 py-3 text-center font-medium w-20">Ordre</th>
+                            <th class="px-5 py-3 text-center font-medium w-28">Relance</th>
+                            <th class="px-5 py-3 text-center font-medium w-24">Cmd.</th>
+                            <th class="px-5 py-3 text-right font-medium">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <tr v-if="!motifsAnnulation.length">
+                            <td colspan="6" class="px-5 py-6 text-center text-gray-400">Aucun motif.</td>
+                        </tr>
+                        <tr v-for="m in motifsAnnulation" :key="m.id" class="hover:bg-gray-50/50">
+                            <td class="px-5 py-3">
+                                <input
+                                    v-if="editingId === m.id"
+                                    v-model="motifEdit.label"
+                                    maxlength="255"
+                                    class="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                                />
+                                <span v-else class="font-medium text-gray-800">{{ m.label }}</span>
+                            </td>
+                            <td class="px-5 py-3">
+                                <input
+                                    v-if="editingId === m.id"
+                                    v-model="motifEdit.slug"
+                                    :disabled="m.commandes_count > 0"
+                                    maxlength="100"
+                                    class="w-full rounded border border-gray-300 px-2 py-1 font-mono text-xs disabled:bg-gray-100 disabled:text-gray-500"
+                                />
+                                <span v-else class="font-mono text-xs text-gray-600">{{ m.slug }}</span>
+                                <p v-if="editingId === m.id && m.commandes_count > 0" class="mt-1 text-[11px] text-amber-700">Code verrouillé ({{ m.commandes_count }} commande(s)).</p>
+                            </td>
+                            <td class="px-5 py-3 text-center">
+                                <input
+                                    v-if="editingId === m.id"
+                                    v-model="motifEdit.sort_order"
+                                    type="number"
+                                    min="0"
+                                    class="w-16 rounded border border-gray-300 px-2 py-1 text-sm text-center"
+                                />
+                                <span v-else>{{ m.sort_order }}</span>
+                            </td>
+                            <td class="px-5 py-3 text-center">
+                                <input
+                                    v-if="editingId === m.id"
+                                    v-model="motifEdit.autorise_relance"
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-gray-300 text-blue-600"
+                                />
+                                <span v-else class="text-xs font-medium" :class="m.autorise_relance ? 'text-green-700' : 'text-gray-400'">
+                                    {{ m.autorise_relance ? 'Oui' : 'Non' }}
+                                </span>
+                            </td>
+                            <td class="px-5 py-3 text-center">
+                                <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ m.commandes_count }}</span>
+                            </td>
+                            <td class="px-5 py-3 text-right">
+                                <template v-if="editingId === m.id">
+                                    <button type="button" @click="sauvegarderMotif(m.id)" :disabled="enCours" class="mr-2 text-green-600 hover:text-green-800"><Check class="h-4 w-4" /></button>
+                                    <button type="button" @click="cancelEdit" class="text-gray-400 hover:text-gray-600"><X class="h-4 w-4" /></button>
+                                </template>
+                                <template v-else>
+                                    <button type="button" @click="ouvrirEditMotif(m)" class="mr-3 text-blue-500 hover:text-blue-700"><Pencil class="h-4 w-4" /></button>
+                                    <button
+                                        type="button"
+                                        @click="supprimerMotif(m.id)"
+                                        :disabled="m.commandes_count > 0"
+                                        :class="m.commandes_count > 0 ? 'cursor-not-allowed text-gray-300' : 'text-red-400 hover:text-red-600'"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
+                                    </button>
                                 </template>
                             </td>
                         </tr>

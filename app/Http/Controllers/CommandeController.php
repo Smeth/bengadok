@@ -5,16 +5,18 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCommandeRequest;
 use App\Models\Client;
 use App\Models\Commande;
+use App\Models\ModePaiement;
 use App\Models\MontantLivraison;
 use App\Models\Pharmacie;
 use App\Models\Produit;
-use App\Models\ModePaiement;
 use App\Models\Zone;
 use App\Services\CommandeService;
 use App\Services\PharmacieProximiteService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -36,27 +38,19 @@ class CommandeController extends Controller
 
         return response()->json(['pharmacies' => $pharmacies]);
     }
+
     public function index(Request $request): Response
     {
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('login');
         }
         $this->authorize('viewAny', Commande::class);
 
-        $query = Commande::with(['client', 'pharmacie', 'produits', 'livreur', 'modePaiement', 'montantLivraison', 'ordonnance'])
-            ->when($request->user()?->pharmacie_id, fn ($q) => $q->where('pharmacie_id', $request->user()->pharmacie_id))
-            ->when($request->user()?->hasAnyRole(['admin', 'super_admin', 'agent_call_center']), fn ($q) => $q->whereNull('parent_id'));
+        $query = $this->commandesIndexBaseQuery($request)
+            ->with(['client', 'pharmacie', 'produits', 'livreur', 'modePaiement', 'montantLivraison', 'ordonnance']);
 
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('numero', 'like', "%{$search}%")
-                    ->orWhereHas('client', fn ($q) => $q->where('nom', 'like', "%{$search}%")
-                        ->orWhere('prenom', 'like', "%{$search}%")
-                        ->orWhere('tel', 'like', "%{$search}%"))
-                    ->orWhereHas('produits', fn ($q) => $q->where('designation', 'like', "%{$search}%"));
-            });
-        }
+        $this->applyCommandeIndexSearch($query, $request->input('search'));
 
         if ($status = $request->input('status')) {
             if ($status === 'validee') {
@@ -66,28 +60,24 @@ class CommandeController extends Controller
             }
         }
 
-        if ($periode = $request->input('periode')) {
-            match ($periode) {
-                'aujourdhui' => $query->whereDate('date', today()),
-                'semaine' => $query->where('date', '>=', now()->startOfWeek()),
-                'mois' => $query->where('date', '>=', now()->startOfMonth()),
-                default => null,
-            };
-        }
+        $this->applyCommandeIndexTemporalFilters($query, $request);
 
-        if ($date = $request->input('date')) {
-            $query->whereDate('date', $date);
-        }
+        $commandes = $query
+            ->orderByRaw('COALESCE(commandes.date, DATE(commandes.created_at)) DESC')
+            ->orderByDesc('commandes.created_at')
+            ->paginate(15)
+            ->withQueryString();
 
-        $commandes = $query->latest('date')->latest('created_at')->paginate(15)->withQueryString();
+        $statsBase = $this->commandesIndexBaseQuery($request);
+        $this->applyCommandeIndexSearch($statsBase, $request->input('search'));
+        $this->applyCommandeIndexTemporalFilters($statsBase, $request);
 
-        $base = Commande::query()->when($request->user()?->pharmacie_id, fn ($q) => $q->where('pharmacie_id', $request->user()->pharmacie_id));
         $stats = [
-            'nouvelles' => (clone $base)->where('status', 'nouvelle')->count(),
-            'en_attente' => (clone $base)->where('status', 'en_attente')->count(),
-            'validees' => (clone $base)->whereIn('status', ['validee', 'a_preparer'])->count(),
-            'livrees' => (clone $base)->where('status', 'retiree')->count(),
-            'annulees' => (clone $base)->where('status', 'annulee')->count(),
+            'nouvelles' => (clone $statsBase)->where('status', 'nouvelle')->count(),
+            'en_attente' => (clone $statsBase)->where('status', 'en_attente')->count(),
+            'validees' => (clone $statsBase)->whereIn('status', ['validee', 'a_preparer'])->count(),
+            'livrees' => (clone $statsBase)->where('status', 'retiree')->count(),
+            'annulees' => (clone $statsBase)->where('status', 'annulee')->count(),
         ];
 
         $pharmacies = Pharmacie::with(['zone', 'typePharmacie', 'heurs'])->get();
@@ -118,7 +108,7 @@ class CommandeController extends Controller
         $pharmacieOptions = [];
         if ($user?->hasAnyRole(['admin', 'super_admin', 'agent_call_center'])
             && $commande->status === 'en_attente'
-            && !$commande->parent_id
+            && ! $commande->parent_id
             && $commande->client?->adresse) {
             $pharmacieOptions = $this->pharmacieService->trouverPharmaciesProches(
                 $commande->client->adresse,
@@ -150,7 +140,7 @@ class CommandeController extends Controller
         // Téléchargement PDF
         if ($request->boolean('download')) {
             $pdf = Pdf::loadView('recu', ['commande' => $commande, 'hideActions' => true]);
-            $filename = 'recu-commande-' . $commande->numero . '.pdf';
+            $filename = 'recu-commande-'.$commande->numero.'.pdf';
 
             return $pdf->download($filename);
         }
@@ -161,7 +151,7 @@ class CommandeController extends Controller
     public function edit(Request $request, Commande $commande): Response
     {
         $this->authorize('update', $commande);
-        if (!in_array($commande->status, ['nouvelle', 'en_attente'])) {
+        if (! in_array($commande->status, ['nouvelle', 'en_attente'])) {
             return redirect()->route('commandes.show', $commande)
                 ->with('error', 'Seules les commandes « nouvelle » ou « en attente » peuvent être modifiées.');
         }
@@ -179,7 +169,7 @@ class CommandeController extends Controller
     public function update(Request $request, Commande $commande): RedirectResponse
     {
         $this->authorize('update', $commande);
-        if (!in_array($commande->status, ['nouvelle', 'en_attente'])) {
+        if (! in_array($commande->status, ['nouvelle', 'en_attente'])) {
             return back()->with('error', 'Seules les commandes « nouvelle » ou « en attente » peuvent être modifiées.');
         }
 
@@ -215,7 +205,7 @@ class CommandeController extends Controller
             ? Client::findOrFail($validated['client_id'])
             : Client::create([
                 'nom' => $validated['client_nom'],
-                'prenom' => !empty(trim($validated['client_prenom'] ?? '')) ? trim($validated['client_prenom']) : null,
+                'prenom' => ! empty(trim($validated['client_prenom'] ?? '')) ? trim($validated['client_prenom']) : null,
                 'tel' => $validated['client_tel'],
                 'adresse' => $validated['client_adresse'],
             ]);
@@ -223,7 +213,7 @@ class CommandeController extends Controller
         if ($validated['client_id'] && isset($validated['client_nom'])) {
             $client->update([
                 'nom' => $validated['client_nom'],
-                'prenom' => !empty(trim($validated['client_prenom'] ?? '')) ? trim($validated['client_prenom']) : null,
+                'prenom' => ! empty(trim($validated['client_prenom'] ?? '')) ? trim($validated['client_prenom']) : null,
                 'tel' => $validated['client_tel'],
                 'adresse' => $validated['client_adresse'],
             ]);
@@ -233,7 +223,7 @@ class CommandeController extends Controller
         if ($request->hasFile('ordonnance')) {
             $file = $request->file('ordonnance');
             $ext = $file->getClientOriginalExtension();
-            $path = $file->storeAs('ordonnances/' . now()->format('Y-m'), uniqid() . '.' . $ext, 'public');
+            $path = $file->storeAs('ordonnances/'.now()->format('Y-m'), uniqid().'.'.$ext, 'public');
             $ordonnance = Ordonnance::create(['urlfile' => $path]);
             $ordonnanceId = $ordonnance->id;
         }
@@ -287,20 +277,20 @@ class CommandeController extends Controller
         $validated = $request->validate([
             'ids' => 'required|array',
             'ids.*' => 'integer|exists:commandes,id',
-            'motif_annulation' => 'required|string|in:medicaments_indisponibles,demande_patient,erreur_commande,probleme_paiement,pharmacie_fermee,probleme_livraison,autre_motif',
+            'motif_annulation' => ['required', 'string', 'max:100', Rule::exists('motifs_annulation', 'slug')],
             'note_annulation' => 'nullable|string|max:1000',
         ]);
 
         $query = Commande::whereIn('id', $validated['ids']);
-        if ($request->user()?->pharmacie_id && !$request->user()?->hasAnyRole(['admin', 'super_admin'])) {
+        if ($request->user()?->pharmacie_id && ! $request->user()?->hasAnyRole(['admin', 'super_admin'])) {
             $query->where('pharmacie_id', $request->user()->pharmacie_id);
         }
 
         $count = $query->whereNotIn('status', ['annulee'])->update([
-            'status'           => 'annulee',
+            'status' => 'annulee',
             'status_pharmacie' => 'annulee',
             'motif_annulation' => $validated['motif_annulation'],
-            'note_annulation'  => $validated['note_annulation'] ?? null,
+            'note_annulation' => $validated['note_annulation'] ?? null,
         ]);
 
         return back()->with('status', "{$count} commande(s) annulée(s).");
@@ -318,7 +308,7 @@ class CommandeController extends Controller
     {
         $validated = $request->validate([
             'status' => 'required|in:nouvelle,en_attente,validee,retiree,annulee',
-            'motif_annulation' => 'nullable|string|in:medicaments_indisponibles,demande_patient,erreur_commande,probleme_paiement,pharmacie_fermee,probleme_livraison,autre_motif',
+            'motif_annulation' => ['required_if:status,annulee', 'nullable', 'string', 'max:100', Rule::exists('motifs_annulation', 'slug')],
             'note_annulation' => 'nullable|string|max:1000',
         ]);
 
@@ -326,7 +316,7 @@ class CommandeController extends Controller
             return back()->with('error', 'La pharmacie doit d\'abord confirmer la remise au livreur avant de marquer la commande comme livrée.');
         }
 
-        if ($validated['status'] === 'validee' && $commande->status === 'en_attente' && !$commande->acceptation_client) {
+        if ($validated['status'] === 'validee' && $commande->status === 'en_attente' && ! $commande->acceptation_client) {
             return back()->with('error', 'Le client doit avoir validé le coût total avant de valider la commande.');
         }
 
@@ -340,20 +330,20 @@ class CommandeController extends Controller
         $statusPharmacie = match ($validated['status']) {
             'validee' => 'valide_a_preparer',
             'annulee' => 'annulee',
-            default   => $commande->status_pharmacie, // conserver l'état pharmacie actuel
+            default => $commande->status_pharmacie, // conserver l'état pharmacie actuel
         };
 
         $commande->update([
-            'status'           => $validated['status'],
+            'status' => $validated['status'],
             'status_pharmacie' => $statusPharmacie,
             'motif_annulation' => $validated['status'] === 'annulee' ? ($validated['motif_annulation'] ?? null) : null,
-            'note_annulation'  => $validated['status'] === 'annulee' ? ($validated['note_annulation'] ?? null) : null,
+            'note_annulation' => $validated['status'] === 'annulee' ? ($validated['note_annulation'] ?? null) : null,
         ]);
 
         // Si validation de la commande parente, valider aussi les commandes enfants (déjà en_attente)
         if ($validated['status'] === 'validee' && $commande->parent_id === null) {
             $commande->enfants()->where('status', 'en_attente')->update([
-                'status'           => 'validee',
+                'status' => 'validee',
                 'status_pharmacie' => 'valide_a_preparer',
             ]);
         }
@@ -368,6 +358,7 @@ class CommandeController extends Controller
         ]);
 
         $commande->update(['acceptation_client' => $validated['acceptation_client']]);
+
         return back();
     }
 
@@ -387,5 +378,56 @@ class CommandeController extends Controller
         ]);
 
         return back();
+    }
+
+    /**
+     * Requête de base liste commandes : périmètre utilisateur (pharmacie, pas d’enfants pour admin).
+     */
+    private function commandesIndexBaseQuery(Request $request): Builder
+    {
+        return Commande::query()
+            ->when($request->user()?->pharmacie_id, fn ($q) => $q->where('pharmacie_id', $request->user()->pharmacie_id))
+            ->when($request->user()?->hasAnyRole(['admin', 'super_admin', 'agent_call_center']), fn ($q) => $q->whereNull('parent_id'));
+    }
+
+    private function applyCommandeIndexSearch(Builder $query, ?string $search): void
+    {
+        if (! $search) {
+            return;
+        }
+
+        $query->where(function ($q) use ($search) {
+            $q->where('numero', 'like', "%{$search}%")
+                ->orWhereHas('client', fn ($q) => $q->where('nom', 'like', "%{$search}%")
+                    ->orWhere('prenom', 'like', "%{$search}%")
+                    ->orWhere('tel', 'like', "%{$search}%"))
+                ->orWhereHas('produits', fn ($q) => $q->where('designation', 'like', "%{$search}%"));
+        });
+    }
+
+    /**
+     * Date exacte (query) prioritaire sur période. Date effective = date commande ou jour de création si null.
+     */
+    private function applyCommandeIndexTemporalFilters(Builder $query, Request $request): void
+    {
+        $date = $request->input('date');
+        $periode = $request->input('periode');
+
+        if ($date) {
+            $query->whereRaw('COALESCE(commandes.date, DATE(commandes.created_at)) = ?', [$date]);
+
+            return;
+        }
+
+        if (! $periode) {
+            return;
+        }
+
+        match ($periode) {
+            'aujourdhui' => $query->whereRaw('COALESCE(commandes.date, DATE(commandes.created_at)) = ?', [now()->toDateString()]),
+            'semaine' => $query->whereRaw('COALESCE(commandes.date, DATE(commandes.created_at)) >= ?', [now()->copy()->startOfWeek()->toDateString()]),
+            'mois' => $query->whereRaw('COALESCE(commandes.date, DATE(commandes.created_at)) >= ?', [now()->copy()->startOfMonth()->toDateString()]),
+            default => null,
+        };
     }
 }

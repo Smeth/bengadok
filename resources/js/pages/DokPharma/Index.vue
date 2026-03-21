@@ -483,7 +483,7 @@ function downloadOrdonnance() {
                             Commandes en attente de confirmation
                         </p>
                         <p class="mt-0.5 text-[12px] text-[#4338CA]">
-                            Ces commandes ont été envoyées. En attente de validation par le backoffice avant préparation.
+                            Ces commandes ont été envoyées. En attente de validation par bengadock avant préparation.
                         </p>
                     </div>
 

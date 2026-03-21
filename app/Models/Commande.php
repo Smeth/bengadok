@@ -16,16 +16,6 @@ class Commande extends Model
         'beneficiaire', 'designation', 'status', 'status_pharmacie', 'acceptation_client', 'motif_annulation', 'note_annulation',
     ];
 
-    public const MOTIFS_ANNULATION = [
-        'medicaments_indisponibles' => 'Médicaments indisponibles',
-        'demande_patient' => 'Demande du patient',
-        'erreur_commande' => 'Erreur de commandes',
-        'probleme_paiement' => 'Problème de paiement',
-        'pharmacie_fermee' => 'Pharmacie fermée',
-        'probleme_livraison' => 'Problème de livraison',
-        'autre_motif' => 'Autre motif',
-    ];
-
     protected $casts = [
         'date' => 'date',
         'prix_total' => 'decimal:2',
@@ -34,21 +24,21 @@ class Commande extends Model
 
     // Statuts côté administrateurs
     public const STATUSES = [
-        'nouvelle'   => 'Nouvelle',
+        'nouvelle' => 'Nouvelle',
         'en_attente' => 'En attente',
-        'validee'    => 'Validée',
-        'retiree'    => 'Livrée',
-        'annulee'    => 'Annulée',
+        'validee' => 'Validée',
+        'retiree' => 'Livrée',
+        'annulee' => 'Annulée',
     ];
 
     // Statuts côté pharmacie
     public const STATUSES_PHARMACIE = [
-        'nouvelle'              => 'Nouvelle commande',
-        'attente_confirmation'  => 'Attente de confirmation',
-        'indisponible'          => 'Indisponible',
-        'valide_a_preparer'     => 'Validé - À préparer',
-        'livre'                 => 'Retirée',
-        'annulee'               => 'Annulée',
+        'nouvelle' => 'Nouvelle commande',
+        'attente_confirmation' => 'Attente de confirmation',
+        'indisponible' => 'Indisponible',
+        'valide_a_preparer' => 'Validé - À préparer',
+        'livre' => 'Retirée',
+        'annulee' => 'Annulée',
     ];
 
     public function client(): BelongsTo

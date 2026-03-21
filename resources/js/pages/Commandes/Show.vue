@@ -119,15 +119,7 @@ function validerDisponibilite() {
     router.post(`/dok-pharma/${props.commande.id}/valider`, { lignes });
 }
 
-const MOTIFS_ANNULATION: Record<string, string> = {
-    medicaments_indisponibles: 'Médicaments indisponibles',
-    demande_patient: 'Demande du patient',
-    erreur_commande: 'Erreur de commande',
-    probleme_paiement: 'Problème de paiement',
-    pharmacie_fermee: 'Pharmacie fermée',
-    probleme_livraison: 'Problème de livraison',
-    autre_motif: 'Autre motif',
-};
+const motifsAnnulationOptions = computed(() => page.props.motifs_annulation ?? []);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
@@ -259,18 +251,18 @@ function renvoyerPharmaciePartiel() {
                         >
                             <option value="">Sélectionner un motif</option>
                             <option
-                                v-for="(label, value) in MOTIFS_ANNULATION"
-                                :key="value"
-                                :value="value"
+                                v-for="m in motifsAnnulationOptions"
+                                :key="m.slug"
+                                :value="m.slug"
                             >
-                                {{ label }}
+                                {{ m.label }}
                             </option>
                         </select>
                         <DialogFooter class="mt-4">
                             <Button variant="outline" @click="modalAnnulation = false">
                                 Annuler
                             </Button>
-                            <Button @click="confirmerAnnulation()">
+                            <Button :disabled="!motifSelectionne" @click="confirmerAnnulation()">
                                 Confirmer l'annulation
                             </Button>
                         </DialogFooter>

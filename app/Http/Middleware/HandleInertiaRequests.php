@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Commande;
+use App\Models\MotifAnnulation;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -37,6 +38,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+
         return [
             ...parent::share($request),
             /** Jeton CSRF à jour à chaque réponse Inertia (POST /logout, formulaires, etc.) */
@@ -62,6 +64,8 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'notifications' => fn () => $this->getNotifications($request),
+            /** Motifs d'annulation (liste triée : slug, label, autorise_relance) */
+            'motifs_annulation' => fn () => MotifAnnulation::orderedForShare(),
         ];
     }
 
@@ -81,15 +85,16 @@ class HandleInertiaRequests extends Middleware
         $isPharmacie = in_array('gerant', $roles) || in_array('vendeur', $roles);
         $isBackoffice = in_array('admin', $roles) || in_array('agent_call_center', $roles) || in_array('super_admin', $roles);
 
-        $query = Commande::query()->with(['client:id,nom,prenom', 'pharmacie:id,designation']);
+        $query = Commande::query();
 
         if ($isPharmacie && $user->pharmacie_id) {
-            // Pharmacie : commandes à traiter (nouvelles à valider)
+            // Pharmacie : nouvelles commandes — pas de chargement client (données sensibles, non exposées au front)
             $query->where('pharmacie_id', $user->pharmacie_id)
                 ->where('status_pharmacie', 'nouvelle');
         } elseif ($isBackoffice) {
-            // Backoffice : commandes que la pharmacie a traitées, en attente de validation admin
-            $query->where('status', 'en_attente')
+            // Backoffice : commandes en attente de validation admin
+            $query->with(['client:id,nom,prenom', 'pharmacie:id,designation'])
+                ->where('status', 'en_attente')
                 ->where('updated_at', '>=', now()->subDays(3));
         } else {
             return ['count' => 0, 'items' => []];
@@ -99,17 +104,19 @@ class HandleInertiaRequests extends Middleware
         $items = $query->orderByDesc('created_at')
             ->limit(10)
             ->get(['id', 'numero', 'status', 'client_id', 'pharmacie_id', 'created_at', 'updated_at'])
-            ->map(fn (Commande $c) => [
-                'id' => $c->id,
-                'numero' => $c->numero,
-                'status' => $c->status,
-                'status_pharmacie' => $c->status_pharmacie,
-                'status_label' => Commande::STATUSES[$c->status] ?? $c->status,
-                'client' => $c->client ? ['nom' => $c->client->nom, 'prenom' => $c->client->prenom] : null,
-                'pharmacie' => $c->pharmacie ? ['designation' => $c->pharmacie->designation] : null,
-                'created_at' => $c->created_at?->toIso8601String(),
-                'url' => '/commandes/' . $c->id,
-            ])
+            ->map(function (Commande $c) use ($isPharmacie) {
+                return [
+                    'id' => $c->id,
+                    'numero' => $c->numero,
+                    'status' => $c->status,
+                    'status_pharmacie' => $c->status_pharmacie,
+                    'status_label' => Commande::STATUSES[$c->status] ?? $c->status,
+                    'client' => $isPharmacie ? null : ($c->client ? ['nom' => $c->client->nom, 'prenom' => $c->client->prenom] : null),
+                    'pharmacie' => $isPharmacie ? null : ($c->pharmacie ? ['designation' => $c->pharmacie->designation] : null),
+                    'created_at' => $c->created_at?->toIso8601String(),
+                    'url' => '/commandes/'.$c->id,
+                ];
+            })
             ->values()
             ->toArray();
 

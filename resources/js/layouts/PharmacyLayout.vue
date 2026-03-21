@@ -40,8 +40,6 @@ interface NotificationItem {
     id: number;
     numero: string;
     status_label: string;
-    client?: { nom: string; prenom?: string };
-    pharmacie?: { designation: string };
     url: string;
     created_at: string;
 }
@@ -50,11 +48,6 @@ const notifications = computed(() => {
     const n = (page.props as { notifications?: { count: number; items: NotificationItem[] } }).notifications;
     return n ?? { count: 0, items: [] };
 });
-
-const formatClientName = (client?: { nom: string; prenom?: string } | null) => {
-    if (!client) return '-';
-    return [client.nom, client.prenom].filter(Boolean).join(' ') || '-';
-};
 
 const formatDate = (iso?: string) => {
     if (!iso) return '';
@@ -315,7 +308,7 @@ function logout() {
                             >
                                 <div class="font-medium">Commande {{ item.numero }}</div>
                                 <div class="text-xs text-muted-foreground">
-                                    {{ formatClientName(item.client) }} · {{ item.status_label }}
+                                    {{ item.status_label }}
                                 </div>
                                 <div class="mt-0.5 text-xs text-muted-foreground">
                                     {{ formatDate(item.created_at) }}
