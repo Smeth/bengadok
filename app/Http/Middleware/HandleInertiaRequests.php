@@ -103,7 +103,7 @@ class HandleInertiaRequests extends Middleware
         $count = (clone $query)->count();
         $items = $query->orderByDesc('created_at')
             ->limit(10)
-            ->get(['id', 'numero', 'status', 'client_id', 'pharmacie_id', 'created_at', 'updated_at'])
+            ->get(['id', 'numero', 'status', 'status_pharmacie', 'client_id', 'pharmacie_id', 'created_at', 'updated_at'])
             ->map(function (Commande $c) use ($isPharmacie) {
                 return [
                     'id' => $c->id,
@@ -114,12 +114,35 @@ class HandleInertiaRequests extends Middleware
                     'client' => $isPharmacie ? null : ($c->client ? ['nom' => $c->client->nom, 'prenom' => $c->client->prenom] : null),
                     'pharmacie' => $isPharmacie ? null : ($c->pharmacie ? ['designation' => $c->pharmacie->designation] : null),
                     'created_at' => $c->created_at?->toIso8601String(),
-                    'url' => '/commandes/'.$c->id,
+                    'url' => $this->notificationCommandesListUrl($c, $isPharmacie),
                 ];
             })
             ->values()
             ->toArray();
 
         return ['count' => $count, 'items' => $items];
+    }
+
+    /**
+     * Cible liste commandes + onglet / filtre statut aligné sur la commande (pharmacie : DokPharma, admin : /commandes).
+     */
+    private function notificationCommandesListUrl(Commande $c, bool $isPharmacie): string
+    {
+        if ($isPharmacie) {
+            $onglet = match ($c->status_pharmacie) {
+                'nouvelle' => 'nouvelles',
+                'attente_confirmation', 'indisponible' => 'en_attente',
+                'valide_a_preparer' => 'a_preparer',
+                'livre' => 'livrees',
+                default => 'nouvelles',
+            };
+
+            return '/dok-pharma/commandes?onglet='.$onglet;
+        }
+
+        $status = $c->status ?? 'nouvelle';
+        $filter = in_array($status, ['validee', 'a_preparer'], true) ? 'validee' : $status;
+
+        return '/commandes?status='.rawurlencode($filter);
     }
 }

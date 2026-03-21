@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
+import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
 
 export type ProduitEnreg = {
     designation: string;
@@ -56,6 +57,7 @@ export type CommandeRelance = {
     pharmacie?: { id?: number; zone_id?: number; zone?: { id: number } };
     produits?: Array<{ designation?: string; dosage?: string; pivot: { quantite: number; prix_unitaire: number } }>;
     mode_paiement?: { id: number };
+    ordonnance?: { urlfile?: string } | null;
 };
 
 type Zone = { id: number; designation: string; pharmacies_count: number };
@@ -115,6 +117,8 @@ const form = ref({
 });
 
 const errors = ref<Record<string, string>>({});
+/** Fichier déjà enregistré (relance) — affichage tant qu’aucun nouveau fichier n’est choisi */
+const ordonnanceUrlExistante = ref<string | null>(null);
 const zoneEnreg = ref<number | ''>('');
 const filtreTypeEnreg = ref<'tous' | 'jour' | 'nuit' | 'garde'>('tous');
 const searchPharmacieEnreg = ref('');
@@ -190,6 +194,7 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
         mode_paiement_id: cmd.mode_paiement?.id ? String(cmd.mode_paiement.id) : '',
         commentaire: '',
     };
+    ordonnanceUrlExistante.value = cmd.ordonnance?.urlfile?.trim() || null;
     const ph = cmd.pharmacie;
     if (ph?.id && props.pharmacies?.length) {
         let zoneId = ph.zone_id ?? ph.zone?.id;
@@ -224,6 +229,7 @@ function resetForm() {
     filtreTypeEnreg.value = 'tous';
     searchPharmacieEnreg.value = '';
     errors.value = {};
+    ordonnanceUrlExistante.value = null;
 }
 
 function close() {
@@ -279,6 +285,9 @@ function onSubmit() {
 function onOrdonnanceChange(e: Event) {
     const target = e.target as HTMLInputElement;
     form.value.ordonnance = target.files?.[0] ?? null;
+    if (form.value.ordonnance) {
+        ordonnanceUrlExistante.value = null;
+    }
 }
 
 watch(() => props.open, (v) => {
@@ -592,10 +601,23 @@ watch(() => props.apiErrors, (v) => {
                             class="flex min-h-[120px] min-w-0 cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden rounded-[15px] border-2 border-dashed border-[rgba(92,89,89,0.3)] bg-white p-4 text-center transition-colors hover:border-[#0d6efd] hover:bg-blue-50/30"
                         >
                             <ClipboardList class="size-12 shrink-0 text-[rgba(92,89,89,0.4)]" />
-                            <span class="max-w-full truncate text-[20px] font-black text-[rgba(92,89,89,0.4)]">{{ form.ordonnance ? form.ordonnance.name : 'Ajouter une ordonnance' }}</span>
+                            <span class="max-w-full truncate text-[20px] font-black text-[rgba(92,89,89,0.4)]">
+                                {{
+                                    form.ordonnance
+                                        ? form.ordonnance.name
+                                        : ordonnanceUrlExistante
+                                          ? 'Ordonnance existante — cliquez pour en remplacer (facultatif)'
+                                          : 'Ajouter une ordonnance'
+                                }}
+                            </span>
                             <input id="ordonnance-enreg" type="file" class="hidden" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" @change="onOrdonnanceChange" />
                         </label>
                         <OrdonnanceFilePreview v-if="form.ordonnance" :file="form.ordonnance" max-height="10rem" />
+                        <OrdonnanceViewer
+                            v-else-if="ordonnanceUrlExistante"
+                            :urlfile="ordonnanceUrlExistante"
+                            max-height="10rem"
+                        />
                     </div>
                     <textarea
                         v-model="form.commentaire"
