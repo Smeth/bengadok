@@ -4,7 +4,6 @@ use App\Http\Controllers\AgentController;
 use App\Http\Controllers\CommandeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DokPharmaController;
-use App\Http\Controllers\NotificationStreamController;
 use App\Http\Controllers\PostLoginLoadingController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ClientDoublonController;
@@ -21,9 +20,6 @@ Route::redirect('reglages', '/settings/profile')->name('reglages');
 
 // Écran de chargement post-connexion (Figma) — auth seulement pour laisser passer avant verified
 Route::middleware(['auth'])->get('chargement', PostLoginLoadingController::class)->name('post-login.loading');
-
-// Flux SSE de notifications temps réel
-Route::middleware(['auth'])->get('notifications/stream', NotificationStreamController::class)->name('notifications.stream');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');

@@ -340,7 +340,16 @@
         z-index: 0;
         pointer-events: none;
     }
-    .pharmacy-main-gradient > * {
+    /*
+     * Ne pas utiliser `> * { z-index: 1 }` : la spécificité écrase les utilitaires
+     * du header (ex. z-30), ce qui peut placer la zone de contenu scrollable
+     * au-dessus du header sticky et bloquer les clics (onglets, cloche, etc.).
+     */
+    .pharmacy-main-gradient > header {
+        position: relative;
+        z-index: 30;
+    }
+    .pharmacy-main-gradient > .pharmacy-main-body {
         position: relative;
         z-index: 1;
     }

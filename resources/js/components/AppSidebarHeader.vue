@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import type { BreadcrumbItem } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
-import { useNotificationStream } from '@/composables/useNotificationStream';
 import UserMenuContent from './UserMenuContent.vue';
 import { dashboard } from '@/routes';
 
@@ -31,9 +30,22 @@ withDefaults(
     },
 );
 
+interface NotificationItem {
+    id: number;
+    numero: string;
+    status_label: string;
+    client?: { nom: string; prenom?: string };
+    pharmacie?: { designation: string };
+    url: string;
+    created_at: string;
+}
+
 const page = usePage();
 const user = computed(() => (page.props.auth as { user?: { name: string; roles?: string[] } })?.user);
-const { notifications } = useNotificationStream();
+const notifications = computed(() => {
+    const n = (page.props as { notifications?: { count: number; items: NotificationItem[] } }).notifications;
+    return n ?? { count: 0, items: [] };
+});
 
 const { getInitials } = useInitials();
 const roleLabel = computed(() => {

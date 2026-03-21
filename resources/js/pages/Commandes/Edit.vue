@@ -5,6 +5,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
 import type { BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
 
@@ -222,6 +223,7 @@ function submit() {
                     @change="onOrdonnanceChange"
                 />
                 <p class="mt-1 text-xs text-muted-foreground">JPG, PNG, GIF, WebP ou PDF. Max 10 Mo.</p>
+                <OrdonnanceFilePreview v-if="ordonnanceFile" :file="ordonnanceFile" class="mt-3" max-height="14rem" />
             </div>
 
             <div class="grid gap-4 md:grid-cols-2">

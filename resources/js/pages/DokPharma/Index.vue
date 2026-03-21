@@ -48,7 +48,10 @@ const props = defineProps<{
 }>();
 
 function changeOnglet(o: string) {
-    router.get('/dok-pharma/commandes', { onglet: o }, { preserveState: true, preserveScroll: true });
+    /* preserveState désactivé : après validation POST, garder l’ancien état local
+     * (cartes ouvertes, formulaires) provoquait des incohérences et, avec le scroll,
+     * des zones pouvaient sembler « mortes » jusqu’au rechargement. */
+    router.get('/dok-pharma/commandes', { onglet: o }, { preserveScroll: true });
 }
 
 /* ─── Accordion ─────────────────────────────────────────────── */

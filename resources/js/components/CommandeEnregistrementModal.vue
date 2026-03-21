@@ -22,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
 
 export type ProduitEnreg = {
     designation: string;
@@ -585,14 +586,17 @@ watch(() => props.apiErrors, (v) => {
 
                 <!-- Ordonnance + Commentaires -->
                 <div class="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
-                    <label
-                        for="ordonnance-enreg"
-                        class="flex min-h-[150px] min-w-0 cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden rounded-[15px] border-2 border-dashed border-[rgba(92,89,89,0.3)] bg-white p-4 text-center transition-colors hover:border-[#0d6efd] hover:bg-blue-50/30"
-                    >
-                        <ClipboardList class="size-12 shrink-0 text-[rgba(92,89,89,0.4)]" />
-                        <span class="max-w-full truncate text-[20px] font-black text-[rgba(92,89,89,0.4)]">{{ form.ordonnance ? form.ordonnance.name : 'Ajouter une ordonnance' }}</span>
-                        <input id="ordonnance-enreg" type="file" class="hidden" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" @change="onOrdonnanceChange" />
-                    </label>
+                    <div class="flex min-w-0 flex-col gap-2">
+                        <label
+                            for="ordonnance-enreg"
+                            class="flex min-h-[120px] min-w-0 cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden rounded-[15px] border-2 border-dashed border-[rgba(92,89,89,0.3)] bg-white p-4 text-center transition-colors hover:border-[#0d6efd] hover:bg-blue-50/30"
+                        >
+                            <ClipboardList class="size-12 shrink-0 text-[rgba(92,89,89,0.4)]" />
+                            <span class="max-w-full truncate text-[20px] font-black text-[rgba(92,89,89,0.4)]">{{ form.ordonnance ? form.ordonnance.name : 'Ajouter une ordonnance' }}</span>
+                            <input id="ordonnance-enreg" type="file" class="hidden" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" @change="onOrdonnanceChange" />
+                        </label>
+                        <OrdonnanceFilePreview v-if="form.ordonnance" :file="form.ordonnance" max-height="10rem" />
+                    </div>
                     <textarea
                         v-model="form.commentaire"
                         placeholder="Commentaires ..."

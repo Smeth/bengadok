@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Commande;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -60,7 +61,58 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'notifications' => fn () => $this->getNotifications($request),
         ];
     }
 
+    /**
+     * Récupère les notifications selon le rôle de l'utilisateur.
+     * - Pharmacie (gerant, vendeur) : nouvelles commandes assignées
+     * - Backoffice (admin, agent) : commandes validées envoyées par les pharmacies
+     */
+    private function getNotifications(Request $request): array
+    {
+        $user = $request->user();
+        if (! $user) {
+            return ['count' => 0, 'items' => []];
+        }
+
+        $roles = $user->getRoleNames()->toArray();
+        $isPharmacie = in_array('gerant', $roles) || in_array('vendeur', $roles);
+        $isBackoffice = in_array('admin', $roles) || in_array('agent_call_center', $roles) || in_array('super_admin', $roles);
+
+        $query = Commande::query()->with(['client:id,nom,prenom', 'pharmacie:id,designation']);
+
+        if ($isPharmacie && $user->pharmacie_id) {
+            // Pharmacie : commandes à traiter (nouvelles à valider)
+            $query->where('pharmacie_id', $user->pharmacie_id)
+                ->where('status_pharmacie', 'nouvelle');
+        } elseif ($isBackoffice) {
+            // Backoffice : commandes que la pharmacie a traitées, en attente de validation admin
+            $query->where('status', 'en_attente')
+                ->where('updated_at', '>=', now()->subDays(3));
+        } else {
+            return ['count' => 0, 'items' => []];
+        }
+
+        $count = (clone $query)->count();
+        $items = $query->orderByDesc('created_at')
+            ->limit(10)
+            ->get(['id', 'numero', 'status', 'client_id', 'pharmacie_id', 'created_at', 'updated_at'])
+            ->map(fn (Commande $c) => [
+                'id' => $c->id,
+                'numero' => $c->numero,
+                'status' => $c->status,
+                'status_pharmacie' => $c->status_pharmacie,
+                'status_label' => Commande::STATUSES[$c->status] ?? $c->status,
+                'client' => $c->client ? ['nom' => $c->client->nom, 'prenom' => $c->client->prenom] : null,
+                'pharmacie' => $c->pharmacie ? ['designation' => $c->pharmacie->designation] : null,
+                'created_at' => $c->created_at?->toIso8601String(),
+                'url' => '/commandes/' . $c->id,
+            ])
+            ->values()
+            ->toArray();
+
+        return ['count' => $count, 'items' => $items];
+    }
 }

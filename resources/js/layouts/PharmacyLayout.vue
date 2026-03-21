@@ -14,6 +14,8 @@ import {
 import {
     DropdownMenu,
     DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import UserMenuContent from '@/components/UserMenuContent.vue';
@@ -33,6 +35,36 @@ const asideWidthPx = computed(() => (sidebarCollapsed.value ? SIDEBAR_W_ICON : S
 const pharmacie = computed(() => page.props.auth?.user?.pharmacie);
 const user = computed(() => page.props.auth?.user);
 const userEmail = computed(() => page.props.auth?.user?.email ?? '');
+
+interface NotificationItem {
+    id: number;
+    numero: string;
+    status_label: string;
+    client?: { nom: string; prenom?: string };
+    pharmacie?: { designation: string };
+    url: string;
+    created_at: string;
+}
+
+const notifications = computed(() => {
+    const n = (page.props as { notifications?: { count: number; items: NotificationItem[] } }).notifications;
+    return n ?? { count: 0, items: [] };
+});
+
+const formatClientName = (client?: { nom: string; prenom?: string } | null) => {
+    if (!client) return '-';
+    return [client.nom, client.prenom].filter(Boolean).join(' ') || '-';
+};
+
+const formatDate = (iso?: string) => {
+    if (!iso) return '';
+    try {
+        const d = new Date(iso);
+        return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    } catch {
+        return '';
+    }
+};
 
 function logout() {
     router.post('/logout');
@@ -249,16 +281,59 @@ function logout() {
             <header
                 class="sticky top-0 z-30 flex min-h-[68px] shrink-0 items-center justify-end gap-4 border-0 bg-transparent px-5 py-3 sm:px-8"
             >
-                <button
-                    type="button"
-                    class="relative flex size-[57px] shrink-0 items-center justify-center rounded-full border border-black/[0.08] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-colors hover:bg-gray-50"
-                >
-                    <Bell class="size-[22px] text-[#3995d2]" />
-                    <span
-                        v-if="(page.props.notifications as { count?: number })?.count"
-                        class="absolute right-3 top-3 size-2 rounded-full bg-[#3995d2] ring-2 ring-white"
-                    />
-                </button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                        <button
+                            type="button"
+                            class="relative flex size-[57px] shrink-0 items-center justify-center rounded-full border border-black/[0.08] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#3995d2]/30"
+                            aria-label="Notifications"
+                        >
+                            <Bell class="size-[22px] text-[#3995d2]" />
+                            <span
+                                v-if="notifications.count > 0"
+                                class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#3995d2] px-1 text-[10px] font-semibold text-white ring-2 ring-white"
+                            >
+                                {{ notifications.count > 99 ? '99+' : notifications.count }}
+                            </span>
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" class="w-80">
+                        <DropdownMenuLabel class="flex items-center justify-between">
+                            <span>Notifications</span>
+                            <span v-if="notifications.count > 0" class="text-xs font-normal text-muted-foreground">
+                                {{ notifications.count }} commande(s)
+                            </span>
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <div v-if="notifications.items.length" class="max-h-72 overflow-y-auto">
+                            <button
+                                v-for="item in notifications.items"
+                                :key="item.id"
+                                type="button"
+                                class="block w-full cursor-pointer px-2 py-2 text-left text-sm hover:bg-accent"
+                                @click="router.visit(item.url)"
+                            >
+                                <div class="font-medium">Commande {{ item.numero }}</div>
+                                <div class="text-xs text-muted-foreground">
+                                    {{ formatClientName(item.client) }} · {{ item.status_label }}
+                                </div>
+                                <div class="mt-0.5 text-xs text-muted-foreground">
+                                    {{ formatDate(item.created_at) }}
+                                </div>
+                            </button>
+                        </div>
+                        <div v-else class="px-2 py-6 text-center text-sm text-muted-foreground">
+                            Aucune nouvelle commande
+                        </div>
+                        <DropdownMenuSeparator />
+                        <Link
+                            href="/dok-pharma/commandes"
+                            class="block px-2 py-2 text-center text-sm font-medium text-primary hover:bg-accent"
+                        >
+                            Voir toutes les commandes
+                        </Link>
+                    </DropdownMenuContent>
+                </DropdownMenu>
                 <DropdownMenu v-if="user">
                     <DropdownMenuTrigger as-child>
                         <button
@@ -285,7 +360,7 @@ function logout() {
                 </DropdownMenu>
             </header>
 
-            <div class="flex min-h-0 flex-1 flex-col">
+            <div class="pharmacy-main-body flex min-h-0 flex-1 flex-col">
                 <slot />
             </div>
         </main>

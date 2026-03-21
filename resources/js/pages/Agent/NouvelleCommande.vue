@@ -9,6 +9,7 @@ import {
     MapPin, Clock, Plus, X, ChevronLeft, ChevronDown,
     Link2, FileText,
 } from 'lucide-vue-next';
+import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -558,7 +559,7 @@ function annuler() {
                     <div class="grid grid-cols-2 gap-4">
 
                         <!-- Ordonnance (zone de dépôt) -->
-                        <div>
+                        <div class="flex flex-col gap-2">
                             <input
                                 ref="ordonnanceInput"
                                 type="file"
@@ -572,7 +573,7 @@ function annuler() {
                                 @dragleave="ordonnanceDragOver = false"
                                 @drop.prevent="onDrop"
                                 :class="[
-                                    'flex h-full min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors',
+                                    'flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors',
                                     ordonnanceDragOver
                                         ? 'border-blue-400 bg-blue-50'
                                         : 'border-gray-300 hover:border-gray-400',
@@ -584,6 +585,7 @@ function annuler() {
                                     {{ ordonnanceFile.name }}
                                 </span>
                             </div>
+                            <OrdonnanceFilePreview v-if="ordonnanceFile" :file="ordonnanceFile" max-height="12rem" />
                         </div>
 
                         <!-- Commentaires -->
