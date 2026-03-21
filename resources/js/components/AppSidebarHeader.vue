@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { cn } from '@/lib/utils';
 import { Link, router } from '@inertiajs/vue3';
 import { Bell, ChevronDown } from 'lucide-vue-next';
 import { usePage } from '@inertiajs/vue3';
@@ -19,14 +20,17 @@ import { useInitials } from '@/composables/useInitials';
 import UserMenuContent from './UserMenuContent.vue';
 import { dashboard } from '@/routes';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         breadcrumbs?: BreadcrumbItem[];
         variant?: 'default' | 'gradient';
+        /** Classes additionnelles sur le header (z-index, etc.) */
+        headerClass?: string;
     }>(),
     {
         breadcrumbs: () => [],
         variant: 'default',
+        headerClass: '',
     },
 );
 
@@ -76,13 +80,18 @@ const formatDate = (iso?: string) => {
 
 <template>
     <header
-        class="flex h-16 shrink-0 items-center justify-between gap-4 px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4"
-        :class="variant === 'gradient'
-            ? 'border-b-0 bg-transparent'
-            : 'border-b border-sidebar-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'"
+        :class="
+            cn(
+                'flex h-16 shrink-0 items-center justify-between gap-4 px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4',
+                props.variant === 'gradient'
+                    ? 'border-b-0 bg-transparent'
+                    : 'border-b border-sidebar-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+                props.headerClass,
+            )
+        "
     >
-        <div class="flex items-center gap-2" :class="variant === 'gradient' ? 'text-white' : ''">
-            <SidebarTrigger class="-ml-1" :class="variant === 'gradient' ? 'text-white hover:bg-white/20' : ''" />
+        <div class="flex items-center gap-2" :class="props.variant === 'gradient' ? 'text-white' : ''">
+            <SidebarTrigger class="-ml-1" :class="props.variant === 'gradient' ? 'text-white hover:bg-white/20' : ''" />
             <Link
                 :href="dashboard()"
                 class="hidden items-center gap-2 md:flex"
@@ -105,7 +114,7 @@ const formatDate = (iso?: string) => {
             </template>
         </div>
 
-        <div class="flex items-center gap-3" :class="variant === 'gradient' ? 'text-white [&_button]:text-white [&_button]:hover:bg-white/20' : ''">
+        <div class="flex items-center gap-3" :class="props.variant === 'gradient' ? 'text-white [&_button]:text-white [&_button]:hover:bg-white/20' : ''">
             <DropdownMenu v-if="user">
                 <DropdownMenuTrigger as-child>
                     <Button variant="ghost" size="icon" class="relative">

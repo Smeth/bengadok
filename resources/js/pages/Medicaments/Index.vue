@@ -191,7 +191,7 @@ function designationComplete(p: Produit) {
                             <p class="mb-2 text-xs text-muted-foreground">Dernière disponibilité connue:</p>
                             <div class="flex flex-wrap gap-1">
                                 <span
-                                    v-for="ph in p.pharmacies.slice(0, 5)"
+                                    v-for="ph in p.pharmacies"
                                     :key="ph.id"
                                     class="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs dark:bg-slate-800"
                                 >

@@ -21,106 +21,130 @@ class DokPharmaController extends Controller
             return $this->emptyDashboard($request);
         }
 
+        $period = in_array($request->query('period'), ['week', 'month'], true)
+            ? $request->query('period')
+            : 'month';
+        $chartOffset = (int) $request->query('chart_offset', 0);
+        if ($chartOffset > 0) {
+            $chartOffset = 0;
+        }
+        if ($chartOffset < -52) {
+            $chartOffset = -52;
+        }
+
         $now = now();
-        $debutSemaine = $now->copy()->startOfWeek();
-        $debutMois = $now->copy()->startOfMonth();
+        if ($period === 'week') {
+            $rangeStart = $now->copy()->addWeeks($chartOffset)->startOfWeek();
+            $rangeEnd = $now->copy()->addWeeks($chartOffset)->endOfWeek();
+        } else {
+            $rangeStart = $now->copy()->addMonths($chartOffset)->startOfMonth();
+            $rangeEnd = $now->copy()->addMonths($chartOffset)->endOfMonth();
+        }
+        $rangeEndEffective = $rangeEnd->gt($now) ? $now->copy()->endOfDay() : $rangeEnd->copy()->endOfDay();
 
-        // Revenu total (commandes livrées ou validées)
-        $revenuTotal = (float) Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', ['livre', 'valide_a_preparer', 'attente_confirmation'])
+        if ($period === 'week') {
+            $nDays = (int) $rangeStart->diffInDays($rangeEndEffective);
+            $prevStart = $rangeStart->copy()->subWeek();
+            $prevEnd = $prevStart->copy()->addDays($nDays)->endOfDay();
+        } else {
+            $dayCount = (int) $rangeStart->diffInDays($rangeEndEffective) + 1;
+            $prevStart = $rangeStart->copy()->subMonth()->startOfMonth();
+            $prevEnd = $prevStart->copy()->addDays($dayCount - 1)->endOfDay();
+            $maxPrev = $rangeStart->copy()->subMonth()->endOfMonth();
+            if ($prevEnd->gt($maxPrev)) {
+                $prevEnd = $maxPrev;
+            }
+        }
+
+        $statusRevenu = ['livre', 'valide_a_preparer', 'attente_confirmation'];
+        $statusCmd = ['livre', 'valide_a_preparer', 'attente_confirmation', 'nouvelle'];
+
+        $revenuActuel = (float) Commande::where('pharmacie_id', $pharmacieId)
+            ->whereIn('status_pharmacie', $statusRevenu)
+            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
             ->sum('prix_total');
 
-        // Revenu semaine précédente pour % évolution
-        $revenuSemainePrec = (float) Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', ['livre', 'valide_a_preparer', 'attente_confirmation'])
-            ->whereBetween('created_at', [$debutSemaine->copy()->subWeek(), $debutSemaine])
+        $revenuPrec = (float) Commande::where('pharmacie_id', $pharmacieId)
+            ->whereIn('status_pharmacie', $statusRevenu)
+            ->whereBetween('created_at', [$prevStart, $prevEnd])
             ->sum('prix_total');
-        $revenuSemaineActuelle = (float) Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', ['livre', 'valide_a_preparer', 'attente_confirmation'])
-            ->where('created_at', '>=', $debutSemaine)
-            ->sum('prix_total');
-        $pctRevenu = $revenuSemainePrec > 0
-            ? round((($revenuSemaineActuelle - $revenuSemainePrec) / $revenuSemainePrec) * 100)
-            : 0;
 
-        // Nombre total commandes
-        $nbCommandes = Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', ['livre', 'valide_a_preparer', 'attente_confirmation', 'nouvelle'])
-            ->count();
-        $nbCmdSemainePrec = Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', ['livre', 'valide_a_preparer', 'attente_confirmation', 'nouvelle'])
-            ->whereBetween('created_at', [$debutSemaine->copy()->subWeek(), $debutSemaine])
-            ->count();
-        $nbCmdSemaineActuelle = Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', ['livre', 'valide_a_preparer', 'attente_confirmation', 'nouvelle'])
-            ->where('created_at', '>=', $debutSemaine)
-            ->count();
-        $pctCmd = $nbCmdSemainePrec > 0
-            ? round((($nbCmdSemaineActuelle - $nbCmdSemainePrec) / $nbCmdSemainePrec) * 100)
-            : 0;
+        $pctRevenu = $revenuPrec > 0
+            ? round((($revenuActuel - $revenuPrec) / $revenuPrec) * 100)
+            : ($revenuActuel > 0 ? 100 : 0);
 
-        // Clients uniques
-        $nbClients = Commande::where('pharmacie_id', $pharmacieId)
+        $nbCmdActuelle = Commande::where('pharmacie_id', $pharmacieId)
+            ->whereIn('status_pharmacie', $statusCmd)
+            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
+            ->count();
+
+        $nbCmdPrec = Commande::where('pharmacie_id', $pharmacieId)
+            ->whereIn('status_pharmacie', $statusCmd)
+            ->whereBetween('created_at', [$prevStart, $prevEnd])
+            ->count();
+
+        $pctCmd = $nbCmdPrec > 0
+            ? round((($nbCmdActuelle - $nbCmdPrec) / $nbCmdPrec) * 100)
+            : ($nbCmdActuelle > 0 ? 100 : 0);
+
+        $nbClientsActuelle = (int) Commande::where('pharmacie_id', $pharmacieId)
             ->whereNotNull('client_id')
+            ->whereIn('status_pharmacie', $statusCmd)
+            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
             ->distinct('client_id')
             ->count('client_id');
-        $nbClientsSemainePrec = Commande::where('pharmacie_id', $pharmacieId)
-            ->whereNotNull('client_id')
-            ->whereBetween('created_at', [$debutSemaine->copy()->subWeek(), $debutSemaine])
-            ->distinct('client_id')
-            ->count('client_id');
-        $nbClientsSemaineActuelle = Commande::where('pharmacie_id', $pharmacieId)
-            ->whereNotNull('client_id')
-            ->where('created_at', '>=', $debutSemaine)
-            ->distinct('client_id')
-            ->count('client_id');
-        $pctClients = $nbClientsSemainePrec > 0
-            ? round((($nbClientsSemaineActuelle - $nbClientsSemainePrec) / $nbClientsSemainePrec) * 100)
-            : 0;
 
-        // Revenus par jour (12 derniers jours du mois)
-        $revenusParJour = Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', ['livre', 'valide_a_preparer', 'attente_confirmation'])
-            ->where('created_at', '>=', $debutMois)
+        $nbClientsPrec = (int) Commande::where('pharmacie_id', $pharmacieId)
+            ->whereNotNull('client_id')
+            ->whereIn('status_pharmacie', $statusCmd)
+            ->whereBetween('created_at', [$prevStart, $prevEnd])
+            ->distinct('client_id')
+            ->count('client_id');
+
+        $pctClients = $nbClientsPrec > 0
+            ? round((($nbClientsActuelle - $nbClientsPrec) / $nbClientsPrec) * 100)
+            : ($nbClientsActuelle > 0 ? 100 : 0);
+
+        $revenusBruts = Commande::where('pharmacie_id', $pharmacieId)
+            ->whereIn('status_pharmacie', $statusRevenu)
+            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
             ->select(DB::raw('DATE(created_at) as jour'), DB::raw('SUM(prix_total) as total'))
             ->groupBy('jour')
             ->orderBy('jour')
             ->get()
             ->keyBy('jour');
 
-        $joursMois = collect(range(1, min(12, $now->day)))->map(function ($d) use ($debutMois, $revenusParJour) {
-            $date = $debutMois->copy()->addDays($d - 1);
-            $key = $date->format('Y-m-d');
-            return [
-                'label' => str_pad((string) $d, 2, '0', STR_PAD_LEFT),
-                'valeur' => (float) ($revenusParJour->get($key)?->total ?? 0),
-            ];
-        });
-
-        // Volume commandes par jour (7 derniers jours de la semaine)
-        $volumeParJour = Commande::where('pharmacie_id', $pharmacieId)
-            ->where('created_at', '>=', $debutSemaine)
+        $volumeBruts = Commande::where('pharmacie_id', $pharmacieId)
+            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
             ->select(DB::raw('DATE(created_at) as jour'), DB::raw('COUNT(*) as nb'))
             ->groupBy('jour')
             ->get()
             ->keyBy('jour');
 
-        $volumeSemaine = collect(range(0, 6))->map(function ($offset) use ($debutSemaine, $volumeParJour) {
-            $date = $debutSemaine->copy()->addDays($offset);
-            $key = $date->format('Y-m-d');
-            return [
-                'label' => str_pad((string) ($offset + 1), 2, '0', STR_PAD_LEFT),
-                'valeur' => (int) ($volumeParJour->get($key)?->nb ?? 0),
+        $weekdayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+        $revenusParJour = [];
+        $volumeParJour = [];
+        for ($d = $rangeStart->copy(); $d->lte($rangeEndEffective); $d = $d->addDay()) {
+            $key = $d->format('Y-m-d');
+            $label = $period === 'week'
+                ? $weekdayLabels[$d->isoWeekday() - 1]
+                : $d->format('d');
+            $revenusParJour[] = [
+                'label' => $label,
+                'valeur' => (float) ($revenusBruts->get($key)?->total ?? 0),
             ];
-        });
+            $volumeParJour[] = [
+                'label' => $label,
+                'valeur' => (int) ($volumeBruts->get($key)?->nb ?? 0),
+            ];
+        }
 
-        // Meilleures ventes (produits les plus vendus ce mois)
         $meilleursVentes = DB::table('commande_produit')
             ->join('commandes', 'commande_produit.commande_id', '=', 'commandes.id')
             ->join('produits', 'commande_produit.produit_id', '=', 'produits.id')
             ->where('commandes.pharmacie_id', $pharmacieId)
             ->whereIn('commandes.status_pharmacie', ['livre', 'valide_a_preparer', 'attente_confirmation'])
-            ->where('commandes.created_at', '>=', $debutMois)
+            ->whereBetween('commandes.created_at', [$rangeStart, $rangeEndEffective])
             ->whereRaw("(commande_produit.status IS NULL OR commande_produit.status <> 'indisponible')")
             ->select(
                 'produits.id',
@@ -141,23 +165,32 @@ class DokPharmaController extends Controller
             ->all();
 
         return Inertia::render('DokPharma/Dashboard', [
+            'period' => $period,
+            'chart_offset' => $chartOffset,
             'stats' => [
-                'revenu_total' => round($revenuTotal, 0),
+                'revenu_total' => round($revenuActuel, 0),
                 'pct_revenu' => $pctRevenu,
-                'nb_commandes' => $nbCommandes,
+                'nb_commandes' => $nbCmdActuelle,
                 'pct_commandes' => $pctCmd,
-                'nb_clients' => $nbClients,
+                'nb_clients' => $nbClientsActuelle,
                 'pct_clients' => $pctClients,
             ],
-            'revenusParJour' => $joursMois->values()->all(),
-            'volumeParJour' => $volumeSemaine->values()->all(),
+            'revenusParJour' => $revenusParJour,
+            'volumeParJour' => $volumeParJour,
             'meilleursVentes' => $meilleursVentes,
         ]);
     }
 
     private function emptyDashboard(Request $request): Response
     {
+        $period = in_array($request->query('period'), ['week', 'month'], true)
+            ? $request->query('period')
+            : 'month';
+        $chartOffset = min(0, max(-52, (int) $request->query('chart_offset', 0)));
+
         return Inertia::render('DokPharma/Dashboard', [
+            'period' => $period,
+            'chart_offset' => $chartOffset,
             'stats' => [
                 'revenu_total' => 0,
                 'pct_revenu' => 0,

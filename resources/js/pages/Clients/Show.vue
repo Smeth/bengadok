@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowLeft,
@@ -15,12 +16,13 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import type { BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
+import { clientNomComplet } from '@/lib/clientDisplayName';
 
 const props = defineProps<{
     client: {
         id: number;
-        nom: string;
-        prenom: string;
+        nom: string | null;
+        prenom: string | null;
         tel: string;
         tel_secondaire?: string;
         adresse: string;
@@ -41,14 +43,14 @@ const props = defineProps<{
     };
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [
+const breadcrumbs = computed<BreadcrumbItem[]>(() => [
     { title: 'Tableau de bord', href: dashboard() },
     { title: 'Clients', href: '/clients' },
-    { title: `${props.client.prenom} ${props.client.nom}`.trim(), href: `/clients/${props.client.id}` },
-];
+    { title: clientNomComplet(props.client), href: `/clients/${props.client.id}` },
+]);
 
 function nomComplet() {
-    return `${props.client.prenom} ${props.client.nom}`.trim();
+    return clientNomComplet(props.client);
 }
 </script>
 

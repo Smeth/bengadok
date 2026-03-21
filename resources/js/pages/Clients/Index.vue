@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
+import { clientNomComplet } from '@/lib/clientDisplayName';
 
 type Client = {
     id: number;
-    nom: string;
-    prenom: string;
+    nom: string | null;
+    prenom: string | null;
     tel: string;
     adresse: string;
     zone?: string;
@@ -43,7 +44,7 @@ function filtrer(key: string, value: string) {
 }
 
 function nomComplet(c: Client) {
-    return `${c.prenom} ${c.nom}`.trim();
+    return clientNomComplet(c);
 }
 </script>
 

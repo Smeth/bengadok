@@ -1,0 +1,11 @@
+/**
+ * Libellé client « prénom nom » sans afficher la chaîne "null"
+ * quand l’API envoie null pour nom / prénom (JSON).
+ */
+export function clientNomComplet(c: { nom?: string | null; prenom?: string | null }): string {
+    const p = (c.prenom ?? '').trim();
+    const n = (c.nom ?? '').trim();
+    if (!p && !n) return '-';
+    if (p === n) return p;
+    return [p, n].filter(Boolean).join(' ');
+}

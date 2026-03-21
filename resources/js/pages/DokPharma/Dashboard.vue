@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight, MoreVertical, TrendingDown, TrendingUp } from 'lucide-vue-next';
 import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
 
@@ -15,12 +15,50 @@ type StatCard = {
 type PointChart = { label: string; valeur: number };
 type MeilleurVente = { id: number; designation: string; ca: number };
 
-const props = defineProps<{
-    stats: StatCard;
-    revenusParJour: PointChart[];
-    volumeParJour: PointChart[];
-    meilleursVentes: MeilleurVente[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        stats: StatCard;
+        revenusParJour: PointChart[];
+        volumeParJour: PointChart[];
+        meilleursVentes: MeilleurVente[];
+        period?: 'week' | 'month';
+        chart_offset?: number;
+    }>(),
+    {
+        period: 'month',
+        chart_offset: 0,
+    },
+);
+
+const comparisonLabel = computed(() =>
+    props.period === 'week' ? 'vs semaine précédente' : 'vs période comparable (mois préc.)',
+);
+
+const periodSelectValue = computed({
+    get: () => props.period,
+    set: (v: string) => {
+        if (v !== 'week' && v !== 'month') {
+            return;
+        }
+        router.get(
+            '/dok-pharma',
+            { period: v, chart_offset: 0 },
+            { preserveScroll: true, only: ['stats', 'revenusParJour', 'volumeParJour', 'meilleursVentes', 'period', 'chart_offset'] },
+        );
+    },
+});
+
+function navigateChart(delta: number): void {
+    const next = props.chart_offset + delta;
+    if (next > 0) {
+        return;
+    }
+    router.get(
+        '/dok-pharma',
+        { period: props.period, chart_offset: next },
+        { preserveScroll: true, only: ['stats', 'revenusParJour', 'volumeParJour', 'meilleursVentes', 'period', 'chart_offset'] },
+    );
+}
 
 const maxRevenuRaw = Math.max(1, ...props.revenusParJour.map((p) => p.valeur));
 /** Plafond d’échelle « nice » pour barres + axe Y cohérents */
@@ -65,7 +103,7 @@ function formatAxisK(n: number): string {
                         </p>
                         <!-- Mobile / tablette : aperçu compact -->
                         <div
-                            class="flex items-end justify-center gap-2 px-4 pb-6 pt-1 sm:gap-4 lg:hidden"
+                            class="pointer-events-none flex items-end justify-center gap-2 px-4 pb-6 pt-1 sm:gap-4 lg:hidden"
                             aria-hidden="true"
                         >
                             <img
@@ -127,7 +165,7 @@ function formatAxisK(n: number): string {
                                 <TrendingDown v-else class="size-3.5 shrink-0" />
                                 {{ (stats.pct_revenu ?? 0) >= 0 ? '+' : '' }}{{ stats.pct_revenu ?? 0 }}%
                             </span>
-                            <span class="text-[15px] font-black text-black">Depuis cette semaine</span>
+                            <span class="text-[15px] font-black text-black">{{ comparisonLabel }}</span>
                         </div>
                     </div>
                     <div class="pharmacy-card p-5 sm:p-6">
@@ -149,7 +187,7 @@ function formatAxisK(n: number): string {
                                 <TrendingDown v-else class="size-3.5 shrink-0" />
                                 {{ (stats.pct_commandes ?? 0) >= 0 ? '+' : '' }}{{ stats.pct_commandes ?? 0 }}%
                             </span>
-                            <span class="text-[15px] font-black text-black">Depuis cette semaine</span>
+                            <span class="text-[15px] font-black text-black">{{ comparisonLabel }}</span>
                         </div>
                     </div>
                     <div class="pharmacy-card p-5 sm:p-6">
@@ -171,7 +209,7 @@ function formatAxisK(n: number): string {
                                 <TrendingDown v-else class="size-3.5 shrink-0" />
                                 {{ (stats.pct_clients ?? 0) >= 0 ? '+' : '' }}{{ stats.pct_clients ?? 0 }}%
                             </span>
-                            <span class="text-[15px] font-black text-black">Depuis cette semaine</span>
+                            <span class="text-[15px] font-black text-black">{{ comparisonLabel }}</span>
                         </div>
                     </div>
                 </div>
@@ -182,20 +220,27 @@ function formatAxisK(n: number): string {
                         <h2 class="text-xl font-black text-black sm:text-[30px] sm:leading-none">Analyse des revenus</h2>
                         <div class="flex items-center gap-2">
                             <select
+                                v-model="periodSelectValue"
                                 class="rounded-[13px] border border-black bg-white px-3 py-1.5 text-[15px] font-black text-black focus:outline-none focus:ring-2 focus:ring-[#3995d2]/30"
                             >
-                                <option>Ce mois</option>
-                                <option>Cette semaine</option>
+                                <option value="month">Ce mois</option>
+                                <option value="week">Cette semaine</option>
                             </select>
                             <button
                                 type="button"
-                                class="flex size-[21px] items-center justify-center rounded-full border border-black bg-white"
+                                class="flex size-[21px] items-center justify-center rounded-full border border-black bg-white disabled:opacity-40"
+                                :disabled="chart_offset <= -52"
+                                aria-label="Période précédente"
+                                @click="navigateChart(-1)"
                             >
                                 <ChevronLeft class="size-3" />
                             </button>
                             <button
                                 type="button"
-                                class="flex size-[21px] items-center justify-center rounded-full border border-black bg-white"
+                                class="flex size-[21px] items-center justify-center rounded-full border border-black bg-white disabled:opacity-40"
+                                :disabled="chart_offset >= 0"
+                                aria-label="Période suivante"
+                                @click="navigateChart(1)"
                             >
                                 <ChevronRight class="size-3" />
                             </button>
@@ -223,7 +268,7 @@ function formatAxisK(n: number): string {
                                 </div>
                             </template>
                             <p v-if="!revenusParJour.length" class="w-full py-12 text-center text-sm text-black/60">
-                                Aucune donnée ce mois
+                                Aucune donnée sur cette période
                             </p>
                         </div>
                     </div>
@@ -235,10 +280,11 @@ function formatAxisK(n: number): string {
                         <div class="mb-5 flex flex-wrap items-center justify-between gap-2">
                             <h2 class="text-xl font-black text-black sm:text-2xl">Volume de commandes</h2>
                             <select
+                                v-model="periodSelectValue"
                                 class="rounded-[13px] border border-black bg-white px-3 py-1.5 text-xs font-black focus:outline-none focus:ring-2 focus:ring-[#3995d2]/30"
                             >
-                                <option>Cette semaine</option>
-                                <option>Ce mois</option>
+                                <option value="week">Cette semaine</option>
+                                <option value="month">Ce mois</option>
                             </select>
                         </div>
                         <div class="flex min-h-[160px] items-end justify-between gap-1 overflow-x-auto pb-2 sm:gap-2">
@@ -259,7 +305,7 @@ function formatAxisK(n: number): string {
                                 </div>
                             </template>
                             <p v-if="!volumeParJour.length" class="w-full py-8 text-center text-sm text-black/60">
-                                Aucune donnée cette semaine
+                                Aucune donnée sur cette période
                             </p>
                         </div>
                     </div>
@@ -268,10 +314,11 @@ function formatAxisK(n: number): string {
                         <div class="mb-5 flex flex-wrap items-center justify-between gap-2">
                             <h2 class="text-xl font-black text-black sm:text-2xl">Meilleures ventes</h2>
                             <select
+                                v-model="periodSelectValue"
                                 class="rounded-[13px] border border-black bg-white px-3 py-1.5 text-xs font-black focus:outline-none focus:ring-2 focus:ring-[#3995d2]/30"
                             >
-                                <option>Ce mois</option>
-                                <option>Cette semaine</option>
+                                <option value="month">Ce mois</option>
+                                <option value="week">Cette semaine</option>
                             </select>
                         </div>
                         <div class="flex min-h-[200px] items-end justify-around gap-3 pb-2">
@@ -299,7 +346,7 @@ function formatAxisK(n: number): string {
                                 </div>
                             </template>
                             <p v-if="!meilleursVentes.length" class="w-full py-10 text-center text-sm text-black/60">
-                                Aucune vente ce mois
+                                Aucune vente sur cette période
                             </p>
                         </div>
                     </div>

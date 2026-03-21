@@ -80,11 +80,15 @@ class MedicamentController extends Controller
                 'prix_min' => (float) $prixMin,
                 'prix_max' => (float) $prixMax,
                 'classement' => $rankingMap[$p->id] ?? null,
-                'pharmacies' => $p->pharmacies->map(fn ($ph) => [
-                    'id' => $ph->id,
-                    'designation' => $ph->designation,
-                    'prix' => $ph->pivot->prix ?? $p->pu,
-                ]),
+                'pharmacies' => $p->pharmacies
+                    ->sortByDesc(fn ($ph) => $ph->pivot->updated_at?->getTimestamp() ?? 0)
+                    ->take(2)
+                    ->values()
+                    ->map(fn ($ph) => [
+                        'id' => $ph->id,
+                        'designation' => $ph->designation,
+                        'prix' => $ph->pivot->prix ?? $p->pu,
+                    ]),
             ];
         });
 
@@ -128,6 +132,7 @@ class MedicamentController extends Controller
 
         $comparaison = $produit->pharmacies->map(function ($ph) use ($produit, $prixMin, $prixMax) {
             $prix = (float) ($ph->pivot->prix ?? $produit->pu);
+
             return [
                 'id' => $ph->id,
                 'designation' => $ph->designation,

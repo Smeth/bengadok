@@ -11,16 +11,43 @@ const props = defineProps<{
 }>();
 
 const MIN_DISPLAY_MS = 1500;
+/** Si la visite Inertia ne se termine pas (réseau, 419, bug client), forcer une navigation complète */
+const HARD_NAV_FALLBACK_MS = 8000;
 const navigated = ref(false);
+
+function safeRedirectUrl(): string {
+    const u = props.redirectTo;
+    return typeof u === 'string' && u.startsWith('/') && !u.startsWith('//') ? u : '/dashboard';
+}
 
 onMounted(() => {
     const started = Date.now();
+    const target = safeRedirectUrl();
     const go = () => {
         if (navigated.value) return;
         navigated.value = true;
-        router.visit(props.redirectTo, {
+        let hardNavTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+            hardNavTimer = null;
+            window.location.assign(target);
+        }, HARD_NAV_FALLBACK_MS);
+
+        const clearHardNav = () => {
+            if (hardNavTimer !== null) {
+                clearTimeout(hardNavTimer);
+                hardNavTimer = null;
+            }
+        };
+
+        router.visit(target, {
             replace: true,
             preserveScroll: false,
+            onFinish: () => {
+                clearHardNav();
+            },
+            onError: () => {
+                clearHardNav();
+                window.location.assign(target);
+            },
         });
     };
     const elapsed = () => Date.now() - started;

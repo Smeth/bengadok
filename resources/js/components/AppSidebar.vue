@@ -156,9 +156,11 @@ function logout() {
                 </Link>
             </div>
 
-            <!-- Illustration sidebar Figma : docteur + blob bleu + 4 icônes flottantes -->
-            <div class="group-data-[collapsible=icon]:hidden mt-auto pt-4 flex items-end justify-center min-h-[200px]">
-                <div class="relative w-full max-w-[220px] h-[200px] mx-auto">
+            <!-- Illustration sidebar Figma : docteur + blob bleu + 4 icônes flottantes (pointer-events-none : évite de capter les clics sur le contenu principal) -->
+            <div
+                class="pointer-events-none group-data-[collapsible=icon]:hidden mt-auto flex min-h-[200px] items-end justify-center pt-4"
+            >
+                <div class="relative mx-auto h-[200px] w-full max-w-[220px]">
                     <!-- Blob bleu arrière-plan (2 formes superposées) -->
                     <div class="absolute flex items-center justify-center left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[140px] h-[120px]">
                         <div class="absolute w-[110px] h-[95px] rounded-[20px] bg-[#3995d2] shadow-[0_4px_4px_rgba(0,0,0,0.25)] rotate-[25deg]" />
@@ -218,5 +220,4 @@ function logout() {
             </div>
         </SidebarFooter>
     </Sidebar>
-    <slot />
 </template>

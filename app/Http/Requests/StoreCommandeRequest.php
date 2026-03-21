@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Commande;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreCommandeRequest extends FormRequest
@@ -32,7 +34,7 @@ class StoreCommandeRequest extends FormRequest
             $decoded = json_decode($clientNouveau, true);
             $clientNouveau = is_array($decoded) ? $decoded : null;
         }
-        if (is_array($clientNouveau) && !$this->has('client_id')) {
+        if (is_array($clientNouveau) && ! $this->has('client_id')) {
             $this->merge([
                 'client_nom' => $clientNouveau['nom'] ?? '',
                 'client_prenom' => $clientNouveau['prenom'] ?? null,
@@ -49,6 +51,61 @@ class StoreCommandeRequest extends FormRequest
             $decoded = json_decode($produits, true);
             $this->merge(['produits' => is_array($decoded) ? $decoded : []]);
         }
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($this->file('ordonnance')) {
+                return;
+            }
+            $raw = $this->input('reutiliser_ordonnance_commande_id');
+            if ($raw === null || $raw === '') {
+                return;
+            }
+
+            $source = Commande::query()->with('client')->find((int) $raw);
+            if (! $source) {
+                $validator->errors()->add('reutiliser_ordonnance_commande_id', 'Commande source introuvable.');
+
+                return;
+            }
+            if (! $this->user()?->can('view', $source)) {
+                $validator->errors()->add('reutiliser_ordonnance_commande_id', 'Accès refusé à cette commande.');
+
+                return;
+            }
+            if ($source->status !== 'annulee') {
+                $validator->errors()->add('reutiliser_ordonnance_commande_id', 'Seules les commandes annulées peuvent servir de source pour réutiliser une ordonnance.');
+
+                return;
+            }
+            if (! $source->ordonnance_id) {
+                $validator->errors()->add('reutiliser_ordonnance_commande_id', 'Cette commande n’a pas d’ordonnance enregistrée.');
+
+                return;
+            }
+
+            $reqClientId = $this->input('client_id');
+            if ($reqClientId) {
+                if ((int) $reqClientId !== (int) $source->client_id) {
+                    $validator->errors()->add('reutiliser_ordonnance_commande_id', 'Le client ne correspond pas à la commande source.');
+                }
+
+                return;
+            }
+
+            $a = $this->normalizeTelDigits($this->input('client_tel'));
+            $b = $this->normalizeTelDigits($source->client?->tel);
+            if ($a === '' || $a !== $b) {
+                $validator->errors()->add('reutiliser_ordonnance_commande_id', 'Le téléphone doit correspondre au client de la commande source.');
+            }
+        });
+    }
+
+    private function normalizeTelDigits(?string $tel): string
+    {
+        return (string) preg_replace('/\D+/', '', (string) ($tel ?? ''));
     }
 
     public function rules(): array
@@ -68,6 +125,7 @@ class StoreCommandeRequest extends FormRequest
             'produits.*.quantite' => 'required|integer|min:1',
             'produits.*.prix_unitaire' => 'required|numeric|min:0',
             'ordonnance' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
+            'reutiliser_ordonnance_commande_id' => 'nullable|integer|exists:commandes,id',
             'mode_paiement_id' => 'nullable|exists:modes_paiement,id',
             'montant_livraison_id' => 'nullable|exists:montants_livraison,id',
             'livreur_id' => 'nullable|exists:livreurs,id',
@@ -85,6 +143,7 @@ class StoreCommandeRequest extends FormRequest
             $decoded = json_decode($data['produits'], true);
             $data['produits'] = is_array($decoded) ? $decoded : [];
         }
+
         return $data;
     }
 }

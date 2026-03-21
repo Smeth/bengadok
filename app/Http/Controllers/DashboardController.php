@@ -17,25 +17,43 @@ class DashboardController extends Controller
         $pharmacieId = $user->pharmacie_id;
 
         $period = $request->get('period', 'month');
-        $chartStart = $period === 'week'
-            ? now()->startOfWeek()
-            : now()->startOfMonth();
+        if (! in_array($period, ['week', 'month'], true)) {
+            $period = 'month';
+        }
+
+        $now = now();
+        if ($period === 'week') {
+            $currentStart = $now->copy()->startOfWeek();
+            $currentEnd = $now->copy()->endOfDay();
+            $nDays = (int) $currentStart->diffInDays($currentEnd);
+            $prevStart = $currentStart->copy()->subWeek();
+            $prevEnd = $prevStart->copy()->addDays($nDays)->endOfDay();
+        } else {
+            $currentStart = $now->copy()->startOfMonth();
+            $currentEnd = $now->copy()->endOfDay();
+            $dayCount = (int) $currentStart->diffInDays($currentEnd) + 1;
+            $prevStart = $now->copy()->subMonth()->startOfMonth();
+            $prevEnd = $prevStart->copy()->addDays($dayCount - 1)->endOfDay();
+            $maxPrev = $now->copy()->subMonth()->endOfMonth();
+            if ($prevEnd->gt($maxPrev)) {
+                $prevEnd = $maxPrev;
+            }
+        }
+
+        $chartStart = $currentStart;
 
         $baseQuery = Commande::query();
         if ($pharmacieId) {
             $baseQuery->where('pharmacie_id', $pharmacieId);
         }
 
-        $depuisSemaine = now()->startOfWeek();
-        $semainePrecedente = now()->subWeek()->startOfWeek();
-
         $revenuTotal = (clone $baseQuery)
-            ->where('date', '>=', $depuisSemaine)
+            ->whereBetween('date', [$currentStart, $currentEnd])
             ->whereIn('status', ['validee', 'retiree'])
             ->sum('prix_total');
 
         $revenuSemainePrec = (clone $baseQuery)
-            ->whereBetween('date', [$semainePrecedente, $depuisSemaine->copy()->subDay()->endOfDay()])
+            ->whereBetween('date', [$prevStart, $prevEnd])
             ->whereIn('status', ['validee', 'retiree'])
             ->sum('prix_total');
 
@@ -46,7 +64,7 @@ class DashboardController extends Controller
         $nbPharmaciesPrec = $pharmacieId
             ? 1
             : (int) Commande::query()
-                ->whereBetween('date', [$semainePrecedente, $depuisSemaine->copy()->subDay()->endOfDay()])
+                ->whereBetween('date', [$prevStart, $prevEnd])
                 ->whereIn('status', ['validee', 'retiree'])
                 ->selectRaw('COUNT(DISTINCT pharmacie_id) as aggregate')
                 ->value('aggregate');
@@ -54,26 +72,26 @@ class DashboardController extends Controller
         $nbPharmaciesActives = $pharmacieId
             ? 1
             : (int) (clone $baseQuery)
-                ->where('date', '>=', $depuisSemaine)
+                ->whereBetween('date', [$currentStart, $currentEnd])
                 ->whereIn('status', ['validee', 'retiree'])
                 ->distinct('pharmacie_id')
                 ->count('pharmacie_id');
 
         $nbCommandes = (clone $baseQuery)
-            ->where('date', '>=', $depuisSemaine)
+            ->whereBetween('date', [$currentStart, $currentEnd])
             ->count();
 
         $nbCommandesPrec = (clone $baseQuery)
-            ->whereBetween('date', [$semainePrecedente, $depuisSemaine->copy()->subDay()->endOfDay()])
+            ->whereBetween('date', [$prevStart, $prevEnd])
             ->count();
 
         $nbClients = (int) (clone $baseQuery)
-            ->where('date', '>=', $depuisSemaine)
+            ->whereBetween('date', [$currentStart, $currentEnd])
             ->selectRaw('COUNT(DISTINCT client_id) as aggregate')
             ->value('aggregate');
 
         $nbClientsPrec = (int) (clone $baseQuery)
-            ->whereBetween('date', [$semainePrecedente, $depuisSemaine->copy()->subDay()->endOfDay()])
+            ->whereBetween('date', [$prevStart, $prevEnd])
             ->selectRaw('COUNT(DISTINCT client_id) as aggregate')
             ->value('aggregate');
 
@@ -125,10 +143,8 @@ class DashboardController extends Controller
         $revenusParJour = [];
 
         if ($pharmacieId) {
-            $jourDebut = $period === 'week'
-                ? now()->copy()->startOfWeek()
-                : now()->copy()->startOfMonth();
-            $jourFin = now()->copy()->endOfDay();
+            $jourDebut = $currentStart->copy();
+            $jourFin = $currentEnd->copy();
             $nbJours = (int) $jourDebut->diffInDays($jourFin) + 1;
             $nbJours = min($nbJours, $period === 'week' ? 7 : 31);
 

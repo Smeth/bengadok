@@ -36,6 +36,9 @@ const pharmacie = computed(() => page.props.auth?.user?.pharmacie);
 const user = computed(() => page.props.auth?.user);
 const userEmail = computed(() => page.props.auth?.user?.email ?? '');
 
+/** Même fond que l’admin sur /settings (AppSidebarLayout sans dégradé dashboard). */
+const isSettingsRoute = computed(() => page.url.startsWith('/settings'));
+
 interface NotificationItem {
     id: number;
     numero: string;
@@ -268,7 +271,10 @@ function logout() {
 
         <!-- Dégradé sur toute la colonne (header + contenu), comme Figma — pas seulement sous le slot -->
         <main
-            class="pharmacy-main-gradient flex min-h-0 flex-1 flex-col overflow-x-clip overflow-y-auto transition-[margin] duration-200 ease-out sm:overflow-x-visible"
+            :class="[
+                'flex min-h-0 flex-1 flex-col overflow-x-clip overflow-y-auto transition-[margin] duration-200 ease-out sm:overflow-x-visible',
+                isSettingsRoute ? 'relative isolate bg-background' : 'pharmacy-main-gradient',
+            ]"
             :style="{ marginLeft: `${asideWidthPx}px` }"
         >
             <header

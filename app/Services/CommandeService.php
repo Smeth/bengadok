@@ -19,10 +19,10 @@ class CommandeService
     {
         return DB::transaction(function () use ($data, $ordonnance) {
             $client = $this->resolveClient($data);
-            $ordonnanceId = $this->storeOrdonnance($ordonnance);
+            $ordonnanceId = $this->resolveOrdonnanceId($data, $ordonnance);
 
             $commande = Commande::create([
-                'numero' => 'BDK' . now()->format('ymdHis') . rand(100, 999),
+                'numero' => 'BDK'.now()->format('ymdHis').rand(100, 999),
                 'client_id' => $client->id,
                 'pharmacie_id' => $data['pharmacie_id'],
                 'ordonnance_id' => $ordonnanceId,
@@ -46,7 +46,7 @@ class CommandeService
 
     private function resolveClient(array $data): Client
     {
-        if (!empty($data['client_id'])) {
+        if (! empty($data['client_id'])) {
             $client = Client::findOrFail($data['client_id']);
             if (isset($data['client_nom'])) {
                 $client->update([
@@ -56,6 +56,7 @@ class CommandeService
                     'adresse' => $data['client_adresse'],
                 ]);
             }
+
             return $client;
         }
 
@@ -72,19 +73,37 @@ class CommandeService
         return $value !== null && trim($value) !== '' ? trim($value) : null;
     }
 
+    private function resolveOrdonnanceId(array $data, ?UploadedFile $file): ?int
+    {
+        $fromUpload = $this->storeOrdonnance($file);
+        if ($fromUpload !== null) {
+            return $fromUpload;
+        }
+
+        $reuseCommandeId = $data['reutiliser_ordonnance_commande_id'] ?? null;
+        if ($reuseCommandeId === null || $reuseCommandeId === '') {
+            return null;
+        }
+
+        $source = Commande::query()->find((int) $reuseCommandeId);
+
+        return $source?->ordonnance_id;
+    }
+
     private function storeOrdonnance(?UploadedFile $file): ?int
     {
-        if (!$file) {
+        if (! $file) {
             return null;
         }
         $ext = $file->getClientOriginalExtension();
-        $path = $file->storeAs('ordonnances/' . now()->format('Y-m'), uniqid() . '.' . $ext, 'public');
+        $path = $file->storeAs('ordonnances/'.now()->format('Y-m'), uniqid().'.'.$ext, 'public');
         $ordonnance = Ordonnance::create(['urlfile' => $path]);
+
         return $ordonnance->id;
     }
 
     /**
-     * @param array<int, array{designation: string, dosage?: string, forme?: string, quantite: int, prix_unitaire: float}> $produits
+     * @param  array<int, array{designation: string, dosage?: string, forme?: string, quantite: int, prix_unitaire: float}>  $produits
      */
     private function attachProduits(Commande $commande, array $produits): float
     {
@@ -111,6 +130,7 @@ class CommandeService
             ]);
             $prixTotal += $prixUnitaire * $quantite;
         }
+
         return $prixTotal;
     }
 }

@@ -474,6 +474,9 @@ function submitRelancerFromModal(payload: import('@/components/CommandeEnregistr
             onError: (e) => { errorsRelancer.value = parseValidationErrors(e); },
         });
     } else {
+        if (payload.reutiliser_ordonnance_commande_id) {
+            data.reutiliser_ordonnance_commande_id = payload.reutiliser_ordonnance_commande_id;
+        }
         router.post('/commandes', data, {
             preserveScroll: true,
             onSuccess: () => {

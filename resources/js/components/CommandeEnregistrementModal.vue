@@ -50,9 +50,12 @@ export type FormEnregPayload = {
     mode_paiement_id: string;
     commentaire: string;
     client_id?: number;
+    /** Relance sans nouveau fichier : réutiliser l’ordonnance de cette commande annulée */
+    reutiliser_ordonnance_commande_id?: number;
 };
 
 export type CommandeRelance = {
+    id?: number;
     client?: { id?: number; nom?: string; prenom?: string; tel?: string; adresse?: string };
     pharmacie?: { id?: number; zone_id?: number; zone?: { id: number } };
     produits?: Array<{ designation?: string; dosage?: string; pivot: { quantite: number; prix_unitaire: number } }>;
@@ -278,6 +281,14 @@ function onSubmit() {
     };
     if (props.mode === 'relance' && props.commande?.client?.id) {
         payload.client_id = props.commande.client.id;
+    }
+    if (
+        props.mode === 'relance'
+        && props.commande?.id
+        && !form.value.ordonnance
+        && ordonnanceUrlExistante.value
+    ) {
+        payload.reutiliser_ordonnance_commande_id = props.commande.id;
     }
     emit('submit', payload);
 }

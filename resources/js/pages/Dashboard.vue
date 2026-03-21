@@ -40,6 +40,10 @@ const props = defineProps<{
 
 const period = computed(() => props.period ?? 'month');
 
+const kpiEvolutionHint = computed(() =>
+    period.value === 'week' ? 'vs semaine précédente' : 'vs mois précédent',
+);
+
 function setPeriod(p: string) {
     periodDropdownOpen.value = false;
     router.get(dashboard(), { period: p }, { preserveState: true });
@@ -234,7 +238,7 @@ function getPiePath(
                             <ArrowDownRight v-else class="size-3" />
                             {{ Math.abs(kpis.evolutionRevenu) }}%
                         </span>
-                        <span class="text-[#5c5959]">Depuis cette semaine</span>
+                        <span class="text-[#5c5959]">{{ kpiEvolutionHint }}</span>
                     </div>
                 </div>
 
@@ -250,7 +254,7 @@ function getPiePath(
                             <ArrowDownRight v-else class="size-3" />
                             {{ Math.abs(kpis.evolutionPharmacies) }}%
                         </span>
-                        <span class="text-[#5c5959]">Depuis cette semaine</span>
+                        <span class="text-[#5c5959]">{{ kpiEvolutionHint }}</span>
                     </div>
                 </div>
 
@@ -266,7 +270,7 @@ function getPiePath(
                             <ArrowDownRight v-else class="size-3" />
                             {{ Math.abs(kpis.evolutionCommandes) }}%
                         </span>
-                        <span class="text-[#5c5959]">Depuis cette semaine</span>
+                        <span class="text-[#5c5959]">{{ kpiEvolutionHint }}</span>
                     </div>
                 </div>
 
@@ -281,7 +285,7 @@ function getPiePath(
                             <ArrowDownRight v-else class="size-3" />
                             {{ Math.abs(kpis.evolutionClients) }}%
                         </span>
-                        <span class="text-[#5c5959]">Depuis cette semaine</span>
+                        <span class="text-[#5c5959]">{{ kpiEvolutionHint }}</span>
                     </div>
                 </div>
             </div>
@@ -300,7 +304,7 @@ function getPiePath(
                             <ArrowDownRight v-else class="size-3" />
                             {{ Math.abs(kpis.evolutionRevenu) }}%
                         </span>
-                        <span class="text-gray-800">Depuis cette semaine</span>
+                        <span class="text-gray-800">{{ kpiEvolutionHint }}</span>
                     </div>
                 </div>
 
@@ -316,7 +320,7 @@ function getPiePath(
                             <ArrowDownRight v-else class="size-3" />
                             {{ Math.abs(kpis.evolutionCommandes) }}%
                         </span>
-                        <span class="text-gray-800">Depuis cette semaine</span>
+                        <span class="text-gray-800">{{ kpiEvolutionHint }}</span>
                     </div>
                 </div>
 
@@ -332,7 +336,7 @@ function getPiePath(
                             <ArrowDownRight v-else class="size-3" />
                             {{ Math.abs(kpis.evolutionClients) }}%
                         </span>
-                        <span class="text-gray-800">Depuis cette semaine</span>
+                        <span class="text-gray-800">{{ kpiEvolutionHint }}</span>
                     </div>
                 </div>
             </div>
