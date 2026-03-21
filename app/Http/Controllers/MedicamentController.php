@@ -39,12 +39,20 @@ class MedicamentController extends Controller
 
         match ($tri) {
             'prix' => $query->orderBy('pu'),
+            'ventes' => $query->orderByRaw('(SELECT COALESCE(SUM(cp.quantite), 0) FROM commande_produit cp WHERE cp.produit_id = produits.id) DESC'),
             'designation' => $query->orderBy('designation'),
             default => $query->orderBy('designation'),
         };
 
-        $rawProduits = $query->get();
-        $produitsList = $rawProduits->map(function ($p) {
+        $rankingMap = collect(DB::table('commande_produit')
+            ->select('produit_id', DB::raw('SUM(quantite) as total'))
+            ->groupBy('produit_id')
+            ->orderByDesc('total')
+            ->pluck('produit_id'))
+            ->flip()
+            ->map(fn ($i) => $i + 1);
+
+        $produits = $query->paginate(15)->withQueryString()->through(function ($p) use ($rankingMap) {
             $prixPharmacy = $p->pharmacies->map(fn ($ph) => (float) ($ph->pivot->prix ?? $p->pu))->filter(fn ($v) => $v > 0)->values();
             $prixMin = $prixPharmacy->isEmpty() ? (float) $p->pu : $prixPharmacy->min();
             $prixMax = $prixPharmacy->isEmpty() ? (float) $p->pu : $prixPharmacy->max();
@@ -71,6 +79,7 @@ class MedicamentController extends Controller
                 'prix_moyen' => $prixMoyen,
                 'prix_min' => (float) $prixMin,
                 'prix_max' => (float) $prixMax,
+                'classement' => $rankingMap[$p->id] ?? null,
                 'pharmacies' => $p->pharmacies->map(fn ($ph) => [
                     'id' => $ph->id,
                     'designation' => $ph->designation,
@@ -78,21 +87,6 @@ class MedicamentController extends Controller
                 ]),
             ];
         });
-
-        $produitsAvecVentes = $produitsList->filter(fn ($p) => $p['ventes'] > 0)->sortByDesc('ventes')->values();
-        $ranking = [];
-        $produitsAvecVentes->each(function ($p, $i) use (&$ranking) {
-            $ranking[$p['id']] = $i + 1;
-        });
-
-        $produits = $produitsList->map(function ($p) use ($ranking) {
-            $p['classement'] = $ranking[$p['id']] ?? null;
-            return $p;
-        });
-
-        if ($tri === 'ventes') {
-            $produits = collect($produits)->sortByDesc('ventes')->values();
-        }
 
         $pharmacies = Pharmacie::orderBy('designation')->get(['id', 'designation']);
 

@@ -26,7 +26,7 @@ class PharmacieController extends Controller
                 ->orWhere('adresse', 'like', "%{$search}%")
                 ->orWhere('telephone', 'like', "%{$search}%"));
 
-        $pharmacies = $query->get()->map(function ($p) {
+        $pharmacies = $query->paginate(8)->withQueryString()->through(function ($p) {
             $lat = $p->latitude ?? ($p->zone?->latitude ? (float) $p->zone->latitude + ($p->id * 0.001) : -4.2694 + ($p->id % 6) * 0.01);
             $lng = $p->longitude ?? ($p->zone?->longitude ? (float) $p->zone->longitude + ($p->id * 0.0005) : 15.2712 + ($p->id % 6) * 0.01);
 
@@ -51,8 +51,28 @@ class PharmacieController extends Controller
         $nbDeGarde = Pharmacie::where('de_garde', true)->count();
         $nbTotal = Pharmacie::count();
 
+        $pharmaciesForMap = Pharmacie::with(['typePharmacie', 'zone'])
+            ->when($search, fn ($q) => $q->where('designation', 'like', "%{$search}%")
+                ->orWhere('adresse', 'like', "%{$search}%")
+                ->orWhere('telephone', 'like', "%{$search}%"))
+            ->get()
+            ->map(function ($p) {
+                $lat = $p->latitude ?? ($p->zone?->latitude ? (float) $p->zone->latitude + ($p->id * 0.001) : -4.2694 + ($p->id % 6) * 0.01);
+                $lng = $p->longitude ?? ($p->zone?->longitude ? (float) $p->zone->longitude + ($p->id * 0.0005) : 15.2712 + ($p->id % 6) * 0.01);
+                return [
+                    'id' => $p->id,
+                    'designation' => $p->designation,
+                    'adresse' => $p->adresse,
+                    'latitude' => $lat,
+                    'longitude' => $lng,
+                    'de_garde' => $p->de_garde,
+                    'type_pharmacie' => $p->typePharmacie,
+                ];
+            });
+
         return Inertia::render('Pharmacies/Index', [
             'pharmacies' => $pharmacies,
+            'pharmaciesForMap' => $pharmaciesForMap,
             'filters' => ['search' => $search],
             'stats' => [
                 'de_garde' => $nbDeGarde,

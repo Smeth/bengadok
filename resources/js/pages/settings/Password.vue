@@ -5,7 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import AppLayout from '@/layouts/AppLayout.vue';
+import SettingsPageShell from '@/components/settings/SettingsPageShell.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import type { BreadcrumbItem } from '@/types';
 import PasswordController from '@/actions/App/Http/Controllers/Settings/PasswordController';
@@ -20,7 +20,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 </script>
 
 <template>
-    <AppLayout :breadcrumbs="breadcrumbItems">
+    <SettingsPageShell :breadcrumbs="breadcrumbItems">
         <Head title="Paramètres du mot de passe" />
 
         <h1 class="sr-only">Paramètres du mot de passe</h1>
@@ -112,5 +112,5 @@ const breadcrumbItems: BreadcrumbItem[] = [
                 </Form>
             </div>
         </SettingsLayout>
-    </AppLayout>
+    </SettingsPageShell>
 </template>

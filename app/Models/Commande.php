@@ -5,14 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Commande extends Model
 {
     protected $fillable = [
-        'numero', 'client_id', 'pharmacie_id', 'pharmacie_refusee_id', 'ordonnance_id',
+        'numero', 'client_id', 'pharmacie_id', 'parent_id', 'pharmacie_refusee_id', 'ordonnance_id',
         'mode_paiement_id', 'livreur_id', 'montant_livraison_id',
         'date', 'heurs', 'commentaire', 'prix_total',
-        'beneficiaire', 'designation', 'status', 'acceptation_client', 'motif_annulation',
+        'beneficiaire', 'designation', 'status', 'status_pharmacie', 'acceptation_client', 'motif_annulation', 'note_annulation',
     ];
 
     public const MOTIFS_ANNULATION = [
@@ -20,6 +21,9 @@ class Commande extends Model
         'demande_patient' => 'Demande du patient',
         'erreur_commande' => 'Erreur de commandes',
         'probleme_paiement' => 'Problème de paiement',
+        'pharmacie_fermee' => 'Pharmacie fermée',
+        'probleme_livraison' => 'Problème de livraison',
+        'autre_motif' => 'Autre motif',
     ];
 
     protected $casts = [
@@ -28,16 +32,23 @@ class Commande extends Model
         'acceptation_client' => 'boolean',
     ];
 
+    // Statuts côté administrateurs
     public const STATUSES = [
-        'nouvelle' => 'Nouvelle',
+        'nouvelle'   => 'Nouvelle',
         'en_attente' => 'En attente',
-        'validee' => 'Validée',
-        'partiellement_validee' => 'Partiellement validée',
-        'indisponible_pharmacie' => 'Indisponible (pharmacie)',
-        'a_preparer' => 'À préparer',
-        'retiree' => 'Retirée',
-        'livree' => 'Livrée',
-        'annulee' => 'Annulée',
+        'validee'    => 'Validée',
+        'retiree'    => 'Livrée',
+        'annulee'    => 'Annulée',
+    ];
+
+    // Statuts côté pharmacie
+    public const STATUSES_PHARMACIE = [
+        'nouvelle'              => 'Nouvelle commande',
+        'attente_confirmation'  => 'Attente de confirmation',
+        'indisponible'          => 'Indisponible',
+        'valide_a_preparer'     => 'Validé - À préparer',
+        'livre'                 => 'Retirée',
+        'annulee'               => 'Annulée',
     ];
 
     public function client(): BelongsTo
@@ -53,6 +64,16 @@ class Commande extends Model
     public function pharmacieRefusee(): BelongsTo
     {
         return $this->belongsTo(Pharmacie::class, 'pharmacie_refusee_id');
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Commande::class, 'parent_id');
+    }
+
+    public function enfants(): HasMany
+    {
+        return $this->hasMany(Commande::class, 'parent_id');
     }
 
     public function ordonnance(): BelongsTo

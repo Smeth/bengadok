@@ -49,7 +49,7 @@ const showPassword = ref(false);
                     :tabindex="1"
                     autocomplete="username"
                     placeholder="Ex: centrale_gerant_misgs233"
-                    class="login-input rounded-lg border border-[#d1d5db] bg-white placeholder:italic"
+                    class="login-input rounded-lg border border-[#d1d5db] bg-white text-[#333333] placeholder:italic placeholder:text-gray-500"
                 />
                 <InputError :message="errors.email" />
             </div>
@@ -65,7 +65,7 @@ const showPassword = ref(false);
                         :tabindex="2"
                         autocomplete="current-password"
                         placeholder="••••••••"
-                        class="login-input rounded-lg border border-[#d1d5db] bg-white pr-10"
+                        class="login-input rounded-lg border border-[#d1d5db] bg-white pr-10 text-[#333333] placeholder:text-gray-500"
                     />
                     <button
                         type="button"
@@ -125,14 +125,23 @@ const showPassword = ref(false);
 
 <style scoped>
 /* Maquette : champs blancs à fine bordure grise (sans fond jaune autofill) */
+/* Texte toujours sombre pour rester lisible sur fond blanc (mode clair ou sombre) */
 .login-input {
     background-color: #fff !important;
+    color: #1f2937 !important;
+    -webkit-text-fill-color: #1f2937 !important;
+    caret-color: #1f2937 !important;
+}
+.login-input::placeholder {
+    color: #6b7280 !important;
+    -webkit-text-fill-color: #6b7280 !important;
 }
 .login-input:-webkit-autofill,
 .login-input:-webkit-autofill:hover,
 .login-input:-webkit-autofill:focus {
     -webkit-box-shadow: 0 0 0 30px white inset !important;
     box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: #1f2937 !important;
 }
 /* Bouton bleu-vert (teal) comme sur la maquette */
 .login-btn {

@@ -11,12 +11,16 @@ defineProps<{
 </script>
 
 <template>
-    <div class="flex flex-col items-center gap-2">
+    <div
+        class="flex flex-col items-center gap-2 rounded-2xl px-8 py-6"
+        style="background: rgba(255,255,255,0.7); box-shadow: 0 4px 24px rgba(0,0,0,0.15); backdrop-filter: blur(10px);"
+    >
         <!-- Icône : cercle + croix médicale teal + combiné bleu foncé -->
         <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 80 80"
-            class="size-16 shrink-0 md:size-20"
+            class="size-16 shrink-0 md:size-20 drop-shadow-md"
+            style="filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15));"
             aria-hidden="true"
         >
             <defs>
@@ -40,12 +44,15 @@ defineProps<{
             <!-- Benga bleu foncé, Dok vert, contour pilule teal -->
             <div
                 class="inline-flex items-center gap-0.5 rounded-full px-4 py-1"
-                style="border: 2px solid #34B0C7;"
+                style="border: 2px solid #2C4685; background: rgba(255,255,255,0.9); box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
             >
                 <span class="text-xl font-semibold tracking-tight text-[#2C4685] md:text-2xl">Benga</span>
                 <span class="text-xl font-semibold tracking-tight text-[#5BB034] md:text-2xl">Dok</span>
             </div>
-            <p class="text-xs text-[#AAAAAA] md:text-sm">
+            <p
+                class="text-xs font-medium md:text-sm"
+                style="color: #2d3748; text-shadow: 0 1px 3px rgba(255,255,255,0.9);"
+            >
                 Votre centre d'appel médical
             </p>
         </template>

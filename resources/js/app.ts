@@ -1,3 +1,4 @@
+import './bootstrap-csrf';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
@@ -19,9 +20,9 @@ createInertiaApp({
             .use(plugin)
             .mount(el);
     },
-    progress: {
-        color: '#4B5563',
-    },
+    // Désactivé : la barre de progression pouvait rester affichée et bloquer
+    // l'interaction avec le formulaire de connexion (champs, bouton).
+    progress: false,
 });
 
 // This will set light / dark mode on page load...

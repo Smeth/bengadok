@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\ParametresController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\ResetController;
@@ -42,4 +43,42 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('settings/reset', ResetController::class)
         ->middleware('role:super_admin')
         ->name('settings.reset.store');
+
+    // ── Paramètres métier ──────────────────────────────────────────────────
+    Route::prefix('settings/parametres')
+        ->name('parametres.')
+        ->middleware('role:admin|super_admin')
+        ->group(function () {
+            Route::get('/', [ParametresController::class, 'index'])->name('index');
+
+            // Zones
+            Route::post('zones', [ParametresController::class, 'storeZone'])->name('zones.store');
+            Route::patch('zones/{zone}', [ParametresController::class, 'updateZone'])->name('zones.update');
+            Route::delete('zones/{zone}', [ParametresController::class, 'destroyZone'])->name('zones.destroy');
+
+            // Modes de paiement
+            Route::post('modes-paiement', [ParametresController::class, 'storeModePaiement'])->name('modes-paiement.store');
+            Route::patch('modes-paiement/{modePaiement}', [ParametresController::class, 'updateModePaiement'])->name('modes-paiement.update');
+            Route::delete('modes-paiement/{modePaiement}', [ParametresController::class, 'destroyModePaiement'])->name('modes-paiement.destroy');
+
+            // Montants de livraison
+            Route::post('montants-livraison', [ParametresController::class, 'storeMontantLivraison'])->name('montants-livraison.store');
+            Route::patch('montants-livraison/{montantLivraison}', [ParametresController::class, 'updateMontantLivraison'])->name('montants-livraison.update');
+            Route::delete('montants-livraison/{montantLivraison}', [ParametresController::class, 'destroyMontantLivraison'])->name('montants-livraison.destroy');
+
+            // Livreurs
+            Route::post('livreurs', [ParametresController::class, 'storeLivreur'])->name('livreurs.store');
+            Route::patch('livreurs/{livreur}', [ParametresController::class, 'updateLivreur'])->name('livreurs.update');
+            Route::delete('livreurs/{livreur}', [ParametresController::class, 'destroyLivreur'])->name('livreurs.destroy');
+
+            // Horaires
+            Route::post('heurs', [ParametresController::class, 'storeHeur'])->name('heurs.store');
+            Route::patch('heurs/{heur}', [ParametresController::class, 'updateHeur'])->name('heurs.update');
+            Route::delete('heurs/{heur}', [ParametresController::class, 'destroyHeur'])->name('heurs.destroy');
+
+            // Types de pharmacie
+            Route::post('types-pharmacie', [ParametresController::class, 'storeTypePharmacie'])->name('types-pharmacie.store');
+            Route::patch('types-pharmacie/{typePharmacie}', [ParametresController::class, 'updateTypePharmacie'])->name('types-pharmacie.update');
+            Route::delete('types-pharmacie/{typePharmacie}', [ParametresController::class, 'destroyTypePharmacie'])->name('types-pharmacie.destroy');
+        });
 });

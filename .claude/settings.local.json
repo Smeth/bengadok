@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:\\\\Users\\\\MONSTER\\\\Documents\\\\WORKSPACE\\\\BENGA-DOC\\\\Dashboard\\\\bengadok\" && php artisan migrate 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\MONSTER\\\\Documents\\\\WORKSPACE\\\\BENGA-DOC\\\\Dashboard\\\\bengadok\" && php artisan tinker --execute=\"echo Commande::count\\(\\) . ' commandes, status_pharmacie column OK';\" 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\MONSTER\\\\Documents\\\\WORKSPACE\\\\BENGA-DOC\\\\Dashboard\\\\bengadok\" && php artisan tinker --execute=\"echo App\\\\Models\\\\Commande::count\\(\\) . ' commandes'; echo ' / status_pharmacie distinct: '; print_r\\(App\\\\Models\\\\Commande::distinct\\(\\)->pluck\\('status_pharmacie'\\)->toArray\\(\\)\\);\" 2>&1)",
+      "Bash(find c:UsersMONSTERDocumentsWORKSPACEBENGA-DOCDashboardbengadokresourcesjslayouts -name *.vue)"
+    ]
+  }
+}

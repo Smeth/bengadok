@@ -14,7 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+        // XSRF-TOKEN non chiffré : Axios peut l’envoyer en X-XSRF-TOKEN (en plus de X-CSRF-TOKEN côté JS).
+        $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'XSRF-TOKEN']);
 
         $middleware->web(append: [
             HandleAppearance::class,

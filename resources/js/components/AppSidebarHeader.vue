@@ -16,35 +16,24 @@ import { Button } from '@/components/ui/button';
 import type { BreadcrumbItem } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
-import AppLogoIcon from './AppLogoIcon.vue';
+import { useNotificationStream } from '@/composables/useNotificationStream';
 import UserMenuContent from './UserMenuContent.vue';
 import { dashboard } from '@/routes';
 
 withDefaults(
     defineProps<{
         breadcrumbs?: BreadcrumbItem[];
+        variant?: 'default' | 'gradient';
     }>(),
     {
         breadcrumbs: () => [],
+        variant: 'default',
     },
 );
 
-interface NotificationItem {
-    id: number;
-    numero: string;
-    status_label: string;
-    client?: { nom: string; prenom?: string };
-    pharmacie?: { designation: string };
-    url: string;
-    created_at: string;
-}
-
 const page = usePage();
 const user = computed(() => (page.props.auth as { user?: { name: string; roles?: string[] } })?.user);
-const notifications = computed(() => {
-    const n = (page.props as { notifications?: { count: number; items: NotificationItem[] } }).notifications;
-    return n ?? { count: 0, items: [] };
-});
+const { notifications } = useNotificationStream();
 
 const { getInitials } = useInitials();
 const roleLabel = computed(() => {
@@ -75,25 +64,36 @@ const formatDate = (iso?: string) => {
 
 <template>
     <header
-        class="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-sidebar-border/70 bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4"
+        class="flex h-16 shrink-0 items-center justify-between gap-4 px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4"
+        :class="variant === 'gradient'
+            ? 'border-b-0 bg-transparent'
+            : 'border-b border-sidebar-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'"
     >
-        <div class="flex items-center gap-2">
-            <SidebarTrigger class="-ml-1" />
+        <div class="flex items-center gap-2" :class="variant === 'gradient' ? 'text-white' : ''">
+            <SidebarTrigger class="-ml-1" :class="variant === 'gradient' ? 'text-white hover:bg-white/20' : ''" />
             <Link
                 :href="dashboard()"
                 class="hidden items-center gap-2 md:flex"
             >
-                <div class="flex aspect-square size-8 items-center justify-center rounded-md bg-[#34B0C7]">
-                    <AppLogoIcon class="size-4" />
+                <div class="flex size-8 items-center justify-center rounded-full bg-white">
+                    <svg class="size-5" viewBox="0 0 32 32" fill="none">
+                        <circle cx="16" cy="16" r="14" fill="#3995D2" />
+                        <path
+                            d="M16 8C12.7 8 10 10.7 10 14C10 17.3 12.7 20 16 20C19.3 20 22 17.3 22 14C22 10.7 19.3 8 16 8ZM16 18C13.8 18 12 16.2 12 14C12 11.8 13.8 10 16 10C18.2 10 20 11.8 20 14C20 16.2 18.2 18 16 18Z"
+                            fill="white"
+                        />
+                    </svg>
                 </div>
-                <span class="font-semibold text-sidebar-foreground">BengaDok</span>
+                <span class="font-semibold">
+                    <span class="text-[#3995D2]">Benga</span><span class="text-[#5BB66E]">Dok</span>
+                </span>
             </Link>
             <template v-if="breadcrumbs && breadcrumbs.length > 0">
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </template>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3" :class="variant === 'gradient' ? 'text-white [&_button]:text-white [&_button]:hover:bg-white/20' : ''">
             <DropdownMenu v-if="user">
                 <DropdownMenuTrigger as-child>
                     <Button variant="ghost" size="icon" class="relative">

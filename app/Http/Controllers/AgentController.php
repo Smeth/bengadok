@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCommandeRequest;
 use App\Models\Client;
 use App\Models\Commande;
 use App\Models\Livreur;
 use App\Models\ModePaiement;
-use App\Models\MontantLivraison;
-use App\Models\Ordonnance;
 use App\Models\Pharmacie;
 use App\Models\Produit;
+use App\Services\CommandeService;
 use App\Services\PharmacieProximiteService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,13 +18,15 @@ use Inertia\Response;
 class AgentController extends Controller
 {
     public function __construct(
-        private PharmacieProximiteService $pharmacieService
+        private PharmacieProximiteService $pharmacieService,
+        private CommandeService $commandeService
     ) {}
 
     public function index(Request $request): Response
     {
         return Inertia::render('Agent/Index', [
             'commandes' => Commande::with(['client', 'pharmacie', 'produits'])
+                ->whereNull('parent_id')
                 ->latest('created_at')
                 ->paginate(15),
         ]);
@@ -33,9 +35,8 @@ class AgentController extends Controller
     public function nouvelleCommande(Request $request): Response
     {
         return Inertia::render('Agent/NouvelleCommande', [
-            'pharmacies' => Pharmacie::with('zone')->get(),
+            'pharmacies' => Pharmacie::with(['zone', 'typePharmacie', 'heurs'])->get(),
             'modesPaiement' => ModePaiement::all(),
-            'montantsLivraison' => MontantLivraison::all(),
             'livreurs' => Livreur::all(),
         ]);
     }
@@ -72,110 +73,25 @@ class AgentController extends Controller
         return response()->json(['produits' => $produits]);
     }
 
-    public function storeCommande(Request $request)
+    public function storeCommande(StoreCommandeRequest $request)
     {
-        $produitsInput = $request->input('produits');
-        if (is_string($produitsInput)) {
-            $produitsDecoded = json_decode($produitsInput, true);
-            $request->merge(['produits' => is_array($produitsDecoded) ? $produitsDecoded : []]);
-        }
-        $clientNouveauInput = $request->input('client_nouveau');
-        if (is_string($clientNouveauInput)) {
-            $decoded = json_decode($clientNouveauInput, true);
-            if (is_array($decoded)) {
-                $request->merge(['client_nouveau' => $decoded]);
-            }
-        }
-
-        $validated = $request->validate([
-            'client_id' => 'nullable|exists:clients,id',
-            'client_nouveau' => 'nullable|array',
-            'client_nouveau.nom' => 'required_with:client_nouveau|string',
-            'client_nouveau.prenom' => 'nullable|string|max:100',
-            'client_nouveau.tel' => 'required_with:client_nouveau|string',
-            'client_nouveau.adresse' => 'required_with:client_nouveau|string',
-            'pharmacie_id' => 'required|exists:pharmacies,id',
-            'produits' => 'required|array|min:1',
-            'produits.*.designation' => 'required|string|max:255',
-            'produits.*.dosage' => 'nullable|string|max:50',
-            'produits.*.quantite' => 'required|integer|min:1',
-            'produits.*.prix_unitaire' => 'required|numeric|min:0',
-            'ordonnance' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
-            'mode_paiement_id' => 'nullable|exists:modes_paiement,id',
-            'montant_livraison_id' => 'nullable|exists:montants_livraison,id',
-            'livreur_id' => 'nullable|exists:livreurs,id',
-            'commentaire' => 'nullable|string',
-        ]);
-
-        $client = $validated['client_id']
-            ? Client::findOrFail($validated['client_id'])
-            : Client::create([
-                'nom' => $validated['client_nouveau']['nom'],
-                'prenom' => !empty(trim($validated['client_nouveau']['prenom'] ?? '')) ? trim($validated['client_nouveau']['prenom']) : null,
-                'tel' => $validated['client_nouveau']['tel'],
-                'adresse' => $validated['client_nouveau']['adresse'],
-            ]);
-
-        $ordonnanceId = null;
-        if ($request->hasFile('ordonnance')) {
-            $file = $request->file('ordonnance');
-            $ext = $file->getClientOriginalExtension();
-            $path = $file->storeAs('ordonnances/' . now()->format('Y-m'), uniqid() . '.' . $ext, 'public');
-            $ordonnance = Ordonnance::create(['urlfile' => $path]);
-            $ordonnanceId = $ordonnance->id;
-        }
-
-        $numero = 'BDK' . now()->format('ymdHis') . rand(100, 999);
-
-        $commande = Commande::create([
-            'numero' => $numero,
-            'client_id' => $client->id,
-            'pharmacie_id' => $validated['pharmacie_id'],
-            'ordonnance_id' => $ordonnanceId,
-            'mode_paiement_id' => $validated['mode_paiement_id'] ?? null,
-            'livreur_id' => $validated['livreur_id'] ?? null,
-            'montant_livraison_id' => $validated['montant_livraison_id'] ?? null,
-            'date' => now(),
-            'heurs' => now()->format('H:i'),
-            'commentaire' => $validated['commentaire'] ?? null,
-            'status' => 'nouvelle',
-        ]);
-
-        $prixTotal = 0;
-        foreach ($validated['produits'] as $p) {
-            $produit = Produit::firstOrCreate(
-                [
-                    'designation' => trim($p['designation']),
-                    'dosage' => trim($p['dosage'] ?? '') ?: null,
-                ],
-                [
-                    'pu' => (float) $p['prix_unitaire'],
-                    'forme' => null,
-                    'type' => 'Vente libre',
-                ]
-            );
-            $quantite = (int) $p['quantite'];
-            $prixUnitaire = (float) $p['prix_unitaire'];
-            $commande->produits()->attach($produit->id, [
-                'quantite' => $quantite,
-                'prix_unitaire' => $prixUnitaire,
-                'status' => 'disponible',
-            ]);
-            $prixTotal += $prixUnitaire * $quantite;
-        }
-
-        $commande->update(['prix_total' => $prixTotal]);
+        $data = $request->getDataForService();
+        $data['livreur_id'] = $data['livreur_id'] ?? null;
+        $commande = $this->commandeService->create($data, $request->file('ordonnance'));
 
         return redirect()->route('agent.index')->with('success', "Commande {$commande->numero} créée.");
     }
 
     /**
-     * Renvoyer une commande (indisponible ou partielle) vers la 2ème pharmacie la plus proche.
+     * Renvoyer toute la commande vers une 2ème pharmacie (tout indisponible).
      */
     public function renvoyerPharmacie(Request $request, Commande $commande)
     {
-        if (!in_array($commande->status, ['en_attente', 'indisponible_pharmacie', 'partiellement_validee'])) {
+        if ($commande->status !== 'en_attente') {
             return back()->with('error', 'Cette commande ne peut pas être renvoyée.');
+        }
+        if ($commande->parent_id) {
+            return back()->with('error', 'Une commande secondaire ne peut pas être renvoyée.');
         }
 
         $client = $commande->client;
@@ -192,9 +108,10 @@ class AgentController extends Controller
         }
 
         $commande->update([
-            'pharmacie_id' => $pharmacieSuivante->id,
+            'pharmacie_id'        => $pharmacieSuivante->id,
             'pharmacie_refusee_id' => $pharmacieRefuseeId,
-            'status' => 'nouvelle',
+            'status'              => 'nouvelle',
+            'status_pharmacie'    => 'nouvelle',
         ]);
 
         foreach ($commande->produits as $p) {
@@ -205,5 +122,107 @@ class AgentController extends Controller
         }
 
         return back()->with('success', "Commande renvoyée à {$pharmacieSuivante->designation}.");
+    }
+
+    /**
+     * Renvoyer uniquement les produits manquants vers une 2ème pharmacie (renvoi partiel).
+     */
+    public function renvoyerPharmaciePartiel(Request $request, Commande $commande)
+    {
+        if ($commande->status !== 'en_attente') {
+            return back()->with('error', 'Seules les commandes en attente peuvent être renvoyées partiellement.');
+        }
+        if ($commande->parent_id) {
+            return back()->with('error', 'Une commande secondaire ne peut pas être renvoyée.');
+        }
+
+        $validated = $request->validate([
+            'pharmacie_id' => 'required|exists:pharmacies,id',
+            'lignes' => 'required|array|min:1',
+            'lignes.*.produit_id' => 'required|exists:produits,id',
+            'lignes.*.quantite' => 'required|integer|min:1',
+        ]);
+
+        $pharmacieId = (int) $validated['pharmacie_id'];
+        if ($pharmacieId === $commande->pharmacie_id) {
+            return back()->with('error', 'Sélectionnez une pharmacie différente.');
+        }
+
+        $commande->load('produits');
+        $produitsEnfant = [];
+
+        foreach ($validated['lignes'] as $ligne) {
+            $produitId = (int) $ligne['produit_id'];
+            $quantiteEnfant = (int) $ligne['quantite'];
+            $pivot = $commande->produits->firstWhere('id', $produitId)?->pivot;
+            if (!$pivot) {
+                continue;
+            }
+            $quantiteParent = $pivot->quantite;
+            $quantiteConfirmee = (int) ($pivot->quantite_confirmee ?? 0);
+            $prixUnitaire = (float) $pivot->prix_unitaire;
+
+            if ($quantiteEnfant <= 0 || $quantiteEnfant > $quantiteParent - $quantiteConfirmee) {
+                continue;
+            }
+
+            $nouvelleQuantiteParent = $quantiteParent - $quantiteEnfant;
+            if ($nouvelleQuantiteParent <= 0) {
+                $commande->produits()->detach($produitId);
+            } else {
+                $commande->produits()->updateExistingPivot($produitId, [
+                    'quantite' => $nouvelleQuantiteParent,
+                    'quantite_confirmee' => min($quantiteConfirmee, $nouvelleQuantiteParent),
+                    'status' => $nouvelleQuantiteParent === $quantiteConfirmee ? 'disponible' : 'partiel',
+                ]);
+            }
+
+            $produitsEnfant[] = [
+                'produit_id' => $produitId,
+                'quantite' => $quantiteEnfant,
+                'prix_unitaire' => $prixUnitaire,
+            ];
+        }
+
+        if (empty($produitsEnfant)) {
+            return back()->with('error', 'Aucun produit valide à renvoyer.');
+        }
+
+        $nbEnfants = $commande->enfants()->count();
+        $numeroEnfant = $commande->numero . '-' . ($nbEnfants + 1);
+
+        $commandeEnfant = Commande::create([
+            'numero'               => $numeroEnfant,
+            'client_id'            => $commande->client_id,
+            'pharmacie_id'         => $pharmacieId,
+            'parent_id'            => $commande->id,
+            'ordonnance_id'        => $commande->ordonnance_id,
+            'mode_paiement_id'     => $commande->mode_paiement_id,
+            'livreur_id'           => $commande->livreur_id,
+            'montant_livraison_id' => $commande->montant_livraison_id,
+            'date'                 => $commande->date,
+            'heurs'                => $commande->heurs,
+            'commentaire'          => $commande->commentaire,
+            'status'               => 'nouvelle',
+            'status_pharmacie'     => 'nouvelle',
+        ]);
+
+        $prixTotalEnfant = 0;
+        foreach ($produitsEnfant as $p) {
+            $commandeEnfant->produits()->attach($p['produit_id'], [
+                'quantite' => $p['quantite'],
+                'prix_unitaire' => $p['prix_unitaire'],
+                'status' => 'disponible',
+            ]);
+            $prixTotalEnfant += $p['quantite'] * $p['prix_unitaire'];
+        }
+        $commandeEnfant->update(['prix_total' => $prixTotalEnfant]);
+
+        $commande->load('produits');
+        $prixParent = $commande->produits->sum(fn ($p) => $p->pivot->quantite * (float) $p->pivot->prix_unitaire);
+        $commande->update(['prix_total' => $prixParent]);
+
+        $pharmacie = Pharmacie::findOrFail($pharmacieId);
+        return back()->with('success', "Produits manquants renvoyés à {$pharmacie->designation}.");
     }
 }

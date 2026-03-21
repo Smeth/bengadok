@@ -9,16 +9,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import UserInfo from '@/components/UserInfo.vue';
 import type { User } from '@/types';
-import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 
 type Props = {
     user: User;
 };
 
-const handleLogout = () => {
-    router.flushAll();
-};
+function handleLogout() {
+    router.post('/logout');
+}
 
 defineProps<Props>();
 </script>
@@ -34,21 +33,20 @@ defineProps<Props>();
         <DropdownMenuItem :as-child="true">
             <Link class="block w-full cursor-pointer" :href="edit()" prefetch>
                 <Settings class="mr-2 h-4 w-4" />
-                Réglages
+                Mon profil
             </Link>
         </DropdownMenuItem>
     </DropdownMenuGroup>
     <DropdownMenuSeparator />
-    <DropdownMenuItem :as-child="true">
-        <Link
-            class="block w-full cursor-pointer"
-            :href="logout()"
-            @click="handleLogout"
-            as="button"
+    <DropdownMenuItem as-child>
+        <button
+            type="button"
+            class="flex w-full cursor-pointer items-center px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
             data-test="logout-button"
+            @click="handleLogout"
         >
             <LogOut class="mr-2 h-4 w-4" />
             Déconnexion
-        </Link>
+        </button>
     </DropdownMenuItem>
 </template>

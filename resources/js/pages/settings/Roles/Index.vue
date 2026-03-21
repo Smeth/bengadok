@@ -52,7 +52,7 @@ const props = defineProps<{
 const page = usePage();
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
-    { title: 'Réglages', href: '/settings/profile' },
+    { title: 'Mon profil', href: '/settings/profile' },
     { title: 'Gestion des rôles', href: '/settings/roles' },
 ];
 
@@ -179,7 +179,7 @@ function permissionsApercu(role: RoleItem): Array<{ name: string; label: string 
     if (gererTout) {
         return [gererTout];
     }
-    return role.permissions.slice(0, 3);
+    return role.permissions.slice(0, 5);
 }
 </script>
 
@@ -226,7 +226,7 @@ function permissionsApercu(role: RoleItem): Array<{ name: string; label: string 
                     />
                 </div>
 
-                <div class="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div
                         v-for="role in filteredRoles"
                         :key="role.id"
@@ -236,7 +236,7 @@ function permissionsApercu(role: RoleItem): Array<{ name: string; label: string 
                             <div class="min-w-0 flex-1">
                                 <div class="mb-2 flex flex-wrap items-center gap-2">
                                     <Shield class="size-5 shrink-0 text-primary" />
-                                    <span class="min-w-0 truncate font-semibold">{{ role.label }}</span>
+                                    <span class="min-w-0 break-words font-semibold">{{ role.label }}</span>
                                     <span
                                         v-if="role.permissions_count"
                                         class="inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-primary/15 px-2.5 py-1 text-xs font-medium text-primary"
@@ -244,7 +244,7 @@ function permissionsApercu(role: RoleItem): Array<{ name: string; label: string 
                                         {{ role.permissions_count }} permission{{ role.permissions_count > 1 ? 's' : '' }}
                                     </span>
                                 </div>
-                                <p class="line-clamp-2 break-words text-sm text-muted-foreground">{{ role.description }}</p>
+                                <p class="line-clamp-3 break-words text-sm text-muted-foreground">{{ role.description }}</p>
                             </div>
                             <div class="flex shrink-0 gap-1">
                                 <Button variant="ghost" size="icon" class="size-8" title="Détails" @click="ouvrirDetail(role)">
@@ -272,7 +272,7 @@ function permissionsApercu(role: RoleItem): Array<{ name: string; label: string 
                                     :title="perm.label"
                                 >
                                     <Check class="size-3.5 shrink-0 text-primary" />
-                                    <span class="min-w-0 flex-1 truncate">{{ perm.label }}</span>
+                                    <span class="min-w-0 flex-1 break-words">{{ perm.label }}</span>
                                 </div>
                             </template>
                             <div

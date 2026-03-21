@@ -39,7 +39,7 @@ const { isCurrentUrl } = useCurrentUrl();
 <template>
     <div class="px-4 py-6">
         <Heading
-            title="Réglages"
+            title="Mon profil"
             description="Gérez votre profil et les paramètres de votre compte"
         />
 
@@ -47,7 +47,7 @@ const { isCurrentUrl } = useCurrentUrl();
             <aside class="w-full max-w-xl lg:w-48">
                 <nav
                     class="flex flex-col space-y-1 space-x-0"
-                    aria-label="Réglages"
+                    aria-label="Mon profil"
                 >
                     <Button
                         v-for="item in sidebarNavItems"
@@ -69,8 +69,8 @@ const { isCurrentUrl } = useCurrentUrl();
 
             <Separator class="my-6 lg:hidden" />
 
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
+            <div class="min-w-0 flex-1">
+                <section class="max-w-6xl space-y-12">
                     <slot />
                 </section>
             </div>
