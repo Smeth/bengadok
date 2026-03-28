@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Pill } from 'lucide-vue-next';
 import { home } from '@/routes';
 
 defineProps<{
@@ -20,12 +19,11 @@ defineProps<{
                         :href="home()"
                         class="flex flex-col items-center gap-2 font-semibold text-slate-800 dark:text-white"
                     >
-                        <div
-                            class="flex size-14 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40"
-                        >
-                            <Pill class="size-7 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <span class="text-lg">BengaDok</span>
+                        <img
+                            src="/images/figma-assets/sidebar-logo-benga.svg"
+                            alt="BengaDok"
+                            class="h-14 w-auto max-w-[160px] object-contain"
+                        />
                         <span class="sr-only">{{ title }}</span>
                     </Link>
                     <div class="space-y-2 text-center">

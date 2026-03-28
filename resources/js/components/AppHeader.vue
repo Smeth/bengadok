@@ -3,7 +3,6 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -96,8 +95,10 @@ const rightNavItems: NavItem[] = [
                                 >Navigation Menu</SheetTitle
                             >
                             <SheetHeader class="flex justify-start text-left">
-                                <AppLogoIcon
-                                    class="size-6 fill-current text-black dark:text-white"
+                                <img
+                                    src="/images/figma-assets/sidebar-logo-benga.svg"
+                                    alt="BengaDok"
+                                    class="h-8 w-auto max-w-[120px] object-contain"
                                 />
                             </SheetHeader>
                             <div

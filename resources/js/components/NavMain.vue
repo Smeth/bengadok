@@ -14,36 +14,30 @@ defineProps<{
 
 const { isCurrentUrl } = useCurrentUrl();
 
-// Couleur active style Figma (vert #5BB66E)
-const activeColorClass = 'bg-[#5BB66E]';
+const activeColorClass = 'bg-[#22c55e]';
 </script>
 
 <template>
-    <SidebarGroup class="px-2 py-2">
-        <SidebarMenu class="flex flex-col gap-1">
+    <SidebarGroup class="shrink-0 px-3 py-1">
+        <SidebarMenu class="flex flex-col gap-0.5">
             <SidebarMenuItem v-for="item in items" :key="item.title" class="list-none">
                 <Link
                     :href="item.href"
-                    class="sidebar-menu-btn-react group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150"
+                    class="sidebar-menu-btn-react group flex h-[44px] w-full cursor-pointer items-center gap-3 rounded-[10px] px-3 font-medium transition-all"
                     :class="isCurrentUrl(item.href)
-                        ? `${activeColorClass} text-white shadow-sm font-bold`
-                        : 'bg-transparent hover:bg-[rgba(92,89,89,0.08)]'"
+                        ? `${activeColorClass} text-white`
+                        : 'bg-transparent'"
                     :data-active="isCurrentUrl(item.href) ? 'true' : undefined"
                 >
-                    <!-- Icône style Figma : 36px, bg rgba(92,89,89,0.25) -->
                     <div
-                        class="sidebar-menu-icon flex size-[36px] shrink-0 items-center justify-center rounded-full transition-colors"
+                        class="sidebar-menu-icon flex shrink-0 items-center justify-center rounded-full transition-colors"
                         :class="isCurrentUrl(item.href)
                             ? 'bg-white/25 text-white'
-                            : 'bg-[rgba(92,89,89,0.25)] group-hover:bg-[rgba(92,89,89,0.35)]'"
+                            : 'group-hover:bg-[#f1f5f9]'"
                     >
-                        <component :is="item.icon" class="sidebar-menu-icon-svg size-6" />
+                        <component :is="item.icon" class="sidebar-menu-icon-svg size-5" stroke-width="1.5" />
                     </div>
-
-                    <!-- Label : 14px, une seule ligne -->
-                    <span class="sidebar-menu-label text-[14px] font-bold leading-tight text-[#5c5959] transition-colors truncate"
-                        :class="isCurrentUrl(item.href) ? '!text-white' : ''"
-                    >
+                    <span class="sidebar-menu-label text-[15px]">
                         {{ item.title }}
                     </span>
                 </Link>

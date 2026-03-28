@@ -92,148 +92,6 @@
     }
 }
 
-/* Empêcher la barre de progression Inertia/NProgress de bloquer les clics */
-#nprogress,
-#nprogress *,
-[role="progressbar"] {
-    pointer-events: none !important;
-}
-
-/* Sidebar BengaDok - design Figma v2 (fond blanc, ombre) */
-[data-slot="sidebar-wrapper"] {
-    --sidebar-width: 335px;
-    --sidebar-width-icon: 5rem; /* 80px : suffisant pour icônes 36px centrées */
-}
-
-/* Sidebar fond blanc style Figma */
-[data-sidebar="sidebar"] {
-    background-color: #ffffff !important;
-    box-shadow: 5px 0px 10px 0px rgba(0, 0, 0, 0.25) !important;
-}
-
-[data-sidebar="sidebar"] .sidebar-menu-btn-react:not([data-active="true"]) {
-    color: #5c5959 !important;
-}
-[data-sidebar="sidebar"] .sidebar-menu-btn-react:not([data-active="true"]) .sidebar-menu-icon {
-    background-color: rgba(92, 89, 89, 0.25) !important;
-}
-[data-sidebar="sidebar"] .sidebar-menu-btn-react:not([data-active="true"]) .sidebar-menu-icon-svg {
-    color: #5c5959 !important;
-}
-[data-sidebar="sidebar"] .sidebar-menu-btn-react:not([data-active="true"]) .sidebar-menu-label {
-    color: #5c5959 !important;
-}
-[data-sidebar="sidebar"] .sidebar-menu-btn-react:not([data-active="true"]):hover {
-    background-color: rgba(92, 89, 89, 0.08) !important;
-    color: #5c5959 !important;
-}
-
-[data-sidebar="sidebar"] .sidebar-menu-btn-react[data-active="true"] {
-    background-color: #5BB66E !important;
-    color: white !important;
-}
-[data-sidebar="sidebar"] .sidebar-menu-btn-react[data-active="true"] .sidebar-menu-icon {
-    background-color: rgba(255, 255, 255, 0.25) !important;
-}
-[data-sidebar="sidebar"] .sidebar-menu-btn-react[data-active="true"] .sidebar-menu-icon-svg,
-[data-sidebar="sidebar"] .sidebar-menu-btn-react[data-active="true"] .sidebar-menu-label {
-    color: white !important;
-}
-
-/* Mode réduit (icônes seules) : masquer les libellés pour éviter chevauchement */
-[data-collapsible="icon"] [data-sidebar="sidebar"] .sidebar-menu-label,
-[data-collapsible="icon"] [data-sidebar="footer"] .sidebar-footer-label,
-[data-collapsible="icon"] .sidebar-logo-text {
-    display: none !important;
-}
-
-/* Mode réduit : centrer les icônes, pas d'overflow pour éviter coupure */
-[data-collapsible="icon"] [data-sidebar="sidebar"] .sidebar-menu-btn-react {
-    justify-content: center !important;
-    width: auto !important;
-    min-width: 2.25rem !important;
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
-}
-[data-collapsible="icon"] [data-sidebar="group"] {
-    align-items: center !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-}
-[data-collapsible="icon"] [data-sidebar="menu"] {
-    align-items: center !important;
-}
-[data-collapsible="icon"] [data-sidebar="menu-item"] {
-    display: flex !important;
-    justify-content: center !important;
-    width: 100% !important;
-}
-[data-collapsible="icon"] [data-sidebar="menu-button"],
-[data-collapsible="icon"] [data-sidebar="sidebar"] [data-sidebar="menu-button"] {
-    margin-left: auto !important;
-    margin-right: auto !important;
-    width: 2.25rem !important;
-    min-width: 2.25rem !important;
-}
-[data-collapsible="icon"] [data-sidebar="header"] {
-    align-items: center !important;
-}
-[data-collapsible="icon"] [data-sidebar="header"] [data-sidebar="menu-item"] {
-    justify-content: center !important;
-}
-[data-collapsible="icon"] [data-sidebar="header"] [data-sidebar="menu-item"] {
-    flex-direction: column !important;
-}
-[data-collapsible="icon"] [data-sidebar="header"] [data-sidebar="menu-button"] {
-    margin-left: auto !important;
-    margin-right: auto !important;
-    flex: 0 0 auto !important;
-    width: 2.25rem !important;
-    min-width: 2.25rem !important;
-}
-[data-collapsible="icon"] [data-sidebar="footer"] > div {
-    align-items: center !important;
-}
-[data-collapsible="icon"] [data-sidebar="footer"] button {
-    width: 2.25rem !important;
-    min-width: 2.25rem !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    padding: 0.5rem !important;
-    justify-content: center !important;
-}
-
-/* Mode étendu : afficher les libellés */
-[data-sidebar="sidebar"] .sidebar-menu-btn-react,
-[data-sidebar="sidebar"] .sidebar-menu-btn-react > * {
-    overflow: visible !important;
-}
-/* Texte sidebar : une seule ligne, taille réduite pour tenir */
-[data-sidebar="sidebar"] .sidebar-menu-label,
-[data-sidebar="footer"] .sidebar-footer-label {
-    font-size: 14px !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}
-
-/* Taille et alignement uniformes des icônes en mode étendu */
-[data-state="expanded"] [data-sidebar="sidebar"] .sidebar-menu-icon {
-    flex-shrink: 0 !important;
-    width: 2.25rem !important;
-    min-width: 2.25rem !important;
-    height: 2.25rem !important;
-}
-.dark [data-sidebar="sidebar"] .sidebar-menu-btn-react:not([data-active="true"]) {
-    color: hsl(0 0% 95.9%) !important;
-}
-.dark [data-sidebar="sidebar"] .sidebar-menu-btn-react:not([data-active="true"]) .sidebar-menu-icon-svg {
-    color: hsl(0 0% 70%) !important;
-}
-.dark [data-sidebar="sidebar"] .sidebar-menu-btn-react:not([data-active="true"]):hover {
-    background-color: hsl(0 0% 15.9%) !important;
-}
-
 :root {
     --background: hsl(210 20% 98%);
     --foreground: hsl(0 0% 10%);
@@ -270,6 +128,16 @@
     --sidebar-accent-foreground: hsl(0 0% 100%);
     --sidebar-border: hsl(0 0% 100% / 0.1);
     --sidebar-ring: hsl(214 89% 52%);
+
+    /* Sidebar BengaDok : palette dédiée (modifiable facilement) */
+    --sidebar-bengadok-bg: #ffffff;
+    --sidebar-bengadok-border: #e2e8f0;
+    --sidebar-bengadok-text: #374151;
+    --sidebar-bengadok-icon: #6b7280;
+    --sidebar-bengadok-hover: #f1f5f9;
+    --sidebar-bengadok-active-bg: #22c55e;
+    --sidebar-bengadok-active-bar: #16a34a;
+    --sidebar-bengadok-active-text: #ffffff;
 }
 
 .dark {
@@ -316,6 +184,8 @@
         @apply bg-background text-foreground;
     }
 }
+
+@import './components/sidebar.css';
 
 /* Espace pharmacie Dok-Pharma : même fond et cartes sur toutes les vues (Figma 340:47) */
 @layer components {
@@ -520,7 +390,7 @@
     animation: bengadok-loader-logo-in 0.75s ease-out both;
 }
 
-/* Empêcher la barre de progression Inertia (NProgress) de bloquer les clics */
+/* NProgress : ne pas bloquer les clics pendant le chargement Inertia */
 #nprogress,
 #nprogress *,
 [role="progressbar"] {

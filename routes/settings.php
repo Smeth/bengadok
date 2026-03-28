@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ClientFrequenceController;
 use App\Http\Controllers\Settings\ParametresController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
@@ -85,5 +86,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('motifs-annulation', [ParametresController::class, 'storeMotifAnnulation'])->name('motifs-annulation.store');
             Route::patch('motifs-annulation/{motifAnnulation}', [ParametresController::class, 'updateMotifAnnulation'])->name('motifs-annulation.update');
             Route::delete('motifs-annulation/{motifAnnulation}', [ParametresController::class, 'destroyMotifAnnulation'])->name('motifs-annulation.destroy');
+
+            // Segments de fréquence client (filtre liste clients, libellé sur fiches)
+            Route::post('client-frequences', [ClientFrequenceController::class, 'store'])->name('client-frequences.store');
+            Route::patch('client-frequences/{clientFrequence}', [ClientFrequenceController::class, 'update'])->name('client-frequences.update');
+            Route::delete('client-frequences/{clientFrequence}', [ClientFrequenceController::class, 'destroy'])->name('client-frequences.destroy');
+
+            Route::patch('relance-delai', [ParametresController::class, 'updateRelanceDelai'])->name('relance-delai.update');
         });
 });

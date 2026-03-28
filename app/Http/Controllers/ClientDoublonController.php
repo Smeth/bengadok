@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Commande;
 use App\Models\GroupeDoublonsClient;
 use App\Services\ClientDoublonService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -25,7 +25,7 @@ class ClientDoublonController extends Controller
         $this->doublonService->detecterEtCreerGroupes();
 
         $query = GroupeDoublonsClient::with([
-            'clients' => fn ($q) => $q->with(['zone', 'commandes' => fn ($q2) => $q2->whereIn('status', ['validee', 'livree', 'a_preparer'])]),
+            'clients' => fn ($q) => $q->with(['zone', 'commandes' => fn ($q2) => $q2->whereIn('status', Commande::STATUTS_COMPTABILISES_CLIENT)]),
             'principalClient',
         ]);
 
@@ -37,8 +37,7 @@ class ClientDoublonController extends Controller
 
         if ($search) {
             $groupes = $groupes->filter(function ($g) use ($search) {
-                return $g->clients->contains(fn ($c) =>
-                    stripos($c->prenom . ' ' . $c->nom, $search) !== false
+                return $g->clients->contains(fn ($c) => stripos($c->prenom.' '.$c->nom, $search) !== false
                     || stripos($c->tel ?? '', $search) !== false
                 );
             })->values();
@@ -59,7 +58,7 @@ class ClientDoublonController extends Controller
 
         $groupesFormates = $groupes->values()->map(function ($g) {
             $clientsData = $g->clients->map(function ($c) {
-                $cmdValides = $c->commandes->filter(fn ($cmd) => in_array($cmd->status, ['validee', 'livree', 'a_preparer']));
+                $cmdValides = $c->commandes->filter(fn ($cmd) => in_array($cmd->status, Commande::STATUTS_COMPTABILISES_CLIENT, true));
                 $totalDepense = $cmdValides->sum('prix_total');
                 $nbCommandes = $cmdValides->count();
                 $derniereCmd = $cmdValides->sortByDesc('date')->first();
@@ -112,12 +111,14 @@ class ClientDoublonController extends Controller
     public function ignorer(GroupeDoublonsClient $groupe): RedirectResponse
     {
         $groupe->update(['statut' => 'ignore']);
+
         return redirect()->route('clients.doublons')->with('success', 'Groupe ignoré.');
     }
 
     public function verifier(GroupeDoublonsClient $groupe): RedirectResponse
     {
         $groupe->update(['statut' => 'verifie']);
+
         return redirect()->route('clients.doublons')->with('success', 'Groupe marqué comme vérifié.');
     }
 
@@ -125,6 +126,7 @@ class ClientDoublonController extends Controller
     {
         $ajouterTelSecondaire = filter_var($request->input('ajouter_tel_secondaire', false), FILTER_VALIDATE_BOOLEAN);
         $this->doublonService->fusionner($groupe, $ajouterTelSecondaire);
+
         return redirect()->route('clients.doublons')->with('success', 'Profils fusionnés avec succès.');
     }
 }

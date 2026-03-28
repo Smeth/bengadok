@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\AppSetting;
 use App\Models\Commande;
 use App\Models\MotifAnnulation;
 use Illuminate\Http\Request;
@@ -45,6 +46,7 @@ class HandleInertiaRequests extends Middleware
             'csrf_token' => fn () => csrf_token(),
             'flash' => [
                 'status' => fn () => $request->session()->get('status'),
+                'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
                 'createdUsername' => fn () => $request->session()->get('createdUsername'),
             ],
@@ -66,6 +68,8 @@ class HandleInertiaRequests extends Middleware
             'notifications' => fn () => $this->getNotifications($request),
             /** Motifs d'annulation (liste triée : slug, label, autorise_relance) */
             'motifs_annulation' => fn () => MotifAnnulation::orderedForShare(),
+            /** Délai (heures) avant de pouvoir resélectionner la même pharmacie lors d'une relance */
+            'delai_relance_meme_pharmacie_heures' => fn () => AppSetting::delaiRelanceMemePharmacieHeures(),
         ];
     }
 

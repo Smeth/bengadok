@@ -15,7 +15,8 @@ import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
 import type { BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
 
-const props = defineProps<{
+const props = withDefaults(
+    defineProps<{
     commande: {
         id: number;
         numero: string;
@@ -28,7 +29,7 @@ const props = defineProps<{
         prix_total: number;
         motif_annulation?: string;
         commentaire?: string;
-        client: { nom: string; prenom: string; tel: string; adresse?: string };
+        client: { nom: string; prenom: string; tel: string; adresse?: string; sexe?: string };
         pharmacie: { designation: string; telephone: string; adresse: string } | null;
         pharmacie_refusee?: { designation: string };
         pharmacieRefusee?: { designation: string };
@@ -40,11 +41,14 @@ const props = defineProps<{
         }>;
         enfants?: Array<{ id: number; numero: string; pharmacie?: { designation: string }; produits: unknown[] }>;
         mode_paiement?: { designation: string };
-        livreur?: { nom: string; prenom: string; tel: string };
+        livreur?: { id: number; nom: string; prenom: string; tel: string };
         ordonnance?: { urlfile?: string } | null;
     };
     pharmacieOptions?: Array<{ id: number; designation: string; adresse?: string }>;
-}>();
+    livreurs?: Array<{ id: number; nom: string; prenom: string; tel: string }>;
+    }>(),
+    { livreurs: () => [] },
+);
 
 const page = usePage();
 const roles = computed(() => (page.props.auth as { user?: { roles?: string[] } })?.user?.roles ?? []);
@@ -56,6 +60,35 @@ const peutModifier = computed(() => isAgent.value && ['nouvelle', 'en_attente'].
 const peutRenvoyer = computed(() => isAgent.value && props.commande.status === 'en_attente');
 const peutValiderRetrait = computed(() => isVendeurOuGerant.value && props.commande.status_pharmacie === 'valide_a_preparer');
 const peutValiderDispo = computed(() => isVendeurOuGerant.value && props.commande.status_pharmacie === 'nouvelle');
+
+const peutAssignerLivreur = computed(() =>
+    isAgent.value && ['validee', 'a_preparer', 'retiree'].includes(props.commande.status),
+);
+
+function civiliteFromSexe(sexe?: string | null): string {
+    if (sexe === 'F') return 'Mme';
+    if (sexe === 'M') return 'Mr';
+    return '';
+}
+
+function nomClientComplet(): string {
+    const c = props.commande.client;
+    if (!c) return '-';
+    const prenom = (c.prenom ?? '').trim();
+    const nom = (c.nom ?? '').trim();
+    if (!prenom && !nom) return '-';
+    const core = prenom === nom ? prenom : [prenom, nom].filter(Boolean).join(' ');
+    const civ = civiliteFromSexe(c.sexe);
+    return civ ? `${civ} ${core}` : core;
+}
+
+function assignLivreurShow(e: Event) {
+    const sel = e.target as HTMLSelectElement;
+    const v = sel.value;
+    router.patch(`/commandes/${props.commande.id}/livreur`, {
+        livreur_id: v ? Number(v) : null,
+    });
+}
 
 const pharmacieRefusee = computed(() => props.commande.pharmacieRefusee ?? props.commande.pharmacie_refusee);
 
@@ -337,7 +370,7 @@ function renvoyerPharmaciePartiel() {
             <div class="grid gap-6 lg:grid-cols-2">
                 <div class="rounded-xl border p-4">
                     <h3 class="mb-3 font-semibold">Client</h3>
-                    <p>{{ [commande.client?.prenom, commande.client?.nom].filter(Boolean).join(' ') || '-' }}</p>
+                    <p>{{ nomClientComplet() }}</p>
                     <p class="text-muted-foreground">{{ commande.client?.tel }}</p>
                     <p class="text-muted-foreground">{{ commande.client?.adresse }}</p>
                 </div>
@@ -358,6 +391,33 @@ function renvoyerPharmaciePartiel() {
                         </label>
                     </div>
                 </div>
+                <div
+                    v-if="commande.livreur || peutAssignerLivreur"
+                    class="rounded-xl border p-4 lg:col-span-2"
+                >
+                    <h3 class="mb-3 font-semibold">Livreur</h3>
+                    <div v-if="peutAssignerLivreur" class="max-w-md">
+                        <label class="mb-2 block text-sm font-medium text-muted-foreground" for="show-livreur-select">
+                            Attribuer un livreur
+                        </label>
+                        <select
+                            id="show-livreur-select"
+                            class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            :value="commande.livreur?.id ?? ''"
+                            @change="assignLivreurShow($event)"
+                        >
+                            <option value="">Aucun livreur</option>
+                            <option v-for="l in livreurs" :key="l.id" :value="l.id">
+                                {{ l.prenom }} {{ l.nom }} — {{ l.tel }}
+                            </option>
+                        </select>
+                    </div>
+                    <template v-else-if="commande.livreur">
+                        <p>{{ commande.livreur.prenom }} {{ commande.livreur.nom }}</p>
+                        <p class="text-muted-foreground">{{ commande.livreur.tel }}</p>
+                    </template>
+                </div>
+
                 <div class="rounded-xl border p-4">
                     <h3 class="mb-3 font-semibold">Pharmacie</h3>
                     <p>{{ commande.pharmacie?.designation }}</p>

@@ -8,6 +8,10 @@ export type CommandeDetail = {
     commentaire?: string;
     motif_annulation?: string;
     note_annulation?: string;
+    /** True si une commande a déjà été créée en relance depuis celle-ci (statut annulée). */
+    deja_relancee?: boolean;
+    /** Pour le délai de relance (même pharmacie), aligné sur le modèle Laravel */
+    updated_at?: string;
     client: {
         id?: number;
         nom: string;
@@ -32,6 +36,7 @@ export type CommandeDetail = {
     }>;
     mode_paiement?: { designation: string };
     montant_livraison?: { designation: number };
+    livreur?: { id: number; nom: string; prenom: string; tel: string };
     ordonnance?: { urlfile?: string } | null;
     acceptation_client?: boolean;
 };

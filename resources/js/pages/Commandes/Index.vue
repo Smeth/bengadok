@@ -15,6 +15,8 @@ import {
     ChevronRight,
     RefreshCw,
     XCircle,
+    Check,
+    CheckCircle2,
 } from 'lucide-vue-next';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
@@ -82,8 +84,8 @@ const props = withDefaults(
         }>;
         zones?: Array<{ id: number; designation: string; pharmacies_count: number }>;
         produits?: Array<{ id: number; designation: string; dosage?: string; pu: number }>;
-        modesPaiement?: Array<{ id: number; designation: string }>;
         montantsLivraison?: Array<{ id: number; designation: number }>;
+        livreurs?: Array<{ id: number; nom: string; prenom: string; tel: string }>;
     }>(),
     {
         commandes: () => ({ data: [], links: [] }),
@@ -92,8 +94,8 @@ const props = withDefaults(
         pharmacies: () => [],
         zones: () => [],
         produits: () => [],
-        modesPaiement: () => [],
         montantsLivraison: () => [],
+        livreurs: () => [],
     }
 );
 
@@ -139,6 +141,7 @@ const detailCommande = ref<CommandeDetail | null>(null);
 const showDetailModal = ref(false);
 const showEnregistrementModal = ref(false);
 const showAnnulerModal = ref(false);
+const showValiderModal = ref(false);
 const showRecuModal = ref(false);
 const showRelancerModal = ref(false);
 const loadingDetail = ref(false);
@@ -273,13 +276,20 @@ function getMedicamentsText(produits: Array<{ designation: string; dosage?: stri
     return produits?.map((p) => p.designation + (p.dosage ? ' ' + p.dosage : '')).join(', ') || '-';
 }
 
-function getClientDisplayName(client: { nom?: string; prenom?: string } | undefined): string {
+function civiliteFromSexe(sexe?: string | null): string {
+    if (sexe === 'F') return 'Mme';
+    if (sexe === 'M') return 'Mr';
+    return '';
+}
+
+function getClientDisplayName(client: { nom?: string; prenom?: string; sexe?: string } | undefined): string {
     if (!client) return '-';
     const prenom = (client.prenom ?? '').trim();
     const nom = (client.nom ?? '').trim();
     if (!prenom && !nom) return '-';
-    if (prenom === nom) return prenom;
-    return [prenom, nom].filter(Boolean).join(' ');
+    const core = prenom === nom ? prenom : [prenom, nom].filter(Boolean).join(' ');
+    const civ = civiliteFromSexe(client.sexe);
+    return civ ? `${civ} ${core}` : core;
 }
 
 function formatDate(d: string) {
@@ -316,25 +326,46 @@ function updateStatus(status: string) {
     });
 }
 
-function onAcceptationChange(e: Event) {
-    setAcceptationClient((e.target as HTMLInputElement).checked);
+function openValiderModal() {
+    showValiderModal.value = true;
 }
 
-function setAcceptationClient(checked: boolean) {
+function confirmValiderCommande() {
     if (!detailCommande.value) return;
-    router.patch(`/commandes/${detailCommande.value.id}/acceptation-client`, {
-        acceptation_client: checked,
-    }, {
+    const id = detailCommande.value.id;
+    showValiderModal.value = false;
+    router.patch(`/commandes/${id}/status`, { status: 'validee' }, {
         preserveScroll: true,
-        onSuccess: () => { if (detailCommande.value) detailCommande.value.acceptation_client = checked; },
+        onSuccess: () => { void openDetail(id); },
     });
 }
 
 function setMontantLivraison(montantId: number) {
     if (!detailCommande.value) return;
-    router.patch(`/commandes/${detailCommande.value.id}/montant-livraison`, { montant_livraison_id: montantId }, {
+    const id = detailCommande.value.id;
+    router.patch(`/commandes/${id}/montant-livraison`, { montant_livraison_id: montantId }, {
         preserveScroll: true,
-        onSuccess: () => { closeDetail(); router.reload(); },
+        onSuccess: async () => {
+            await openDetail(id);
+            router.reload({ only: ['commandes', 'stats'], preserveState: true });
+        },
+    });
+}
+
+function peutAssignerLivreurDetail(): boolean {
+    const s = detailCommande.value?.status;
+    return s === 'validee' || s === 'a_preparer' || s === 'retiree';
+}
+
+function setLivreurCommande(livreurId: number | null) {
+    if (!detailCommande.value) return;
+    const id = detailCommande.value.id;
+    router.patch(`/commandes/${id}/livreur`, { livreur_id: livreurId }, {
+        preserveScroll: true,
+        onSuccess: async () => {
+            await openDetail(id);
+            router.reload({ only: ['commandes', 'stats'], preserveState: true });
+        },
     });
 }
 
@@ -356,6 +387,29 @@ function confirmAnnuler() {
             showAnnulerModal.value = false;
             closeDetail();
             router.reload();
+        },
+    });
+}
+
+function confirmAnnulerEtRelancer() {
+    if (!detailCommande.value || !motifAnnulation.value) return;
+    if (!motifAutoriseRelance(motifAnnulation.value)) return;
+    const id = detailCommande.value.id;
+    const note = noteAnnulation.value || undefined;
+    const motif = motifAnnulation.value;
+    router.patch(`/commandes/${id}/status`, {
+        status: 'annulee',
+        motif_annulation: motif,
+        note_annulation: note,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            showAnnulerModal.value = false;
+            void (async () => {
+                await openDetail(id);
+                showRelancerModal.value = true;
+                router.reload({ only: ['commandes', 'stats'], preserveState: true });
+            })();
         },
     });
 }
@@ -398,10 +452,10 @@ function submitEnregistrementFromModal(payload: import('@/components/CommandeEnr
         formData.append('client_prenom', payload.client_prenom);
         formData.append('client_tel', payload.client_tel);
         formData.append('client_adresse', payload.client_adresse);
+        if (payload.client_sexe) formData.append('client_sexe', payload.client_sexe);
         formData.append('pharmacie_id', payload.pharmacie_id);
         if (payload.beneficiaire) formData.append('beneficiaire', payload.beneficiaire);
         formData.append('produits', JSON.stringify(payload.produits));
-        if (payload.mode_paiement_id) formData.append('mode_paiement_id', payload.mode_paiement_id);
         if (payload.commentaire) formData.append('commentaire', payload.commentaire);
         formData.append('ordonnance', payload.ordonnance);
 
@@ -417,10 +471,10 @@ function submitEnregistrementFromModal(payload: import('@/components/CommandeEnr
             client_prenom: payload.client_prenom,
             client_tel: payload.client_tel,
             client_adresse: payload.client_adresse,
+            client_sexe: payload.client_sexe || undefined,
             pharmacie_id: payload.pharmacie_id,
             beneficiaire: payload.beneficiaire || undefined,
             produits: payload.produits,
-            mode_paiement_id: payload.mode_paiement_id || undefined,
             commentaire: payload.commentaire || undefined,
         };
         router.post('/commandes', data, {
@@ -436,9 +490,11 @@ function submitRelancerFromModal(payload: import('@/components/CommandeEnregistr
         pharmacie_id: payload.pharmacie_id,
         beneficiaire: payload.beneficiaire || undefined,
         produits: payload.produits,
-        mode_paiement_id: payload.mode_paiement_id || undefined,
         commentaire: payload.commentaire || undefined,
     };
+    if (payload.client_sexe) {
+        data.client_sexe = payload.client_sexe;
+    }
     if (payload.client_id) {
         data.client_id = payload.client_id;
     } else {
@@ -456,11 +512,11 @@ function submitRelancerFromModal(payload: import('@/components/CommandeEnregistr
             formData.append('client_tel', payload.client_tel);
             formData.append('client_adresse', payload.client_adresse);
         }
+        if (payload.client_sexe) formData.append('client_sexe', payload.client_sexe);
         formData.append('pharmacie_id', payload.pharmacie_id);
         if (payload.beneficiaire) formData.append('beneficiaire', payload.beneficiaire);
         formData.append('produits', JSON.stringify(payload.produits));
         formData.append('ordonnance', payload.ordonnance);
-        if (payload.mode_paiement_id) formData.append('mode_paiement_id', payload.mode_paiement_id);
         if (payload.commentaire) formData.append('commentaire', payload.commentaire);
         router.post('/commandes', formData, {
             preserveScroll: true,
@@ -645,8 +701,8 @@ const nextPageUrl = computed(() => {
 
         <!-- Modal Détails -> Remplacée par un Sheet (Tiroir) -->
         <Sheet :open="showDetailModal" @update:open="showDetailModal = $event">
-            <SheetContent 
-                class="w-full sm:max-w-[500px] md:max-w-[540px] overflow-y-auto bg-[#fafafa] p-0 border-l-0 shadow-2xl" 
+            <SheetContent
+                class="w-full max-h-[100dvh] min-h-0 sm:max-w-[500px] md:max-w-[540px] overflow-y-auto overflow-x-hidden bg-[#fafafa] p-0 border-l-0 shadow-2xl"
                 @pointer-down-outside="closeDetail"
             >
                 <SheetHeader class="sr-only">
@@ -661,9 +717,9 @@ const nextPageUrl = computed(() => {
                     Chargement...
                 </div>
                 
-                <div v-else-if="detailCommande" class="flex h-full flex-col">
-                    <!-- En-tête du tiroir -->
-                    <div class="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white px-6 py-4 shadow-sm">
+                <div v-else-if="detailCommande">
+                    <!-- En-tête (défile avec le reste) -->
+                    <div class="flex items-center justify-between border-b border-gray-100 bg-white px-6 py-4 shadow-sm">
                         <div>
                             <p class="text-[18px] font-bold text-gray-800">{{ detailCommande.numero }}</p>
                             <p class="text-[13px] font-medium text-gray-500">Date : {{ formatDate(detailCommande.date) }}</p>
@@ -676,14 +732,13 @@ const nextPageUrl = computed(() => {
                         </span>
                     </div>
 
-                    <!-- Contenu défilable -->
-                    <div class="flex-1 space-y-4 p-6">
+                    <div class="space-y-4 p-6 pb-8">
                         <!-- Informations du client -->
                         <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                             <h3 class="mb-3 text-[14px] font-bold text-[#b4b4b4]">Informations du client</h3>
                             <div class="flex flex-col gap-1.5 md:flex-row md:items-center md:justify-between mb-2">
                                 <p class="text-[15px] font-bold text-gray-900">
-                                    <span class="font-normal text-gray-500 mr-1">Nom :</span> 
+                                    <span class="font-normal text-gray-500 mr-1">Nom :</span>
                                     {{ getClientDisplayName(detailCommande.client) }}
                                 </p>
                                 <p class="text-[14px] font-bold text-gray-800">
@@ -780,7 +835,7 @@ const nextPageUrl = computed(() => {
                                 </div>
                             </div>
                             <button
-                                v-if="motifAutoriseRelance(detailCommande.motif_annulation) && canCreateCommande"
+                                v-if="motifAutoriseRelance(detailCommande.motif_annulation) && canCreateCommande && !detailCommande.deja_relancee"
                                 type="button"
                                 class="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#3B82F6] text-[15px] font-bold text-white transition-colors hover:bg-blue-600"
                                 @click="openRelancerModal"
@@ -814,8 +869,9 @@ const nextPageUrl = computed(() => {
                                         <button
                                             v-for="m in montantsLivraison"
                                             :key="m.id"
+                                            type="button"
                                             class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-[12px] font-bold text-gray-700 transition-colors hover:border-[#0d6efd] hover:bg-blue-50 hover:text-[#0d6efd]"
-                                            @click="setMontantLivraison(m.id)"
+                                            @click.stop="setMontantLivraison(m.id)"
                                         >
                                             {{ Number(m.designation).toLocaleString('fr-FR') }} FCFA
                                         </button>
@@ -833,77 +889,136 @@ const nextPageUrl = computed(() => {
                             </div>
                         </div>
 
+                        <div
+                            v-if="detailCommande.livreur || (canCreateCommande && peutAssignerLivreurDetail())"
+                            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                        >
+                            <h3 class="mb-3 text-[14px] font-bold text-[#b4b4b4]">Livreur</h3>
+                            <div v-if="canCreateCommande && peutAssignerLivreurDetail()" class="flex flex-col gap-2">
+                                <label class="text-[13px] font-medium text-gray-600" for="detail-livreur-select">Attribuer un livreur</label>
+                                <select
+                                    id="detail-livreur-select"
+                                    class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-[14px] text-gray-900 focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                    :value="detailCommande.livreur?.id ?? ''"
+                                    @change="setLivreurCommande(($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null)"
+                                >
+                                    <option value="">Aucun livreur</option>
+                                    <option v-for="l in livreurs" :key="l.id" :value="l.id">
+                                        {{ l.prenom }} {{ l.nom }} — {{ l.tel }}
+                                    </option>
+                                </select>
+                            </div>
+                            <p v-else-if="detailCommande.livreur" class="text-[14px] font-medium text-gray-900">
+                                {{ detailCommande.livreur.prenom }} {{ detailCommande.livreur.nom }}
+                                <span class="block text-[13px] font-normal text-gray-500">{{ detailCommande.livreur.tel }}</span>
+                            </p>
+                            <p v-else class="text-[13px] text-gray-500">Aucun livreur assigné.</p>
+                        </div>
+
                         <div v-if="flashError" class="rounded-xl border border-red-200 bg-red-50 p-4 text-[13px] font-medium text-red-700 shadow-sm">
                             {{ flashError }}
                         </div>
                         <div v-if="flashStatus" class="rounded-xl border border-green-200 bg-green-50 p-4 text-[13px] font-medium text-green-700 shadow-sm">
                             {{ flashStatus }}
                         </div>
-                    </div>
 
-                    <!-- Zone des boutons d'action (Sticky en bas) -->
-                    <div class="sticky bottom-0 z-10 border-t border-gray-100 bg-white p-6 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-                        <div class="flex flex-col gap-3">
-                            <!-- Si en attente : cases de validation puis boutons -->
-                            <template v-if="detailCommande.status === 'en_attente'">
-                                <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 mb-2">
-                                    <input
-                                        type="checkbox"
-                                        :checked="detailCommande.acceptation_client"
-                                        class="size-4 rounded text-[#0d6efd] focus:ring-[#0d6efd]"
-                                        @change="onAcceptationChange"
-                                    />
-                                    <span class="text-[13px] font-medium text-gray-700">Le client a validé le coût total</span>
-                                </label>
-                                <button
-                                    class="flex h-12 w-full items-center justify-center rounded-full bg-[#0d6efd] text-[15px] font-bold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
-                                    :disabled="!detailCommande.acceptation_client"
-                                    @click="updateStatus('validee')"
-                                >
-                                    Valider
-                                </button>
-                                <button
-                                    class="flex h-12 w-full flex-row items-center justify-center rounded-full bg-[#e7000b] text-[15px] font-bold text-white transition-colors hover:bg-red-700"
-                                    @click="openAnnulerModal"
-                                >
-                                    Annuler
-                                </button>
-                            </template>
+                        <!-- Actions (suite du scroll, pas de barre fixe) -->
+                        <div class="border-t border-gray-200 bg-white pt-5">
+                            <div class="flex flex-col gap-3">
+                                <template v-if="detailCommande.status === 'en_attente'">
+                                    <button
+                                        type="button"
+                                        class="flex h-12 w-full items-center justify-center rounded-full bg-[#0d6efd] text-[15px] font-bold text-white transition-colors hover:bg-blue-700"
+                                        @click="openValiderModal"
+                                    >
+                                        Valider
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="flex h-12 w-full flex-row items-center justify-center rounded-full bg-[#e7000b] text-[15px] font-bold text-white transition-colors hover:bg-red-700"
+                                        @click="openAnnulerModal"
+                                    >
+                                        Annuler
+                                    </button>
+                                </template>
 
-                            <template v-else-if="detailCommande.status === 'validee'">
-                                <button
-                                    class="flex h-12 w-full items-center justify-center rounded-full bg-[#016630] text-[15px] font-bold text-white transition-colors hover:bg-green-800 focus:outline-none"
-                                    @click="updateStatus('retiree')"
-                                >
-                                    <Truck class="mr-2 size-5" />
-                                    Livrée
-                                </button>
-                                <button
-                                    class="flex h-12 w-full flex-row items-center justify-center rounded-full bg-[#e7000b] text-[15px] font-bold text-white transition-colors hover:bg-red-700"
-                                    @click="openAnnulerModal"
-                                >
-                                    Annuler
-                                </button>
-                            </template>
+                                <template v-else-if="detailCommande.status === 'validee' || detailCommande.status === 'a_preparer'">
+                                    <button
+                                        type="button"
+                                        class="flex h-12 w-full items-center justify-center rounded-full bg-[#016630] text-[15px] font-bold text-white transition-colors hover:bg-green-800 focus:outline-none"
+                                        @click="updateStatus('retiree')"
+                                    >
+                                        <Truck class="mr-2 size-5" />
+                                        Livrée
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="flex h-12 w-full flex-row items-center justify-center rounded-full bg-[#e7000b] text-[15px] font-bold text-white transition-colors hover:bg-red-700"
+                                        @click="openAnnulerModal"
+                                    >
+                                        Annuler
+                                    </button>
+                                </template>
 
-                            <template v-else-if="detailCommande.status === 'retiree'">
-                                <button
-                                    class="flex h-12 w-full items-center justify-center rounded-full bg-[#0d6efd] text-[15px] font-bold text-white transition-colors hover:bg-blue-700"
-                                    @click="showRecuModal = true"
-                                >
-                                    <FileText class="mr-2 size-5" />
-                                    Générer le reçu
-                                </button>
-                                <button class="flex h-12 w-full items-center justify-center rounded-full bg-gray-400 text-[15px] font-bold text-white cursor-not-allowed">
-                                    <Truck class="mr-2 size-5" />
-                                    Livrée
-                                </button>
-                            </template>
+                                <template v-else-if="detailCommande.status === 'retiree'">
+                                    <button
+                                        type="button"
+                                        class="flex h-12 w-full items-center justify-center rounded-full bg-[#0d6efd] text-[15px] font-bold text-white transition-colors hover:bg-blue-700"
+                                        @click="showRecuModal = true"
+                                    >
+                                        <FileText class="mr-2 size-5" />
+                                        Générer le reçu
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="flex h-12 w-full items-center justify-center rounded-full bg-gray-400 text-[15px] font-bold text-white cursor-not-allowed"
+                                    >
+                                        <Truck class="mr-2 size-5" />
+                                        Livrée
+                                    </button>
+                                </template>
+                            </div>
                         </div>
                     </div>
                 </div>
             </SheetContent>
         </Sheet>
+
+        <!-- Modal confirmation validation commande -->
+        <Dialog :open="showValiderModal" @update:open="showValiderModal = $event">
+            <DialogContent class="max-w-[440px]">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2 text-lg font-bold text-gray-900">
+                        <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#0d6efd]/15">
+                            <CheckCircle2 class="size-6 text-[#0d6efd]" />
+                        </span>
+                        Valider la commande
+                    </DialogTitle>
+                </DialogHeader>
+                <p class="text-[14px] leading-relaxed text-gray-600">
+                    Confirmez-vous la validation de la commande
+                    <span class="font-semibold text-gray-900">{{ detailCommande?.numero }}</span>
+                    ? Le statut passera à « Validée » et la pharmacie pourra préparer la commande.
+                </p>
+                <DialogFooter class="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="rounded-[10px] border-gray-300"
+                        @click="showValiderModal = false"
+                    >
+                        Retour
+                    </Button>
+                    <Button
+                        type="button"
+                        class="rounded-[10px] bg-[#0d6efd] font-bold text-white hover:bg-blue-700"
+                        @click="confirmValiderCommande"
+                    >
+                        Confirmer la validation
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         <!-- Modal Annuler -->
         <Dialog :open="showAnnulerModal" @update:open="showAnnulerModal = $event">
@@ -917,7 +1032,7 @@ const nextPageUrl = computed(() => {
                     </DialogTitle>
                 </DialogHeader>
                 <p class="shrink-0 text-[13px] text-black leading-snug">
-                    Sélectionner le motif d'annulation. Selon la configuration, certains motifs permettent ensuite de relancer la commande (autre pharmacie, etc.).
+                    Sélectionner le motif d’annulation. Si les médicaments sont indisponibles ou selon la configuration du motif, vous pouvez relancer la commande avec une autre pharmacie.
                 </p>
                 <div class="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
                     <p class="text-sm font-black text-black">
@@ -926,12 +1041,18 @@ const nextPageUrl = computed(() => {
                     <div
                         v-for="opt in motifOptions"
                         :key="opt.key"
-                        class="flex min-h-[52px] cursor-pointer flex-col justify-center rounded-[8px] border border-[rgba(92,89,89,0.25)] px-3 py-1.5 transition-colors"
+                        class="relative flex min-h-[52px] cursor-pointer flex-col justify-center rounded-[8px] border border-[rgba(92,89,89,0.25)] px-3 py-1.5 pr-9 transition-colors"
                         :class="motifAnnulation === opt.key
                             ? 'border-[#e7000b] bg-[rgba(231,0,11,0.2)]'
                             : 'bg-[rgba(231,0,11,0.13)] hover:bg-[rgba(231,0,11,0.18)]'"
                         @click="motifAnnulation = opt.key"
                     >
+                        <div
+                            v-if="motifAnnulation === opt.key"
+                            class="absolute right-2 top-2 flex size-5 items-center justify-center rounded-full bg-[#e7000b]"
+                        >
+                            <Check class="size-3 text-white" stroke-width="3" />
+                        </div>
                         <p class="text-[13px] font-bold text-black">{{ opt.label }}</p>
                         <p class="mt-0.5 text-[12px] font-light text-black">{{ opt.desc }}</p>
                     </div>
@@ -947,21 +1068,33 @@ const nextPageUrl = computed(() => {
                         class="w-full rounded-[10px] border border-[rgba(92,89,89,0.25)] bg-[rgba(0,0,0,0.11)] px-3 py-1.5 text-[13px] placeholder:text-black/60 focus:outline-none focus:ring-2 focus:ring-[#e7000b]/50"
                     />
                 </div>
-                <DialogFooter class="shrink-0 gap-3 sm:justify-end">
-                    <Button
-                        variant="outline"
-                        class="h-9 rounded-[10px] bg-[rgba(102,102,102,0.13)] px-4 text-sm font-black text-[rgba(0,0,0,0.82)] hover:bg-[rgba(102,102,102,0.2)]"
-                        @click="showAnnulerModal = false"
-                    >
-                        Retour
-                    </Button>
-                    <Button
-                        class="h-9 min-w-[160px] rounded-[10px] bg-[#e7000b] text-sm font-black text-white hover:bg-red-700 disabled:opacity-50"
-                        :disabled="!motifAnnulation"
-                        @click="confirmAnnuler"
-                    >
-                        Annuler la commande
-                    </Button>
+                <DialogFooter class="shrink-0 block space-y-0 p-0 sm:p-0">
+                    <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <Button
+                            v-if="motifAnnulation && motifAutoriseRelance(motifAnnulation) && canCreateCommande"
+                            class="h-9 min-w-[180px] rounded-[10px] bg-[#0d6efd] text-sm font-black text-white hover:bg-blue-700"
+                            :disabled="!motifAnnulation"
+                            @click="confirmAnnulerEtRelancer"
+                        >
+                            Relancer la commande
+                        </Button>
+                        <div class="flex flex-wrap justify-end gap-3 sm:ml-auto">
+                            <Button
+                                variant="outline"
+                                class="h-9 rounded-[10px] bg-[rgba(102,102,102,0.13)] px-4 text-sm font-black text-[rgba(0,0,0,0.82)] hover:bg-[rgba(102,102,102,0.2)]"
+                                @click="showAnnulerModal = false"
+                            >
+                                Retour
+                            </Button>
+                            <Button
+                                class="h-9 min-w-[160px] rounded-[10px] bg-[#e7000b] text-sm font-black text-white hover:bg-red-700 disabled:opacity-50"
+                                :disabled="!motifAnnulation"
+                                @click="confirmAnnuler"
+                            >
+                                Annuler la commande
+                            </Button>
+                        </div>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1008,7 +1141,6 @@ const nextPageUrl = computed(() => {
             v-model:open="showEnregistrementModal"
             :zones="zones ?? []"
             :pharmacies="pharmacies ?? []"
-            :modes-paiement="modesPaiement ?? []"
             :api-errors="apiErrorsEnreg"
             @submit="submitEnregistrementFromModal"
         />
@@ -1020,7 +1152,6 @@ const nextPageUrl = computed(() => {
             :commande="detailCommande ?? undefined"
             :zones="zones ?? []"
             :pharmacies="pharmacies ?? []"
-            :modes-paiement="modesPaiement ?? []"
             :api-errors="errorsRelancer"
             @submit="submitRelancerFromModal"
         />

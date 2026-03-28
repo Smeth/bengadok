@@ -138,42 +138,15 @@ onMounted(() => {
                     </svg>
                 </div>
 
-                <!-- Cercle blanc Figma + ombre 5px 0 10 -->
+                <!-- Cercle blanc Figma + ombre 5px 0 10 — logo officiel sidebar-logo-benga.svg -->
                 <div
                     class="bengadok-loader-logo-in relative flex aspect-square w-[min(72vw,260px)] flex-col items-center justify-center gap-2 rounded-full bg-white px-4 py-6 opacity-0 shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)]"
                 >
-                    <!-- Icône officielle (même esprit que LoginLogo) -->
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 80 80"
-                        class="size-[72px] shrink-0 sm:size-[88px]"
-                        aria-hidden="true"
-                    >
-                        <defs>
-                            <linearGradient id="bengadok-pl-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#3d9bad" />
-                                <stop offset="100%" stop-color="#34B0C7" />
-                            </linearGradient>
-                        </defs>
-                        <circle cx="40" cy="40" r="38" fill="url(#bengadok-pl-bg)" />
-                        <g transform="rotate(-22 40 40)" fill="none" stroke="#2C4685" stroke-width="5" stroke-linecap="round">
-                            <path d="M30 30 Q30 50 42 58" />
-                            <path d="M50 30 Q50 50 38 58" />
-                        </g>
-                        <rect x="35" y="22" width="10" height="36" rx="2" fill="#34B0C7" />
-                        <rect x="22" y="35" width="36" height="10" rx="2" fill="#34B0C7" />
-                    </svg>
-
-                    <div
-                        class="inline-flex items-center gap-0.5 rounded-full px-3 py-0.5"
-                        style="border: 2px solid #2c4685; background: rgba(255, 255, 255, 0.95)"
-                    >
-                        <span class="text-lg font-semibold tracking-tight text-[#2C4685] sm:text-xl">Benga</span>
-                        <span class="text-lg font-semibold tracking-tight text-[#5BB034] sm:text-xl">Dok</span>
-                    </div>
-                    <p class="max-w-[200px] text-center text-[11px] font-medium leading-tight text-[#94a3b8] sm:text-xs">
-                        Votre centre d'appel médical
-                    </p>
+                    <img
+                        src="/images/figma-assets/sidebar-logo-benga.svg"
+                        alt="BengaDok"
+                        class="h-[80px] w-auto max-w-[180px] object-contain sm:h-[100px] sm:max-w-[220px]"
+                    />
                 </div>
             </div>
 

@@ -21,11 +21,15 @@ class CommandeService
             $client = $this->resolveClient($data);
             $ordonnanceId = $this->resolveOrdonnanceId($data, $ordonnance);
 
+            $reuseId = $data['reutiliser_ordonnance_commande_id'] ?? null;
+            $reuseId = ($reuseId === null || $reuseId === '') ? null : (int) $reuseId;
+
             $commande = Commande::create([
                 'numero' => 'BDK'.now()->format('ymdHis').rand(100, 999),
                 'client_id' => $client->id,
                 'pharmacie_id' => $data['pharmacie_id'],
                 'ordonnance_id' => $ordonnanceId,
+                'relance_de_commande_id' => $reuseId,
                 'mode_paiement_id' => $data['mode_paiement_id'] ?? null,
                 'montant_livraison_id' => $data['montant_livraison_id'] ?? null,
                 'livreur_id' => $data['livreur_id'] ?? null,
@@ -49,12 +53,18 @@ class CommandeService
         if (! empty($data['client_id'])) {
             $client = Client::findOrFail($data['client_id']);
             if (isset($data['client_nom'])) {
-                $client->update([
+                $attrs = [
                     'nom' => $data['client_nom'],
                     'prenom' => $this->trimOrNull($data['client_prenom'] ?? null),
                     'tel' => $data['client_tel'],
                     'adresse' => $data['client_adresse'],
-                ]);
+                ];
+                if (array_key_exists('client_sexe', $data)) {
+                    $attrs['sexe'] = $data['client_sexe'] ?: null;
+                }
+                $client->update($attrs);
+            } elseif (array_key_exists('client_sexe', $data)) {
+                $client->update(['sexe' => $data['client_sexe'] ?: null]);
             }
 
             return $client;
@@ -65,6 +75,7 @@ class CommandeService
             'prenom' => $this->trimOrNull($data['client_prenom'] ?? null),
             'tel' => $data['client_tel'],
             'adresse' => $data['client_adresse'],
+            'sexe' => ! empty($data['client_sexe']) ? $data['client_sexe'] : null,
         ]);
     }
 

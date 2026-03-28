@@ -1,15 +1,17 @@
 <?php
 
 use App\Http\Controllers\AgentController;
-use App\Http\Controllers\CommandeController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DokPharmaController;
-use App\Http\Controllers\PostLoginLoadingController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ClientDoublonController;
+use App\Http\Controllers\CommandeController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DbMedicamentController;
+use App\Http\Controllers\DokPharmaController;
 use App\Http\Controllers\MedicamentController;
+use App\Http\Controllers\MedicamentDoublonController;
 use App\Http\Controllers\PharmacieController;
 use App\Http\Controllers\PharmacieVendeurController;
+use App\Http\Controllers\PostLoginLoadingController;
 use App\Http\Controllers\UtilisateurBackofficeController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +39,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::prefix('medicaments')->name('medicaments.')->group(function () {
         Route::get('/', [MedicamentController::class, 'index'])->name('index');
+        Route::get('doublons', [MedicamentDoublonController::class, 'index'])->name('doublons');
+        Route::patch('doublons/{groupe}/ignorer', [MedicamentDoublonController::class, 'ignorer'])->name('doublons.ignorer');
+        Route::patch('doublons/{groupe}/verifier', [MedicamentDoublonController::class, 'verifier'])->name('doublons.verifier');
+        Route::patch('doublons/{groupe}/fusionner', [MedicamentDoublonController::class, 'fusionner'])->name('doublons.fusionner');
+        Route::post('db-medicaments', [DbMedicamentController::class, 'store'])->name('db-medicaments.store')->middleware('role:admin|super_admin');
+        Route::patch('db-medicaments/{dbMedicament}', [DbMedicamentController::class, 'update'])->name('db-medicaments.update')->middleware('role:admin|super_admin');
+        Route::delete('db-medicaments/{dbMedicament}', [DbMedicamentController::class, 'destroy'])->name('db-medicaments.destroy')->middleware('role:admin|super_admin');
         Route::get('{produit}', [MedicamentController::class, 'show'])->name('show');
     });
     Route::prefix('clients')->name('clients.')->group(function () {
@@ -45,6 +54,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('doublons/{groupe}/ignorer', [ClientDoublonController::class, 'ignorer'])->name('doublons.ignorer');
         Route::patch('doublons/{groupe}/verifier', [ClientDoublonController::class, 'verifier'])->name('doublons.verifier');
         Route::patch('doublons/{groupe}/fusionner', [ClientDoublonController::class, 'fusionner'])->name('doublons.fusionner');
+        Route::patch('{client}/enrichissement-profil', [ClientController::class, 'updateEnrichissementProfil'])->name('enrichissement-profil');
         Route::get('{client}', [ClientController::class, 'show'])->name('show');
     });
     Route::prefix('utilisateurs')->name('utilisateurs.')->middleware('role:admin|super_admin')->group(function () {
@@ -55,13 +65,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('{user}', [UtilisateurBackofficeController::class, 'destroy'])->name('destroy');
     });
 
-    //Processus vendeur -> pharmacie
+    // Processus vendeur -> pharmacie
     Route::prefix('pharmacie')->name('pharmacie.')->middleware('role:gerant')->group(function () {
         Route::get('vendeurs', [PharmacieVendeurController::class, 'index'])->name('vendeurs.index');
         Route::post('vendeurs', [PharmacieVendeurController::class, 'store'])->name('vendeurs.store');
     });
 
-    //Commande
+    // Commande
     Route::prefix('commandes')->name('commandes.')->group(function () {
         Route::get('/', [CommandeController::class, 'index'])->name('index');
         Route::get('recherche-pharmacie-proche', [CommandeController::class, 'rechercherPharmacieProche'])->name('recherche-pharmacie');
@@ -74,6 +84,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('{commande}/status', [CommandeController::class, 'updateStatus'])->name('update-status');
         Route::patch('{commande}/acceptation-client', [CommandeController::class, 'setAcceptationClient'])->name('acceptation-client');
         Route::patch('{commande}/montant-livraison', [CommandeController::class, 'setMontantLivraison'])->name('montant-livraison');
+        Route::patch('{commande}/livreur', [CommandeController::class, 'setLivreur'])->name('livreur');
     });
 
     Route::prefix('dok-pharma')->name('dok-pharma.')->middleware('role:vendeur|gerant')->group(function () {

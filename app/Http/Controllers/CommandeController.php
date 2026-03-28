@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCommandeRequest;
 use App\Models\Client;
 use App\Models\Commande;
+use App\Models\Livreur;
 use App\Models\ModePaiement;
 use App\Models\MontantLivraison;
 use App\Models\Pharmacie;
@@ -83,8 +84,8 @@ class CommandeController extends Controller
         $pharmacies = Pharmacie::with(['zone', 'typePharmacie', 'heurs'])->get();
         $zones = Zone::withCount('pharmacies')->get();
         $produits = Produit::all();
-        $modesPaiement = ModePaiement::all();
         $montantsLivraison = MontantLivraison::all();
+        $livreurs = Livreur::orderBy('nom')->orderBy('prenom')->get();
 
         return Inertia::render('Commandes/Index', [
             'commandes' => $commandes,
@@ -93,8 +94,8 @@ class CommandeController extends Controller
             'pharmacies' => $pharmacies,
             'zones' => $zones,
             'produits' => $produits,
-            'modesPaiement' => $modesPaiement,
             'montantsLivraison' => $montantsLivraison,
+            'livreurs' => $livreurs,
         ]);
     }
 
@@ -104,6 +105,12 @@ class CommandeController extends Controller
         $user = $request->user();
 
         $commande->load(['client', 'pharmacie', 'pharmacieRefusee', 'produits', 'ordonnance', 'modePaiement', 'livreur', 'montantLivraison', 'enfants.pharmacie', 'enfants.produits', 'parent']);
+
+        $commande->setAttribute(
+            'deja_relancee',
+            $commande->status === 'annulee'
+                && Commande::query()->where('relance_de_commande_id', $commande->id)->exists()
+        );
 
         $pharmacieOptions = [];
         if ($user?->hasAnyRole(['admin', 'super_admin', 'agent_call_center'])
@@ -121,9 +128,12 @@ class CommandeController extends Controller
             return response()->json(['commande' => $commande]);
         }
 
+        $livreurs = Livreur::orderBy('nom')->orderBy('prenom')->get();
+
         return Inertia::render('Commandes/Show', [
             'commande' => $commande,
             'pharmacieOptions' => $pharmacieOptions,
+            'livreurs' => $livreurs,
         ]);
     }
 
@@ -316,10 +326,6 @@ class CommandeController extends Controller
             return back()->with('error', 'La pharmacie doit d\'abord confirmer la remise au livreur avant de marquer la commande comme livrée.');
         }
 
-        if ($validated['status'] === 'validee' && $commande->status === 'en_attente' && ! $commande->acceptation_client) {
-            return back()->with('error', 'Le client doit avoir validé le coût total avant de valider la commande.');
-        }
-
         if ($validated['status'] === 'validee' && $commande->parent_id === null) {
             $enfantsNonValides = $commande->enfants()->where('status', 'nouvelle')->exists();
             if ($enfantsNonValides) {
@@ -347,6 +353,25 @@ class CommandeController extends Controller
                 'status_pharmacie' => 'valide_a_preparer',
             ]);
         }
+
+        return back();
+    }
+
+    public function setLivreur(Request $request, Commande $commande): RedirectResponse
+    {
+        $this->authorize('assignLivreur', $commande);
+
+        $validated = $request->validate([
+            'livreur_id' => 'sometimes|nullable|integer|exists:livreurs,id',
+        ]);
+
+        if (! array_key_exists('livreur_id', $validated)) {
+            return back();
+        }
+
+        $commande->update([
+            'livreur_id' => $validated['livreur_id'],
+        ]);
 
         return back();
     }

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Client;
+use App\Models\Commande;
 use App\Models\GroupeDoublonsClient;
 use Illuminate\Support\Facades\DB;
 
@@ -13,10 +14,10 @@ class ClientDoublonService
      */
     public function detecterEtCreerGroupes(): void
     {
-        $clients = Client::with(['zone', 'commandes' => fn ($q) => $q->whereIn('status', ['validee', 'livree', 'a_preparer'])])
+        $clients = Client::with(['zone', 'commandes' => fn ($q) => $q->whereIn('status', Commande::STATUTS_COMPTABILISES_CLIENT)])
             ->get();
 
-        $groupesParNom = $clients->groupBy(fn ($c) => $this->normaliser($c->prenom . ' ' . $c->nom));
+        $groupesParNom = $clients->groupBy(fn ($c) => $this->normaliser($c->prenom.' '.$c->nom));
 
         foreach ($groupesParNom as $nomNorm => $groupeClients) {
             if ($nomNorm === '' || $groupeClients->count() < 2) {
@@ -64,7 +65,7 @@ class ClientDoublonService
 
     private function choisirPrincipal($clients)
     {
-        return $clients->sortByDesc(fn ($c) => $c->commandes->filter(fn ($cmd) => in_array($cmd->status, ['validee', 'livree', 'a_preparer']))->count())
+        return $clients->sortByDesc(fn ($c) => $c->commandes->filter(fn ($cmd) => in_array($cmd->status, Commande::STATUTS_COMPTABILISES_CLIENT, true))->count())
             ->sortByDesc(fn ($c) => $c->created_at?->timestamp ?? 0)
             ->first()->id;
     }

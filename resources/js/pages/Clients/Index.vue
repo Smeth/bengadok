@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Search, Users, Phone } from 'lucide-vue-next';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
@@ -21,13 +21,33 @@ type Client = {
     panier_moyen: number;
     medicaments_frequents: string[];
     habitué: boolean;
+    frequence_label?: string | null;
 };
 
-const props = defineProps<{
-    clients: Client[];
-    zones: Array<{ id: number; designation: string }>;
-    filters: { search?: string; zone_id?: string; tri?: string; frequence?: string };
-}>();
+type FrequenceRow = {
+    id: number;
+    designation: string;
+    slug: string;
+    commandes_minimum: number;
+    commandes_maximum: number | null;
+    intervalle_max_jours: number | null;
+    priorite: number;
+};
+
+const props = withDefaults(
+    defineProps<{
+        clients: Client[];
+        zones: Array<{ id: number; designation: string }>;
+        frequences?: FrequenceRow[];
+        filters: { search?: string; zone_id?: string; tri?: string; frequence?: string; frequence_id?: string };
+    }>(),
+    {
+        frequences: () => [],
+    },
+);
+
+const page = usePage();
+const flashStatus = computed(() => (page.props.flash as { status?: string })?.status);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
@@ -35,12 +55,22 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const searchQuery = ref(props.filters.search ?? '');
-const activeTab = ref<'liste' | 'doublons' | 'statistiques'>('liste');
+type TabId = 'liste' | 'doublons' | 'statistiques';
+const activeTab = ref<TabId>('liste');
 
-watch(() => props.filters.search, (v) => { searchQuery.value = v ?? ''; });
+watch(() => props.filters.search, (v) => {
+    searchQuery.value = v ?? '';
+});
 
 function filtrer(key: string, value: string) {
-    router.get('/clients', { ...props.filters, [key]: value || undefined }, { preserveState: true });
+    const next: Record<string, string | undefined> = { ...props.filters, [key]: value || undefined };
+    if (key === 'frequence_id') {
+        next.frequence = undefined;
+    }
+    if (key !== 'frequence_id' && key !== 'frequence') {
+        /* garder les filtres fréquence */
+    }
+    router.get('/clients', next, { preserveState: true });
 }
 
 function nomComplet(c: Client) {
@@ -56,42 +86,46 @@ function nomComplet(c: Client) {
             class="flex flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6"
             style="background: linear-gradient(to right, rgba(91, 176, 52, 0.14) 0%, rgba(52, 176, 199, 0.14) 100%);"
         >
+            <p
+                v-if="flashStatus"
+                class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800"
+            >
+                {{ flashStatus }}
+            </p>
+
             <!-- Tabs -->
             <div class="flex flex-wrap items-center gap-4">
-                <div class="flex gap-2">
-                        <button
-                            class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                            :class="activeTab === 'liste' ? 'bg-[#459cd1] text-white' : 'bg-white/80 text-muted-foreground hover:bg-white'"
-                            @click="activeTab = 'liste'"
-                        >
-                            Liste des clients
-                        </button>
-                        <Link
-                            href="/clients/doublons"
-                            class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                            :class="'bg-white/80 text-muted-foreground hover:bg-white'"
-                        >
-                            Gestion des doublons Clients
-                        </Link>
-                        <button
-                            class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                            :class="activeTab === 'statistiques' ? 'bg-[#459cd1] text-white' : 'bg-white/80 text-muted-foreground hover:bg-white'"
-                            @click="activeTab = 'statistiques'"
-                        >
-                            Statistiques
-                        </button>
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+                        :class="activeTab === 'liste' ? 'bg-[#459cd1] text-white' : 'bg-white/80 text-muted-foreground hover:bg-white'"
+                        @click="activeTab = 'liste'"
+                    >
+                        Liste des clients
+                    </button>
+                    <Link
+                        href="/clients/doublons"
+                        class="rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-white/80 text-muted-foreground hover:bg-white"
+                    >
+                        Gestion des doublons Clients
+                    </Link>
+                    <button
+                        type="button"
+                        class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+                        :class="activeTab === 'statistiques' ? 'bg-[#459cd1] text-white' : 'bg-white/80 text-muted-foreground hover:bg-white'"
+                        @click="activeTab = 'statistiques'"
+                    >
+                        Statistiques
+                    </button>
                 </div>
             </div>
 
             <div v-if="activeTab === 'liste'" class="space-y-4">
                 <form class="flex flex-wrap items-center gap-4" @submit.prevent="filtrer('search', searchQuery)">
-                    <div class="relative flex-1 min-w-[200px]">
+                    <div class="relative min-w-[200px] flex-1">
                         <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            v-model="searchQuery"
-                            placeholder="Rechercher un client..."
-                            class="pl-9"
-                        />
+                        <Input v-model="searchQuery" placeholder="Rechercher un client..." class="pl-9" />
                     </div>
                     <select
                         :value="filters.tri"
@@ -113,19 +147,26 @@ function nomComplet(c: Client) {
                         <option v-for="z in zones" :key="z.id" :value="String(z.id)">{{ z.designation }}</option>
                     </select>
                     <select
-                        :value="filters.frequence"
-                        class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-                        @change="(e: Event) => filtrer('frequence', (e.target as HTMLSelectElement).value)"
+                        :value="filters.frequence_id || ''"
+                        class="max-w-[220px] flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        @change="(e: Event) => filtrer('frequence_id', (e.target as HTMLSelectElement).value)"
                     >
                         <option value="">Toutes les fréquences</option>
-                        <option value="habitué">Habitué</option>
-                        <option value="occasionnel">Occasionnel</option>
+                        <option v-for="f in frequences" :key="f.id" :value="String(f.id)">{{ f.designation }}</option>
                     </select>
                     <div class="ml-auto flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-white">
                         <Users class="size-4" />
                         <span class="font-semibold">{{ clients.length }}</span>
                     </div>
                 </form>
+                <p class="text-xs text-muted-foreground">
+                    Les commandes comptées excluent les annulations et incluent les statuts en cours, validées et livrées
+                    (y compris anciens statuts éventuels). La fréquence affichée suit la règle à la plus haute priorité qui correspond au client.
+                    Les règles se gèrent dans
+                    <Link href="/settings/parametres?onglet=clientFrequences" class="font-medium text-[#459cd1] underline-offset-2 hover:underline">
+                        Configuration → Fréquences clients
+                    </Link>.
+                </p>
 
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div
@@ -144,7 +185,13 @@ function nomComplet(c: Client) {
                                         {{ c.zone }}
                                     </span>
                                     <span
-                                        v-if="c.habitué"
+                                        v-if="c.frequence_label"
+                                        class="rounded-full bg-violet-100 px-2 py-0.5 text-xs text-violet-800 dark:bg-violet-900/30"
+                                    >
+                                        {{ c.frequence_label }}
+                                    </span>
+                                    <span
+                                        v-else-if="c.habitué"
                                         class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900/30"
                                     >
                                         Habitué
@@ -164,7 +211,7 @@ function nomComplet(c: Client) {
                         <div class="mb-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
                             <span class="flex items-baseline gap-2">
                                 <span class="text-muted-foreground">Commandes</span>
-                                <span>{{ c.nb_commandes }}</span>
+                                <span class="font-medium tabular-nums">{{ c.nb_commandes }}</span>
                             </span>
                             <span class="flex items-baseline gap-2">
                                 <span class="text-muted-foreground">Total Dépensé</span>

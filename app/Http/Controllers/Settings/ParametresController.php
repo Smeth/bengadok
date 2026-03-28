@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
+use App\Models\ClientFrequence;
 use App\Models\Heur;
 use App\Models\Livreur;
 use App\Models\ModePaiement;
@@ -16,13 +18,43 @@ use Inertia\Response;
 
 class ParametresController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $motifsAnnulation = MotifAnnulation::query()
             ->withCount('commandes')
             ->orderBy('sort_order')
             ->orderBy('label')
             ->get();
+
+        $allowedOnglets = [
+            'zones',
+            'modesPaiement',
+            'montantsLivraison',
+            'livreurs',
+            'horaires',
+            'typesPharmacie',
+            'motifsAnnulation',
+            'clientFrequences',
+            'relanceCommande',
+        ];
+        $onglet = $request->query('onglet');
+        if (! is_string($onglet) || ! in_array($onglet, $allowedOnglets, true)) {
+            $onglet = null;
+        }
+
+        $clientFrequences = ClientFrequence::query()
+            ->orderByDesc('priorite')
+            ->orderBy('designation')
+            ->get()
+            ->map(fn (ClientFrequence $f) => [
+                'id' => $f->id,
+                'designation' => $f->designation,
+                'slug' => $f->slug,
+                'commandes_minimum' => $f->commandes_minimum,
+                'commandes_maximum' => $f->commandes_maximum,
+                'intervalle_max_jours' => $f->intervalle_max_jours,
+                'priorite' => $f->priorite,
+            ]);
 
         return Inertia::render('settings/Parametres', [
             'zones' => Zone::withCount('pharmacies')->orderBy('designation')->get(),
@@ -32,7 +64,28 @@ class ParametresController extends Controller
             'heurs' => Heur::withCount('pharmacies')->orderBy('ouverture')->get(),
             'typesPharmacie' => TypePharmacie::with('heurs')->withCount('pharmacies')->orderBy('designation')->get(),
             'motifsAnnulation' => $motifsAnnulation,
+            'clientFrequences' => $clientFrequences,
+            'appSettings' => [
+                'delai_relance_meme_pharmacie_heures' => AppSetting::delaiRelanceMemePharmacieHeures(),
+            ],
+            'onglet' => $onglet,
         ]);
+    }
+
+    public function updateRelanceDelai(Request $request)
+    {
+        $validated = $request->validate([
+            'delai_relance_meme_pharmacie_heures' => 'required|integer|min:0|max:8760',
+        ]);
+
+        $row = AppSetting::query()->first();
+        if ($row) {
+            $row->update($validated);
+        } else {
+            AppSetting::query()->create($validated);
+        }
+
+        return back()->with('status', 'Délai de relance (même pharmacie) enregistré.');
     }
 
     // ── Zones ──────────────────────────────────────────────────────────────

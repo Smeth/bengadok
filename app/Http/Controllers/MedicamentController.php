@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DbMedicament;
 use App\Models\Pharmacie;
 use App\Models\Produit;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -13,6 +15,8 @@ class MedicamentController extends Controller
 {
     public function index(Request $request): Response
     {
+        $onglet = $request->input('onglet', 'catalogue');
+
         $search = $request->input('search', '');
         $type = $request->input('type', '');
         $pharmacieId = $request->input('pharmacie_id', '');
@@ -94,10 +98,35 @@ class MedicamentController extends Controller
 
         $pharmacies = Pharmacie::orderBy('designation')->get(['id', 'designation']);
 
+        $dbMedicaments = $onglet === 'db_medicament'
+            ? DbMedicament::query()
+                ->orderBy('designation')
+                ->paginate(15, ['*'], 'db_page')
+                ->withQueryString()
+                ->through(fn (DbMedicament $m) => [
+                    'id' => $m->id,
+                    'designation' => $m->designation,
+                    'dosage' => $m->dosage,
+                    'forme' => $m->forme,
+                    'prix' => $m->prix !== null ? (float) $m->prix : null,
+                    'laboratoire' => $m->laboratoire,
+                    'type' => $m->type,
+                    'code_article' => $m->code_article,
+                    'notes' => $m->notes,
+                    'created_at' => $m->created_at?->format('d/m/Y H:i'),
+                ])
+            : new LengthAwarePaginator([], 0, 15, 1, [
+                'path' => $request->url(),
+                'query' => $request->query(),
+                'pageName' => 'db_page',
+            ]);
+
         return Inertia::render('Medicaments/Index', [
             'produits' => $produits,
             'pharmacies' => $pharmacies,
             'filters' => $request->only(['search', 'type', 'pharmacie_id', 'tri']),
+            'onglet' => $onglet,
+            'dbMedicaments' => $dbMedicaments,
         ]);
     }
 

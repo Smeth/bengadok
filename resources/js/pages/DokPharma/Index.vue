@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { usePolling } from '@/composables/usePolling';
 import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
 import {
@@ -18,6 +18,23 @@ type Pivot = {
     quantite_confirmee: number | null;
 };
 type Produit = { id: number; designation: string; pivot: Pivot };
+
+/** Quantité servie / confirmée (0 si ligne indisponible). */
+function qteDisponibleNombre(p: Produit): number {
+    if (p.pivot.status === 'indisponible') return 0;
+    const c = p.pivot.quantite_confirmee;
+    if (c !== null && c !== undefined) return c;
+    return p.pivot.quantite;
+}
+
+/** Affichage colonne « disponible » en lecture seule. */
+function qteDisponibleAffichee(p: Produit): string {
+    if (p.pivot.status === 'indisponible') return '—';
+    const c = p.pivot.quantite_confirmee;
+    if (c !== null && c !== undefined) return String(c);
+    return String(p.pivot.quantite);
+}
+
 type Commande = {
     id: number;
     numero: string;
@@ -73,19 +90,71 @@ type LigneForm = { prix: string; quantite: string; dispo: boolean };
 const formLignes      = ref<Record<number, Record<number, LigneForm>>>({});
 const formCommentaires = ref<Record<number, string>>({});
 
+/** Incrémenté à chaque changement du formulaire — force le recalcul disabled / classes du bouton Envoyer. */
+const formLignesRevision = ref(0);
+watch(
+    formLignes,
+    () => {
+        formLignesRevision.value++;
+    },
+    { deep: true },
+);
+
+/** Nombre saisi (prix) : accepte la virgule française et les espaces — évite NaN qui bloque la validation. */
+function parseNombreFr(v: string | number | undefined | null): number {
+    if (v === undefined || v === null || v === '') return NaN;
+    if (typeof v === 'number') return Number.isFinite(v) ? v : NaN;
+    const s = String(v)
+        .trim()
+        .replace(/\s/g, '')
+        .replace(/\u00a0/g, '')
+        .replace(',', '.');
+    if (s === '') return NaN;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : NaN;
+}
+
+function qteConfirmeeParsee(ligne: LigneForm | undefined): number {
+    if (!ligne?.quantite || String(ligne.quantite).trim() === '') return NaN;
+    const n = parseInt(String(ligne.quantite).trim(), 10);
+    if (!Number.isFinite(n)) return NaN;
+    return n;
+}
+
+/**
+ * Initialise ou complète les lignes du formulaire (sans écraser les saisies).
+ * Important : le polling Inertia (reload preserveState) peut ajouter des produits après ouverture de la carte.
+ */
 function initForm(cmd: Commande) {
-    if (formLignes.value[cmd.id]) return;
-    const map: Record<number, LigneForm> = {};
-    cmd.produits.forEach(p => {
+    if (!formLignes.value[cmd.id]) {
+        formLignes.value[cmd.id] = {};
+    }
+    const map = formLignes.value[cmd.id];
+    cmd.produits.forEach((p) => {
+        if (map[p.id]) return;
+        const qDem = Number(p.pivot.quantite) || 1;
         map[p.id] = {
-            prix:     p.pivot.prix_unitaire > 0 ? String(p.pivot.prix_unitaire) : '',
-            quantite: String(p.pivot.quantite_confirmee ?? p.pivot.quantite),
-            dispo:    p.pivot.status !== 'indisponible',
+            prix: p.pivot.prix_unitaire > 0 ? String(p.pivot.prix_unitaire) : '',
+            quantite: String(p.pivot.quantite_confirmee ?? p.pivot.quantite ?? qDem),
+            dispo: p.pivot.status !== 'indisponible',
         };
     });
-    formLignes.value[cmd.id] = map;
-    formCommentaires.value[cmd.id] = '';
+    if (formCommentaires.value[cmd.id] === undefined) {
+        formCommentaires.value[cmd.id] = '';
+    }
 }
+
+watch(
+    () => props.commandes.data,
+    () => {
+        for (const cmd of props.commandes.data) {
+            if (expandedCards.value.has(cmd.id)) {
+                initForm(cmd);
+            }
+        }
+    },
+    { deep: true },
+);
 
 function totalCmd(cmd: Commande): number {
     const lignes = formLignes.value[cmd.id];
@@ -93,16 +162,19 @@ function totalCmd(cmd: Commande): number {
     return cmd.produits.reduce((sum, p) => {
         const l = lignes[p.id];
         if (!l?.dispo) return sum;
-        return sum + (Number(l.prix) || 0) * (Number(l.quantite) || p.pivot.quantite);
+        const prix = parseNombreFr(l.prix);
+        const qte = qteConfirmeeParsee(l);
+        if (!Number.isFinite(prix) || !Number.isFinite(qte)) return sum;
+        return sum + prix * qte;
     }, 0);
 }
 
 function totalLigne(cmdId: number, produit: Produit): string {
     const ligne = formLignes.value[cmdId]?.[produit.id];
     if (!ligne?.dispo) return '';
-    const prix = Number(ligne.prix || 0);
-    const qte  = Number(ligne.quantite || produit.pivot.quantite);
-    if (!prix || !qte) return '';
+    const prix = parseNombreFr(ligne.prix);
+    const qte = qteConfirmeeParsee(ligne);
+    if (!Number.isFinite(prix) || !Number.isFinite(qte) || prix <= 0 || qte <= 0) return '';
     return (prix * qte).toLocaleString('fr-FR');
 }
 
@@ -110,7 +182,8 @@ function totalLigne(cmdId: number, produit: Produit): string {
 function qteInvalide(cmdId: number, produit: Produit): boolean {
     const ligne = formLignes.value[cmdId]?.[produit.id];
     if (!ligne?.dispo) return false;
-    const qte = Number(ligne.quantite);
+    const qte = qteConfirmeeParsee(ligne);
+    if (!Number.isFinite(qte)) return true;
     return qte > produit.pivot.quantite || qte < 1;
 }
 
@@ -121,21 +194,34 @@ function hasQteError(cmd: Commande): boolean {
 
 /** Retourne true si un produit disponible n'a pas de prix saisi (> 0) */
 function hasPrixError(cmd: Commande): boolean {
-    return cmd.produits.some(p => {
+    return cmd.produits.some((p) => {
         const ligne = formLignes.value[cmd.id]?.[p.id];
         if (!ligne?.dispo) return false;
-        return !ligne.prix || Number(ligne.prix) <= 0;
+        const px = parseNombreFr(ligne.prix);
+        return !Number.isFinite(px) || px <= 0;
     });
 }
 
+/** État du bouton Envoyer (même logique que l’action, avec dépendance explicite à la révision). */
+function peutEnvoyerDisponibilite(cmd: Commande): boolean {
+    void formLignesRevision.value;
+    return !hasQteError(cmd) && !hasPrixError(cmd);
+}
+
 function envoyer(cmd: Commande) {
-    if (hasQteError(cmd) || hasPrixError(cmd)) return;
-    const lignes = cmd.produits.map(p => ({
-        produit_id:         p.id,
-        status:             formLignes.value[cmd.id]?.[p.id]?.dispo ? 'disponible' : 'indisponible',
-        prix_unitaire:      Number(formLignes.value[cmd.id]?.[p.id]?.prix || 0),
-        quantite_confirmee: Number(formLignes.value[cmd.id]?.[p.id]?.quantite || p.pivot.quantite),
-    }));
+    if (!peutEnvoyerDisponibilite(cmd)) return;
+    const lignes = cmd.produits.map((p) => {
+        const ligne = formLignes.value[cmd.id]?.[p.id];
+        const qte = qteConfirmeeParsee(ligne);
+        const pxBrut = ligne?.dispo ? parseNombreFr(ligne.prix) : 0;
+        const prixUnitaire = Number.isFinite(pxBrut) ? pxBrut : 0;
+        return {
+            produit_id: p.id,
+            status: ligne?.dispo ? 'disponible' : 'indisponible',
+            prix_unitaire: prixUnitaire,
+            quantite_confirmee: Number.isFinite(qte) ? qte : p.pivot.quantite,
+        };
+    });
     router.post(`/dok-pharma/${cmd.id}/valider`, { lignes, commentaire: formCommentaires.value[cmd.id] ?? '' }, {
         preserveScroll: true,
         onSuccess: () => {
@@ -333,11 +419,12 @@ function downloadOrdonnance() {
                                     <Paperclip class="size-3.5" />Médicaments demandés
                                 </p>
                                 <div class="overflow-x-auto rounded-xl border border-gray-100">
-                                    <table class="w-full min-w-[560px] text-[13px]">
+                                    <table class="w-full min-w-[720px] text-[13px]">
                                         <thead class="bg-gray-50">
                                             <tr>
                                                 <th class="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500">Nom Médicament</th>
-                                                <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Quantité</th>
+                                                <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Qté demandée</th>
+                                                <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Qté disponible</th>
                                                 <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Prix unitaire</th>
                                                 <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Total</th>
                                                 <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Disponibilité</th>
@@ -353,7 +440,10 @@ function downloadOrdonnance() {
                                                         {{ p.designation }}
                                                     </span>
                                                 </td>
-                                                <!-- Quantité (éditable si dispo) -->
+                                                <td class="px-3 py-2.5 text-[13px] font-medium tabular-nums text-gray-700">
+                                                    {{ p.pivot.quantite }}
+                                                </td>
+                                                <!-- Quantité disponible (saisie si dispo) -->
                                                 <td class="px-3 py-2.5">
                                                     <div class="flex w-16 flex-col gap-0.5">
                                                         <input
@@ -454,11 +544,14 @@ function downloadOrdonnance() {
                                         Saisissez le prix de tous les médicaments disponibles
                                     </p>
                                     <button
-                                        class="rounded-xl px-6 py-2.5 text-[13px] font-bold text-white shadow transition-colors"
-                                        :class="hasQteError(cmd) || hasPrixError(cmd)
-                                            ? 'bg-gray-300 cursor-not-allowed'
-                                            : 'bg-primary hover:bg-primary/90'"
-                                        :disabled="hasQteError(cmd) || hasPrixError(cmd)"
+                                        type="button"
+                                        class="rounded-xl px-6 py-2.5 text-[13px] font-bold shadow transition-colors"
+                                        :class="
+                                            peutEnvoyerDisponibilite(cmd)
+                                                ? 'bg-[#3995d2] text-white hover:bg-[#3181b8]'
+                                                : 'cursor-not-allowed bg-gray-300 text-gray-600'
+                                        "
+                                        :disabled="!peutEnvoyerDisponibilite(cmd)"
                                         @click="envoyer(cmd)"
                                     >
                                         Envoyer
@@ -546,11 +639,12 @@ function downloadOrdonnance() {
                                     <Paperclip class="size-3.5" />Médicaments demandés
                                 </p>
                                 <div class="overflow-x-auto rounded-xl border border-gray-100">
-                                    <table class="w-full min-w-[560px] text-[13px]">
+                                    <table class="w-full min-w-[720px] text-[13px]">
                                         <thead class="bg-gray-50">
                                             <tr>
                                                 <th class="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500">Nom Médicament</th>
-                                                <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Quantité</th>
+                                                <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Qté demandée</th>
+                                                <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Qté disponible</th>
                                                 <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Prix unitaire</th>
                                                 <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Total</th>
                                                 <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Disponibilité</th>
@@ -564,7 +658,8 @@ function downloadOrdonnance() {
                                                         {{ p.designation }}
                                                     </span>
                                                 </td>
-                                                <td class="px-3 py-2.5 text-[13px] text-gray-600">{{ p.pivot.quantite }}</td>
+                                                <td class="px-3 py-2.5 text-[13px] font-medium tabular-nums text-gray-600">{{ p.pivot.quantite }}</td>
+                                                <td class="px-3 py-2.5 text-[13px] font-medium tabular-nums text-gray-800">{{ qteDisponibleAffichee(p) }}</td>
                                                 <td class="px-3 py-2.5">
                                                     <div class="flex items-center gap-1">
                                                         <span class="text-[13px] font-semibold text-gray-900">{{ Number(p.pivot.prix_unitaire).toLocaleString('fr-FR') }}</span>
@@ -573,7 +668,7 @@ function downloadOrdonnance() {
                                                 </td>
                                                 <td class="px-3 py-2.5">
                                                     <div class="flex items-center gap-1">
-                                                        <span class="text-[13px] font-bold text-gray-900">{{ Number(p.pivot.prix_unitaire * p.pivot.quantite).toLocaleString('fr-FR') }}</span>
+                                                        <span class="text-[13px] font-bold text-gray-900">{{ Number(p.pivot.prix_unitaire * qteDisponibleNombre(p)).toLocaleString('fr-FR') }}</span>
                                                         <span class="text-[11px] text-gray-400">xaf</span>
                                                     </div>
                                                 </td>
@@ -669,11 +764,12 @@ function downloadOrdonnance() {
                                     <Paperclip class="size-3.5" />Médicaments demandés
                                 </p>
                                 <div class="overflow-x-auto rounded-xl border border-gray-100">
-                                    <table class="w-full min-w-[560px] text-[13px]">
+                                    <table class="w-full min-w-[720px] text-[13px]">
                                         <thead class="bg-gray-50">
                                             <tr>
                                                 <th class="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500">Nom Médicament</th>
-                                                <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Quantité</th>
+                                                <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Qté demandée</th>
+                                                <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Qté disponible</th>
                                                 <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Prix unitaire</th>
                                                 <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Total</th>
                                                 <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Disponibilité</th>
@@ -684,7 +780,8 @@ function downloadOrdonnance() {
                                                 <td class="px-4 py-2.5">
                                                     <span class="inline-block rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[13px] text-gray-800">{{ p.designation }}</span>
                                                 </td>
-                                                <td class="px-3 py-2.5 text-[13px] text-gray-700">{{ p.pivot.quantite }}</td>
+                                                <td class="px-3 py-2.5 text-[13px] font-medium tabular-nums text-gray-700">{{ p.pivot.quantite }}</td>
+                                                <td class="px-3 py-2.5 text-[13px] font-medium tabular-nums text-gray-800">{{ qteDisponibleAffichee(p) }}</td>
                                                 <td class="px-3 py-2.5">
                                                     <div class="flex items-center gap-1">
                                                         <span class="text-[13px] font-semibold text-gray-900">{{ Number(p.pivot.prix_unitaire).toLocaleString('fr-FR') }}</span>
@@ -693,7 +790,7 @@ function downloadOrdonnance() {
                                                 </td>
                                                 <td class="px-3 py-2.5">
                                                     <div class="flex items-center gap-1">
-                                                        <span class="text-[13px] font-bold text-gray-900">{{ Number(p.pivot.prix_unitaire * p.pivot.quantite).toLocaleString('fr-FR') }}</span>
+                                                        <span class="text-[13px] font-bold text-gray-900">{{ Number(p.pivot.prix_unitaire * qteDisponibleNombre(p)).toLocaleString('fr-FR') }}</span>
                                                         <span class="text-[11px] text-gray-400">xaf</span>
                                                     </div>
                                                 </td>
@@ -782,11 +879,12 @@ function downloadOrdonnance() {
                                     <Paperclip class="size-3.5" />Médicaments demandés
                                 </p>
                                 <div class="overflow-x-auto rounded-xl border border-gray-100">
-                                    <table class="w-full min-w-[480px] text-[13px]">
+                                    <table class="w-full min-w-[720px] text-[13px]">
                                         <thead class="bg-gray-50">
                                             <tr>
                                                 <th class="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500">Nom Médicament</th>
-                                                <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Quantité</th>
+                                                <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Qté demandée</th>
+                                                <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Qté disponible</th>
                                                 <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Prix unitaire</th>
                                                 <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Total</th>
                                                 <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500">Disponibilité</th>
@@ -800,7 +898,8 @@ function downloadOrdonnance() {
                                                         {{ p.designation }}
                                                     </span>
                                                 </td>
-                                                <td class="px-3 py-2.5 text-[13px] text-gray-600">{{ p.pivot.quantite_confirmee ?? p.pivot.quantite }}</td>
+                                                <td class="px-3 py-2.5 text-[13px] font-medium tabular-nums text-gray-600">{{ p.pivot.quantite }}</td>
+                                                <td class="px-3 py-2.5 text-[13px] font-medium tabular-nums text-gray-800">{{ qteDisponibleAffichee(p) }}</td>
                                                 <td class="px-3 py-2.5">
                                                     <div class="flex items-center gap-1">
                                                         <span class="text-[13px] font-semibold text-gray-900">{{ Number(p.pivot.prix_unitaire).toLocaleString('fr-FR') }}</span>
@@ -809,7 +908,7 @@ function downloadOrdonnance() {
                                                 </td>
                                                 <td class="px-3 py-2.5">
                                                     <div class="flex items-center gap-1">
-                                                        <span class="text-[13px] font-bold text-gray-900">{{ Number(p.pivot.prix_unitaire * (p.pivot.quantite_confirmee ?? p.pivot.quantite)).toLocaleString('fr-FR') }}</span>
+                                                        <span class="text-[13px] font-bold text-gray-900">{{ Number(p.pivot.prix_unitaire * qteDisponibleNombre(p)).toLocaleString('fr-FR') }}</span>
                                                         <span class="text-[11px] text-gray-400">xaf</span>
                                                     </div>
                                                 </td>

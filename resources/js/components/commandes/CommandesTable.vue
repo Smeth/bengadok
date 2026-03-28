@@ -34,12 +34,20 @@ const emit = defineEmits<{
     filtrer: [key: string, value: string];
 }>();
 
-function getClientDisplayName(client: { nom?: string; prenom?: string } | undefined): string {
+function civiliteFromSexe(sexe?: string | null): string {
+    if (sexe === 'F') return 'Mme';
+    if (sexe === 'M') return 'Mr';
+    return '';
+}
+
+function getClientDisplayName(client: { nom?: string; prenom?: string; sexe?: string } | undefined): string {
     if (!client) return '-';
     const prenom = (client.prenom ?? '').trim();
     const nom = (client.nom ?? '').trim();
     if (!prenom && !nom) return '-';
-    return [prenom, nom].filter(Boolean).join(' ');
+    const core = prenom === nom ? prenom : [prenom, nom].filter(Boolean).join(' ');
+    const civ = civiliteFromSexe(client.sexe);
+    return civ ? `${civ} ${core}` : core;
 }
 
 function getMedicamentsText(produits: Array<{ designation: string; dosage?: string }> | undefined): string {

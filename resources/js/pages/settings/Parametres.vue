@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import type { BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
-import { Plus, Pencil, Trash2, Check, X, MapPin, CreditCard, Truck, User, Clock, Building2, RefreshCw } from 'lucide-vue-next';
+import { Plus, Pencil, Trash2, Check, X, MapPin, CreditCard, Truck, User, Clock, Building2, RefreshCw, CalendarClock, Timer } from 'lucide-vue-next';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -23,7 +33,21 @@ interface MotifAnnulationRow {
     commandes_count: number;
 }
 
-withDefaults(
+interface ClientFrequenceRow {
+    id: number;
+    designation: string;
+    slug: string;
+    commandes_minimum: number;
+    commandes_maximum: number | null;
+    intervalle_max_jours: number | null;
+    priorite: number;
+}
+
+interface AppSettingsProps {
+    delai_relance_meme_pharmacie_heures: number;
+}
+
+const props = withDefaults(
     defineProps<{
         zones:               Zone[];
         modesPaiement:       ModePaiement[];
@@ -32,11 +56,20 @@ withDefaults(
         heurs:               Heur[];
         typesPharmacie:      TypePharmacie[];
         motifsAnnulation:    MotifAnnulationRow[];
+        clientFrequences:    ClientFrequenceRow[];
+        appSettings:         AppSettingsProps;
+        onglet:              string | null;
     }>(),
     {
         motifsAnnulation: () => [],
-    }
+        clientFrequences: () => [],
+        appSettings: () => ({ delai_relance_meme_pharmacie_heures: 24 }),
+        onglet: null,
+    },
 );
+
+const page = usePage();
+const flashStatus = computed(() => (page.props.flash as { status?: string })?.status);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
@@ -52,11 +85,35 @@ const onglets = [
     { id: 'livreurs',          label: 'Livreurs',            icon: User },
     { id: 'horaires',          label: 'Horaires',            icon: Clock },
     { id: 'typesPharmacie',    label: 'Types pharmacie',     icon: Building2 },
+    { id: 'clientFrequences',  label: 'Fréquences clients',  icon: CalendarClock },
+    { id: 'relanceCommande',   label: 'Relance commandes',   icon: Timer },
     { id: 'motifsAnnulation',  label: 'Motifs d\'annulation', icon: RefreshCw },
 ] as const;
 
 type OngletId = typeof onglets[number]['id'];
 const ongletActif = ref<OngletId>('zones');
+
+function isOngletId(v: string): v is OngletId {
+    return (onglets as readonly { id: string }[]).some((t) => t.id === v);
+}
+
+watch(
+    () => props.onglet,
+    (o) => {
+        if (o && isOngletId(o)) {
+            ongletActif.value = o;
+        }
+    },
+    { immediate: true },
+);
+
+function selectOnglet(id: OngletId) {
+    ongletActif.value = id;
+    editingId.value = null;
+    freqModalOpen.value = false;
+    const q = id === 'zones' ? {} : { onglet: id };
+    router.get('/settings/parametres', q, { preserveState: true, preserveScroll: true, replace: true });
+}
 
 // ─── Utilitaires formulaire ───────────────────────────────────────────────────
 
@@ -236,6 +293,114 @@ function supprimerMotif(id: number) {
         submit(`/settings/parametres/motifs-annulation/${id}`, {}, 'delete');
     }
 }
+
+// ─── Fréquences clients (segmentation liste clients) ─────────────────────────
+
+const freqModalOpen = ref(false);
+const freqEditing = ref<ClientFrequenceRow | null>(null);
+const freqForm = ref({
+    designation: '',
+    slug: '',
+    commandes_minimum: '0',
+    commandes_maximum: '',
+    intervalle_max_jours: '',
+    priorite: '10',
+});
+
+function closeFreqModal() {
+    freqModalOpen.value = false;
+    freqEditing.value = null;
+}
+
+function openFreqCreate() {
+    freqEditing.value = null;
+    freqForm.value = {
+        designation: '',
+        slug: '',
+        commandes_minimum: '0',
+        commandes_maximum: '',
+        intervalle_max_jours: '',
+        priorite: '10',
+    };
+    freqModalOpen.value = true;
+}
+
+function openFreqEdit(row: ClientFrequenceRow) {
+    freqEditing.value = row;
+    freqForm.value = {
+        designation: row.designation,
+        slug: row.slug,
+        commandes_minimum: String(row.commandes_minimum),
+        commandes_maximum: row.commandes_maximum != null ? String(row.commandes_maximum) : '',
+        intervalle_max_jours: row.intervalle_max_jours != null ? String(row.intervalle_max_jours) : '',
+        priorite: String(row.priorite),
+    };
+    freqModalOpen.value = true;
+}
+
+function optInt(raw: string): number | undefined {
+    const t = raw.trim();
+    if (t === '') return undefined;
+    const n = parseInt(t, 10);
+    return Number.isFinite(n) ? n : undefined;
+}
+
+function payloadFreq() {
+    const min = parseInt(freqForm.value.commandes_minimum, 10);
+    const prio = parseInt(freqForm.value.priorite, 10);
+    return {
+        designation: freqForm.value.designation.trim(),
+        slug: freqForm.value.slug.trim() || undefined,
+        commandes_minimum: Number.isFinite(min) ? min : 0,
+        commandes_maximum: optInt(freqForm.value.commandes_maximum),
+        intervalle_max_jours: optInt(freqForm.value.intervalle_max_jours),
+        priorite: Number.isFinite(prio) ? prio : 0,
+    };
+}
+
+function submitFreq() {
+    const p = payloadFreq();
+    if (!p.designation) return;
+    enCours.value = true;
+    if (freqEditing.value) {
+        router.patch(`/settings/parametres/client-frequences/${freqEditing.value.id}`, p, {
+            preserveScroll: true,
+            onSuccess: () => closeFreqModal(),
+            onFinish: () => { enCours.value = false; },
+        });
+    } else {
+        router.post('/settings/parametres/client-frequences', p, {
+            preserveScroll: true,
+            onSuccess: () => closeFreqModal(),
+            onFinish: () => { enCours.value = false; },
+        });
+    }
+}
+
+function destroyFreq(row: ClientFrequenceRow) {
+    if (!confirm(`Supprimer la fréquence « ${row.designation} » ?`)) return;
+    enCours.value = true;
+    router.delete(`/settings/parametres/client-frequences/${row.id}`, {
+        preserveScroll: true,
+        onFinish: () => { enCours.value = false; },
+    });
+}
+
+const relanceDelaiForm = ref({ delai_relance_meme_pharmacie_heures: '24' });
+
+watch(
+    () => props.appSettings.delai_relance_meme_pharmacie_heures,
+    (v) => {
+        relanceDelaiForm.value.delai_relance_meme_pharmacie_heures = String(v ?? 0);
+    },
+    { immediate: true },
+);
+
+function sauverRelanceDelai() {
+    const n = parseInt(relanceDelaiForm.value.delai_relance_meme_pharmacie_heures, 10);
+    if (!Number.isFinite(n) || n < 0) return;
+    submit('/settings/parametres/relance-delai', { delai_relance_meme_pharmacie_heures: n }, 'patch');
+}
 </script>
 
 <template>
@@ -252,13 +417,20 @@ function supprimerMotif(id: number) {
                 </p>
             </div>
 
+            <p
+                v-if="flashStatus"
+                class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800"
+            >
+                {{ flashStatus }}
+            </p>
+
             <!-- Onglets -->
             <div class="flex flex-wrap gap-1 rounded-xl bg-gray-100 p-1">
                 <button
                     v-for="o in onglets"
                     :key="o.id"
                     type="button"
-                    @click="ongletActif = o.id; editingId = null"
+                    @click="selectOnglet(o.id)"
                     :class="[
                         'flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
                         ongletActif === o.id
@@ -681,6 +853,172 @@ function supprimerMotif(id: number) {
                         </tr>
                     </tbody>
                 </table>
+            </section>
+
+            <!-- ══════════════════ FRÉQUENCES CLIENTS ══════════════════ -->
+            <section v-if="ongletActif === 'clientFrequences'" class="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b bg-gray-50 px-5 py-3">
+                    <h2 class="flex items-center gap-2 font-semibold text-gray-700">
+                        <CalendarClock class="h-4 w-4 text-violet-600" /> Fréquences clients
+                    </h2>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <span class="text-xs text-gray-400">{{ clientFrequences.length }} règle(s)</span>
+                        <Button
+                            type="button"
+                            class="h-9 gap-2 bg-violet-600 text-white hover:bg-violet-700"
+                            @click="openFreqCreate"
+                        >
+                            <Plus class="h-4 w-4" />
+                            Nouvelle fréquence
+                        </Button>
+                    </div>
+                </div>
+                <div class="border-b bg-violet-50/40 px-5 py-4">
+                    <p class="text-sm leading-relaxed text-gray-600">
+                        Utilisé pour le filtre « Toutes les fréquences » sur la
+                        <span class="font-semibold">liste des clients</span> et le libellé sur chaque carte. La règle à la
+                        <span class="font-semibold">priorité</span> la plus élevée qui correspond au client (nombre de commandes comptabilisées, écart moyen en jours entre commandes) s’applique en premier.
+                    </p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[720px] text-sm">
+                        <thead class="border-b bg-gray-50 text-xs text-gray-500">
+                            <tr>
+                                <th class="px-5 py-3 text-left font-medium">Libellé</th>
+                                <th class="px-5 py-3 text-left font-medium">Slug</th>
+                                <th class="px-5 py-3 text-right font-medium">Cmd min</th>
+                                <th class="px-5 py-3 text-right font-medium">Cmd max</th>
+                                <th class="px-5 py-3 text-right font-medium">Intervalle max (j)</th>
+                                <th class="px-5 py-3 text-right font-medium">Priorité</th>
+                                <th class="px-5 py-3 text-right font-medium"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr v-if="!clientFrequences.length">
+                                <td colspan="7" class="px-5 py-6 text-center text-gray-400">Aucune fréquence définie.</td>
+                            </tr>
+                            <tr v-for="f in clientFrequences" :key="f.id" class="hover:bg-gray-50/50">
+                                <td class="px-5 py-3 font-medium text-gray-800">{{ f.designation }}</td>
+                                <td class="px-5 py-3 font-mono text-xs text-gray-600">{{ f.slug }}</td>
+                                <td class="px-5 py-3 text-right tabular-nums">{{ f.commandes_minimum }}</td>
+                                <td class="px-5 py-3 text-right tabular-nums">{{ f.commandes_maximum ?? '—' }}</td>
+                                <td class="px-5 py-3 text-right tabular-nums">{{ f.intervalle_max_jours ?? '—' }}</td>
+                                <td class="px-5 py-3 text-right tabular-nums">{{ f.priorite }}</td>
+                                <td class="px-5 py-3 text-right">
+                                    <button
+                                        type="button"
+                                        class="mr-3 text-blue-500 hover:text-blue-700"
+                                        @click="openFreqEdit(f)"
+                                    >
+                                        <Pencil class="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="text-red-400 hover:text-red-600"
+                                        @click="destroyFreq(f)"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <Dialog :open="freqModalOpen" @update:open="(v: boolean) => !v && closeFreqModal()">
+                    <DialogContent class="max-h-[90vh] max-w-lg overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle>{{ freqEditing ? 'Modifier la fréquence' : 'Nouvelle fréquence' }}</DialogTitle>
+                        </DialogHeader>
+                        <div class="grid gap-3 py-2">
+                            <div>
+                                <Label class="text-xs">Libellé *</Label>
+                                <Input v-model="freqForm.designation" class="mt-1" placeholder="Ex. Très actif" />
+                            </div>
+                            <div>
+                                <Label class="text-xs">Slug URL (optionnel, sinon dérivé du libellé)</Label>
+                                <Input v-model="freqForm.slug" class="mt-1 font-mono text-sm" placeholder="tres-actif" />
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <Label class="text-xs">Commandes minimum</Label>
+                                    <Input v-model="freqForm.commandes_minimum" class="mt-1" inputmode="numeric" />
+                                </div>
+                                <div>
+                                    <Label class="text-xs">Commandes maximum (vide = illimité)</Label>
+                                    <Input v-model="freqForm.commandes_maximum" class="mt-1" inputmode="numeric" />
+                                </div>
+                            </div>
+                            <div>
+                                <Label class="text-xs">Intervalle max entre commandes (jours)</Label>
+                                <Input
+                                    v-model="freqForm.intervalle_max_jours"
+                                    class="mt-1"
+                                    inputmode="numeric"
+                                    placeholder="Ex. 30 — moyenne ≤ 30 jours"
+                                />
+                                <p class="mt-1 text-[11px] text-muted-foreground">
+                                    Laisser vide pour ne pas utiliser l’écart entre commandes. Au moins 2 commandes datées sont nécessaires pour calculer la moyenne.
+                                </p>
+                            </div>
+                            <div>
+                                <Label class="text-xs">Priorité (plus haut = appliqué en premier sur la carte client)</Label>
+                                <Input v-model="freqForm.priorite" class="mt-1" inputmode="numeric" />
+                            </div>
+                        </div>
+                        <DialogFooter class="gap-2">
+                            <Button variant="outline" type="button" @click="closeFreqModal">Annuler</Button>
+                            <Button
+                                type="button"
+                                class="bg-violet-600 text-white hover:bg-violet-700"
+                                :disabled="!freqForm.designation.trim() || enCours"
+                                @click="submitFreq"
+                            >
+                                Enregistrer
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </section>
+
+            <!-- ══════════════════ RELANCE COMMANDES ══════════════════ -->
+            <section v-if="ongletActif === 'relanceCommande'" class="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                <div class="border-b bg-gray-50 px-5 py-3">
+                    <h2 class="font-semibold text-gray-700 flex items-center gap-2">
+                        <Timer class="h-4 w-4 text-amber-600" /> Relance après annulation
+                    </h2>
+                </div>
+                <div class="space-y-4 border-b border-amber-100 bg-amber-50/40 px-5 py-4">
+                    <p class="text-sm leading-relaxed text-gray-600">
+                        Lorsqu’un agent <span class="font-semibold">relance</span> une commande annulée (réutilisation de l’ordonnance), la
+                        <span class="font-semibold">pharmacie d’origine</span> ne peut pas être sélectionnée pendant le nombre d’heures indiqué
+                        (calcul à partir de la dernière mise à jour de la commande annulée). Mettre
+                        <span class="font-semibold">0</span> pour désactiver cette contrainte.
+                    </p>
+                </div>
+                <form class="flex flex-wrap items-end gap-4 px-5 py-6" @submit.prevent="sauverRelanceDelai">
+                    <div class="min-w-[200px] flex-1">
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400">
+                            Délai (heures) — même pharmacie
+                        </label>
+                        <input
+                            v-model="relanceDelaiForm.delai_relance_meme_pharmacie_heures"
+                            type="number"
+                            min="0"
+                            max="8760"
+                            required
+                            class="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        />
+                        <p class="mt-1 text-xs text-gray-500">0 = aucune restriction. Max. 8760 h (1 an).</p>
+                    </div>
+                    <button
+                        type="submit"
+                        :disabled="enCours"
+                        class="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-60"
+                    >
+                        <Check class="h-4 w-4" /> Enregistrer
+                    </button>
+                </form>
             </section>
 
             <!-- ══════════════════ MOTIFS D'ANNULATION ══════════════════ -->

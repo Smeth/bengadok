@@ -8,8 +8,8 @@
         * { box-sizing: border-box; }
         body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; color: #333; }
         .recu { max-width: 700px; margin: 0 auto; border: 2px solid #3995d2; border-radius: 17px; padding: 40px; background: #fff; }
-        .logo { width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 50%; background: #3995D2; display: flex; align-items: center; justify-content: center; }
-        .logo svg { width: 40px; height: 40px; }
+        .logo { width: 120px; height: 48px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; }
+        .logo img { width: 100%; height: 100%; object-fit: contain; }
         h1 { text-align: center; font-size: 22px; font-weight: 700; text-transform: uppercase; color: #666; margin: 0 0 24px; }
         .header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb; margin-bottom: 24px; }
         .header p { margin: 0; font-size: 15px; color: rgba(0,0,0,0.74); }
@@ -48,7 +48,7 @@
 
     <div class="recu">
         <div class="logo">
-            <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" fill="white"/><path d="M16 8C12.7 8 10 10.7 10 14C10 17.3 12.7 20 16 20C19.3 20 22 17.3 22 14C22 10.7 19.3 8 16 8ZM16 18C13.8 18 12 16.2 12 14C12 11.8 13.8 10 16 10C18.2 10 20 11.8 20 14C20 16.2 18.2 18 16 18Z" fill="#3995D2"/></svg>
+            <img src="{{ asset('images/figma-assets/sidebar-logo-benga.svg') }}" alt="BengaDok" />
         </div>
         <h1>Reçu Commande Client</h1>
 

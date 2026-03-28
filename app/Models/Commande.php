@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Commande extends Model
 {
     protected $fillable = [
-        'numero', 'client_id', 'pharmacie_id', 'parent_id', 'pharmacie_refusee_id', 'ordonnance_id',
+        'numero', 'client_id', 'pharmacie_id', 'parent_id', 'relance_de_commande_id', 'pharmacie_refusee_id', 'ordonnance_id',
         'mode_paiement_id', 'livreur_id', 'montant_livraison_id',
         'date', 'heurs', 'commentaire', 'prix_total',
         'beneficiaire', 'designation', 'status', 'status_pharmacie', 'acceptation_client', 'motif_annulation', 'note_annulation',
@@ -29,6 +29,19 @@ class Commande extends Model
         'validee' => 'Validée',
         'retiree' => 'Livrée',
         'annulee' => 'Annulée',
+    ];
+
+    /**
+     * Commandes prises en compte pour les KPI client (hors annulées).
+     * Inclut les statuts historiques éventuels en base (livree, a_preparer).
+     */
+    public const STATUTS_COMPTABILISES_CLIENT = [
+        'nouvelle',
+        'en_attente',
+        'validee',
+        'retiree',
+        'livree',
+        'a_preparer',
     ];
 
     // Statuts côté pharmacie
@@ -64,6 +77,18 @@ class Commande extends Model
     public function enfants(): HasMany
     {
         return $this->hasMany(Commande::class, 'parent_id');
+    }
+
+    /** Commande annulée dont celle-ci est une relance (réutilisation ordonnance). */
+    public function relanceSource(): BelongsTo
+    {
+        return $this->belongsTo(Commande::class, 'relance_de_commande_id');
+    }
+
+    /** Relances créées à partir de cette commande (au plus une en pratique). */
+    public function relancesDepuis(): HasMany
+    {
+        return $this->hasMany(Commande::class, 'relance_de_commande_id');
     }
 
     public function ordonnance(): BelongsTo

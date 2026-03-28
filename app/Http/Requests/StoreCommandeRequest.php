@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\AppSetting;
 use App\Models\Commande;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -85,6 +86,29 @@ class StoreCommandeRequest extends FormRequest
 
                 return;
             }
+            if (Commande::query()->where('relance_de_commande_id', $source->id)->exists()) {
+                $validator->errors()->add('reutiliser_ordonnance_commande_id', 'Une relance a déjà été créée à partir de cette commande. Si la nouvelle commande est annulée, vous pourrez relancer à partir de celle-ci.');
+
+                return;
+            }
+
+            $delaiHeures = AppSetting::delaiRelanceMemePharmacieHeures();
+            if ($delaiHeures > 0 && $this->filled('pharmacie_id')) {
+                $phId = (int) $this->input('pharmacie_id');
+                if ($phId === (int) $source->pharmacie_id && $source->updated_at) {
+                    $until = $source->updated_at->copy()->addHours($delaiHeures);
+                    if (now()->lt($until)) {
+                        $validator->errors()->add(
+                            'pharmacie_id',
+                            sprintf(
+                                'Cette pharmacie ne peut pas être resélectionnée avant le %s (délai de relance : %d h, calculé à partir de la dernière mise à jour de la commande annulée).',
+                                $until->timezone(config('app.timezone'))->locale('fr')->isoFormat('LLL'),
+                                $delaiHeures
+                            )
+                        );
+                    }
+                }
+            }
 
             $reqClientId = $this->input('client_id');
             if ($reqClientId) {
@@ -116,6 +140,7 @@ class StoreCommandeRequest extends FormRequest
             'client_prenom' => 'nullable|string|max:100',
             'client_tel' => 'required_without:client_id|string|max:20',
             'client_adresse' => 'required_without:client_id|string',
+            'client_sexe' => 'nullable|in:M,F',
             'pharmacie_id' => 'required|exists:pharmacies,id',
             'beneficiaire' => 'nullable|string|max:100',
             'produits' => 'required|array|min:1',

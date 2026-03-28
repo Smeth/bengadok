@@ -36,51 +36,46 @@ const isGerant = computed(() => roles.value.includes('gerant'));
 const isVendeur = computed(() => roles.value.includes('vendeur'));
 const isPharma = computed(() => isGerant.value || isVendeur.value);
 
+// Nav items exact order: Tableau de bord, Commandes, Pharmacies, Médicaments, Clients, Utilisateurs Backoffice
 const mainNavItems = computed<NavItem[]>(() => {
-    const items: NavItem[] = [];
     const isAdmin = roles.value.includes('admin') || roles.value.includes('super_admin');
     const isGerant = roles.value.includes('gerant');
     const isAgent = roles.value.includes('agent_call_center');
     const isVendeur = roles.value.includes('vendeur');
 
-    items.push({ title: 'Tableau de bord', href: dashboard(), icon: LayoutGrid });
-
-    if (isAdmin) {
-        items.push({ title: 'Commandes', href: '/commandes', icon: ClipboardList });
-        items.push({ title: 'Pharmacies', href: '/pharmacies', icon: Building2 });
-        items.push({ title: 'Médicaments', href: '/medicaments', icon: Package });
-        items.push({ title: 'Clients', href: '/clients', icon: Users });
-        items.push({ title: 'Utilisateurs Backoffice', href: '/utilisateurs', icon: UserCog });
-    }
+    const items: NavItem[] = [
+        { title: 'Tableau de bord', href: dashboard(), icon: LayoutGrid },
+        { title: 'Commandes', href: isPharma.value ? '/dok-pharma' : '/commandes', icon: ClipboardList },
+        { title: 'Pharmacies', href: '/pharmacies', icon: Building2 },
+        { title: 'Médicaments', href: '/medicaments', icon: Package },
+        { title: 'Clients', href: '/clients', icon: Users },
+        { title: 'Utilisateurs Backoffice', href: '/utilisateurs', icon: UserCog },
+    ];
 
     if (isAgent && !isAdmin) {
-        items.push({ title: 'Mes réceptions', href: '/agent', icon: PhoneCall });
-        items.push({ title: 'Clients', href: '/clients', icon: Users });
-    }
-
-    if (isGerant || isVendeur) {
-        items.push({ title: 'Commandes', href: '/dok-pharma', icon: ClipboardList });
-    }
-    if (isGerant) {
-        items.push({ title: 'Vendeurs', href: '/pharmacie/vendeurs', icon: UserCog });
-    }
-
-    if (!isAdmin && !isGerant && !isAgent && !isVendeur) {
-        items.push(
-            { title: 'Commandes', href: '/commandes', icon: ClipboardList },
-            { title: 'Pharmacies', href: '/pharmacies', icon: Building2 },
-            { title: 'Médicaments', href: '/medicaments', icon: Package },
+        return [
+            { title: 'Tableau de bord', href: dashboard(), icon: LayoutGrid },
+            { title: 'Mes réceptions', href: '/agent', icon: PhoneCall },
             { title: 'Clients', href: '/clients', icon: Users },
-            { title: 'Utilisateurs Backoffice', href: '/utilisateurs', icon: UserCog },
-        );
+        ];
     }
-
+    if (isGerant && !isAdmin) {
+        return [
+            { title: 'Tableau de bord', href: dashboard(), icon: LayoutGrid },
+            { title: 'Commandes', href: '/dok-pharma', icon: ClipboardList },
+            { title: 'Vendeurs', href: '/pharmacie/vendeurs', icon: UserCog },
+        ];
+    }
+    if (isVendeur && !isAdmin) {
+        return [
+            { title: 'Tableau de bord', href: dashboard(), icon: LayoutGrid },
+            { title: 'Commandes', href: '/dok-pharma', icon: ClipboardList },
+        ];
+    }
     return items;
 });
 
-// Mon profil = compte utilisateur (profile, mot de passe, apparence)
-// Configuration = paramètres métier (zones, paiements, livraison, etc.)
-const settingsItem   = { title: 'Mon profil', href: '/settings/profile',   icon: Settings };
+const reglagesItem = { title: 'Réglages', href: '/reglages', icon: Settings };
 const parametresItem = { title: 'Configuration', href: '/settings/parametres', icon: Settings };
 const isAdmin = computed(() => roles.value.includes('admin') || roles.value.includes('super_admin'));
 
@@ -95,125 +90,120 @@ function logout() {
         variant="inset"
         class="border-r-0 bg-white shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)]"
     >
-        <SidebarHeader class="border-b-0 border-sidebar-border p-4 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
-            <SidebarMenu class="group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:items-center">
-                <SidebarMenuItem class="flex items-center gap-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:gap-2">
+        <SidebarHeader class="flex shrink-0 items-center justify-between gap-2 border-b-0 border-sidebar-border px-4 pt-4 pb-3 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-3 group-data-[collapsible=icon]:px-2">
+            <SidebarMenu class="flex-1 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:items-center">
+                <SidebarMenuItem class="flex items-center gap-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:gap-2">
                     <SidebarMenuButton size="lg" as-child class="min-w-0 flex-1 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:min-w-0">
-                        <Link :href="dashboard()" class="flex w-full items-center justify-center group-data-[collapsible=icon]:w-auto">
+                        <Link :href="dashboard()" class="flex w-full items-center justify-center gap-2 group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:justify-center">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
                     <SidebarTrigger
-                        class="shrink-0 size-9 rounded-lg bg-[rgba(92,89,89,0.08)] text-[#5c5959] hover:bg-[rgba(92,89,89,0.15)] hover:text-[#5c5959]"
+                        class="size-8 shrink-0 rounded-[6px] bg-[#f1f5f9] text-[#6b7280] hover:bg-[#e2e8f0] hover:text-[#374151]"
                         aria-label="Réduire la barre latérale"
                     />
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent class="flex-1 py-4 px-2 group-data-[collapsible=icon]:px-0">
+        <SidebarContent class="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-2 px-3 group-data-[collapsible=icon]:px-0">
             <NavMain :items="mainNavItems" />
 
-            <!-- Réglages : séparé par un grand espace vertical (design client) -->
-            <div class="mt-12 px-2 pb-1 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
+            <!-- Réglages : margin-top 56px -->
+            <div class="mt-[56px] shrink-0 px-3 pb-1 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
                 <Link
-                    :href="settingsItem.href"
-                    class="sidebar-menu-btn-react group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all"
-                    :class="isCurrentUrl(settingsItem.href)
-                        ? 'bg-[#5BB66E] text-white shadow-sm font-bold'
-                        : 'bg-transparent hover:bg-[rgba(92,89,89,0.08)]'"
-                    :data-active="isCurrentUrl(settingsItem.href) ? 'true' : undefined"
+                    :href="reglagesItem.href"
+                    class="sidebar-menu-btn-react group flex h-[44px] w-full items-center gap-3 rounded-[10px] px-3 transition-all"
+                    :class="isCurrentUrl(reglagesItem.href)
+                        ? 'bg-[#22c55e] text-white'
+                        : 'bg-transparent'"
+                    :data-active="isCurrentUrl(reglagesItem.href) ? 'true' : undefined"
                 >
-                    <div class="sidebar-menu-icon flex size-[36px] shrink-0 items-center justify-center rounded-full transition-colors"
-                        :class="isCurrentUrl(settingsItem.href) ? 'bg-white/25 text-white' : 'bg-[rgba(92,89,89,0.25)] group-hover:bg-[rgba(92,89,89,0.35)]'">
-                        <component :is="settingsItem.icon" class="sidebar-menu-icon-svg size-6" :class="isCurrentUrl(settingsItem.href) ? 'text-white' : 'text-[#5c5959]'" />
+                    <div class="sidebar-menu-icon flex shrink-0 items-center justify-center rounded-full transition-colors"
+                        :class="isCurrentUrl(reglagesItem.href) ? 'bg-white/25 text-white' : 'group-hover:bg-[#f1f5f9]'">
+                        <component :is="reglagesItem.icon" class="sidebar-menu-icon-svg size-5" stroke-width="1.5" />
                     </div>
-                    <span class="sidebar-menu-label text-[14px] font-bold leading-tight text-[#5c5959] truncate group-data-[collapsible=icon]:hidden"
-                        :class="isCurrentUrl(settingsItem.href) ? '!text-white' : ''">
-                        {{ settingsItem.title }}
+                    <span class="sidebar-menu-label group-data-[collapsible=icon]:hidden">
+                        {{ reglagesItem.title }}
                     </span>
                 </Link>
             </div>
 
-            <!-- Paramètres métier (admin seulement) -->
-            <div v-if="isAdmin" class="px-2 pb-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
+            <!-- Configuration (admin seulement) -->
+            <div v-if="isAdmin" class="shrink-0 px-3 pb-1 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
                 <Link
                     :href="parametresItem.href"
-                    class="sidebar-menu-btn-react group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all"
+                    class="sidebar-menu-btn-react group flex h-[44px] w-full items-center gap-3 rounded-[10px] px-3 transition-all"
                     :class="isCurrentUrl(parametresItem.href)
-                        ? 'bg-[#5BB66E] text-white shadow-sm font-bold'
-                        : 'bg-transparent hover:bg-[rgba(92,89,89,0.08)]'"
+                        ? 'bg-[#22c55e] text-white'
+                        : 'bg-transparent'"
                     :data-active="isCurrentUrl(parametresItem.href) ? 'true' : undefined"
                 >
-                    <div class="sidebar-menu-icon flex size-[36px] shrink-0 items-center justify-center rounded-full transition-colors"
-                        :class="isCurrentUrl(parametresItem.href) ? 'bg-white/25 text-white' : 'bg-[rgba(92,89,89,0.25)] group-hover:bg-[rgba(92,89,89,0.35)]'">
-                        <component :is="parametresItem.icon" class="sidebar-menu-icon-svg size-6" :class="isCurrentUrl(parametresItem.href) ? 'text-white' : 'text-[#5c5959]'" />
+                    <div class="sidebar-menu-icon flex shrink-0 items-center justify-center rounded-full transition-colors"
+                        :class="isCurrentUrl(parametresItem.href) ? 'bg-white/25 text-white' : 'group-hover:bg-[#f1f5f9]'">
+                        <component :is="parametresItem.icon" class="sidebar-menu-icon-svg size-5" stroke-width="1.5" />
                     </div>
-                    <span class="sidebar-menu-label text-[14px] font-bold leading-tight text-[#5c5959] truncate group-data-[collapsible=icon]:hidden"
-                        :class="isCurrentUrl(parametresItem.href) ? '!text-white' : ''">
+                    <span class="sidebar-menu-label group-data-[collapsible=icon]:hidden">
                         {{ parametresItem.title }}
                     </span>
                 </Link>
             </div>
 
-            <!-- Illustration sidebar Figma : docteur + blob bleu + 4 icônes flottantes (pointer-events-none : évite de capter les clics sur le contenu principal) -->
+            <!-- Illustration : ~25-30% hauteur sidebar, blob bleu, docteur 3D, 4 icônes flottantes -->
             <div
-                class="pointer-events-none group-data-[collapsible=icon]:hidden mt-auto flex min-h-[200px] items-end justify-center pt-4"
+                class="pointer-events-none group-data-[collapsible=icon]:hidden relative mt-auto flex min-h-0 flex-1 items-end justify-center overflow-hidden pt-3"
             >
-                <div class="relative mx-auto h-[200px] w-full max-w-[220px]">
-                    <!-- Blob bleu arrière-plan (2 formes superposées) -->
-                    <div class="absolute flex items-center justify-center left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[140px] h-[120px]">
-                        <div class="absolute w-[110px] h-[95px] rounded-[20px] bg-[#3995d2] shadow-[0_4px_4px_rgba(0,0,0,0.25)] rotate-[25deg]" />
-                        <div class="absolute w-[100px] h-[85px] rounded-[20px] bg-[#3995d2] shadow-[0_4px_4px_rgba(0,0,0,0.25)] -rotate-[13deg]" />
+                <div class="relative mx-auto h-full max-h-[200px] min-h-0 w-full max-w-[220px] shrink-0">
+                    <!-- Blob bleu organique -->
+                    <div class="absolute left-1/2 top-1/2 flex h-[100px] w-[130px] -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+                        <div class="absolute h-[85px] w-[110px] rounded-[22px] bg-[#3995d2] shadow-[0_2px_4px_rgba(0,0,0,0.2)] -rotate-[13deg]" />
+                        <div class="absolute h-[92px] w-[118px] rounded-[22px] bg-[#3995d2] shadow-[0_2px_4px_rgba(0,0,0,0.2)] rotate-[25deg]" />
                     </div>
-                    <!-- Docteur principal -->
+                    <!-- 3D Doctor -->
                     <img
                         src="/images/figma-assets/sidebar-doctor-main.png"
                         alt=""
-                        class="absolute left-1/2 bottom-0 -translate-x-1/2 w-[140px] h-auto object-contain object-bottom pointer-events-none"
+                        class="absolute left-1/2 bottom-0 h-[80%] w-auto max-w-[130px] -translate-x-1/2 object-contain object-bottom pointer-events-none"
                         style="filter: drop-shadow(0 4px 4px rgba(0,0,0,0.25));"
                     />
-                    <!-- Icône Caducée (gauche) -->
+                    <!-- 4 icônes flottantes : caducée, pilules, flacon, graphique -->
                     <img
                         src="/images/figma-assets/sidebar-icon-caduceus.svg"
                         alt=""
-                        class="absolute left-0 top-[18%] w-[50px] h-auto opacity-95"
-                        style="filter: drop-shadow(0 4px 4px rgba(0,0,0,0.25)); transform: rotate(-17deg);"
+                        class="absolute left-0 top-[6%] w-[34px] h-auto opacity-90"
+                        style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2)); transform: rotate(-17deg);"
                     />
-                    <!-- Icône Pilules (haut centre-droite) -->
                     <img
                         src="/images/figma-assets/sidebar-icon-pills.png"
                         alt=""
-                        class="absolute right-[5%] top-[12%] w-[38px] h-auto opacity-95"
-                        style="filter: drop-shadow(0 4px 4px rgba(0,0,0,0.25)); transform: rotate(10deg);"
+                        class="absolute left-[42%] top-[4%] w-[32px] h-auto opacity-90"
+                        style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2)); transform: rotate(10deg);"
                     />
-                    <!-- Icône Flacon (centre-droite) -->
                     <img
                         src="/images/figma-assets/sidebar-icon-bottle.png"
                         alt=""
-                        class="absolute left-[38%] top-[15%] w-[42px] h-auto opacity-95"
-                        style="filter: drop-shadow(0 4px 4px rgba(0,0,0,0.25)); transform: rotate(27deg);"
+                        class="absolute right-[8%] top-[6%] w-[30px] h-auto opacity-90"
+                        style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2)); transform: rotate(27deg);"
                     />
-                    <!-- Icône Bar chart (droite) -->
                     <img
                         src="/images/figma-assets/sidebar-icon-barchart.png"
                         alt=""
-                        class="absolute right-[2%] top-[35%] w-[44px] h-auto opacity-95"
-                        style="filter: drop-shadow(0 4px 4px rgba(0,0,0,0.25)); transform: rotate(13deg);"
+                        class="absolute right-0 top-[20%] w-[32px] h-auto opacity-90"
+                        style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2)); transform: rotate(13deg);"
                     />
                 </div>
             </div>
         </SidebarContent>
 
-        <SidebarFooter class="border-t-0 p-3 pb-6 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
-            <div class="flex flex-col items-center gap-3 w-full group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:w-auto">
+        <SidebarFooter class="shrink-0 border-t-0 px-3 pt-3 pb-5 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
+            <div class="flex w-full items-center gap-3 group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:justify-center">
                 <button
                     type="button"
-                    class="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2.5 font-bold text-[14px] text-[#5c5959] transition-colors hover:bg-[rgba(92,89,89,0.08)] hover:text-[#5c5959] group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:px-2"
+                    class="sidebar-logout-btn group flex h-[44px] w-full items-center gap-3 rounded-[10px] px-3 font-medium transition-colors group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2"
                     @click="logout"
                 >
-                    <div class="flex size-[36px] shrink-0 items-center justify-center rounded-full bg-[#5c5959] text-white">
-                        <LogOut class="size-5 shrink-0" />
+                    <div class="sidebar-logout-icon flex shrink-0 items-center justify-center">
+                        <LogOut class="sidebar-menu-icon-svg size-5 shrink-0" stroke-width="1.5" />
                     </div>
                     <span class="sidebar-footer-label group-data-[collapsible=icon]:hidden">Déconnexion</span>
                 </button>

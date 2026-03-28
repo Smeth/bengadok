@@ -1,26 +1,21 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import {
     Building2,
     CheckCircle2,
+    ChevronDown,
     ChevronLeft,
     ClipboardList,
     Clock,
     FileEdit,
+    Phone,
     Pill,
-    Plus,
     Search,
     X,
 } from 'lucide-vue-next';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
 import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
@@ -38,6 +33,8 @@ export type FormEnregPayload = {
     client_prenom: string;
     client_tel: string;
     client_adresse: string;
+    /** M ou F — civilité affichée côté liste / détail */
+    client_sexe: '' | 'M' | 'F';
     pharmacie_id: string;
     beneficiaire: string;
     produits: Array<{
@@ -47,7 +44,6 @@ export type FormEnregPayload = {
         prix_unitaire: number;
     }>;
     ordonnance: File | null;
-    mode_paiement_id: string;
     commentaire: string;
     client_id?: number;
     /** Relance sans nouveau fichier : réutiliser l’ordonnance de cette commande annulée */
@@ -56,10 +52,11 @@ export type FormEnregPayload = {
 
 export type CommandeRelance = {
     id?: number;
-    client?: { id?: number; nom?: string; prenom?: string; tel?: string; adresse?: string };
+    /** Référence temporelle pour le délai « même pharmacie » (relance) */
+    updated_at?: string;
+    client?: { id?: number; nom?: string; prenom?: string; tel?: string; adresse?: string; sexe?: string };
     pharmacie?: { id?: number; zone_id?: number; zone?: { id: number } };
     produits?: Array<{ designation?: string; dosage?: string; pivot: { quantite: number; prix_unitaire: number } }>;
-    mode_paiement?: { id: number };
     ordonnance?: { urlfile?: string } | null;
 };
 
@@ -74,8 +71,6 @@ type Pharmacie = {
     type_pharmacie?: { designation: string };
     heurs?: { ouverture: string; fermeture: string };
 };
-type ModePaiement = { id: number; designation: string };
-
 const props = withDefaults(
     defineProps<{
         open: boolean;
@@ -83,16 +78,61 @@ const props = withDefaults(
         commande?: CommandeRelance;
         zones?: Zone[];
         pharmacies?: Pharmacie[];
-        modesPaiement?: ModePaiement[];
         apiErrors?: Record<string, string>;
     }>(),
-    { mode: 'nouvelle', zones: () => [], pharmacies: () => [], modesPaiement: () => [], apiErrors: () => ({}) }
+    { mode: 'nouvelle', zones: () => [], pharmacies: () => [], apiErrors: () => ({}) }
 );
 
 const emit = defineEmits<{
     'update:open': [value: boolean];
     submit: [payload: FormEnregPayload];
 }>();
+
+const page = usePage();
+const delaiRelanceHeures = computed(
+    () => Number((page.props as { delai_relance_meme_pharmacie_heures?: number }).delai_relance_meme_pharmacie_heures ?? 0),
+);
+
+function finDelaiRelancePharmacieSource(): Date | null {
+    if (props.mode !== 'relance' || !props.commande?.updated_at) {
+        return null;
+    }
+    const h = delaiRelanceHeures.value;
+    if (h <= 0) {
+        return null;
+    }
+    const t = new Date(props.commande.updated_at);
+    if (Number.isNaN(t.getTime())) {
+        return null;
+    }
+    return new Date(t.getTime() + h * 3600 * 1000);
+}
+
+function isPharmacieBloqueePourRelance(pharmacyId: number): boolean {
+    if (props.mode !== 'relance' || !props.commande) {
+        return false;
+    }
+    const srcId = props.commande.pharmacie?.id;
+    if (!srcId || Number(pharmacyId) !== Number(srcId)) {
+        return false;
+    }
+    const fin = finDelaiRelancePharmacieSource();
+    if (!fin) {
+        return false;
+    }
+    return Date.now() < fin.getTime();
+}
+
+function libelleDelaiRelance(p: Pharmacie): string {
+    if (!isPharmacieBloqueePourRelance(p.id)) {
+        return '';
+    }
+    const fin = finDelaiRelancePharmacieSource();
+    if (!fin) {
+        return '';
+    }
+    return `Indisponible jusqu’au ${fin.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} (délai relance)`;
+}
 
 const beneficiaires = ['Soi-même', 'Sa mère', 'Son père', 'Son enfant', 'Autre'];
 const formesPharmaceutiques = [
@@ -111,11 +151,11 @@ const form = ref({
     client_prenom: '',
     client_tel: '',
     client_adresse: '',
+    client_sexe: '' as '' | 'M' | 'F',
     pharmacie_id: '',
     beneficiaire: '',
     produits: [{ designation: '', dosage: '', forme: '', quantite: 1, prix_unitaire: 0 }] as ProduitEnreg[],
     ordonnance: null as File | null,
-    mode_paiement_id: '',
     commentaire: '',
 });
 
@@ -182,6 +222,7 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
         client_prenom: cmd.client?.prenom ?? '',
         client_tel: cmd.client?.tel ?? '',
         client_adresse: cmd.client?.adresse ?? '',
+        client_sexe: (cmd.client?.sexe === 'M' || cmd.client?.sexe === 'F' ? cmd.client.sexe : '') as '' | 'M' | 'F',
         pharmacie_id: '',
         beneficiaire: 'Soi-même',
         produits: (cmd.produits?.length
@@ -194,7 +235,6 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
             }))
             : [{ designation: '', dosage: '', forme: '', quantite: 1, prix_unitaire: 0 }]) as ProduitEnreg[],
         ordonnance: null,
-        mode_paiement_id: cmd.mode_paiement?.id ? String(cmd.mode_paiement.id) : '',
         commentaire: '',
     };
     ordonnanceUrlExistante.value = cmd.ordonnance?.urlfile?.trim() || null;
@@ -208,6 +248,9 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
         if (zoneId) {
             zoneEnreg.value = zoneId;
             form.value.pharmacie_id = String(ph.id);
+            if (props.mode === 'relance' && isPharmacieBloqueePourRelance(ph.id)) {
+                form.value.pharmacie_id = '';
+            }
         }
     }
     filtreTypeEnreg.value = 'tous';
@@ -221,11 +264,11 @@ function resetForm() {
         client_prenom: '',
         client_tel: '',
         client_adresse: '',
+        client_sexe: '' as '' | 'M' | 'F',
         pharmacie_id: '',
         beneficiaire: '',
         produits: [{ designation: '', dosage: '', forme: '', quantite: 1, prix_unitaire: 0 }],
         ordonnance: null,
-        mode_paiement_id: '',
         commentaire: '',
     };
     zoneEnreg.value = '';
@@ -272,11 +315,11 @@ function onSubmit() {
         client_prenom: form.value.client_prenom,
         client_tel: form.value.client_tel,
         client_adresse: form.value.client_adresse,
+        client_sexe: form.value.client_sexe,
         pharmacie_id: form.value.pharmacie_id,
         beneficiaire: form.value.beneficiaire || '',
         produits: produitsValides,
         ordonnance: form.value.ordonnance,
-        mode_paiement_id: form.value.mode_paiement_id || '',
         commentaire: form.value.commentaire || '',
     };
     if (props.mode === 'relance' && props.commande?.client?.id) {
@@ -319,332 +362,357 @@ watch(() => props.apiErrors, (v) => {
 <template>
     <Dialog :open="open" @update:open="emit('update:open', $event)">
         <DialogContent
-            class="!left-[50%] !top-[50%] !w-[950px] !max-w-[95vw] !-translate-x-1/2 !-translate-y-1/2 max-h-[90vh] overflow-y-auto rounded-[15px] border border-gray-200 bg-white p-6 shadow-[0px_3px_20px_0px_rgba(0,0,0,0.25)]"
+            class="!left-[50%] !top-[50%] !w-[650px] !max-w-[95vw] !-translate-x-1/2 !-translate-y-1/2 !max-h-[80vh] !overflow-hidden !rounded-[15px] !border !border-[#ccc5c5] !bg-white !p-0 !shadow-xl"
             :show-close-button="false"
         >
-            <DialogHeader class="mb-4 flex min-w-0 flex-row items-center justify-between gap-2 border-b border-gray-200 pb-4">
-                <DialogTitle
-                    class="flex min-w-0 shrink items-center gap-3 text-xl font-black tracking-[2.8px] text-[#3995d2]"
-                >
-                    <FileEdit class="size-6 shrink-0 text-[#3995d2]" />
+            <!-- Header sticky : rounded-t pour épouser le parent (clip par overflow-hidden) -->
+            <div class="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-t-[15px] border-b border-[#ccc5c5] bg-white px-6 py-4 shadow-[0px_2px_8px_rgba(0,0,0,0.06)]">
+                <h2 class="flex items-center gap-3 text-xl font-black tracking-[2.8px] text-[#3995d2]">
+                    <FileEdit class="size-5 shrink-0 text-[#3995d2]" />
                     {{ mode === 'relance' ? 'Relancer la commande' : 'Enregistrement Commande' }}
-                </DialogTitle>
+                </h2>
                 <button
                     type="button"
-                    class="flex size-8 items-center justify-center rounded p-1 text-[#dc3545] transition-opacity hover:opacity-80"
+                    class="text-[#dc3545] transition-colors hover:opacity-80"
                     aria-label="Fermer"
                     @click="close"
                 >
                     <X class="size-5" />
                 </button>
-            </DialogHeader>
+            </div>
 
-            <form class="flex min-w-0 flex-col gap-5" @submit.prevent="onSubmit">
-                <!-- Client : Nom, Prénom, Adresse -->
-                <div class="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-3">
-                    <div class="flex flex-col gap-1">
-                        <Label class="text-[20px] font-light text-black">Nom du Client</Label>
-                        <Input
-                            v-model="form.client_nom"
-                            placeholder="Ex : Fofana Didier"
-                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-4 text-[16px] focus:border-blue-500"
-                            :class="{ 'border-red-500': errors.client_nom }"
-                        />
-                        <p v-if="errors.client_nom" class="text-xs text-red-600">{{ errors.client_nom }}</p>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <Label class="text-[20px] font-light text-black">Prénom du Client</Label>
-                        <Input
-                            v-model="form.client_prenom"
-                            placeholder="Ex : Amélia"
-                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-4 text-[16px] focus:border-blue-500"
-                        />
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <Label class="text-[20px] font-light text-black">Adresse</Label>
-                        <Input
-                            v-model="form.client_adresse"
-                            placeholder="Ex : 20 rue Loby Moungali"
-                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-4 text-[16px] focus:border-blue-500"
-                            :class="{ 'border-red-500': errors.client_adresse }"
-                        />
-                        <p v-if="errors.client_adresse" class="text-xs text-red-600">{{ errors.client_adresse }}</p>
-                    </div>
-                </div>
-
-                <!-- Bénéficiaire, Téléphone -->
-                <div class="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
-                    <div class="flex flex-col gap-1">
-                        <Label class="text-[20px] font-light text-black">Bénéficiaire</Label>
-                        <select
-                            v-model="form.beneficiaire"
-                            class="h-[42px] w-full rounded-[10px] border border-[#ccc5c5] bg-white px-4 text-[16px] focus:border-blue-500 focus:outline-none"
-                        >
-                            <option value="">choisir un bénéficiaire</option>
-                            <option v-for="b in beneficiaires" :key="b" :value="b">{{ b }}</option>
-                        </select>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <Label class="text-[20px] font-light text-black">Téléphone</Label>
-                        <div
-                            class="flex h-[42px] overflow-hidden rounded-[10px] border border-[#ccc5c5] focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500"
-                            :class="{ 'border-red-500': errors.client_tel }"
-                        >
-                            <span class="flex items-center border-r border-gray-200 bg-gray-50 px-3 text-[13px] font-medium text-gray-500">+242</span>
-                            <input
-                                v-model="form.client_tel"
-                                type="tel"
-                                placeholder="06 898 8888"
-                                class="min-w-0 flex-1 bg-transparent px-4 py-2 text-[13px] outline-none"
-                            />
+            <!-- Body scrollable -->
+            <form class="flex max-h-[calc(80vh-130px)] flex-col overflow-y-auto" @submit.prevent="onSubmit">
+                <div class="flex flex-col gap-5 px-6 py-5">
+                    <!-- Section 1 — Infos Client (Figma: Nom, Prénom, Tél / Bénéficiaire, Adresse) -->
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div class="flex flex-col gap-1.5">
+                                <Label class="text-sm font-medium text-black">Nom du Client</Label>
+                                <input
+                                    v-model="form.client_nom"
+                                    type="text"
+                                    placeholder="Ex : Fofana Didier"
+                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                    :class="{ 'border-[#dc3545]': errors.client_nom }"
+                                />
+                                <p v-if="errors.client_nom" class="text-xs text-[#dc3545]">{{ errors.client_nom }}</p>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <Label class="text-sm font-medium text-black">Prénom du Client</Label>
+                                <input
+                                    v-model="form.client_prenom"
+                                    type="text"
+                                    placeholder="Ex : Fofana Didier"
+                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                />
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <Label class="text-sm font-medium text-black">Téléphone</Label>
+                                <div
+                                    class="flex h-[42px] overflow-hidden rounded-[10px] border border-[#ccc5c5] focus-within:border-[#0d6efd] focus-within:ring-1 focus-within:ring-[#0d6efd]"
+                                    :class="{ 'border-[#dc3545]': errors.client_tel }"
+                                >
+                                    <span class="flex items-center gap-1.5 border-r border-[#ccc5c5] bg-white pl-3 pr-2 text-sm text-[rgba(92,89,89,0.4)]">
+                                        <Phone class="size-5 shrink-0" />
+                                    </span>
+                                    <input
+                                        v-model="form.client_tel"
+                                        type="tel"
+                                        placeholder="+242 06 800 8008"
+                                        class="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm outline-none placeholder:italic placeholder:text-[rgba(92,89,89,0.4)]"
+                                    />
+                                </div>
+                                <p v-if="errors.client_tel" class="text-xs text-[#dc3545]">{{ errors.client_tel }}</p>
+                            </div>
                         </div>
-                        <p v-if="errors.client_tel" class="text-xs text-red-600">{{ errors.client_tel }}</p>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div class="flex flex-col gap-1.5">
+                                <Label class="text-sm font-medium text-black">Genre</Label>
+                                <div class="relative">
+                                    <select
+                                        v-model="form.client_sexe"
+                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                    >
+                                        <option value="">Non précisé</option>
+                                        <option value="M">M (Mr)</option>
+                                        <option value="F">F (Mme)</option>
+                                    </select>
+                                    <ChevronDown class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]" />
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <Label class="text-sm font-medium text-black">Bénéficiaire</Label>
+                                <div class="relative">
+                                    <select
+                                        v-model="form.beneficiaire"
+                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                    >
+                                        <option value="">choisir un bénéficiaire</option>
+                                        <option v-for="b in beneficiaires" :key="b" :value="b">{{ b }}</option>
+                                    </select>
+                                    <ChevronDown class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]" />
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-1.5 md:col-span-2">
+                                <Label class="text-sm font-medium text-black">Adresse</Label>
+                                <input
+                                    v-model="form.client_adresse"
+                                    type="text"
+                                    placeholder="Ex : 20 rue Loby Moungali"
+                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                    :class="{ 'border-[#dc3545]': errors.client_adresse }"
+                                />
+                                <p v-if="errors.client_adresse" class="text-xs text-[#dc3545]">{{ errors.client_adresse }}</p>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Pharmacie Partenaire -->
-                <div class="min-w-0 rounded-[10px] border border-[#ccc5c5] bg-white p-4">
-                    <p class="mb-3 text-[21px] font-black text-[rgba(92,89,89,0.4)]">Pharmacie Partenaire</p>
+                    <!-- Section 2 — Pharmacie Partenaire (Figma: border #ccc5c5, cartes sélectionnées vertes) -->
+                    <div class="rounded-[10px] border border-[#ccc5c5] p-5">
+                        <p class="mb-1 text-[21px] font-black italic text-[rgba(92,89,89,0.4)]">Pharmacie Partenaire</p>
+                        <p class="mb-4 text-base text-black">Sélectionner une pharmacie</p>
 
-                    <div v-if="!zoneEnreg" class="flex flex-col gap-3">
-                        <p class="text-[13px] text-gray-500">Sélectionner d'abord une zone de Brazzaville</p>
-                        <div class="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                        <div v-if="!zoneEnreg" class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                             <button
                                 v-for="zone in zones"
                                 :key="zone.id"
                                 type="button"
-                                class="flex min-h-[100px] flex-col items-center justify-center gap-2 rounded-[10px] border border-[rgba(92,89,89,0.25)] bg-white p-4 text-center transition-all hover:border-[#0d6efd] hover:bg-blue-50/50"
+                                class="flex min-h-[90px] min-w-[110px] flex-col items-center justify-center gap-2 rounded-[10px] border border-[#ccc5c5] p-3 text-center transition-all hover:border-[#0d6efd] hover:bg-blue-50/30"
                                 @click="zoneEnreg = zone.id; filtreTypeEnreg = 'tous'; searchPharmacieEnreg = ''"
                             >
-                                <Building2 class="size-8 text-gray-400" />
-                                <span class="text-[15px] font-bold text-gray-800">{{ zone.designation }}</span>
-                                <span class="text-[12px] text-gray-500">{{ zone.pharmacies_count }} Pharmacies</span>
+                                <Building2 class="size-8 text-black" stroke-width="1.5" />
+                                <span class="text-[13px] font-bold text-black">{{ zone.designation }}</span>
+                                <span class="text-[11px] text-black">{{ zone.pharmacies_count }} Pharmacies</span>
                             </button>
                         </div>
-                        <p v-if="errors.pharmacie_id" class="text-xs text-red-600">{{ errors.pharmacie_id }}</p>
-                    </div>
 
-                    <div v-else class="flex flex-col gap-3">
-                        <div class="flex items-center gap-2">
-                            <button
-                                type="button"
-                                class="flex shrink-0 items-center gap-1.5 rounded-[8px] border border-black/80 px-2 py-1.5 text-[12px] font-medium text-black transition-colors hover:bg-gray-100"
-                                @click="form.pharmacie_id = ''; zoneEnreg = ''"
-                            >
-                                <ChevronLeft class="size-4" />
-                                Retour
-                            </button>
-                            <span class="text-[20px] font-light text-black">Sélectionner une pharmacie</span>
-                        </div>
-                        <div class="flex min-w-0 flex-col gap-3 sm:flex-row">
-                            <div class="flex min-w-0 flex-1 items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white pl-3 pr-3 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
-                                <Search class="mr-2 size-4 shrink-0 text-gray-400" />
-                                <input
-                                    v-model="searchPharmacieEnreg"
-                                    placeholder="Recherche une pharmacie"
-                                    class="min-w-0 flex-1 bg-transparent py-2.5 text-[13px] outline-none"
-                                />
-                            </div>
-                            <div class="flex min-w-0 shrink-0 flex-wrap gap-2">
+                        <div v-else class="space-y-3">
+                            <div class="flex items-center gap-2">
                                 <button
-                                    v-for="f in filtresType"
-                                    :key="f.key"
                                     type="button"
-                                    class="rounded-[8px] border px-3 py-1.5 text-[11px] font-medium transition-all"
-                                    :class="filtreTypeEnreg === f.key ? 'border-[#0d6efd] bg-[#0d6efd] text-white' : 'border-black text-black hover:bg-gray-100'"
-                                    @click="filtreTypeEnreg = f.key"
+                                    class="flex shrink-0 items-center gap-1.5 rounded-[8px] border border-black px-2 py-1.5 text-xs font-medium text-black hover:bg-gray-100"
+                                    @click="form.pharmacie_id = ''; zoneEnreg = ''"
                                 >
-                                    {{ f.label }}
+                                    <ChevronLeft class="size-4" />
+                                    Retour
                                 </button>
+                                <span class="text-base text-black">Sélectionner une pharmacie</span>
                             </div>
-                        </div>
-                        <div class="grid max-h-56 grid-cols-1 gap-3 overflow-y-auto sm:grid-cols-2"
-                        >
-                            <p
-                                v-if="!pharmaciesZoneEnreg.length"
-                                class="py-8 text-center text-[14px] font-medium text-gray-500"
-                            >
-                                Aucune pharmacie disponible correspondant à vos critères.
-                            </p>
-                            <button
-                                v-for="p in pharmaciesZoneEnreg"
-                                :key="p.id"
-                                type="button"
-                                class="flex min-h-[100px] cursor-pointer items-center justify-between gap-3 rounded-[10px] border p-3 text-left transition-all"
-                                :class="form.pharmacie_id === String(p.id) ? 'border-[rgba(92,89,89,0.25)] bg-[rgba(91,182,110,0.18)]' : 'border-[rgba(92,89,89,0.25)] bg-white hover:border-gray-300'"
-                                @click="form.pharmacie_id = String(p.id)"
-                            >
-                                <div class="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
-                                    <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#E1F3E7]">
-                                        <Pill class="size-5 text-[#3c9054]" />
-                                    </div>
-                                    <div class="min-w-0 flex-1 overflow-hidden">
-                                        <p class="truncate text-[13px] font-bold text-gray-900">{{ p.designation }}</p>
-                                        <p class="truncate text-[12px] text-gray-500">{{ p.adresse }} • {{ p.telephone }}</p>
-                                        <div v-if="p.heurs" class="mt-0.5 flex items-center gap-1 text-[11px] text-gray-600">
+                            <div class="flex flex-col gap-3 sm:flex-row">
+                                <div class="flex min-w-0 flex-1 items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white pl-3 focus-within:border-[#0d6efd] focus-within:ring-1 focus-within:ring-[#0d6efd]">
+                                    <Search class="mr-2 size-4 shrink-0 text-[rgba(102,102,102,0.6)]" />
+                                    <input
+                                        v-model="searchPharmacieEnreg"
+                                        placeholder="Recherche une pharmacie"
+                                        class="min-w-0 flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-[rgba(102,102,102,0.6)]"
+                                    />
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <button
+                                        v-for="f in filtresType"
+                                        :key="f.key"
+                                        type="button"
+                                        class="rounded-[8px] border border-black px-3 py-1.5 text-[11px] font-medium transition-all"
+                                        :class="filtreTypeEnreg === f.key ? 'border-[#0d6efd] bg-[#0d6efd] text-white' : 'border-black text-black hover:bg-gray-100'"
+                                        @click="filtreTypeEnreg = f.key"
+                                    >
+                                        {{ f.label }}
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="grid max-h-48 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
+                                <p
+                                    v-if="!pharmaciesZoneEnreg.length"
+                                    class="col-span-full py-6 text-center text-sm text-[rgba(92,89,89,0.4)]"
+                                >
+                                    Aucune pharmacie disponible.
+                                </p>
+                                <button
+                                    v-for="p in pharmaciesZoneEnreg"
+                                    :key="p.id"
+                                    type="button"
+                                    :disabled="mode === 'relance' && isPharmacieBloqueePourRelance(p.id)"
+                                    class="flex min-h-[100px] items-center justify-between gap-3 rounded-[10px] border p-3 text-left transition-all"
+                                    :class="[
+                                        form.pharmacie_id === String(p.id) ? 'border-[rgba(92,89,89,0.25)] bg-[rgba(91,182,110,0.18)]' : 'border-[rgba(92,89,89,0.25)] hover:bg-[rgba(91,182,110,0.08)]',
+                                        mode === 'relance' && isPharmacieBloqueePourRelance(p.id) ? 'cursor-not-allowed opacity-55' : 'cursor-pointer',
+                                    ]"
+                                    @click="!(mode === 'relance' && isPharmacieBloqueePourRelance(p.id)) && (form.pharmacie_id = String(p.id))"
+                                >
+                                    <div class="min-w-0 flex-1">
+                                        <p class="truncate text-[13px] font-bold text-[#374151]">{{ p.designation }}</p>
+                                        <p class="truncate text-[11px] text-[#94a3b8]">{{ p.adresse }} • {{ p.telephone }}</p>
+                                        <p v-if="mode === 'relance' && libelleDelaiRelance(p)" class="mt-1 text-[11px] font-medium text-amber-700">
+                                            {{ libelleDelaiRelance(p) }}
+                                        </p>
+                                        <div v-if="p.heurs" class="mt-0.5 flex items-center gap-1 text-[11px] text-[#94a3b8]">
                                             <Clock class="size-3" /> {{ p.heurs.ouverture }}-{{ p.heurs.fermeture }}
                                         </div>
                                     </div>
-                                </div>
-                                <div class="flex shrink-0 flex-col items-end gap-1">
-                                    <div
-                                        class="flex size-5 items-center justify-center rounded-full border-2 transition-colors"
-                                        :class="form.pharmacie_id === String(p.id) ? 'border-[#0d6efd] bg-[#0d6efd]' : 'border-gray-300'"
-                                    >
-                                        <CheckCircle2 v-if="form.pharmacie_id === String(p.id)" class="size-3 text-white" />
+                                    <div class="flex shrink-0 flex-col items-end gap-1">
+                                        <div
+                                            class="flex size-5 items-center justify-center rounded-full border-2"
+                                            :class="form.pharmacie_id === String(p.id) ? 'border-[#016630] bg-white' : 'border-[#ccc5c5]'"
+                                        >
+                                            <CheckCircle2 v-if="form.pharmacie_id === String(p.id)" class="size-3 text-[#016630]" />
+                                        </div>
+                                        <span v-if="isOuverte(p.heurs) === true" class="rounded border border-[#016630] bg-white px-2 py-0.5 text-[7px] font-bold text-[#016630]">Ouvert</span>
+                                        <span v-else-if="isOuverte(p.heurs) === false" class="rounded bg-red-100 px-2 py-0.5 text-[7px] font-bold text-red-600">FERMÉ</span>
                                     </div>
-                                    <span v-if="isOuverte(p.heurs) === true" class="rounded-[5px] border border-[#016630] bg-white px-2 py-0.5 text-[10px] font-bold text-[#016630]">Ouvert</span>
-                                    <span v-else-if="isOuverte(p.heurs) === false" class="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600">FERMÉ</span>
-                                </div>
+                                </button>
+                            </div>
+                            <p v-if="errors.pharmacie_id" class="text-xs text-[#dc3545]">{{ errors.pharmacie_id }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Section 3 — Médicaments (Figma: Nom | Quantité | Prix unitaire | Total, bouton #0d6efd) -->
+                    <div class="rounded-[10px] border border-[#ccc5c5] p-5">
+                        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+                            <p class="text-[20px] font-black italic text-[rgba(92,89,89,0.4)]">Médicaments</p>
+                            <button
+                                type="button"
+                                class="flex items-center gap-2 rounded-[10px] bg-[#0d6efd] px-3.5 py-2 text-sm font-black text-white hover:bg-blue-700"
+                                @click="addProduit"
+                            >
+                                <Pill class="size-5" />
+                                Ajouter un médicament
                             </button>
                         </div>
-                        <p v-if="errors.pharmacie_id" class="text-xs font-medium text-red-600">
-                            {{ errors.pharmacie_id }}
-                        </p>
-                    </div>
-                </div>
+                        <p v-if="errors.produits" class="mb-2 text-xs text-[#dc3545]">{{ errors.produits }}</p>
 
-                <!-- Médicaments -->
-                <div class="flex min-w-0 flex-col gap-3 rounded-[10px] border border-[#ccc5c5] bg-white p-4">
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                        <span class="text-[20px] font-black text-[rgba(92,89,89,0.4)]">Médicaments</span>
-                        <button
-                            type="button"
-                            class="flex items-center gap-2 rounded-[10px] bg-[#0d6efd] px-4 py-2 text-[14px] font-black text-white transition-colors hover:bg-blue-600"
-                            @click="addProduit"
+                        <div
+                            v-for="(p, i) in form.produits"
+                            :key="i"
+                            class="mb-4 flex flex-col gap-3 rounded-[10px] border border-[#ccc5c5] bg-white p-4 last:mb-0"
                         >
-                            <Plus class="size-4" />
-                            Ajouter un médicament
-                        </button>
-                    </div>
-                    <p v-if="errors.produits" class="text-xs text-red-600">
-                        {{ errors.produits }}
-                    </p>
-
-                    <div
-                        v-for="(p, i) in form.produits"
-                        :key="i"
-                        class="flex min-w-0 flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4"
-                    >
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="grid min-w-0 flex-1 grid-cols-2 gap-3 md:grid-cols-4">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
+                                    <div class="flex flex-col gap-1">
+                                        <Label class="text-base font-light text-black">Nom Médicament</Label>
+                                        <input
+                                            v-model="p.designation"
+                                            placeholder="Ex : 1000"
+                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none"
+                                            :class="{ 'border-[#dc3545]': getProduitError(i, 'designation') }"
+                                        />
+                                        <p v-if="getProduitError(i, 'designation')" class="text-xs text-[#dc3545]">{{ getProduitError(i, 'designation') }}</p>
+                                    </div>
+                                    <div class="flex flex-col gap-1">
+                                        <Label class="text-base font-light text-black">Quantité</Label>
+                                        <input
+                                            v-model.number="p.quantite"
+                                            type="number"
+                                            min="1"
+                                            class="h-[42px] w-[59px] rounded-[10px] border border-[#ccc5c5] bg-white px-2 py-2 text-center text-base text-[#5c5959] focus:border-[#0d6efd] focus:outline-none"
+                                            :class="{ 'border-[#dc3545]': getProduitError(i, 'quantite') }"
+                                        />
+                                        <p v-if="getProduitError(i, 'quantite')" class="text-xs text-[#dc3545]">{{ getProduitError(i, 'quantite') }}</p>
+                                    </div>
+                                    <div class="flex flex-col gap-1">
+                                        <Label class="text-base font-light text-black">Prix unitaire</Label>
+                                        <div class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white">
+                                            <input
+                                                v-model.number="p.prix_unitaire"
+                                                type="number"
+                                                min="0"
+                                                step="1"
+                                                placeholder="Ex : 1000"
+                                                class="min-w-0 flex-1 border-0 px-3 py-2 text-sm outline-none placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:ring-0"
+                                                :class="{ 'ring-1 ring-[#dc3545]': getProduitError(i, 'prix_unitaire') }"
+                                            />
+                                            <span class="pr-3 text-base font-medium text-black">xaf</span>
+                                        </div>
+                                        <p v-if="getProduitError(i, 'prix_unitaire')" class="text-xs text-[#dc3545]">{{ getProduitError(i, 'prix_unitaire') }}</p>
+                                    </div>
+                                    <div class="flex flex-col gap-1">
+                                        <Label class="text-base font-light text-black">Total</Label>
+                                        <div class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white">
+                                            <span class="flex-1 px-3 text-base font-medium text-black">{{ ((p.prix_unitaire || 0) * (p.quantite || 0)).toFixed(1) }}</span>
+                                            <span class="pr-3 text-base font-medium text-black">xaf</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="shrink-0 text-[rgba(92,89,89,0.4)] hover:text-[#dc3545]" @click="removeProduit(i)">
+                                    <X class="size-4" />
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 border-t border-[#ccc5c5] pt-2 sm:grid-cols-4">
                                 <div class="flex flex-col gap-1">
-                                    <Label class="text-[20px] font-light text-black">Nom Médicament</Label>
-                                    <Input
-                                        v-model="p.designation"
-                                        placeholder="Ex : 1000"
-                                        class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 text-[16px]"
-                                        :class="{ 'border-red-500': getProduitError(i, 'designation') }"
+                                    <Label class="text-xs font-medium text-black">Dosage</Label>
+                                    <input
+                                        v-model="p.dosage"
+                                        placeholder="Ex : 500mg"
+                                        class="h-[38px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none"
                                     />
-                                    <p v-if="getProduitError(i, 'designation')" class="text-xs text-red-600">{{ getProduitError(i, 'designation') }}</p>
                                 </div>
                                 <div class="flex flex-col gap-1">
-                                    <Label class="text-[20px] font-light text-black">Dosage</Label>
-                                    <Input v-model="p.dosage" placeholder="Ex : 1000" class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 text-[16px]" />
-                                </div>
-                                <div class="flex flex-col gap-1">
-                                    <Label class="text-[20px] font-light text-black">Forme</Label>
-                                    <select v-model="p.forme" class="h-[42px] w-full rounded-[10px] border border-[#ccc5c5] bg-white px-3 text-[16px]">
+                                    <Label class="text-xs font-medium text-black">Forme</Label>
+                                    <select
+                                        v-model="p.forme"
+                                        class="h-[38px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                    >
                                         <option value="">Choisir la forme</option>
                                         <option v-for="f in formesPharmaceutiques" :key="f" :value="f">{{ f }}</option>
                                     </select>
                                 </div>
-                                <div class="flex flex-col gap-1">
-                                    <Label class="text-[20px] font-light text-black">Quantité</Label>
-                                    <div class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white px-2" :class="{ 'border-red-500': getProduitError(i, 'quantite') }">
-                                        <Input v-model.number="p.quantite" type="number" min="1" class="h-full flex-1 border-0 p-0 text-center text-[16px] font-semibold focus-visible:ring-0" />
-                                        <div class="flex flex-col border-l border-gray-200 pl-1">
-                                            <button type="button" class="leading-none text-gray-500 hover:text-gray-900" @click="p.quantite++">▴</button>
-                                            <button type="button" class="leading-none text-gray-500 hover:text-gray-900" @click="p.quantite > 1 ? p.quantite-- : null">▾</button>
-                                        </div>
-                                    </div>
-                                    <p v-if="getProduitError(i, 'quantite')" class="text-xs text-red-600">{{ getProduitError(i, 'quantite') }}</p>
-                                </div>
-                            </div>
-                            <button type="button" class="mt-6 shrink-0 text-gray-400 transition-colors hover:text-red-500 md:mt-0" @click="removeProduit(i)">
-                                <X class="size-4" />
-                            </button>
-                        </div>
-                        <div class="grid min-w-0 grid-cols-2 gap-3 md:grid-cols-4">
-                            <div class="flex flex-col gap-1">
-                                <Label class="text-[20px] font-light text-black">Prix unitaire</Label>
-                                <div class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5]">
-                                    <Input v-model.number="p.prix_unitaire" type="number" min="0" step="1" placeholder="Ex : 1000" class="h-full flex-1 border-0 pr-10 text-[16px] focus-visible:ring-0" :class="{ 'border-red-500': getProduitError(i, 'prix_unitaire') }" />
-                                    <span class="pr-3 text-[16px] font-medium text-gray-900">xaf</span>
-                                </div>
-                                <p v-if="getProduitError(i, 'prix_unitaire')" class="text-xs text-red-600">{{ getProduitError(i, 'prix_unitaire') }}</p>
-                            </div>
-                            <div class="flex flex-col gap-1">
-                                <Label class="text-[20px] font-light text-black">Total</Label>
-                                <div class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-gray-50">
-                                    <span class="flex-1 px-3 text-[16px] font-semibold">{{ ((p.prix_unitaire || 0) * (p.quantite || 0)).toFixed(1) }}</span>
-                                    <span class="pr-3 text-[16px] font-medium text-gray-900">xaf</span>
-                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <p class="text-[20px] font-black text-black">
-                        Total montant commande : <span class="text-[25px] font-medium">{{ totalEnreg.toFixed(1) }}</span> <span class="text-[20px] font-medium">xaf</span>
+                    <!-- Section 4 — Total -->
+                    <p class="text-base font-bold text-[#1a1a2e]">
+                        Total montant commande :
+                        <span class="text-[20px] font-bold">{{ totalEnreg.toFixed(1) }}</span>
+                        <span class="ml-1 text-sm font-normal text-[#94a3b8]">xaf</span>
                     </p>
-                </div>
 
-                <!-- Informations paiement -->
-                <div class="min-w-0 rounded-[10px] border border-[#ccc5c5] bg-white p-4">
-                    <p class="mb-3 text-[20px] font-black text-[rgba(92,89,89,0.4)]">Informations paiement</p>
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <Label class="shrink-0 text-[20px] font-light text-black">Mode de paiement</Label>
-                        <select
-                            v-model="form.mode_paiement_id"
-                            class="h-[42px] min-w-0 flex-1 rounded-[10px] border border-[#ccc5c5] bg-white px-3 text-[16px] focus:border-blue-500 focus:outline-none"
-                        >
-                            <option value="">choisir le mode de paiement</option>
-                            <option v-for="m in modesPaiement" :key="m.id" :value="m.id">{{ m.designation }}</option>
-                        </select>
+                    <!-- Ordonnance (dashed #e2e8f0) + Commentaires (solid #e2e8f0) : deux blocs égaux côte à côte -->
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div class="flex flex-col gap-2">
+                            <label
+                                for="ordonnance-enreg"
+                                class="flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-3 rounded-[10px] border-2 border-dashed border-[#e2e8f0] bg-white p-6 text-center transition-colors hover:border-[#94a3b8]"
+                            >
+                                <div class="flex size-12 items-center justify-center">
+                                    <ClipboardList class="size-10 text-[#94a3b8]" />
+                                </div>
+                                <span class="text-sm font-medium text-[#94a3b8]">
+                                    {{ form.ordonnance ? form.ordonnance.name : ordonnanceUrlExistante ? 'Ordonnance existante — remplacer (facultatif)' : 'Ajouter une ordonnance' }}
+                                </span>
+                                <input id="ordonnance-enreg" type="file" class="hidden" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" @change="onOrdonnanceChange" />
+                            </label>
+                            <OrdonnanceFilePreview v-if="form.ordonnance" :file="form.ordonnance" max-height="10rem" />
+                            <OrdonnanceViewer v-else-if="ordonnanceUrlExistante" :urlfile="ordonnanceUrlExistante" max-height="10rem" />
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <Label class="text-sm font-medium text-[#374151]">Commentaires</Label>
+                            <textarea
+                                v-model="form.commentaire"
+                                placeholder="Commentaires ..."
+                                rows="4"
+                                class="min-h-[120px] resize-none rounded-[10px] border border-[#e2e8f0] bg-white p-3 text-sm placeholder:italic placeholder:text-[#94a3b8] focus:border-[#3B82F6] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                            />
+                        </div>
                     </div>
                 </div>
 
-                <!-- Ordonnance + Commentaires -->
-                <div class="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div class="flex min-w-0 flex-col gap-2">
-                        <label
-                            for="ordonnance-enreg"
-                            class="flex min-h-[120px] min-w-0 cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden rounded-[15px] border-2 border-dashed border-[rgba(92,89,89,0.3)] bg-white p-4 text-center transition-colors hover:border-[#0d6efd] hover:bg-blue-50/30"
-                        >
-                            <ClipboardList class="size-12 shrink-0 text-[rgba(92,89,89,0.4)]" />
-                            <span class="max-w-full truncate text-[20px] font-black text-[rgba(92,89,89,0.4)]">
-                                {{
-                                    form.ordonnance
-                                        ? form.ordonnance.name
-                                        : ordonnanceUrlExistante
-                                          ? 'Ordonnance existante — cliquez pour en remplacer (facultatif)'
-                                          : 'Ajouter une ordonnance'
-                                }}
-                            </span>
-                            <input id="ordonnance-enreg" type="file" class="hidden" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" @change="onOrdonnanceChange" />
-                        </label>
-                        <OrdonnanceFilePreview v-if="form.ordonnance" :file="form.ordonnance" max-height="10rem" />
-                        <OrdonnanceViewer
-                            v-else-if="ordonnanceUrlExistante"
-                            :urlfile="ordonnanceUrlExistante"
-                            max-height="10rem"
-                        />
-                    </div>
-                    <textarea
-                        v-model="form.commentaire"
-                        placeholder="Commentaires ..."
-                        class="min-h-[150px] min-w-0 w-full resize-none rounded-[10px] border border-[#ccc5c5] bg-white p-4 text-[20px] text-[rgba(92,89,89,0.4)] placeholder:text-[rgba(92,89,89,0.4)] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                </div>
-
-                <DialogFooter class="flex flex-col gap-4 pt-4 sm:flex-row sm:justify-center">
-                    <Button type="button" class="h-[47px] w-full rounded-[15px] bg-[#dc3545] px-8 text-[20px] font-black text-white hover:bg-red-600 sm:w-[120px]" @click="close">
+                <!-- Footer sticky : Annuler #EF4444, Envoyer #3B82F6, rounded 8–10px, padding ~40px -->
+                <div class="sticky bottom-0 flex justify-center gap-6 border-t border-[#e2e8f0] bg-white px-6 py-5 shadow-[0_-2px_10px_rgba(0,0,0,0.04)]">
+                    <Button
+                        type="button"
+                        class="rounded-[10px] bg-[#EF4444] px-10 py-2.5 text-[15px] font-bold text-white hover:bg-red-600"
+                        @click="close"
+                    >
                         Annuler
                     </Button>
-                    <Button type="submit" class="h-[47px] w-full rounded-[15px] bg-[#0d6efd] px-8 text-[20px] font-black text-white hover:bg-blue-700 sm:w-[120px]">
+                    <Button
+                        type="submit"
+                        class="rounded-[10px] bg-[#3B82F6] px-10 py-2.5 text-[15px] font-bold text-white hover:bg-blue-600"
+                    >
                         Envoyer
                     </Button>
-                </DialogFooter>
+                </div>
             </form>
         </DialogContent>
     </Dialog>

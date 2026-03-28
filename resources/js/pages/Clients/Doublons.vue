@@ -391,137 +391,140 @@ const statutLabels: Record<string, string> = {
 
         <!-- Modal Fusion des profils clients -->
         <Dialog :open="modalFusionOpen" @update:open="modalFusionOpen = $event">
-            <DialogContent class="sm:max-w-2xl" :show-close-button="true">
-                <DialogHeader class="text-left">
-                    <DialogTitle class="flex items-center gap-2 text-xl">
-                        <UsersRound class="size-6 text-[#459cd1]" />
+            <DialogContent
+                class="!flex max-h-[min(85vh,600px)] !gap-0 flex-col overflow-hidden p-0 sm:max-w-xl"
+                :show-close-button="true"
+            >
+                <DialogHeader class="shrink-0 border-b px-4 py-3 pr-12 text-left sm:px-5">
+                    <DialogTitle class="flex items-center gap-2 text-base font-semibold sm:text-lg">
+                        <UsersRound class="size-5 shrink-0 text-[#459cd1] sm:size-6" />
                         Fusion des profils clients
                     </DialogTitle>
                 </DialogHeader>
 
-                <div class="space-y-4">
+                <div class="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3 sm:px-5">
                     <!-- Avertissement -->
-                    <div class="flex gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-900/20">
-                        <AlertCircle class="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
-                        <div class="text-sm">
+                    <div class="flex gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5 dark:border-amber-700 dark:bg-amber-900/20">
+                        <AlertCircle class="size-4 shrink-0 text-amber-600 dark:text-amber-400 sm:size-5" />
+                        <div class="text-xs leading-snug sm:text-sm">
                             <p class="font-semibold text-amber-800 dark:text-amber-200">Attention : Action irréversible</p>
-                            <p class="mt-1 text-amber-700 dark:text-amber-300">
+                            <p class="mt-0.5 text-amber-700 dark:text-amber-300">
                                 Cette opération fusionnera les deux profils en un seul. Toutes les commandes du profil dupliqué seront rattachées au profil principal.
                             </p>
                         </div>
                     </div>
 
                     <!-- Comparaison des profils -->
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div class="rounded-lg border-2 border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-800 dark:bg-emerald-900/20">
-                            <span class="mb-3 inline-block rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white">
+                    <div class="grid gap-2.5 sm:grid-cols-2">
+                        <div class="rounded-lg border-2 border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/20">
+                            <span class="mb-2 inline-block rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-white sm:text-xs">
                                 Profil principal (conservé)
                             </span>
                             <template v-if="principalPourModal">
-                                <p class="font-semibold text-foreground">{{ nomComplet(principalPourModal) }}</p>
-                                <p class="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                                <p class="text-sm font-semibold text-foreground">{{ nomComplet(principalPourModal) }}</p>
+                                <p class="mt-1.5 flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm">
                                     <Phone class="size-4 shrink-0" />
                                     <span class="font-medium">Téléphone principal :</span> {{ principalPourModal.tel }}
                                 </p>
-                                <p class="flex items-center gap-2 text-sm text-muted-foreground">
+                                <p class="flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm">
                                     <Phone class="size-4 shrink-0" />
                                     <span class="font-medium">Téléphone secondaire :</span>
                                     {{ premierDuplique && optionNumeroSecondaire ? premierDuplique.tel : (principalPourModal.tel || '—') }}
                                 </p>
-                                <p class="flex items-center gap-2 text-sm text-muted-foreground">
+                                <p class="flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm">
                                     <MapPin class="size-4 shrink-0" />
                                     {{ principalPourModal.adresse || '-' }}{{ principalPourModal.zone ? `, ${principalPourModal.zone}` : '' }}
                                 </p>
-                                <p class="flex items-center gap-2 text-sm">
+                                <p class="flex items-center gap-1.5 text-xs sm:text-sm">
                                     <ListOrdered class="size-4 shrink-0" />
                                     {{ principalPourModal.nb_commandes }} commandes . {{ Number(principalPourModal.total_depense).toLocaleString('fr-FR') }} xaf
                                 </p>
                             </template>
                         </div>
-                        <div class="rounded-lg border-2 border-red-200 bg-red-50/50 p-4 dark:border-red-800 dark:bg-red-900/20">
-                            <span class="mb-3 inline-block rounded bg-red-600 px-2 py-1 text-xs font-medium text-white">
+                        <div class="rounded-lg border-2 border-red-200 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-900/20">
+                            <span class="mb-2 inline-block rounded bg-red-600 px-2 py-0.5 text-[10px] font-medium text-white sm:text-xs">
                                 Profil dupliqué (sera fusionné)
                             </span>
                             <template v-if="premierDuplique">
-                                <p class="font-semibold text-foreground">{{ nomComplet(premierDuplique) }}</p>
-                                <p class="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                                <p class="text-sm font-semibold text-foreground">{{ nomComplet(premierDuplique) }}</p>
+                                <p class="mt-1.5 flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm">
                                     <Phone class="size-4 shrink-0" />
                                     <span class="font-medium">Téléphone principal :</span> {{ premierDuplique.tel }}
                                 </p>
-                                <p class="flex items-center gap-2 text-sm text-muted-foreground">
+                                <p class="flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm">
                                     <MapPin class="size-4 shrink-0" />
                                     {{ premierDuplique.adresse || '-' }}{{ premierDuplique.zone ? `, ${premierDuplique.zone}` : '' }}
                                 </p>
-                                <p class="flex items-center gap-2 text-sm">
+                                <p class="flex items-center gap-1.5 text-xs sm:text-sm">
                                     <ListOrdered class="size-4 shrink-0" />
                                     {{ premierDuplique.nb_commandes }} commandes . {{ Number(premierDuplique.total_depense).toLocaleString('fr-FR') }} xaf
                                 </p>
                             </template>
                             <template v-else-if="dupliquesPourModal.length > 1">
-                                <p class="text-sm text-muted-foreground">{{ dupliquesPourModal.length }} profils dupliqués seront fusionnés</p>
+                                <p class="text-xs text-muted-foreground sm:text-sm">{{ dupliquesPourModal.length }} profils dupliqués seront fusionnés</p>
                             </template>
                         </div>
                     </div>
 
                     <!-- Option de fusion -->
                     <div>
-                        <h4 class="mb-2 font-semibold text-foreground">Option de fusion</h4>
-                        <label class="flex cursor-pointer items-center gap-2 rounded border p-3">
+                        <h4 class="mb-1.5 text-sm font-semibold text-foreground">Option de fusion</h4>
+                        <label class="flex cursor-pointer items-center gap-2 rounded border py-2 pl-2 pr-2.5">
                             <input
                                 v-model="optionNumeroSecondaire"
                                 type="radio"
                                 :value="true"
                                 class="size-4"
                             />
-                            <span class="text-sm">Ajouter le numéro du profil dupliqué comme numéro secondaire</span>
+                            <span class="text-xs leading-tight sm:text-sm">Ajouter le numéro du profil dupliqué comme numéro secondaire</span>
                         </label>
-                        <label class="mt-2 flex cursor-pointer items-center gap-2 rounded border p-3">
+                        <label class="mt-1.5 flex cursor-pointer items-center gap-2 rounded border py-2 pl-2 pr-2.5">
                             <input
                                 v-model="optionNumeroSecondaire"
                                 type="radio"
                                 :value="false"
                                 class="size-4"
                             />
-                            <span class="text-sm">Ne pas ajouter le numéro secondaire</span>
+                            <span class="text-xs leading-tight sm:text-sm">Ne pas ajouter le numéro secondaire</span>
                         </label>
                     </div>
 
                     <!-- Résumé de la fusion -->
                     <div>
-                        <h4 class="mb-2 font-semibold text-foreground">Résumé de la fusion</h4>
-                        <ul class="space-y-1.5 text-sm text-muted-foreground">
+                        <h4 class="mb-1.5 text-sm font-semibold text-foreground">Résumé de la fusion</h4>
+                        <ul class="space-y-1 text-xs text-muted-foreground sm:text-sm">
                             <li v-if="principalPourModal" class="flex items-center gap-2">
-                                <CheckCheck class="size-4 shrink-0 text-[#459cd1]" />
+                                <CheckCheck class="size-3.5 shrink-0 text-[#459cd1] sm:size-4" />
                                 Profil conservé : {{ nomComplet(principalPourModal) }}
                             </li>
-                            <li class="flex items-center gap-2">
-                                <CheckCheck class="size-4 shrink-0 text-[#459cd1]" />
+                            <li class="flex items-start gap-2">
+                                <CheckCheck class="size-3.5 shrink-0 text-[#459cd1] sm:size-4" />
                                 {{ commandesRattachees }} commande(s) seront rattachées au profil principal
                             </li>
-                            <li class="flex items-center gap-2">
-                                <CheckCheck class="size-4 shrink-0 text-[#459cd1]" />
+                            <li class="flex items-start gap-2">
+                                <CheckCheck class="size-3.5 shrink-0 text-[#459cd1] sm:size-4" />
                                 Total après fusion : {{ totalApresFusion.commandes }} commandes, {{ Number(totalApresFusion.montant).toLocaleString('fr-FR') }} xaf
                             </li>
                         </ul>
                     </div>
-
-                    <!-- Boutons -->
-                    <DialogFooter class="flex-row justify-between border-t pt-4 sm:justify-between">
-                        <Button
-                            variant="destructive"
-                            class="bg-red-600 text-white hover:bg-red-700"
-                            @click="fermerModalFusion"
-                        >
-                            Annuler
-                        </Button>
-                        <Button
-                            class="bg-[#459cd1] text-white hover:bg-[#3a8ab8]"
-                            @click="confirmerFusion"
-                        >
-                            Fusionner les profils
-                        </Button>
-                    </DialogFooter>
                 </div>
+
+                <!-- Boutons -->
+                <DialogFooter class="shrink-0 flex-row justify-between gap-2 border-t px-4 py-3 sm:justify-between sm:px-5">
+                    <Button
+                        variant="destructive"
+                        class="h-9 bg-red-600 px-4 text-sm text-white hover:bg-red-700"
+                        @click="fermerModalFusion"
+                    >
+                        Annuler
+                    </Button>
+                    <Button
+                        class="h-9 bg-[#459cd1] px-4 text-sm text-white hover:bg-[#3a8ab8]"
+                        @click="confirmerFusion"
+                    >
+                        Fusionner les profils
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
 
