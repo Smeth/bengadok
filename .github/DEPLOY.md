@@ -3,13 +3,13 @@
 ## Architecture CI/CD
 
 ```
-Push sur main
+Push sur main ou PR vers main
      │
      ▼
 [ci.yml] Lint + Tests (PHP 8.2 & 8.3)
      │
-     ▼ (si CI passe)
-[deploy.yml] Déploiement VPS via SSH
+     ▼ (push sur main uniquement, si CI passe)
+Déploiement VPS via SSH
      │
      ├── php artisan down      (maintenance)
      ├── git pull

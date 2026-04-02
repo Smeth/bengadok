@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Évite les courses entre exécutions ; les déploiements prod restent sérialisés via le groupe ci-dessous
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   lint:
     name: Lint (PHP + Frontend)
@@ -119,3 +124,81 @@ jobs:
 
       - name: Exécuter les tests
         run: php artisan test --parallel
+
+  deploy:
+    name: Déploiement VPS
+    needs: [lint, tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Déploiement via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            echo "=== [1/9] Activation mode maintenance ==="
+            php artisan down --render="errors.503" --retry=60 || true
+
+            echo "=== [2/9] Récupération du code ==="
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "=== [3/9] Installation dépendances PHP ==="
+            composer install \
+              --no-interaction \
+              --prefer-dist \
+              --optimize-autoloader \
+              --no-dev
+
+            echo "=== [4/9] Build assets frontend ==="
+            rm -f public/hot
+            npm ci --prefer-offline
+            npm run build
+
+            echo "=== [5/9] Migrations base de données ==="
+            php artisan migrate --force
+
+            echo "=== [6/9] Lien storage public ==="
+            php artisan storage:link --force || true
+
+            echo "=== [7/9] Nettoyage et mise en cache ==="
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan event:cache
+
+            echo "=== [8/9] Redémarrage du worker de queue ==="
+            php artisan queue:restart
+
+            echo "=== [9/9] Désactivation mode maintenance ==="
+            php artisan up
+
+            echo "✓ Déploiement terminé avec succès"
+
+      - name: Notification de succès
+        if: success()
+        run: echo "Déploiement réussi sur ${{ secrets.VPS_HOST }}"
+
+      - name: Désactivation maintenance en cas d'échec
+        if: failure()
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            php artisan up || true
+            echo "⚠ Déploiement échoué — maintenance désactivée"
