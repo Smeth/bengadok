@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowLeft,
@@ -12,12 +11,13 @@ import {
     RefreshCw,
     Pencil,
 } from 'lucide-vue-next';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { Button } from '@/components/ui/button';
-import type { BreadcrumbItem } from '@/types';
-import { dashboard } from '@/routes';
-import { clientNomComplet } from '@/lib/clientDisplayName';
+import { computed, ref } from 'vue';
 import ClientEnrichirProfilModal from '@/components/clients/ClientEnrichirProfilModal.vue';
+import { Button } from '@/components/ui/button';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { clientNomComplet } from '@/lib/clientDisplayName';
+import { dashboard } from '@/routes';
+import type { BreadcrumbItem } from '@/types';
 
 const props = defineProps<{
     client: {

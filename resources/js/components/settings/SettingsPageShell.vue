@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { usePharmacyPortal } from '@/composables/usePharmacyPortal';
 import AppLayout from '@/layouts/AppLayout.vue';
 import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
-import { usePharmacyPortal } from '@/composables/usePharmacyPortal';
 import type { BreadcrumbItem } from '@/types';
 
 const props = withDefaults(

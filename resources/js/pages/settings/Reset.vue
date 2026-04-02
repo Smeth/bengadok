@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
+import { RotateCcw } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { Button } from '@/components/ui/button';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -15,9 +15,9 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { RotateCcw } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
-import { usePage } from '@inertiajs/vue3';
+import { Button } from '@/components/ui/button';
+import AppLayout from '@/layouts/AppLayout.vue';
+import SettingsLayout from '@/layouts/settings/Layout.vue';
 
 const page = usePage();
 const processing = ref(false);

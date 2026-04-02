@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
 import {
     Building2,
     ClipboardList,
@@ -12,6 +12,7 @@ import {
     Users,
     UserCog,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
 import {
     Sidebar,
@@ -23,11 +24,10 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { usePage } from '@inertiajs/vue3';
+import { useCurrentUrl } from '@/composables/useCurrentUrl';
+import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 import AppLogo from './AppLogo.vue';
-import { dashboard } from '@/routes';
-import { useCurrentUrl } from '@/composables/useCurrentUrl';
 
 const page = usePage();
 const { isCurrentUrl } = useCurrentUrl();

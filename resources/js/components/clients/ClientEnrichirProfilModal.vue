@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import {
     Accessibility,
@@ -13,8 +12,9 @@ import {
     UserPlus,
     X,
 } from 'lucide-vue-next';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const NICHE_OPTIONS = [
     { id: 'parent', label: 'Parent', icon: Baby },

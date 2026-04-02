@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight, MoreVertical, TrendingDown, TrendingUp } from 'lucide-vue-next';
+import { computed } from 'vue';
 import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
 
 type StatCard = {

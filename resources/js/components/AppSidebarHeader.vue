@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { cn } from '@/lib/utils';
 import { Link, router } from '@inertiajs/vue3';
-import { Bell, ChevronDown } from 'lucide-vue-next';
 import { usePage } from '@inertiajs/vue3';
+import { Bell, ChevronDown } from 'lucide-vue-next';
+import { computed } from 'vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -13,12 +13,12 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import type { BreadcrumbItem } from '@/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useInitials } from '@/composables/useInitials';
-import UserMenuContent from './UserMenuContent.vue';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import type { BreadcrumbItem } from '@/types';
+import UserMenuContent from './UserMenuContent.vue';
 
 const props = withDefaults(
     defineProps<{

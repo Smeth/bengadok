@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { usePolling } from '@/composables/usePolling';
 import { Download } from 'lucide-vue-next';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { computed, ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { BreadcrumbItem } from '@/types';
+import { usePolling } from '@/composables/usePolling';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
+import type { BreadcrumbItem } from '@/types';
 
 usePolling();
 

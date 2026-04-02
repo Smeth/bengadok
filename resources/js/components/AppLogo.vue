@@ -20,7 +20,7 @@ withDefaults(
         <img
             src="/images/figma-assets/sidebar-logo-benga.svg"
             alt="BengaDok"
-            class="h-[90px] w-auto max-w-[210px] shrink-0 object-contain object-center group-data-[collapsible=icon]:hidden"
+            class="h-[138.069px] w-auto max-w-[322.161px] shrink-0 object-contain object-center group-data-[collapsible=icon]:hidden"
         />
         <!-- Icône réduite quand sidebar collapsed -->
         <div class="hidden shrink-0 items-center justify-center rounded-full bg-[#3995D2] size-8 group-data-[collapsible=icon]:flex">

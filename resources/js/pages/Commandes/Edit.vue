@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { ref, watch } from 'vue';
+import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
+import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
-import type { BreadcrumbItem } from '@/types';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
+import type { BreadcrumbItem } from '@/types';
 
 const props = defineProps<{
     commande: {
@@ -77,11 +78,6 @@ function ajouterProduit() {
 
 function supprimerProduit(i: number) {
     produitsSelection.value.splice(i, 1);
-}
-
-function onOrdonnanceChange(e: Event) {
-    const target = e.target as HTMLInputElement;
-    ordonnanceFile.value = target.files?.[0] ?? null;
 }
 
 function submit() {
@@ -215,14 +211,7 @@ function submit() {
             </div>
 
             <div>
-                <Label>Nouvelle ordonnance (remplace l'actuelle)</Label>
-                <Input
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
-                    class="mt-1 cursor-pointer"
-                    @change="onOrdonnanceChange"
-                />
-                <p class="mt-1 text-xs text-muted-foreground">JPG, PNG, GIF, WebP ou PDF. Max 10 Mo.</p>
+                <OrdonnanceUppy v-model="ordonnanceFile" label="Nouvelle ordonnance (remplace l'actuelle)" />
                 <OrdonnanceFilePreview v-if="ordonnanceFile" :file="ordonnanceFile" class="mt-3" max-height="14rem" />
             </div>
 

@@ -1,5 +1,5 @@
-import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 /** Utilisateur connecté sur l’espace Dok-Pharma (gérant / vendeur) */
 export function usePharmacyPortal() {

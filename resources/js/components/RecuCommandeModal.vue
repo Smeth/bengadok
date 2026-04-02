@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { X, User, Building2, Pill, Banknote, Truck } from 'lucide-vue-next';
+import { computed } from 'vue';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import type { CommandeDetail } from '@/types';
 

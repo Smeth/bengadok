@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { usePolling } from '@/composables/usePolling';
 import {
     Plus,
     Search,
@@ -18,7 +16,11 @@ import {
     Check,
     CheckCircle2,
 } from 'lucide-vue-next';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { computed, ref, watch } from 'vue';
+import CommandeEnregistrementModal from '@/components/CommandeEnregistrementModal.vue';
+import CommandesTable from '@/components/commandes/CommandesTable.vue';
+import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
+import RecuCommandeModal from '@/components/RecuCommandeModal.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -29,12 +31,6 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
-import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -42,13 +38,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
-import RecuCommandeModal from '@/components/RecuCommandeModal.vue';
-import CommandeEnregistrementModal from '@/components/CommandeEnregistrementModal.vue';
-import CommandesTable from '@/components/commandes/CommandesTable.vue';
-import type { BreadcrumbItem, CommandeDetail } from '@/types';
-import { STATUTS_COMMANDE, type MotifAnnulationOption } from '@/types';
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import { usePolling } from '@/composables/usePolling';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
+import { STATUTS_COMMANDE  } from '@/types';
+import type { BreadcrumbItem, CommandeDetail } from '@/types';
+import type {MotifAnnulationOption} from '@/types';
 
 usePolling();
 

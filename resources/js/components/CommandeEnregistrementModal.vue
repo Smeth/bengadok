@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import {
     Building2,
     CheckCircle2,
     ChevronDown,
     ChevronLeft,
-    ClipboardList,
     Clock,
     FileEdit,
     Phone,
@@ -14,11 +12,13 @@ import {
     Search,
     X,
 } from 'lucide-vue-next';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { computed, ref, watch } from 'vue';
 import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
 import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
 
 export type ProduitEnreg = {
     designation: string;
@@ -336,13 +336,12 @@ function onSubmit() {
     emit('submit', payload);
 }
 
-function onOrdonnanceChange(e: Event) {
-    const target = e.target as HTMLInputElement;
-    form.value.ordonnance = target.files?.[0] ?? null;
-    if (form.value.ordonnance) {
-        ordonnanceUrlExistante.value = null;
-    }
-}
+watch(
+    () => form.value.ordonnance,
+    (f) => {
+        if (f) ordonnanceUrlExistante.value = null;
+    },
+);
 
 watch(() => props.open, (v) => {
     if (v) {
@@ -670,18 +669,13 @@ watch(() => props.apiErrors, (v) => {
                     <!-- Ordonnance (dashed #e2e8f0) + Commentaires (solid #e2e8f0) : deux blocs égaux côte à côte -->
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div class="flex flex-col gap-2">
-                            <label
-                                for="ordonnance-enreg"
-                                class="flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-3 rounded-[10px] border-2 border-dashed border-[#e2e8f0] bg-white p-6 text-center transition-colors hover:border-[#94a3b8]"
+                            <p
+                                v-if="ordonnanceUrlExistante && !form.ordonnance"
+                                class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
                             >
-                                <div class="flex size-12 items-center justify-center">
-                                    <ClipboardList class="size-10 text-[#94a3b8]" />
-                                </div>
-                                <span class="text-sm font-medium text-[#94a3b8]">
-                                    {{ form.ordonnance ? form.ordonnance.name : ordonnanceUrlExistante ? 'Ordonnance existante — remplacer (facultatif)' : 'Ajouter une ordonnance' }}
-                                </span>
-                                <input id="ordonnance-enreg" type="file" class="hidden" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" @change="onOrdonnanceChange" />
-                            </label>
+                                Ordonnance déjà enregistrée — ajoutez un fichier ci-dessous pour la remplacer (facultatif).
+                            </p>
+                            <OrdonnanceUppy v-model="form.ordonnance" />
                             <OrdonnanceFilePreview v-if="form.ordonnance" :file="form.ordonnance" max-height="10rem" />
                             <OrdonnanceViewer v-else-if="ordonnanceUrlExistante" :urlfile="ordonnanceUrlExistante" max-height="10rem" />
                         </div>

@@ -3,8 +3,8 @@
  * Écran de chargement post-connexion — aligné Figma node 326:4 (loading).
  * Fond blanc, halo dégradé bas, disque logo centré, anneaux animés autour du logo.
  */
-import { onMounted, ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
+import { onMounted, ref } from 'vue';
 
 const props = defineProps<{
     redirectTo: string;

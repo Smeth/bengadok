@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     Search,
@@ -15,9 +14,9 @@ import {
     UsersRound,
     CheckCheck,
 } from 'lucide-vue-next';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { ref, watch, computed } from 'vue';
+import ConfirmModal from '@/components/ConfirmModal.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Dialog,
     DialogContent,
@@ -25,10 +24,11 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog';
-import ConfirmModal from '@/components/ConfirmModal.vue';
-import type { BreadcrumbItem } from '@/types';
-import { dashboard } from '@/routes';
+import { Input } from '@/components/ui/input';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { clientNomComplet } from '@/lib/clientDisplayName';
+import { dashboard } from '@/routes';
+import type { BreadcrumbItem } from '@/types';
 
 type ClientInGroup = {
     id: number;

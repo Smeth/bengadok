@@ -1,5 +1,5 @@
-import { onBeforeUnmount, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { onBeforeUnmount, onMounted } from 'vue';
 
 const POLL_INTERVAL_MS = 30_000; // 30 secondes
 

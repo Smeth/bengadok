@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
-import { usePolling } from '@/composables/usePolling';
+import { usePage } from '@inertiajs/vue3';
 import {
     ArrowDownRight,
     ArrowUpRight,
     ChevronDown,
     Pill,
 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+import { usePolling } from '@/composables/usePolling';
 import AppLayout from '@/layouts/AppLayout.vue';
-import type { BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
-import { usePage } from '@inertiajs/vue3';
+import type { BreadcrumbItem } from '@/types';
 
 usePolling();
 

@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import type { BreadcrumbItem } from '@/types';
-import { dashboard } from '@/routes';
 import {
     Building2, Phone, Search, Sun, Moon, Shield,
     MapPin, Clock, Plus, X, ChevronLeft, ChevronDown,
     Link2, FileText,
 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
+import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { dashboard } from '@/routes';
+import type { BreadcrumbItem } from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -163,20 +164,7 @@ const modePaiementId = ref<number | ''>('');
 
 // ─── Ordonnance ───────────────────────────────────────────────────────────────
 
-const ordonnanceInput = ref<HTMLInputElement | null>(null);
 const ordonnanceFile = ref<File | null>(null);
-const ordonnanceDragOver = ref(false);
-
-function onOrdonnanceChange(e: Event) {
-    const target = e.target as HTMLInputElement;
-    ordonnanceFile.value = target.files?.[0] ?? null;
-}
-
-function onDrop(e: DragEvent) {
-    ordonnanceDragOver.value = false;
-    const file = e.dataTransfer?.files?.[0];
-    if (file) ordonnanceFile.value = file;
-}
 
 // ─── Commentaire ──────────────────────────────────────────────────────────────
 
@@ -558,33 +546,9 @@ function annuler() {
                     <!-- ── Ordonnance + Commentaires ── -->
                     <div class="grid grid-cols-2 gap-4">
 
-                        <!-- Ordonnance (zone de dépôt) -->
+                        <!-- Ordonnance (FilePond) -->
                         <div class="flex flex-col gap-2">
-                            <input
-                                ref="ordonnanceInput"
-                                type="file"
-                                accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
-                                class="hidden"
-                                @change="onOrdonnanceChange"
-                            />
-                            <div
-                                @click="(ordonnanceInput as HTMLInputElement)?.click()"
-                                @dragover.prevent="ordonnanceDragOver = true"
-                                @dragleave="ordonnanceDragOver = false"
-                                @drop.prevent="onDrop"
-                                :class="[
-                                    'flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors',
-                                    ordonnanceDragOver
-                                        ? 'border-blue-400 bg-blue-50'
-                                        : 'border-gray-300 hover:border-gray-400',
-                                ]"
-                            >
-                                <FileText class="h-8 w-8 text-gray-400" />
-                                <span v-if="!ordonnanceFile" class="text-sm text-gray-400">Ajouter une ordonnance</span>
-                                <span v-else class="break-all text-center text-xs font-medium text-green-600">
-                                    {{ ordonnanceFile.name }}
-                                </span>
-                            </div>
+                            <OrdonnanceUppy v-model="ordonnanceFile" label="Ordonnance" />
                             <OrdonnanceFilePreview v-if="ordonnanceFile" :file="ordonnanceFile" max-height="12rem" />
                         </div>
 

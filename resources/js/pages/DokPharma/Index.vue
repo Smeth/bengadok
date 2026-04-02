@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
-import { usePolling } from '@/composables/usePolling';
-import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
 import {
     ChevronDown, ChevronUp, Paperclip, Clock, FileText,
     ShoppingCart, ZoomIn, ZoomOut, Download, RefreshCw,
     X, CheckCircle2, ShieldCheck, Eye, AlertCircle,
 } from 'lucide-vue-next';
+import { ref, watch } from 'vue';
+import { usePolling } from '@/composables/usePolling';
+import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
 
 usePolling();
 

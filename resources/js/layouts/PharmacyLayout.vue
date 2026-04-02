@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import {
     Bell,
@@ -11,6 +10,8 @@ import {
     PanelLeftOpen,
     Settings,
 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+import AppLogo from '@/components/AppLogo.vue';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -19,7 +20,6 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import UserMenuContent from '@/components/UserMenuContent.vue';
-import AppLogo from '@/components/AppLogo.vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 
 /** Aligné sur la sidebar admin : 16rem + mode icône 5rem (app.css) */
