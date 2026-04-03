@@ -9,10 +9,9 @@ use App\Models\User;
 use App\Models\Zone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -59,6 +58,7 @@ class PharmacieController extends Controller
             ->map(function ($p) {
                 $lat = $p->latitude ?? ($p->zone?->latitude ? (float) $p->zone->latitude + ($p->id * 0.001) : -4.2694 + ($p->id % 6) * 0.01);
                 $lng = $p->longitude ?? ($p->zone?->longitude ? (float) $p->zone->longitude + ($p->id * 0.0005) : 15.2712 + ($p->id % 6) * 0.01);
+
                 return [
                     'id' => $p->id,
                     'designation' => $p->designation,
@@ -141,7 +141,7 @@ class PharmacieController extends Controller
         );
 
         $zoneId = $validated['zone_id'] ?? null;
-        if (!$zoneId) {
+        if (! $zoneId) {
             $zoneId = Zone::first()?->id;
         }
 
@@ -227,20 +227,22 @@ class PharmacieController extends Controller
 
     public function toggleGarde(Pharmacie $pharmacie): RedirectResponse
     {
-        $pharmacie->update(['de_garde' => !$pharmacie->de_garde]);
+        $pharmacie->update(['de_garde' => ! $pharmacie->de_garde]);
         $message = $pharmacie->de_garde ? 'Pharmacie mise de garde.' : 'Garde retirée.';
+
         return back()->with('status', $message);
     }
 
     public function destroy(Pharmacie $pharmacie): RedirectResponse
     {
         $pharmacie->delete();
+
         return redirect()->route('pharmacies.index')->with('status', 'Pharmacie supprimée.');
     }
 
     public function storeUser(Request $request, Pharmacie $pharmacie): RedirectResponse
     {
-        if (!$request->user()?->hasAnyRole(['admin', 'super_admin'])) {
+        if (! $request->user()?->hasAnyRole(['admin', 'super_admin'])) {
             abort(403, 'Seuls les admins peuvent ajouter des utilisateurs à une pharmacie.');
         }
 
@@ -253,7 +255,7 @@ class PharmacieController extends Controller
 
         $validated = $request->validate($rules);
 
-        $password = !empty($validated['password'])
+        $password = ! empty($validated['password'])
             ? $validated['password']
             : Str::random(10);
 
@@ -279,7 +281,7 @@ class PharmacieController extends Controller
 
     public function resetUserPassword(Request $request, Pharmacie $pharmacie, User $user): RedirectResponse
     {
-        if (!$request->user()?->hasAnyRole(['admin', 'super_admin'])) {
+        if (! $request->user()?->hasAnyRole(['admin', 'super_admin'])) {
             abort(403, 'Seuls les admins peuvent réinitialiser les mots de passe.');
         }
         if ($user->pharmacie_id !== $pharmacie->id) {
@@ -294,7 +296,7 @@ class PharmacieController extends Controller
 
     public function destroyUser(Request $request, Pharmacie $pharmacie, User $user): RedirectResponse
     {
-        if (!$request->user()?->hasAnyRole(['admin', 'super_admin'])) {
+        if (! $request->user()?->hasAnyRole(['admin', 'super_admin'])) {
             abort(403, 'Seuls les admins peuvent supprimer des utilisateurs.');
         }
         if ($user->pharmacie_id !== $pharmacie->id) {

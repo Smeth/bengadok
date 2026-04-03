@@ -59,8 +59,10 @@ class PharmacieProximiteService
                     (float) ($b->latitude ?? 0),
                     (float) ($b->longitude ?? 0)
                 );
+
                 return $distA <=> $distB;
             }
+
             return 0;
         })->values();
     }
@@ -71,6 +73,7 @@ class PharmacieProximiteService
         $dLat = deg2rad($lat2 - $lat1);
         $dLon = deg2rad($lon2 - $lon1);
         $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
+
         return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 

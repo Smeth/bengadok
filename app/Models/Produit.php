@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Produit extends Model
 {
@@ -31,6 +30,7 @@ class Produit extends Model
     public function getDesignationCompleteAttribute(): string
     {
         $parts = array_filter([$this->designation, $this->dosage, $this->forme]);
+
         return implode(' ', $parts);
     }
 }

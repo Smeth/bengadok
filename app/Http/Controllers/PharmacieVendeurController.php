@@ -15,7 +15,7 @@ class PharmacieVendeurController extends Controller
     public function index(Request $request): Response
     {
         $pharmacieId = $request->user()?->pharmacie_id;
-        if (!$pharmacieId || !$request->user()?->hasRole('gerant')) {
+        if (! $pharmacieId || ! $request->user()?->hasRole('gerant')) {
             abort(403);
         }
 
@@ -37,7 +37,7 @@ class PharmacieVendeurController extends Controller
     {
         $user = $request->user();
         $pharmacieId = $user?->pharmacie_id;
-        if (!$pharmacieId || !$user?->hasRole('gerant')) {
+        if (! $pharmacieId || ! $user?->hasRole('gerant')) {
             abort(403);
         }
 

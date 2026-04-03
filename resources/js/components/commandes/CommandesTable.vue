@@ -57,6 +57,7 @@ function getMedicamentsText(produits: Array<{ designation: string; dosage?: stri
     return produits?.map((p) => p.designation + (p.dosage ? ' ' + p.dosage : '')).join(', ') || '-';
 }
 
+
 function formatDate(d: string) {
     if (!d) return '-';
     return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });

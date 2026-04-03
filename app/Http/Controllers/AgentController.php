@@ -96,22 +96,22 @@ class AgentController extends Controller
 
         $client = $commande->client;
         $adresse = $client?->adresse ?? '';
-        if (!$adresse) {
+        if (! $adresse) {
             return back()->with('error', 'Adresse client manquante.');
         }
 
         $pharmacieRefuseeId = $commande->pharmacie_id;
         $pharmacies = $this->pharmacieService->trouverPharmaciesProches($adresse, $pharmacieRefuseeId);
         $pharmacieSuivante = $pharmacies->first();
-        if (!$pharmacieSuivante) {
+        if (! $pharmacieSuivante) {
             return back()->with('error', 'Aucune autre pharmacie proche disponible.');
         }
 
         $commande->update([
-            'pharmacie_id'        => $pharmacieSuivante->id,
+            'pharmacie_id' => $pharmacieSuivante->id,
             'pharmacie_refusee_id' => $pharmacieRefuseeId,
-            'status'              => 'nouvelle',
-            'status_pharmacie'    => 'nouvelle',
+            'status' => 'nouvelle',
+            'status_pharmacie' => 'nouvelle',
         ]);
 
         foreach ($commande->produits as $p) {
@@ -155,7 +155,7 @@ class AgentController extends Controller
             $produitId = (int) $ligne['produit_id'];
             $quantiteEnfant = (int) $ligne['quantite'];
             $pivot = $commande->produits->firstWhere('id', $produitId)?->pivot;
-            if (!$pivot) {
+            if (! $pivot) {
                 continue;
             }
             $quantiteParent = $pivot->quantite;
@@ -189,22 +189,22 @@ class AgentController extends Controller
         }
 
         $nbEnfants = $commande->enfants()->count();
-        $numeroEnfant = $commande->numero . '-' . ($nbEnfants + 1);
+        $numeroEnfant = $commande->numero.'-'.($nbEnfants + 1);
 
         $commandeEnfant = Commande::create([
-            'numero'               => $numeroEnfant,
-            'client_id'            => $commande->client_id,
-            'pharmacie_id'         => $pharmacieId,
-            'parent_id'            => $commande->id,
-            'ordonnance_id'        => $commande->ordonnance_id,
-            'mode_paiement_id'     => $commande->mode_paiement_id,
-            'livreur_id'           => $commande->livreur_id,
+            'numero' => $numeroEnfant,
+            'client_id' => $commande->client_id,
+            'pharmacie_id' => $pharmacieId,
+            'parent_id' => $commande->id,
+            'ordonnance_id' => $commande->ordonnance_id,
+            'mode_paiement_id' => $commande->mode_paiement_id,
+            'livreur_id' => $commande->livreur_id,
             'montant_livraison_id' => $commande->montant_livraison_id,
-            'date'                 => $commande->date,
-            'heurs'                => $commande->heurs,
-            'commentaire'          => $commande->commentaire,
-            'status'               => 'nouvelle',
-            'status_pharmacie'     => 'nouvelle',
+            'date' => $commande->date,
+            'heurs' => $commande->heurs,
+            'commentaire' => $commande->commentaire,
+            'status' => 'nouvelle',
+            'status_pharmacie' => 'nouvelle',
         ]);
 
         $prixTotalEnfant = 0;
@@ -223,6 +223,7 @@ class AgentController extends Controller
         $commande->update(['prix_total' => $prixParent]);
 
         $pharmacie = Pharmacie::findOrFail($pharmacieId);
+
         return back()->with('success', "Produits manquants renvoyés à {$pharmacie->designation}.");
     }
 }

@@ -17,7 +17,7 @@ class DokPharmaController extends Controller
     public function dashboard(Request $request): Response
     {
         $pharmacieId = $request->user()?->pharmacie_id;
-        if (!$pharmacieId) {
+        if (! $pharmacieId) {
             return $this->emptyDashboard($request);
         }
 
@@ -208,11 +208,11 @@ class DokPharmaController extends Controller
     public function index(Request $request): Response
     {
         $pharmacieId = $request->user()?->pharmacie_id;
-        if (!$pharmacieId) {
+        if (! $pharmacieId) {
             return Inertia::render('DokPharma/Index', [
                 'commandes' => ['data' => [], 'links' => [], 'current_page' => 1, 'last_page' => 1, 'from' => 0, 'to' => 0, 'total' => 0],
-                'stats'     => ['nouvelles' => 0, 'en_attente' => 0, 'a_preparer' => 0, 'livrees' => 0],
-                'onglet'    => $request->input('onglet', 'nouvelles'),
+                'stats' => ['nouvelles' => 0, 'en_attente' => 0, 'a_preparer' => 0, 'livrees' => 0],
+                'onglet' => $request->input('onglet', 'nouvelles'),
             ]);
         }
 
@@ -222,11 +222,11 @@ class DokPharmaController extends Controller
             ->where('pharmacie_id', $pharmacieId);
 
         $query
-            ->when($onglet === 'nouvelles',   fn ($q) => $q->where('status_pharmacie', 'nouvelle'))
-            ->when($onglet === 'en_attente',  fn ($q) => $q->whereIn('status_pharmacie', ['attente_confirmation', 'indisponible']))
-            ->when($onglet === 'a_preparer',  fn ($q) => $q->where('status_pharmacie', 'valide_a_preparer'))
-            ->when($onglet === 'livrees',     fn ($q) => $q->where('status_pharmacie', 'livre'))
-            ->when(!in_array($onglet, ['nouvelles', 'en_attente', 'a_preparer', 'livrees']),
+            ->when($onglet === 'nouvelles', fn ($q) => $q->where('status_pharmacie', 'nouvelle'))
+            ->when($onglet === 'en_attente', fn ($q) => $q->whereIn('status_pharmacie', ['attente_confirmation', 'indisponible']))
+            ->when($onglet === 'a_preparer', fn ($q) => $q->where('status_pharmacie', 'valide_a_preparer'))
+            ->when($onglet === 'livrees', fn ($q) => $q->where('status_pharmacie', 'livre'))
+            ->when(! in_array($onglet, ['nouvelles', 'en_attente', 'a_preparer', 'livrees']),
                 fn ($q) => $q->where('status_pharmacie', 'nouvelle'));
 
         $commandes = $query
@@ -236,46 +236,46 @@ class DokPharmaController extends Controller
             ->withQueryString()
             ->through(function ($c) {
                 return [
-                    'id'               => $c->id,
-                    'numero'           => $c->numero,
-                    'date'             => $c->date
+                    'id' => $c->id,
+                    'numero' => $c->numero,
+                    'date' => $c->date
                         ? \Carbon\Carbon::parse($c->date)->format('d/m/Y H:i')
                         : ($c->created_at ? $c->created_at->format('d/m/Y H:i') : ''),
-                    'status'           => $c->status,
+                    'status' => $c->status,
                     'status_pharmacie' => $c->status_pharmacie,
-                    'client'           => $c->client
+                    'client' => $c->client
                         ? ['nom' => $c->client->nom, 'prenom' => $c->client->prenom]
                         : null,
-                    'produits'         => $c->produits->map(fn ($p) => [
-                        'id'          => $p->id,
+                    'produits' => $c->produits->map(fn ($p) => [
+                        'id' => $p->id,
                         'designation' => $p->designation,
-                        'pivot'       => [
-                            'quantite'           => $p->pivot->quantite,
-                            'prix_unitaire'      => (float) ($p->pivot->prix_unitaire ?? 0),
-                            'status'             => $p->pivot->status ?? 'disponible',
+                        'pivot' => [
+                            'quantite' => $p->pivot->quantite,
+                            'prix_unitaire' => (float) ($p->pivot->prix_unitaire ?? 0),
+                            'status' => $p->pivot->status ?? 'disponible',
                             'quantite_confirmee' => $p->pivot->quantite_confirmee ?? null,
                         ],
                     ])->values(),
-                    'ordonnance_id'  => $c->ordonnance_id,
+                    'ordonnance_id' => $c->ordonnance_id,
                     'ordonnance_url' => $c->ordonnance?->urlfile
-                        ? asset('storage/' . ltrim($c->ordonnance->urlfile, '/'))
+                        ? asset('storage/'.ltrim($c->ordonnance->urlfile, '/'))
                         : null,
-                    'commentaire'    => $c->commentaire,
-                    'prix_total'     => (float) ($c->prix_total ?? 0),
+                    'commentaire' => $c->commentaire,
+                    'prix_total' => (float) ($c->prix_total ?? 0),
                 ];
             });
 
         $stats = [
-            'nouvelles'  => Commande::where('pharmacie_id', $pharmacieId)->where('status_pharmacie', 'nouvelle')->count(),
+            'nouvelles' => Commande::where('pharmacie_id', $pharmacieId)->where('status_pharmacie', 'nouvelle')->count(),
             'en_attente' => Commande::where('pharmacie_id', $pharmacieId)->whereIn('status_pharmacie', ['attente_confirmation', 'indisponible'])->count(),
             'a_preparer' => Commande::where('pharmacie_id', $pharmacieId)->where('status_pharmacie', 'valide_a_preparer')->count(),
-            'livrees'    => Commande::where('pharmacie_id', $pharmacieId)->where('status_pharmacie', 'livre')->count(),
+            'livrees' => Commande::where('pharmacie_id', $pharmacieId)->where('status_pharmacie', 'livre')->count(),
         ];
 
         return Inertia::render('DokPharma/Index', [
             'commandes' => $commandes,
-            'stats'     => $stats,
-            'onglet'    => $onglet,
+            'stats' => $stats,
+            'onglet' => $onglet,
         ]);
     }
 
@@ -285,7 +285,7 @@ class DokPharmaController extends Controller
     public function validerDisponibilite(Request $request, Commande $commande)
     {
         $pharmacieId = $request->user()?->pharmacie_id;
-        if (!$pharmacieId || $commande->pharmacie_id != $pharmacieId) {
+        if (! $pharmacieId || $commande->pharmacie_id != $pharmacieId) {
             abort(403);
         }
 
@@ -293,13 +293,13 @@ class DokPharmaController extends Controller
         $commande->load('produits');
         $produitMap = $commande->produits->keyBy('id');
 
-        $lignes    = $request->input('lignes', []);
-        $nbDispo   = 0;
+        $lignes = $request->input('lignes', []);
+        $nbDispo = 0;
         $nbIndispo = 0;
 
         // Vérification préalable : tout produit disponible doit avoir un prix > 0
         foreach ($lignes as $ligne) {
-            $status       = $ligne['status'] ?? 'disponible';
+            $status = $ligne['status'] ?? 'disponible';
             $prixUnitaire = isset($ligne['prix_unitaire']) ? (float) $ligne['prix_unitaire'] : 0;
             if (in_array($status, ['disponible', 'partiel']) && $prixUnitaire <= 0) {
                 return back()->with('error', 'Veuillez saisir le prix pour tous les médicaments disponibles avant d\'envoyer.');
@@ -307,12 +307,14 @@ class DokPharmaController extends Controller
         }
 
         foreach ($lignes as $ligne) {
-            $produitId    = (int) ($ligne['produit_id'] ?? 0);
-            $produit      = $produitMap->get($produitId);
-            if (!$produit) continue;
+            $produitId = (int) ($ligne['produit_id'] ?? 0);
+            $produit = $produitMap->get($produitId);
+            if (! $produit) {
+                continue;
+            }
 
-            $qteDemandee  = (int) $produit->pivot->quantite;
-            $status       = $ligne['status'] ?? 'disponible';
+            $qteDemandee = (int) $produit->pivot->quantite;
+            $status = $ligne['status'] ?? 'disponible';
             $prixUnitaire = isset($ligne['prix_unitaire']) ? (float) $ligne['prix_unitaire'] : null;
 
             // Sécurité : la quantité confirmée ne peut pas dépasser la quantité demandée
@@ -343,8 +345,11 @@ class DokPharmaController extends Controller
         // Recalcul prix total depuis le pivot mis à jour
         $commande->load('produits'); // recharge pour avoir les nouvelles valeurs
         $prixTotal = $commande->produits->sum(function ($p) {
-            if ($p->pivot->status === 'indisponible') return 0;
+            if ($p->pivot->status === 'indisponible') {
+                return 0;
+            }
             $qte = $p->pivot->quantite_confirmee ?? $p->pivot->quantite;
+
             return $qte * (float) $p->pivot->prix_unitaire;
         });
 
@@ -352,16 +357,16 @@ class DokPharmaController extends Controller
 
         if ($nbDispo === 0) {
             $commande->update([
-                'status'                => 'en_attente',
-                'status_pharmacie'      => 'indisponible',
-                'pharmacie_refusee_id'  => $pharmacieId,
+                'status' => 'en_attente',
+                'status_pharmacie' => 'indisponible',
+                'pharmacie_refusee_id' => $pharmacieId,
                 ...($commentairePharmacie !== '' ? ['commentaire' => $commentairePharmacie] : []),
             ]);
         } else {
             $commande->update([
-                'status'           => 'en_attente',
+                'status' => 'en_attente',
                 'status_pharmacie' => 'attente_confirmation',
-                'prix_total'       => $prixTotal,
+                'prix_total' => $prixTotal,
                 ...($commentairePharmacie !== '' ? ['commentaire' => $commentairePharmacie] : []),
             ]);
         }
@@ -375,7 +380,7 @@ class DokPharmaController extends Controller
     public function validerRetrait(Request $request, Commande $commande)
     {
         $pharmacieId = $request->user()?->pharmacie_id;
-        if (!$pharmacieId || $commande->pharmacie_id != $pharmacieId) {
+        if (! $pharmacieId || $commande->pharmacie_id != $pharmacieId) {
             abort(403);
         }
         if ($commande->status_pharmacie !== 'valide_a_preparer') {

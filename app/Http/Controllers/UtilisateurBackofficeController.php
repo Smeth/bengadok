@@ -86,7 +86,7 @@ class UtilisateurBackofficeController extends Controller
             'email' => 'required|email|unique:users,email',
             'username' => 'nullable|string|max:50|unique:users,username',
             'password' => ['required', Password::defaults()],
-            'role' => 'required|in:' . implode(',', self::ROLES_BACKOFFICE),
+            'role' => 'required|in:'.implode(',', self::ROLES_BACKOFFICE),
         ]);
 
         $user = User::create([
@@ -109,9 +109,9 @@ class UtilisateurBackofficeController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'username' => 'nullable|string|max:50|unique:users,username,' . $user->id,
-            'role' => 'required|in:' . implode(',', self::ROLES_BACKOFFICE),
+            'email' => 'required|email|unique:users,email,'.$user->id,
+            'username' => 'nullable|string|max:50|unique:users,username,'.$user->id,
+            'role' => 'required|in:'.implode(',', self::ROLES_BACKOFFICE),
         ]);
 
         $user->update([
@@ -134,6 +134,7 @@ class UtilisateurBackofficeController extends Controller
         }
 
         $user->delete();
+
         return back()->with('status', 'Utilisateur supprimé.');
     }
 
@@ -154,14 +155,14 @@ class UtilisateurBackofficeController extends Controller
 
     private function authorizeBackoffice(): void
     {
-        if (!auth()->user()?->hasAnyRole(['admin', 'super_admin'])) {
+        if (! auth()->user()?->hasAnyRole(['admin', 'super_admin'])) {
             abort(403);
         }
     }
 
     private function ensureBackofficeUser(User $user): void
     {
-        if ($user->pharmacie_id || !$user->hasAnyRole(self::ROLES_BACKOFFICE)) {
+        if ($user->pharmacie_id || ! $user->hasAnyRole(self::ROLES_BACKOFFICE)) {
             abort(404);
         }
     }
@@ -205,10 +206,11 @@ class UtilisateurBackofficeController extends Controller
                     $items[] = ['name' => $p, 'label' => self::PERMISSION_LABELS[$p]];
                 }
             }
-            if (!empty($items)) {
+            if (! empty($items)) {
                 $result[$cat] = $items;
             }
         }
+
         return $result;
     }
 

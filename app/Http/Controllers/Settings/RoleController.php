@@ -109,7 +109,7 @@ class RoleController extends Controller
             'guard_name' => 'web',
         ]);
 
-        if (!empty($validated['permissions'])) {
+        if (! empty($validated['permissions'])) {
             $role->syncPermissions($validated['permissions']);
         }
 
@@ -163,7 +163,7 @@ class RoleController extends Controller
             $matchingNames = array_keys(array_filter(self::ROLE_LABELS, fn ($l) => stripos($l, $search) !== false));
             $query->where(function ($q) use ($search, $matchingNames) {
                 $q->where('name', 'like', "%{$search}%");
-                if (!empty($matchingNames)) {
+                if (! empty($matchingNames)) {
                     $q->orWhereIn('name', $matchingNames);
                 }
             });
@@ -194,10 +194,11 @@ class RoleController extends Controller
                     $items[] = ['name' => $p, 'label' => $label];
                 }
             }
-            if (!empty($items)) {
+            if (! empty($items)) {
                 $result[$cat] = $items;
             }
         }
+
         return $result;
     }
 
@@ -206,10 +207,11 @@ class RoleController extends Controller
         $groupées = [];
         foreach (self::PERMISSIONS_PAR_CATEGORIE as $cat => $perms) {
             $found = array_intersect($perms, $permissionNames);
-            if (!empty($found)) {
+            if (! empty($found)) {
                 $groupées[$cat] = array_map(fn ($n) => self::PERMISSION_LABELS[$n] ?? $n, $found);
             }
         }
+
         return $groupées;
     }
 
@@ -223,6 +225,7 @@ class RoleController extends Controller
     {
         $order = array_flip($roleNames);
         usort($roles, fn ($a, $b) => ($order[$a['name']] ?? 999) <=> ($order[$b['name']] ?? 999));
+
         return $roles;
     }
 
@@ -233,6 +236,7 @@ class RoleController extends Controller
             if ($p->name === 'gérer-tout') {
                 return 0;
             }
+
             return 1;
         });
 
