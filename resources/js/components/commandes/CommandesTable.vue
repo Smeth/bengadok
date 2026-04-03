@@ -41,6 +41,7 @@ function civiliteFromSexe(sexe?: string | null): string {
     return '';
 }
 
+
 function getClientDisplayName(client: { nom?: string; prenom?: string; sexe?: string } | undefined): string {
     if (!client) return '-';
     const prenom = (client.prenom ?? '').trim();
