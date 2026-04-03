@@ -106,11 +106,8 @@ class CommandeService
         if (! $file) {
             return null;
         }
-        $ext = $file->getClientOriginalExtension();
-        $path = $file->storeAs('ordonnances/'.now()->format('Y-m'), uniqid().'.'.$ext, 'public');
-        $ordonnance = Ordonnance::create(['urlfile' => $path]);
 
-        return $ordonnance->id;
+        return Ordonnance::registerNewUpload($file)->id;
     }
 
     /**

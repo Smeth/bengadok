@@ -23,7 +23,7 @@ withDefaults(
             <img
                 src="/images/figma-assets/sidebar-logo-benga.png"
                 alt="BengaDok"
-                class="h-auto max-h-[84px] w-full max-w-[145px] object-contain object-center sm:max-h-[90px] sm:max-w-[155px]"
+                class="block h-auto max-h-[72px] w-full max-w-[132px] object-contain object-bottom object-center sm:max-h-[76px] sm:max-w-[138px]"
             />
         </div>
         <!-- Icône réduite quand sidebar collapsed -->

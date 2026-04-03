@@ -15,6 +15,7 @@ import {
     RefreshCw,
     CalendarClock,
     Timer,
+    FileCheck,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
@@ -93,6 +94,21 @@ interface AppSettingsProps {
     delai_relance_meme_pharmacie_heures: number;
 }
 
+interface OrdonnanceVerificationSettings {
+    enabled: boolean;
+    max_prescription_age_days: number;
+    threshold_pass: number;
+    threshold_review: number;
+    /** queue = file d'attente ; immediate = pendant la requête d'upload */
+    execution_mode: 'queue' | 'immediate';
+    block_pass_on_duplicate: boolean;
+    tesseract_binary: string;
+    rule_weights: Record<string, number>;
+    keywords_prescriber: string[];
+    keywords_patient: string[];
+    keywords_medicament: string[];
+}
+
 const props = withDefaults(
     defineProps<{
         zones: Zone[];
@@ -104,12 +120,26 @@ const props = withDefaults(
         motifsAnnulation: MotifAnnulationRow[];
         clientFrequences: ClientFrequenceRow[];
         appSettings: AppSettingsProps;
+        ordonnanceVerificationSettings: OrdonnanceVerificationSettings;
         onglet: string | null;
     }>(),
     {
         motifsAnnulation: () => [],
         clientFrequences: () => [],
         appSettings: () => ({ delai_relance_meme_pharmacie_heures: 24 }),
+        ordonnanceVerificationSettings: () => ({
+            enabled: true,
+            execution_mode: 'queue' as const,
+            max_prescription_age_days: 180,
+            threshold_pass: 70,
+            threshold_review: 45,
+            block_pass_on_duplicate: true,
+            tesseract_binary: 'tesseract',
+            rule_weights: {},
+            keywords_prescriber: [],
+            keywords_patient: [],
+            keywords_medicament: [],
+        }),
         onglet: null,
     },
 );
@@ -139,6 +169,11 @@ const onglets = [
         icon: CalendarClock,
     },
     { id: 'relanceCommande', label: 'Relance commandes', icon: Timer },
+    {
+        id: 'ordonnanceVerification',
+        label: 'Vérif. ordonnances',
+        icon: FileCheck,
+    },
     { id: 'motifsAnnulation', label: "Motifs d'annulation", icon: RefreshCw },
 ] as const;
 
@@ -540,6 +575,97 @@ function sauverRelanceDelai() {
     submit(
         '/settings/parametres/relance-delai',
         { delai_relance_meme_pharmacie_heures: n },
+        'patch',
+    );
+}
+
+const OV_RULE_KEYS = [
+    { key: 'date_found', label: 'Date détectée dans le texte' },
+    { key: 'date_not_future', label: 'Date non postérieure à aujourd’hui' },
+    { key: 'date_within_max_age', label: 'Éligibilité (fenêtre max.)' },
+    { key: 'prescriber_keywords', label: 'Indices prescripteur (mots-clés)' },
+    { key: 'patient_keywords', label: 'Indices patient (mots-clés)' },
+    { key: 'medicament_keywords', label: 'Indices médicaments (mots-clés)' },
+    { key: 'no_duplicate_file', label: 'Fichier unique (empreinte)' },
+] as const;
+
+const DEFAULT_OV_WEIGHTS: Record<string, number> = {
+    date_found: 12,
+    date_not_future: 20,
+    date_within_max_age: 25,
+    prescriber_keywords: 12,
+    patient_keywords: 8,
+    medicament_keywords: 13,
+    no_duplicate_file: 10,
+};
+
+const ovForm = ref({
+    enabled: true,
+    execution_mode: 'queue' as 'queue' | 'immediate',
+    max_prescription_age_days: 180,
+    threshold_pass: 70,
+    threshold_review: 45,
+    block_pass_on_duplicate: true,
+    tesseract_binary: 'tesseract',
+    rule_weights: {} as Record<string, number>,
+    kw_prescriber: '',
+    kw_patient: '',
+    kw_medicament: '',
+});
+
+watch(
+    () => props.ordonnanceVerificationSettings,
+    (s) => {
+        if (!s) return;
+        ovForm.value.enabled = s.enabled;
+        ovForm.value.execution_mode =
+            s.execution_mode === 'immediate' ? 'immediate' : 'queue';
+        ovForm.value.max_prescription_age_days = s.max_prescription_age_days;
+        ovForm.value.threshold_pass = s.threshold_pass;
+        ovForm.value.threshold_review = s.threshold_review;
+        ovForm.value.block_pass_on_duplicate = s.block_pass_on_duplicate;
+        ovForm.value.tesseract_binary = s.tesseract_binary;
+        ovForm.value.rule_weights = {
+            ...DEFAULT_OV_WEIGHTS,
+            ...(s.rule_weights || {}),
+        };
+        ovForm.value.kw_prescriber = (s.keywords_prescriber || []).join('\n');
+        ovForm.value.kw_patient = (s.keywords_patient || []).join('\n');
+        ovForm.value.kw_medicament = (s.keywords_medicament || []).join('\n');
+    },
+    { immediate: true, deep: true },
+);
+
+function sauverOrdonnanceVerification() {
+    const rw: Record<string, number> = {};
+    for (const { key } of OV_RULE_KEYS) {
+        const v = Number(ovForm.value.rule_weights[key]);
+        rw[key] = Number.isFinite(v) && v >= 0 ? v : 0;
+    }
+    submit(
+        '/settings/parametres/ordonnance-verification',
+        {
+            enabled: ovForm.value.enabled,
+            execution_mode: ovForm.value.execution_mode,
+            max_prescription_age_days: ovForm.value.max_prescription_age_days,
+            threshold_pass: ovForm.value.threshold_pass,
+            threshold_review: ovForm.value.threshold_review,
+            block_pass_on_duplicate: ovForm.value.block_pass_on_duplicate,
+            tesseract_binary: ovForm.value.tesseract_binary.trim() || 'tesseract',
+            rule_weights: rw,
+            keywords_prescriber: ovForm.value.kw_prescriber
+                .split('\n')
+                .map((x) => x.trim())
+                .filter(Boolean),
+            keywords_patient: ovForm.value.kw_patient
+                .split('\n')
+                .map((x) => x.trim())
+                .filter(Boolean),
+            keywords_medicament: ovForm.value.kw_medicament
+                .split('\n')
+                .map((x) => x.trim())
+                .filter(Boolean),
+        },
         'patch',
     );
 }
@@ -1793,6 +1919,226 @@ function sauverRelanceDelai() {
                         type="submit"
                         :disabled="enCours"
                         class="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-60"
+                    >
+                        <Check class="h-4 w-4" /> Enregistrer
+                    </button>
+                </form>
+            </section>
+
+            <!-- ══════════════════ VÉRIFICATION ORDONNANCES (OCR + règles) ══════════════════ -->
+            <section
+                v-if="ongletActif === 'ordonnanceVerification'"
+                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+            >
+                <div class="border-b bg-gray-50 px-5 py-3">
+                    <h2
+                        class="font-semibold text-gray-700 flex items-center gap-2"
+                    >
+                        <FileCheck class="h-4 w-4 text-teal-600" />
+                        Vérification des ordonnances (OCR + règles)
+                    </h2>
+                </div>
+                <div
+                    class="space-y-3 border-b border-teal-100 bg-teal-50/40 px-5 py-4"
+                >
+                    <p class="text-sm leading-relaxed text-gray-600">
+                        Après chaque upload, l’analyse du
+                        <span class="font-semibold">PDF</span> (texte natif) ou
+                        des
+                        <span class="font-semibold">images</span> via
+                        <span class="font-semibold">Tesseract</span> (exécutable
+                        configurable ci‑dessous) peut être lancée en
+                        <span class="font-semibold">file d’attente</span> ou
+                        <span class="font-semibold">immédiatement</span> (voir le
+                        mode d’exécution). Le score est calculé selon les
+                        <span class="font-semibold">pondérations</span> et
+                        comparé aux seuils. Les mots-clés sont recherchés dans le
+                        texte brut (insensible à la casse).
+                    </p>
+                </div>
+                <form
+                    class="space-y-6 px-5 py-6"
+                    @submit.prevent="sauverOrdonnanceVerification"
+                >
+                    <label
+                        class="flex cursor-pointer items-center gap-3 text-sm font-medium text-gray-800"
+                    >
+                        <input
+                            v-model="ovForm.enabled"
+                            type="checkbox"
+                            class="size-4 rounded border-gray-300"
+                        />
+                        Activer la vérification automatique
+                    </label>
+
+                    <div class="max-w-xl">
+                        <label
+                            class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                            >Mode d’exécution</label
+                        >
+                        <select
+                            v-model="ovForm.execution_mode"
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800"
+                        >
+                            <option value="queue">
+                                File d’attente (asynchrone) — nécessite un worker
+                                (ex. php artisan queue:work)
+                            </option>
+                            <option value="immediate">
+                                Immédiat — pendant l’upload (la réponse HTTP attend
+                                la fin de l’analyse)
+                            </option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">
+                            Le mode immédiat peut allonger le temps de réponse ;
+                            prévoir un timeout serveur suffisant pour l’OCR.
+                        </p>
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <div>
+                            <label
+                                class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                                >Âge max. prescription (jours)</label
+                            >
+                            <input
+                                v-model.number="ovForm.max_prescription_age_days"
+                                type="number"
+                                min="1"
+                                max="3650"
+                                required
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                                >Seuil « conforme » (%)</label
+                            >
+                            <input
+                                v-model.number="ovForm.threshold_pass"
+                                type="number"
+                                min="0"
+                                max="100"
+                                required
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                                >Seuil « revue » (%)</label
+                            >
+                            <input
+                                v-model.number="ovForm.threshold_review"
+                                type="number"
+                                min="0"
+                                max="100"
+                                required
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                            />
+                        </div>
+                    </div>
+
+                    <label
+                        class="flex cursor-pointer items-center gap-3 text-sm text-gray-700"
+                    >
+                        <input
+                            v-model="ovForm.block_pass_on_duplicate"
+                            type="checkbox"
+                            class="size-4 rounded border-gray-300"
+                        />
+                        Forcer une « revue » si le fichier est déjà utilisé
+                        (même empreinte SHA-256)
+                    </label>
+
+                    <div>
+                        <label
+                            class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                            >Binaire Tesseract</label
+                        >
+                        <input
+                            v-model="ovForm.tesseract_binary"
+                            type="text"
+                            class="w-full max-w-md rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono"
+                            placeholder="tesseract"
+                        />
+                        <p class="mt-1 text-xs text-gray-500">
+                            Windows : chemin complet si nécessaire. Les PDF sont
+                            lisés sans OCR.
+                        </p>
+                    </div>
+
+                    <div>
+                        <p
+                            class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400"
+                        >
+                            Pondérations des critères (points)
+                        </p>
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <div
+                                v-for="r in OV_RULE_KEYS"
+                                :key="r.key"
+                                class="flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2"
+                            >
+                                <span class="text-xs text-gray-700">{{
+                                    r.label
+                                }}</span>
+                                <input
+                                    v-model.number="ovForm.rule_weights[r.key]"
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    class="w-20 rounded border border-gray-300 px-2 py-1 text-sm text-right"
+                                />
+                            </div>
+                        </div>
+                        <p class="mt-2 text-xs text-gray-500">
+                            Le score final est le pourcentage des points obtenus
+                            sur la somme des pondérations actives.
+                        </p>
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-1 lg:grid-cols-3">
+                        <div>
+                            <label
+                                class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                                >Mots-clés prescripteur (1 par ligne)</label
+                            >
+                            <textarea
+                                v-model="ovForm.kw_prescriber"
+                                rows="6"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                                >Mots-clés patient (1 par ligne)</label
+                            >
+                            <textarea
+                                v-model="ovForm.kw_patient"
+                                rows="6"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                                >Mots-clés médicaments (1 par ligne)</label
+                            >
+                            <textarea
+                                v-model="ovForm.kw_medicament"
+                                rows="6"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs"
+                            />
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        :disabled="enCours"
+                        class="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
                     >
                         <Check class="h-4 w-4" /> Enregistrer
                     </button>

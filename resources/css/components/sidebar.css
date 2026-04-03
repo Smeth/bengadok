@@ -213,8 +213,32 @@
     .sidebar-menu-icon-svg {
     color: hsl(0 0% 70%) !important;
 }
+/*
+ * Survol en thème sombre : le sélecteur générique :hover (plus haut) impose
+ * --sidebar-bengadok-text (gris foncé) — illisible sur fond sombre.
+ * On rétablit texte + icônes clairs comme pour l’état inactif .dark.
+ */
 .dark
     [data-sidebar='sidebar']
     .sidebar-menu-btn-react:not([data-active='true']):hover {
     background-color: hsl(0 0% 15.9%) !important;
+    color: hsl(0 0% 95.9%) !important;
+}
+.dark
+    [data-sidebar='sidebar']
+    .sidebar-menu-btn-react:not([data-active='true']):hover
+    .sidebar-menu-label {
+    color: hsl(0 0% 95.9%) !important;
+}
+.dark
+    [data-sidebar='sidebar']
+    .sidebar-menu-btn-react:not([data-active='true']):hover
+    .sidebar-menu-icon-svg {
+    color: hsl(0 0% 70%) !important;
+}
+.dark
+    [data-sidebar='sidebar']
+    .sidebar-menu-btn-react:not([data-active='true']):hover
+    .sidebar-menu-icon {
+    background-color: hsl(0 0% 25%) !important;
 }

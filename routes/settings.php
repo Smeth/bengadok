@@ -93,5 +93,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('client-frequences/{clientFrequence}', [ClientFrequenceController::class, 'destroy'])->name('client-frequences.destroy');
 
             Route::patch('relance-delai', [ParametresController::class, 'updateRelanceDelai'])->name('relance-delai.update');
+
+            Route::patch(
+                'ordonnance-verification',
+                [ParametresController::class, 'updateOrdonnanceVerification'],
+            )->name('ordonnance-verification.update');
         });
 });

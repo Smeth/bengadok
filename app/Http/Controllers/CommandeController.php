@@ -8,6 +8,7 @@ use App\Models\Commande;
 use App\Models\Livreur;
 use App\Models\ModePaiement;
 use App\Models\MontantLivraison;
+use App\Models\Ordonnance;
 use App\Models\Pharmacie;
 use App\Models\Produit;
 use App\Models\Zone;
@@ -49,7 +50,7 @@ class CommandeController extends Controller
         $this->authorize('viewAny', Commande::class);
 
         $query = $this->commandesIndexBaseQuery($request)
-            ->with(['client', 'pharmacie', 'produits', 'livreur', 'modePaiement', 'montantLivraison', 'ordonnance']);
+            ->with(['client', 'pharmacie', 'produits', 'livreur', 'modePaiement', 'montantLivraison', 'ordonnance.verification']);
 
         $this->applyCommandeIndexSearch($query, $request->input('search'));
 
@@ -104,7 +105,7 @@ class CommandeController extends Controller
         $this->authorize('view', $commande);
         $user = $request->user();
 
-        $commande->load(['client', 'pharmacie', 'pharmacieRefusee', 'produits', 'ordonnance', 'modePaiement', 'livreur', 'montantLivraison', 'enfants.pharmacie', 'enfants.produits', 'parent']);
+        $commande->load(['client', 'pharmacie', 'pharmacieRefusee', 'produits', 'ordonnance.verification', 'modePaiement', 'livreur', 'montantLivraison', 'enfants.pharmacie', 'enfants.produits', 'parent']);
 
         $commande->setAttribute(
             'deja_relancee',
@@ -166,7 +167,7 @@ class CommandeController extends Controller
                 ->with('error', 'Seules les commandes « nouvelle » ou « en attente » peuvent être modifiées.');
         }
 
-        $commande->load(['client', 'pharmacie', 'produits', 'ordonnance', 'modePaiement', 'montantLivraison']);
+        $commande->load(['client', 'pharmacie', 'produits', 'ordonnance.verification', 'modePaiement', 'montantLivraison']);
 
         return Inertia::render('Commandes/Edit', [
             'commande' => $commande,
@@ -231,11 +232,7 @@ class CommandeController extends Controller
 
         $ordonnanceId = $commande->ordonnance_id;
         if ($request->hasFile('ordonnance')) {
-            $file = $request->file('ordonnance');
-            $ext = $file->getClientOriginalExtension();
-            $path = $file->storeAs('ordonnances/'.now()->format('Y-m'), uniqid().'.'.$ext, 'public');
-            $ordonnance = Ordonnance::create(['urlfile' => $path]);
-            $ordonnanceId = $ordonnance->id;
+            $ordonnanceId = Ordonnance::registerNewUpload($request->file('ordonnance'))->id;
         }
 
         $commande->update([

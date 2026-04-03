@@ -115,24 +115,33 @@ function logout() {
                 class="w-full group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center"
             >
                 <SidebarMenuItem
-                    class="relative flex w-full items-center justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2"
+                    class="relative grid w-full grid-cols-[2rem_minmax(0,1fr)_2rem] items-end gap-x-1 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-2"
                 >
+                    <!-- Équilibre la colonne du bouton repli (logo centré dans la zone utile) -->
+                    <div
+                        class="min-w-0 group-data-[collapsible=icon]:hidden"
+                        aria-hidden="true"
+                    />
                     <SidebarMenuButton
                         size="lg"
                         as-child
-                        class="mx-auto min-w-0 w-auto !h-auto !min-h-0 !overflow-visible !p-0 group-data-[collapsible=icon]:mx-0 group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!overflow-hidden group-data-[collapsible=icon]:!p-2"
+                        class="min-w-0 justify-self-center !h-auto !min-h-0 !overflow-visible !p-0 group-data-[collapsible=icon]:mx-0 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!overflow-hidden group-data-[collapsible=icon]:!p-2"
                     >
                         <Link
                             :href="dashboard()"
-                            class="flex w-full items-center justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:justify-center"
+                            class="flex w-full min-w-0 items-end justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center"
                         >
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
-                    <SidebarTrigger
-                        class="absolute right-0 top-1/2 z-10 size-8 shrink-0 -translate-y-1/2 rounded-md bg-[#f1f5f9] text-[#6b7280] hover:bg-[#e2e8f0] hover:text-[#374151] group-data-[collapsible=icon]:static group-data-[collapsible=icon]:translate-y-0"
-                        aria-label="Réduire la barre latérale"
-                    />
+                    <div
+                        class="flex justify-end self-end group-data-[collapsible=icon]:contents"
+                    >
+                        <SidebarTrigger
+                            class="z-10 h-8 w-8 shrink-0 rounded-md bg-[#f1f5f9] text-[#6b7280] hover:bg-[#e2e8f0] hover:text-[#374151] group-data-[collapsible=icon]:self-center"
+                            aria-label="Réduire la barre latérale"
+                        />
+                    </div>
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarHeader>

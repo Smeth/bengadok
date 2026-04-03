@@ -10,6 +10,7 @@ use App\Models\Livreur;
 use App\Models\ModePaiement;
 use App\Models\MontantLivraison;
 use App\Models\MotifAnnulation;
+use App\Models\OrdonnanceVerificationSetting;
 use App\Models\TypePharmacie;
 use App\Models\Zone;
 use Illuminate\Http\Request;
@@ -36,6 +37,7 @@ class ParametresController extends Controller
             'motifsAnnulation',
             'clientFrequences',
             'relanceCommande',
+            'ordonnanceVerification',
         ];
         $onglet = $request->query('onglet');
         if (! is_string($onglet) || ! in_array($onglet, $allowedOnglets, true)) {
@@ -68,6 +70,7 @@ class ParametresController extends Controller
             'appSettings' => [
                 'delai_relance_meme_pharmacie_heures' => AppSetting::delaiRelanceMemePharmacieHeures(),
             ],
+            'ordonnanceVerificationSettings' => $this->ordonnanceVerificationSettingsPayload(),
             'onglet' => $onglet,
         ]);
     }
@@ -346,5 +349,107 @@ class ParametresController extends Controller
         $motifAnnulation->delete();
 
         return back()->with('success', 'Motif d\'annulation supprimé.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function ordonnanceVerificationSettingsPayload(): array
+    {
+        $row = OrdonnanceVerificationSetting::query()->first();
+        if (! $row) {
+            return [
+                'enabled' => true,
+                'execution_mode' => OrdonnanceVerificationSetting::EXECUTION_MODE_QUEUE,
+                'max_prescription_age_days' => 180,
+                'threshold_pass' => 70,
+                'threshold_review' => 45,
+                'block_pass_on_duplicate' => true,
+                'tesseract_binary' => 'tesseract',
+                'rule_weights' => [],
+                'keywords_prescriber' => [],
+                'keywords_patient' => [],
+                'keywords_medicament' => [],
+            ];
+        }
+
+        return [
+            'enabled' => $row->enabled,
+            'execution_mode' => $row->execution_mode
+                ?? OrdonnanceVerificationSetting::EXECUTION_MODE_QUEUE,
+            'max_prescription_age_days' => $row->max_prescription_age_days,
+            'threshold_pass' => $row->threshold_pass,
+            'threshold_review' => $row->threshold_review,
+            'block_pass_on_duplicate' => $row->block_pass_on_duplicate,
+            'tesseract_binary' => $row->tesseract_binary,
+            'rule_weights' => $row->rule_weights ?? [],
+            'keywords_prescriber' => $row->keywords_prescriber ?? [],
+            'keywords_patient' => $row->keywords_patient ?? [],
+            'keywords_medicament' => $row->keywords_medicament ?? [],
+        ];
+    }
+
+    public function updateOrdonnanceVerification(Request $request)
+    {
+        $validated = $request->validate([
+            'enabled' => 'sometimes|boolean',
+            'execution_mode' => 'required|in:queue,immediate',
+            'max_prescription_age_days' => 'required|integer|min:1|max:3650',
+            'threshold_pass' => 'required|integer|min:0|max:100',
+            'threshold_review' => 'required|integer|min:0|max:100',
+            'block_pass_on_duplicate' => 'boolean',
+            'tesseract_binary' => 'required|string|max:255',
+            'rule_weights' => 'required|array',
+            'rule_weights.date_found' => 'nullable|integer|min:0|max:100',
+            'rule_weights.date_not_future' => 'nullable|integer|min:0|max:100',
+            'rule_weights.date_within_max_age' => 'nullable|integer|min:0|max:100',
+            'rule_weights.prescriber_keywords' => 'nullable|integer|min:0|max:100',
+            'rule_weights.patient_keywords' => 'nullable|integer|min:0|max:100',
+            'rule_weights.medicament_keywords' => 'nullable|integer|min:0|max:100',
+            'rule_weights.no_duplicate_file' => 'nullable|integer|min:0|max:100',
+            'keywords_prescriber' => 'required|array',
+            'keywords_prescriber.*' => 'string|max:255',
+            'keywords_patient' => 'required|array',
+            'keywords_patient.*' => 'string|max:255',
+            'keywords_medicament' => 'required|array',
+            'keywords_medicament.*' => 'string|max:255',
+        ]);
+
+        if ($validated['threshold_review'] > $validated['threshold_pass']) {
+            return back()->with('error', 'Le seuil « revue » doit être inférieur ou égal au seuil « conforme ».');
+        }
+
+        $row = OrdonnanceVerificationSetting::query()->first();
+        if (! $row) {
+            OrdonnanceVerificationSetting::query()->create([
+                'enabled' => $request->boolean('enabled'),
+                'execution_mode' => $validated['execution_mode'],
+                'max_prescription_age_days' => $validated['max_prescription_age_days'],
+                'threshold_pass' => $validated['threshold_pass'],
+                'threshold_review' => $validated['threshold_review'],
+                'rule_weights' => array_map('intval', $validated['rule_weights']),
+                'keywords_prescriber' => array_values(array_filter(array_map('trim', $validated['keywords_prescriber']))),
+                'keywords_patient' => array_values(array_filter(array_map('trim', $validated['keywords_patient']))),
+                'keywords_medicament' => array_values(array_filter(array_map('trim', $validated['keywords_medicament']))),
+                'block_pass_on_duplicate' => $request->boolean('block_pass_on_duplicate'),
+                'tesseract_binary' => $validated['tesseract_binary'],
+            ]);
+        } else {
+            $row->update([
+                'enabled' => $request->boolean('enabled'),
+                'execution_mode' => $validated['execution_mode'],
+                'max_prescription_age_days' => $validated['max_prescription_age_days'],
+                'threshold_pass' => $validated['threshold_pass'],
+                'threshold_review' => $validated['threshold_review'],
+                'rule_weights' => array_map('intval', $validated['rule_weights']),
+                'keywords_prescriber' => array_values(array_filter(array_map('trim', $validated['keywords_prescriber']))),
+                'keywords_patient' => array_values(array_filter(array_map('trim', $validated['keywords_patient']))),
+                'keywords_medicament' => array_values(array_filter(array_map('trim', $validated['keywords_medicament']))),
+                'block_pass_on_duplicate' => $request->boolean('block_pass_on_duplicate'),
+                'tesseract_binary' => $validated['tesseract_binary'],
+            ]);
+        }
+
+        return back()->with('status', 'Paramètres de vérification des ordonnances enregistrés.');
     }
 }

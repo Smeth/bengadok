@@ -17,7 +17,6 @@ import {
     FileText,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
-import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
 import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
@@ -729,11 +728,6 @@ function annuler() {
                             <OrdonnanceUppy
                                 v-model="ordonnanceFile"
                                 label="Ordonnance"
-                            />
-                            <OrdonnanceFilePreview
-                                v-if="ordonnanceFile"
-                                :file="ordonnanceFile"
-                                max-height="12rem"
                             />
                         </div>
 

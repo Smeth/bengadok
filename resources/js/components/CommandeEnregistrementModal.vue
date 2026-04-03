@@ -13,9 +13,7 @@ import {
     X,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
-import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
 import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
-import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -1053,20 +1051,19 @@ watch(
                                 "
                                 class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
                             >
-                                Ordonnance déjà enregistrée — ajoutez un fichier
-                                ci-dessous pour la remplacer (facultatif).
+                                Ordonnance déjà enregistrée —
+                                <a
+                                    :href="`/storage/${ordonnanceUrlExistante}`"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="font-medium text-amber-950 underline underline-offset-2 hover:text-amber-800"
+                                >
+                                    Ouvrir l’ordonnance
+                                </a>
+                                — ajoutez un fichier ci-dessous pour la
+                                remplacer (facultatif).
                             </p>
                             <OrdonnanceUppy v-model="form.ordonnance" />
-                            <OrdonnanceFilePreview
-                                v-if="form.ordonnance"
-                                :file="form.ordonnance"
-                                max-height="10rem"
-                            />
-                            <OrdonnanceViewer
-                                v-else-if="ordonnanceUrlExistante"
-                                :urlfile="ordonnanceUrlExistante"
-                                max-height="10rem"
-                            />
                         </div>
                         <div class="flex flex-col gap-1.5">
                             <Label class="text-sm font-medium text-[#374151]"
