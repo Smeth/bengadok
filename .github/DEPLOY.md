@@ -6,7 +6,7 @@
 Push sur main ou PR vers main
      │
      ▼
-[ci.yml] Lint + Tests (PHP 8.2 & 8.3)
+[ci.yml] Lint + Tests (PHP 8.3)
      │
      ▼ (push sur main uniquement, si CI passe)
 Déploiement VPS via SSH
@@ -44,8 +44,8 @@ Aller dans : **GitHub repo → Settings → Secrets and variables → Actions**
 
 ### Prérequis
 ```bash
-# PHP 8.2+
-sudo apt install php8.2 php8.2-{cli,fpm,mysql,mbstring,xml,bcmath,gd,curl,zip,intl}
+# PHP 8.3+
+sudo apt install php8.3 php8.3-{cli,fpm,mysql,mbstring,xml,bcmath,gd,curl,zip,intl}
 
 # Composer
 curl -sS https://getcomposer.org/installer | php
@@ -69,7 +69,7 @@ sudo usermod -aG www-data deployer
 
 # Autoriser deployer à redémarrer php-fpm et nginx sans mot de passe
 sudo visudo
-# Ajouter : deployer ALL=(ALL) NOPASSWD: /bin/systemctl restart php8.2-fpm, /bin/systemctl reload nginx
+# Ajouter : deployer ALL=(ALL) NOPASSWD: /bin/systemctl restart php8.3-fpm, /bin/systemctl reload nginx
 ```
 
 ### Cloner le dépôt sur le VPS
@@ -160,7 +160,7 @@ server {
     }
 
     location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         include fastcgi_params;

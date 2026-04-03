@@ -52,6 +52,7 @@ function getClientDisplayName(client: { nom?: string; prenom?: string; sexe?: st
     return civ ? `${civ} ${core}` : core;
 }
 
+
 function getMedicamentsText(produits: Array<{ designation: string; dosage?: string }> | undefined): string {
     return produits?.map((p) => p.designation + (p.dosage ? ' ' + p.dosage : '')).join(', ') || '-';
 }
