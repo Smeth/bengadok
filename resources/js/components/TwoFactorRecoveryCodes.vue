@@ -45,7 +45,9 @@ onMounted(async () => {
                 <LockKeyhole class="size-4" />Codes de récupération 2FA
             </CardTitle>
             <CardDescription>
-                Les codes de récupération vous permettent de retrouver l'accès si vous perdez votre appareil 2FA. Conservez-les dans un gestionnaire de mots de passe sécurisé.
+                Les codes de récupération vous permettent de retrouver l'accès
+                si vous perdez votre appareil 2FA. Conservez-les dans un
+                gestionnaire de mots de passe sécurisé.
             </CardDescription>
         </CardHeader>
         <CardContent>
@@ -110,8 +112,11 @@ onMounted(async () => {
                         </div>
                     </div>
                     <p class="text-xs text-muted-foreground select-none">
-                        Chaque code de récupération ne peut être utilisé qu'une fois pour accéder à votre compte et sera supprimé après utilisation. Pour en obtenir plus, cliquez sur
-                        <span class="font-bold">Régénérer les codes</span> ci-dessus.
+                        Chaque code de récupération ne peut être utilisé qu'une
+                        fois pour accéder à votre compte et sera supprimé après
+                        utilisation. Pour en obtenir plus, cliquez sur
+                        <span class="font-bold">Régénérer les codes</span>
+                        ci-dessus.
                     </p>
                 </div>
             </div>

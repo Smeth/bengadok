@@ -124,7 +124,7 @@ jobs:
         run: php artisan migrate --force
 
       - name: Exécuter les tests
-        run: php artisan test --parallel
+        run: php artisan test
 
   deploy:
     name: Déploiement VPS

@@ -59,7 +59,10 @@ onUnmounted(() => {
                     <Badge variant="destructive">Désactivé</Badge>
 
                     <p class="text-muted-foreground">
-                        Lorsque vous activez l'authentification à deux facteurs, un code sécurisé vous sera demandé lors de la connexion. Ce code peut être récupéré depuis une application compatible TOTP sur votre téléphone.
+                        Lorsque vous activez l'authentification à deux facteurs,
+                        un code sécurisé vous sera demandé lors de la connexion.
+                        Ce code peut être récupéré depuis une application
+                        compatible TOTP sur votre téléphone.
                     </p>
 
                     <div>
@@ -89,7 +92,10 @@ onUnmounted(() => {
                     <Badge variant="default">Activé</Badge>
 
                     <p class="text-muted-foreground">
-                        Avec l'authentification à deux facteurs activée, un code aléatoire vous sera demandé lors de la connexion, que vous pouvez récupérer depuis l'application compatible TOTP sur votre téléphone.
+                        Avec l'authentification à deux facteurs activée, un code
+                        aléatoire vous sera demandé lors de la connexion, que
+                        vous pouvez récupérer depuis l'application compatible
+                        TOTP sur votre téléphone.
                     </p>
 
                     <TwoFactorRecoveryCodes />

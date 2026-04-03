@@ -43,9 +43,17 @@ interface NotificationItem {
 }
 
 const page = usePage();
-const user = computed(() => (page.props.auth as { user?: { name: string; roles?: string[] } })?.user);
+const user = computed(
+    () =>
+        (page.props.auth as { user?: { name: string; roles?: string[] } })
+            ?.user,
+);
 const notifications = computed(() => {
-    const n = (page.props as { notifications?: { count: number; items: NotificationItem[] } }).notifications;
+    const n = (
+        page.props as {
+            notifications?: { count: number; items: NotificationItem[] };
+        }
+    ).notifications;
     return n ?? { count: 0, items: [] };
 });
 
@@ -69,7 +77,12 @@ const formatDate = (iso?: string) => {
     if (!iso) return '';
     try {
         const d = new Date(iso);
-        return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        return d.toLocaleDateString('fr-FR', {
+            day: '2-digit',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
     } catch {
         return '';
     }
@@ -88,13 +101,23 @@ const formatDate = (iso?: string) => {
             )
         "
     >
-        <div class="flex items-center gap-2" :class="props.variant === 'gradient' ? 'text-white' : ''">
+        <div
+            class="flex items-center gap-2"
+            :class="props.variant === 'gradient' ? 'text-white' : ''"
+        >
             <template v-if="breadcrumbs && breadcrumbs.length > 0">
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </template>
         </div>
 
-        <div class="flex items-center gap-3" :class="props.variant === 'gradient' ? 'text-white [&_button]:text-white [&_button]:hover:bg-white/20' : ''">
+        <div
+            class="flex items-center gap-3"
+            :class="
+                props.variant === 'gradient'
+                    ? 'text-white [&_button]:text-white [&_button]:hover:bg-white/20'
+                    : ''
+            "
+        >
             <DropdownMenu v-if="user">
                 <DropdownMenuTrigger as-child>
                     <Button variant="ghost" size="icon" class="relative">
@@ -103,19 +126,31 @@ const formatDate = (iso?: string) => {
                             v-if="notifications.count > 0"
                             class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground"
                         >
-                            {{ notifications.count > 99 ? '99+' : notifications.count }}
+                            {{
+                                notifications.count > 99
+                                    ? '99+'
+                                    : notifications.count
+                            }}
                         </span>
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" class="w-80">
-                    <DropdownMenuLabel class="flex items-center justify-between">
+                    <DropdownMenuLabel
+                        class="flex items-center justify-between"
+                    >
                         <span>Notifications</span>
-                        <span v-if="notifications.count > 0" class="text-xs font-normal text-muted-foreground">
+                        <span
+                            v-if="notifications.count > 0"
+                            class="text-xs font-normal text-muted-foreground"
+                        >
                             {{ notifications.count }} commande(s)
                         </span>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <div v-if="notifications.items.length" class="max-h-72 overflow-y-auto">
+                    <div
+                        v-if="notifications.items.length"
+                        class="max-h-72 overflow-y-auto"
+                    >
                         <button
                             v-for="item in notifications.items"
                             :key="item.id"
@@ -123,11 +158,17 @@ const formatDate = (iso?: string) => {
                             class="block w-full cursor-pointer px-2 py-2 text-left text-sm hover:bg-accent"
                             @click="router.visit(item.url)"
                         >
-                            <div class="font-medium">Commande {{ item.numero }}</div>
-                            <div class="text-xs text-muted-foreground">
-                                {{ formatClientName(item.client) }} · {{ item.status_label }}
+                            <div class="font-medium">
+                                Commande {{ item.numero }}
                             </div>
-                            <div v-if="item.pharmacie" class="mt-0.5 text-xs text-muted-foreground">
+                            <div class="text-xs text-muted-foreground">
+                                {{ formatClientName(item.client) }} ·
+                                {{ item.status_label }}
+                            </div>
+                            <div
+                                v-if="item.pharmacie"
+                                class="mt-0.5 text-xs text-muted-foreground"
+                            >
                                 {{ item.pharmacie.designation }}
                             </div>
                             <div class="mt-0.5 text-xs text-muted-foreground">
@@ -135,7 +176,10 @@ const formatDate = (iso?: string) => {
                             </div>
                         </button>
                     </div>
-                    <div v-else class="px-2 py-6 text-center text-sm text-muted-foreground">
+                    <div
+                        v-else
+                        class="px-2 py-6 text-center text-sm text-muted-foreground"
+                    >
                         Aucune nouvelle commande
                     </div>
                     <DropdownMenuSeparator />
@@ -149,16 +193,31 @@ const formatDate = (iso?: string) => {
             </DropdownMenu>
             <DropdownMenu v-if="user">
                 <DropdownMenuTrigger as-child>
-                    <Button variant="ghost" class="flex items-center gap-2 px-2 py-1.5">
+                    <Button
+                        variant="ghost"
+                        class="flex items-center gap-2 px-2 py-1.5"
+                    >
                         <Avatar class="size-8 shrink-0">
-                            <AvatarImage v-if="user.avatar" :src="user.avatar" :alt="user.name" />
+                            <AvatarImage
+                                v-if="user.avatar"
+                                :src="user.avatar"
+                                :alt="user.name"
+                            />
                             <AvatarFallback class="text-xs">
                                 {{ getInitials(user.name) }}
                             </AvatarFallback>
                         </Avatar>
-                        <div class="hidden flex-col items-start text-left sm:block">
-                            <span class="block text-sm font-medium leading-tight">{{ user.name }}</span>
-                            <span class="block text-xs text-muted-foreground leading-tight">{{ roleLabel }}</span>
+                        <div
+                            class="hidden flex-col items-start text-left sm:block"
+                        >
+                            <span
+                                class="block text-sm font-medium leading-tight"
+                                >{{ user.name }}</span
+                            >
+                            <span
+                                class="block text-xs text-muted-foreground leading-tight"
+                                >{{ roleLabel }}</span
+                            >
                         </div>
                         <ChevronDown class="size-4 shrink-0 opacity-50" />
                     </Button>

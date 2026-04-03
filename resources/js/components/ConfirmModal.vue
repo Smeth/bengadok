@@ -20,13 +20,13 @@ withDefaults(
         loading?: boolean;
     }>(),
     {
-        title: 'Confirmer l\'action',
+        title: "Confirmer l'action",
         description: 'Êtes-vous sûr de vouloir continuer ?',
         confirmText: 'Confirmer',
         cancelText: 'Annuler',
         variant: 'destructive',
         loading: false,
-    }
+    },
 );
 
 const emit = defineEmits<{
@@ -49,7 +49,10 @@ function onCancel() {
     <Dialog :open="open" @update:open="emit('update:open', $event)">
         <DialogContent class="max-w-md">
             <DialogHeader>
-                <DialogTitle class="flex items-center gap-2" :class="variant === 'destructive' ? 'text-red-600' : ''">
+                <DialogTitle
+                    class="flex items-center gap-2"
+                    :class="variant === 'destructive' ? 'text-red-600' : ''"
+                >
                     <AlertTriangle class="size-5 shrink-0" />
                     {{ title }}
                 </DialogTitle>
@@ -66,7 +69,9 @@ function onCancel() {
                     :disabled="loading"
                     @click="onConfirm"
                 >
-                    <span v-if="loading" class="animate-pulse">Chargement...</span>
+                    <span v-if="loading" class="animate-pulse"
+                        >Chargement...</span
+                    >
                     <span v-else>{{ confirmText }}</span>
                 </Button>
             </DialogFooter>

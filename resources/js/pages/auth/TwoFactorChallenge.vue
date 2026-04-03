@@ -18,15 +18,15 @@ const authConfigContent = computed<TwoFactorConfigContent>(() => {
         return {
             title: 'Code de récupération',
             description:
-                'Veuillez confirmer l\'accès à votre compte en entrant l\'un de vos codes de récupération d\'urgence.',
-            buttonText: 'se connecter avec un code d\'authentification',
+                "Veuillez confirmer l'accès à votre compte en entrant l'un de vos codes de récupération d'urgence.",
+            buttonText: "se connecter avec un code d'authentification",
         };
     }
 
     return {
-        title: 'Code d\'authentification',
+        title: "Code d'authentification",
         description:
-            'Entrez le code d\'authentification fourni par votre application d\'authentification.',
+            "Entrez le code d'authentification fourni par votre application d'authentification.",
         buttonText: 'se connecter avec un code de récupération',
     };
 });

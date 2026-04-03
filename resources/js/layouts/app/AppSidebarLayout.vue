@@ -16,7 +16,9 @@ withDefaults(defineProps<Props>(), {
 });
 
 const page = usePage();
-const isDashboard = computed(() => page.url === '/dashboard' || page.url.startsWith('/dashboard?'));
+const isDashboard = computed(
+    () => page.url === '/dashboard' || page.url.startsWith('/dashboard?'),
+);
 const isCommandes = computed(() => page.url.startsWith('/commandes'));
 const hasGradientBg = computed(() => isDashboard.value || isCommandes.value);
 </script>
@@ -28,9 +30,14 @@ const hasGradientBg = computed(() => isDashboard.value || isCommandes.value);
             <div
                 class="relative isolate"
                 :class="hasGradientBg ? 'min-h-svh' : 'min-h-full'"
-                :style="hasGradientBg
-                    ? { background: 'linear-gradient(60.02deg, rgb(57, 149, 210) 35.89%, rgb(91, 182, 110) 92.85%)' }
-                    : undefined"
+                :style="
+                    hasGradientBg
+                        ? {
+                              background:
+                                  'linear-gradient(60.02deg, rgb(57, 149, 210) 35.89%, rgb(91, 182, 110) 92.85%)',
+                          }
+                        : undefined
+                "
             >
                 <AppSidebarHeader
                     header-class="relative z-20"

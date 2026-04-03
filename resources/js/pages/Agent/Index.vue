@@ -57,13 +57,20 @@ function exportSelectedCSV() {
     const headers = ['N°', 'Client', 'Pharmacie', 'Date', 'Montant', 'Statut'];
     const rows = selected.map((c) => [
         c.numero,
-        `${c.client?.prenom ?? ''} ${c.client?.nom ?? ''}`.trim() + ' - ' + (c.client?.tel ?? ''),
+        `${c.client?.prenom ?? ''} ${c.client?.nom ?? ''}`.trim() +
+            ' - ' +
+            (c.client?.tel ?? ''),
         c.pharmacie?.designation ?? '-',
         c.date ?? '',
         Number(c.prix_total).toLocaleString('fr-FR'),
         c.status,
     ]);
-    const csv = [headers.join(';'), ...rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';'))].join('\n');
+    const csv = [
+        headers.join(';'),
+        ...rows.map((r) =>
+            r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';'),
+        ),
+    ].join('\n');
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -94,9 +101,16 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </Link>
             </div>
 
-            <div v-if="someSelected" class="flex flex-wrap items-center gap-3 rounded-lg border bg-primary/5 px-4 py-2">
-                <span class="font-medium">{{ selectedIds.size }} commande(s) sélectionnée(s)</span>
-                <Button variant="outline" size="sm" @click="clearSelection">Tout désélectionner</Button>
+            <div
+                v-if="someSelected"
+                class="flex flex-wrap items-center gap-3 rounded-lg border bg-primary/5 px-4 py-2"
+            >
+                <span class="font-medium"
+                    >{{ selectedIds.size }} commande(s) sélectionnée(s)</span
+                >
+                <Button variant="outline" size="sm" @click="clearSelection"
+                    >Tout désélectionner</Button
+                >
                 <Button variant="outline" size="sm" @click="exportSelectedCSV">
                     <Download class="mr-2 size-4" />
                     Exporter CSV
@@ -110,16 +124,28 @@ const breadcrumbs: BreadcrumbItem[] = [
                             <th class="w-10 px-2 py-3">
                                 <Checkbox
                                     :checked="allSelected"
-                                    :indeterminate="someSelected && !allSelected"
+                                    :indeterminate="
+                                        someSelected && !allSelected
+                                    "
                                     @update:checked="toggleAll"
                                 />
                             </th>
                             <th class="px-4 py-3 text-left font-medium">N°</th>
-                            <th class="px-4 py-3 text-left font-medium">Client</th>
-                            <th class="px-4 py-3 text-left font-medium">Pharmacie</th>
-                            <th class="px-4 py-3 text-left font-medium">Date</th>
-                            <th class="px-4 py-3 text-left font-medium">Montant</th>
-                            <th class="px-4 py-3 text-left font-medium">Statut</th>
+                            <th class="px-4 py-3 text-left font-medium">
+                                Client
+                            </th>
+                            <th class="px-4 py-3 text-left font-medium">
+                                Pharmacie
+                            </th>
+                            <th class="px-4 py-3 text-left font-medium">
+                                Date
+                            </th>
+                            <th class="px-4 py-3 text-left font-medium">
+                                Montant
+                            </th>
+                            <th class="px-4 py-3 text-left font-medium">
+                                Statut
+                            </th>
                             <th class="px-4 py-3 text-left font-medium"></th>
                         </tr>
                     </thead>
@@ -135,21 +161,45 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     @update:checked="() => toggleOne(cmd.id)"
                                 />
                             </td>
-                            <td class="px-4 py-3 font-mono">{{ cmd.numero }}</td>
-                            <td class="px-4 py-3">{{ cmd.client?.prenom }} {{ cmd.client?.nom }} - {{ cmd.client?.tel }}</td>
-                            <td class="px-4 py-3">{{ cmd.pharmacie?.designation }}</td>
-                            <td class="px-4 py-3">{{ cmd.date }}</td>
-                            <td class="px-4 py-3">{{ Number(cmd.prix_total).toLocaleString('fr-FR') }} XAF</td>
+                            <td class="px-4 py-3 font-mono">
+                                {{ cmd.numero }}
+                            </td>
                             <td class="px-4 py-3">
-                                <span class="rounded-full px-2 py-0.5 text-xs" :class="{
-                                    'bg-blue-100 dark:bg-blue-900/30': cmd.status === 'nouvelle',
-                                    'bg-emerald-100 dark:bg-emerald-900/30': cmd.status === 'validee' || cmd.status === 'livree',
-                                }">
+                                {{ cmd.client?.prenom }} {{ cmd.client?.nom }} -
+                                {{ cmd.client?.tel }}
+                            </td>
+                            <td class="px-4 py-3">
+                                {{ cmd.pharmacie?.designation }}
+                            </td>
+                            <td class="px-4 py-3">{{ cmd.date }}</td>
+                            <td class="px-4 py-3">
+                                {{
+                                    Number(cmd.prix_total).toLocaleString(
+                                        'fr-FR',
+                                    )
+                                }}
+                                XAF
+                            </td>
+                            <td class="px-4 py-3">
+                                <span
+                                    class="rounded-full px-2 py-0.5 text-xs"
+                                    :class="{
+                                        'bg-blue-100 dark:bg-blue-900/30':
+                                            cmd.status === 'nouvelle',
+                                        'bg-emerald-100 dark:bg-emerald-900/30':
+                                            cmd.status === 'validee' ||
+                                            cmd.status === 'livree',
+                                    }"
+                                >
                                     {{ cmd.status }}
                                 </span>
                             </td>
                             <td class="px-4 py-3">
-                                <Link :href="`/commandes/${cmd.id}`" class="text-primary hover:underline">Détails</Link>
+                                <Link
+                                    :href="`/commandes/${cmd.id}`"
+                                    class="text-primary hover:underline"
+                                    >Détails</Link
+                                >
                             </td>
                         </tr>
                     </tbody>

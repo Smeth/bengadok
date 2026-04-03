@@ -39,7 +39,13 @@ const props = withDefaults(
         clients: Client[];
         zones: Array<{ id: number; designation: string }>;
         frequences?: FrequenceRow[];
-        filters: { search?: string; zone_id?: string; tri?: string; frequence?: string; frequence_id?: string };
+        filters: {
+            search?: string;
+            zone_id?: string;
+            tri?: string;
+            frequence?: string;
+            frequence_id?: string;
+        };
     }>(),
     {
         frequences: () => [],
@@ -47,7 +53,9 @@ const props = withDefaults(
 );
 
 const page = usePage();
-const flashStatus = computed(() => (page.props.flash as { status?: string })?.status);
+const flashStatus = computed(
+    () => (page.props.flash as { status?: string })?.status,
+);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
@@ -58,12 +66,18 @@ const searchQuery = ref(props.filters.search ?? '');
 type TabId = 'liste' | 'doublons' | 'statistiques';
 const activeTab = ref<TabId>('liste');
 
-watch(() => props.filters.search, (v) => {
-    searchQuery.value = v ?? '';
-});
+watch(
+    () => props.filters.search,
+    (v) => {
+        searchQuery.value = v ?? '';
+    },
+);
 
 function filtrer(key: string, value: string) {
-    const next: Record<string, string | undefined> = { ...props.filters, [key]: value || undefined };
+    const next: Record<string, string | undefined> = {
+        ...props.filters,
+        [key]: value || undefined,
+    };
     if (key === 'frequence_id') {
         next.frequence = undefined;
     }
@@ -84,7 +98,13 @@ function nomComplet(c: Client) {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             class="flex flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6"
-            style="background: linear-gradient(to right, rgba(91, 176, 52, 0.14) 0%, rgba(52, 176, 199, 0.14) 100%);"
+            style="
+                background: linear-gradient(
+                    to right,
+                    rgba(91, 176, 52, 0.14) 0%,
+                    rgba(52, 176, 199, 0.14) 100%
+                );
+            "
         >
             <p
                 v-if="flashStatus"
@@ -99,7 +119,11 @@ function nomComplet(c: Client) {
                     <button
                         type="button"
                         class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                        :class="activeTab === 'liste' ? 'bg-[#459cd1] text-white' : 'bg-white/80 text-muted-foreground hover:bg-white'"
+                        :class="
+                            activeTab === 'liste'
+                                ? 'bg-[#459cd1] text-white'
+                                : 'bg-white/80 text-muted-foreground hover:bg-white'
+                        "
                         @click="activeTab = 'liste'"
                     >
                         Liste des clients
@@ -113,7 +137,11 @@ function nomComplet(c: Client) {
                     <button
                         type="button"
                         class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                        :class="activeTab === 'statistiques' ? 'bg-[#459cd1] text-white' : 'bg-white/80 text-muted-foreground hover:bg-white'"
+                        :class="
+                            activeTab === 'statistiques'
+                                ? 'bg-[#459cd1] text-white'
+                                : 'bg-white/80 text-muted-foreground hover:bg-white'
+                        "
                         @click="activeTab = 'statistiques'"
                     >
                         Statistiques
@@ -122,15 +150,30 @@ function nomComplet(c: Client) {
             </div>
 
             <div v-if="activeTab === 'liste'" class="space-y-4">
-                <form class="flex flex-wrap items-center gap-4" @submit.prevent="filtrer('search', searchQuery)">
+                <form
+                    class="flex flex-wrap items-center gap-4"
+                    @submit.prevent="filtrer('search', searchQuery)"
+                >
                     <div class="relative min-w-[200px] flex-1">
-                        <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input v-model="searchQuery" placeholder="Rechercher un client..." class="pl-9" />
+                        <Search
+                            class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                        />
+                        <Input
+                            v-model="searchQuery"
+                            placeholder="Rechercher un client..."
+                            class="pl-9"
+                        />
                     </div>
                     <select
                         :value="filters.tri"
                         class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-                        @change="(e: Event) => filtrer('tri', (e.target as HTMLSelectElement).value)"
+                        @change="
+                            (e: Event) =>
+                                filtrer(
+                                    'tri',
+                                    (e.target as HTMLSelectElement).value,
+                                )
+                        "
                     >
                         <option value="">Trier par</option>
                         <option value="nom">Nom</option>
@@ -141,31 +184,62 @@ function nomComplet(c: Client) {
                     <select
                         :value="filters.zone_id"
                         class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-                        @change="(e: Event) => filtrer('zone_id', (e.target as HTMLSelectElement).value)"
+                        @change="
+                            (e: Event) =>
+                                filtrer(
+                                    'zone_id',
+                                    (e.target as HTMLSelectElement).value,
+                                )
+                        "
                     >
                         <option value="">Toutes les zones</option>
-                        <option v-for="z in zones" :key="z.id" :value="String(z.id)">{{ z.designation }}</option>
+                        <option
+                            v-for="z in zones"
+                            :key="z.id"
+                            :value="String(z.id)"
+                        >
+                            {{ z.designation }}
+                        </option>
                     </select>
                     <select
                         :value="filters.frequence_id || ''"
                         class="max-w-[220px] flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-                        @change="(e: Event) => filtrer('frequence_id', (e.target as HTMLSelectElement).value)"
+                        @change="
+                            (e: Event) =>
+                                filtrer(
+                                    'frequence_id',
+                                    (e.target as HTMLSelectElement).value,
+                                )
+                        "
                     >
                         <option value="">Toutes les fréquences</option>
-                        <option v-for="f in frequences" :key="f.id" :value="String(f.id)">{{ f.designation }}</option>
+                        <option
+                            v-for="f in frequences"
+                            :key="f.id"
+                            :value="String(f.id)"
+                        >
+                            {{ f.designation }}
+                        </option>
                     </select>
-                    <div class="ml-auto flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-white">
+                    <div
+                        class="ml-auto flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-white"
+                    >
                         <Users class="size-4" />
                         <span class="font-semibold">{{ clients.length }}</span>
                     </div>
                 </form>
                 <p class="text-xs text-muted-foreground">
-                    Les commandes comptées excluent les annulations et incluent les statuts en cours, validées et livrées
-                    (y compris anciens statuts éventuels). La fréquence affichée suit la règle à la plus haute priorité qui correspond au client.
-                    Les règles se gèrent dans
-                    <Link href="/settings/parametres?onglet=clientFrequences" class="font-medium text-[#459cd1] underline-offset-2 hover:underline">
-                        Configuration → Fréquences clients
-                    </Link>.
+                    Les commandes comptées excluent les annulations et incluent
+                    les statuts en cours, validées et livrées (y compris anciens
+                    statuts éventuels). La fréquence affichée suit la règle à la
+                    plus haute priorité qui correspond au client. Les règles se
+                    gèrent dans
+                    <Link
+                        href="/settings/parametres?onglet=clientFrequences"
+                        class="font-medium text-[#459cd1] underline-offset-2 hover:underline"
+                    >
+                        Configuration → Fréquences clients </Link
+                    >.
                 </p>
 
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -176,7 +250,9 @@ function nomComplet(c: Client) {
                     >
                         <div class="mb-3 flex items-start justify-between">
                             <div>
-                                <h3 class="font-semibold text-foreground">{{ nomComplet(c) }}</h3>
+                                <h3 class="font-semibold text-foreground">
+                                    {{ nomComplet(c) }}
+                                </h3>
                                 <div class="mt-1 flex flex-wrap gap-1">
                                     <span
                                         v-if="c.zone"
@@ -203,28 +279,57 @@ function nomComplet(c: Client) {
                             </Button>
                         </div>
 
-                        <p class="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+                        <p
+                            class="mb-3 flex items-center gap-2 text-sm text-muted-foreground"
+                        >
                             <Phone class="size-4 shrink-0" />
                             Téléphone {{ c.tel }}
                         </p>
 
-                        <div class="mb-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                        <div
+                            class="mb-3 flex flex-wrap gap-x-6 gap-y-2 text-sm"
+                        >
                             <span class="flex items-baseline gap-2">
-                                <span class="text-muted-foreground">Commandes</span>
-                                <span class="font-medium tabular-nums">{{ c.nb_commandes }}</span>
+                                <span class="text-muted-foreground"
+                                    >Commandes</span
+                                >
+                                <span class="font-medium tabular-nums">{{
+                                    c.nb_commandes
+                                }}</span>
                             </span>
                             <span class="flex items-baseline gap-2">
-                                <span class="text-muted-foreground">Total Dépensé</span>
-                                <strong class="text-emerald-600">{{ Number(c.total_depense).toLocaleString('fr-FR') }}&nbsp;xaf</strong>
+                                <span class="text-muted-foreground"
+                                    >Total Dépensé</span
+                                >
+                                <strong class="text-emerald-600"
+                                    >{{
+                                        Number(c.total_depense).toLocaleString(
+                                            'fr-FR',
+                                        )
+                                    }}&nbsp;xaf</strong
+                                >
                             </span>
                             <span class="flex items-baseline gap-2">
-                                <span class="text-muted-foreground">Panier Moyen</span>
-                                <strong class="text-emerald-600">{{ Number(c.panier_moyen).toLocaleString('fr-FR') }}&nbsp;xaf</strong>
+                                <span class="text-muted-foreground"
+                                    >Panier Moyen</span
+                                >
+                                <strong class="text-emerald-600"
+                                    >{{
+                                        Number(c.panier_moyen).toLocaleString(
+                                            'fr-FR',
+                                        )
+                                    }}&nbsp;xaf</strong
+                                >
                             </span>
                         </div>
 
-                        <div v-if="c.medicaments_frequents?.length" class="space-y-1">
-                            <p class="text-xs text-muted-foreground">Médicaments fréquents:</p>
+                        <div
+                            v-if="c.medicaments_frequents?.length"
+                            class="space-y-1"
+                        >
+                            <p class="text-xs text-muted-foreground">
+                                Médicaments fréquents:
+                            </p>
                             <div class="flex flex-wrap gap-1">
                                 <span
                                     v-for="med in c.medicaments_frequents"
@@ -239,14 +344,24 @@ function nomComplet(c: Client) {
                 </div>
             </div>
 
-            <div v-else-if="activeTab === 'doublons'" class="rounded-xl border bg-white p-8 text-center dark:border-white/10 dark:bg-white/95">
-                <p class="mb-4 text-muted-foreground">La gestion des doublons s'effectue sur une page dédiée.</p>
+            <div
+                v-else-if="activeTab === 'doublons'"
+                class="rounded-xl border bg-white p-8 text-center dark:border-white/10 dark:bg-white/95"
+            >
+                <p class="mb-4 text-muted-foreground">
+                    La gestion des doublons s'effectue sur une page dédiée.
+                </p>
                 <Button as-child>
-                    <Link href="/clients/doublons">Ouvrir la gestion des doublons</Link>
+                    <Link href="/clients/doublons"
+                        >Ouvrir la gestion des doublons</Link
+                    >
                 </Button>
             </div>
 
-            <div v-else class="rounded-xl border bg-white p-8 text-center dark:border-white/10 dark:bg-white/95">
+            <div
+                v-else
+                class="rounded-xl border bg-white p-8 text-center dark:border-white/10 dark:bg-white/95"
+            >
                 <p class="text-muted-foreground">Statistiques – à venir</p>
             </div>
         </div>

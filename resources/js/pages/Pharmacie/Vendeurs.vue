@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import {
-    Users,
-    ShieldCheck,
-    Shield,
-    Copy,
-    RefreshCw,
-} from 'lucide-vue-next';
+import { Users, ShieldCheck, Shield, Copy, RefreshCw } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,7 +17,12 @@ import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
 const props = defineProps<{
-    vendeurs: Array<{ id: number; name: string; email: string; username?: string }>;
+    vendeurs: Array<{
+        id: number;
+        name: string;
+        email: string;
+        username?: string;
+    }>;
     pharmacie: { id: number; designation: string };
     nextUserId?: number;
 }>();
@@ -89,14 +88,20 @@ function copyCredentials() {
 }
 
 function creerVendeur() {
-    router.post('/pharmacie/vendeurs', {
-        name: form.value.name,
-        email: form.value.email,
-        password: form.value.password,
-        role: form.value.role,
-    }, {
-        onSuccess: () => { modalCreate.value = false; },
-    });
+    router.post(
+        '/pharmacie/vendeurs',
+        {
+            name: form.value.name,
+            email: form.value.email,
+            password: form.value.password,
+            role: form.value.role,
+        },
+        {
+            onSuccess: () => {
+                modalCreate.value = false;
+            },
+        },
+    );
 }
 </script>
 
@@ -106,8 +111,13 @@ function creerVendeur() {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex flex-1 flex-col gap-6 p-4">
             <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-semibold">Vendeurs - {{ pharmacie?.designation }}</h1>
-                <Button class="bg-[#459cd1] text-white hover:bg-[#3a8ab8]" @click="ouvrirCreate">
+                <h1 class="text-2xl font-semibold">
+                    Vendeurs - {{ pharmacie?.designation }}
+                </h1>
+                <Button
+                    class="bg-[#459cd1] text-white hover:bg-[#3a8ab8]"
+                    @click="ouvrirCreate"
+                >
                     <Users class="mr-2 size-4" />
                     Créer un utilisateur
                 </Button>
@@ -118,8 +128,12 @@ function creerVendeur() {
                     <thead class="border-b bg-muted/50">
                         <tr>
                             <th class="px-4 py-3 text-left font-medium">Nom</th>
-                            <th class="px-4 py-3 text-left font-medium">Email</th>
-                            <th class="px-4 py-3 text-left font-medium">Identifiant</th>
+                            <th class="px-4 py-3 text-left font-medium">
+                                Email
+                            </th>
+                            <th class="px-4 py-3 text-left font-medium">
+                                Identifiant
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -130,12 +144,20 @@ function creerVendeur() {
                         >
                             <td class="px-4 py-3">{{ v.name }}</td>
                             <td class="px-4 py-3">{{ v.email }}</td>
-                            <td class="px-4 py-3 font-mono text-muted-foreground">{{ v.username || '-' }}</td>
+                            <td
+                                class="px-4 py-3 font-mono text-muted-foreground"
+                            >
+                                {{ v.username || '-' }}
+                            </td>
                         </tr>
                     </tbody>
                 </table>
-                <p v-if="!vendeurs?.length" class="py-8 text-center text-muted-foreground">
-                    Aucun vendeur. Cliquez sur "Créer un utilisateur" pour en ajouter.
+                <p
+                    v-if="!vendeurs?.length"
+                    class="py-8 text-center text-muted-foreground"
+                >
+                    Aucun vendeur. Cliquez sur "Créer un utilisateur" pour en
+                    ajouter.
                 </p>
             </div>
         </div>
@@ -179,11 +201,17 @@ function creerVendeur() {
                         <div class="flex gap-4">
                             <label
                                 class="flex flex-1 cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors"
-                                :class="form.role === 'gerant' ? 'border-[#459cd1] bg-sky-50' : 'border-input hover:bg-muted/30'"
+                                :class="
+                                    form.role === 'gerant'
+                                        ? 'border-[#459cd1] bg-sky-50'
+                                        : 'border-input hover:bg-muted/30'
+                                "
                             >
                                 <ShieldCheck class="size-8 text-[#459cd1]" />
                                 <span class="font-semibold">Gérant</span>
-                                <span class="text-xs text-muted-foreground">Accès complet</span>
+                                <span class="text-xs text-muted-foreground"
+                                    >Accès complet</span
+                                >
                                 <input
                                     v-model="form.role"
                                     type="radio"
@@ -193,11 +221,17 @@ function creerVendeur() {
                             </label>
                             <label
                                 class="flex flex-1 cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors"
-                                :class="form.role === 'vendeur' ? 'border-[#459cd1] bg-sky-50' : 'border-input hover:bg-muted/30'"
+                                :class="
+                                    form.role === 'vendeur'
+                                        ? 'border-[#459cd1] bg-sky-50'
+                                        : 'border-input hover:bg-muted/30'
+                                "
                             >
                                 <Shield class="size-8 text-[#459cd1]" />
                                 <span class="font-semibold">Vendeur</span>
-                                <span class="text-xs text-muted-foreground">Commandes uniquement</span>
+                                <span class="text-xs text-muted-foreground"
+                                    >Commandes uniquement</span
+                                >
                                 <input
                                     v-model="form.role"
                                     type="radio"
@@ -209,7 +243,9 @@ function creerVendeur() {
                     </div>
 
                     <div class="rounded-lg bg-muted/50 p-4 space-y-4">
-                        <h4 class="font-medium text-muted-foreground">Infos propriétaire</h4>
+                        <h4 class="font-medium text-muted-foreground">
+                            Infos propriétaire
+                        </h4>
                         <div class="space-y-2">
                             <Label>Identifiant (auto-généré)</Label>
                             <Input
@@ -218,7 +254,8 @@ function creerVendeur() {
                                 class="bg-muted font-mono text-sm"
                             />
                             <p class="text-xs text-[#459cd1]">
-                                L'identifiant sera généré automatiquement à partir du nom
+                                L'identifiant sera généré automatiquement à
+                                partir du nom
                             </p>
                         </div>
                         <div class="space-y-2">
@@ -241,18 +278,27 @@ function creerVendeur() {
                                 </Button>
                             </div>
                             <p class="text-xs text-[#459cd1]">
-                                L'utilisateur devra changer ce mot de passe à la première connexion
+                                L'utilisateur devra changer ce mot de passe à la
+                                première connexion
                             </p>
                         </div>
                     </div>
 
                     <div class="rounded-lg bg-sky-50 p-4 dark:bg-sky-950/30">
-                        <h4 class="mb-2 font-medium text-sky-800 dark:text-sky-200">Identifiants à transmettre</h4>
+                        <h4
+                            class="mb-2 font-medium text-sky-800 dark:text-sky-200"
+                        >
+                            Identifiants à transmettre
+                        </h4>
                         <p class="text-sm text-muted-foreground">
-                            Identifiant : <span class="font-mono">{{ identifiantPreview }}</span>
+                            Identifiant :
+                            <span class="font-mono">{{
+                                identifiantPreview
+                            }}</span>
                         </p>
                         <p class="text-sm text-muted-foreground">
-                            Mot de passe : <span class="font-mono">{{ form.password }}</span>
+                            Mot de passe :
+                            <span class="font-mono">{{ form.password }}</span>
                         </p>
                         <Button
                             type="button"
@@ -278,10 +324,17 @@ function creerVendeur() {
                     </div>
 
                     <DialogFooter class="gap-2">
-                        <Button type="button" variant="destructive" @click="modalCreate = false">
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            @click="modalCreate = false"
+                        >
                             Annuler
                         </Button>
-                        <Button type="submit" class="bg-[#459cd1] text-white hover:bg-[#3a8ab8]">
+                        <Button
+                            type="submit"
+                            class="bg-[#459cd1] text-white hover:bg-[#3a8ab8]"
+                        >
                             Créer l'utilisateur
                         </Button>
                     </DialogFooter>

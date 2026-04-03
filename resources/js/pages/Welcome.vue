@@ -56,10 +56,14 @@ import { dashboard, login } from '@/routes';
                         <path d="m10.5 11.5 8 4.5" />
                     </svg>
                 </div>
-                <h1 class="mb-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white lg:text-4xl">
+                <h1
+                    class="mb-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white lg:text-4xl"
+                >
                     BengaDok
                 </h1>
-                <p class="mb-8 max-w-md text-lg text-slate-600 dark:text-slate-300">
+                <p
+                    class="mb-8 max-w-md text-lg text-slate-600 dark:text-slate-300"
+                >
                     Votre pharmacie, connectée à plus de patients chaque jour.
                 </p>
 
@@ -67,35 +71,59 @@ import { dashboard, login } from '@/routes';
                     class="mb-10 grid gap-4 rounded-2xl border border-slate-200/80 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-800/50 lg:grid-cols-3"
                 >
                     <div class="flex flex-col items-center gap-2">
-                        <div class="flex size-12 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40">
-                            <Pill class="size-6 text-emerald-600 dark:text-emerald-400" />
+                        <div
+                            class="flex size-12 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40"
+                        >
+                            <Pill
+                                class="size-6 text-emerald-600 dark:text-emerald-400"
+                            />
                         </div>
-                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <span
+                            class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                        >
                             Commandes simplifiées
                         </span>
-                        <span class="text-xs text-slate-500 dark:text-slate-400">
+                        <span
+                            class="text-xs text-slate-500 dark:text-slate-400"
+                        >
                             Gérez vos commandes de médicaments en un clin d'œil
                         </span>
                     </div>
                     <div class="flex flex-col items-center gap-2">
-                        <div class="flex size-12 items-center justify-center rounded-xl bg-teal-100 dark:bg-teal-900/40">
-                            <Truck class="size-6 text-teal-600 dark:text-teal-400" />
+                        <div
+                            class="flex size-12 items-center justify-center rounded-xl bg-teal-100 dark:bg-teal-900/40"
+                        >
+                            <Truck
+                                class="size-6 text-teal-600 dark:text-teal-400"
+                            />
                         </div>
-                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <span
+                            class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                        >
                             Livraison proche
                         </span>
-                        <span class="text-xs text-slate-500 dark:text-slate-400">
+                        <span
+                            class="text-xs text-slate-500 dark:text-slate-400"
+                        >
                             Pharmacie la plus proche selon l'adresse du client
                         </span>
                     </div>
                     <div class="flex flex-col items-center gap-2">
-                        <div class="flex size-12 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40">
-                            <Users class="size-6 text-emerald-600 dark:text-emerald-400" />
+                        <div
+                            class="flex size-12 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40"
+                        >
+                            <Users
+                                class="size-6 text-emerald-600 dark:text-emerald-400"
+                            />
                         </div>
-                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <span
+                            class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                        >
                             Gestion complète
                         </span>
-                        <span class="text-xs text-slate-500 dark:text-slate-400">
+                        <span
+                            class="text-xs text-slate-500 dark:text-slate-400"
+                        >
                             Gérants, vendeurs et agents call center
                         </span>
                     </div>
@@ -120,7 +148,9 @@ import { dashboard, login } from '@/routes';
             </div>
         </main>
 
-        <footer class="mt-auto hidden pt-8 text-center text-sm text-slate-500 dark:text-slate-400 lg:block">
+        <footer
+            class="mt-auto hidden pt-8 text-center text-sm text-slate-500 dark:text-slate-400 lg:block"
+        >
             BengaDok — Plateforme de gestion des commandes de pharmacie
         </footer>
     </div>

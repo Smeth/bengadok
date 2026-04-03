@@ -55,7 +55,9 @@ const showPassword = ref(false);
             </div>
 
             <div class="grid gap-2">
-                <Label for="password" class="text-[#333333]">Mot de passe</Label>
+                <Label for="password" class="text-[#333333]"
+                    >Mot de passe</Label
+                >
                 <div class="relative">
                     <Input
                         id="password"
@@ -70,7 +72,11 @@ const showPassword = ref(false);
                     <button
                         type="button"
                         class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+                        :aria-label="
+                            showPassword
+                                ? 'Masquer le mot de passe'
+                                : 'Afficher le mot de passe'
+                        "
                         @click="showPassword = !showPassword"
                     >
                         <EyeOff v-if="showPassword" class="size-4" />
@@ -104,18 +110,19 @@ const showPassword = ref(false);
             <!-- Réinitialisation par SMS -->
             <div
                 class="flex gap-3 rounded-lg border p-4"
-                style="background-color: #e6f7ed; border-color: #7ad894;"
+                style="background-color: #e6f7ed; border-color: #7ad894"
             >
                 <div
                     class="flex size-10 shrink-0 items-center justify-center rounded-full text-white"
-                    style="background-color: #67cb88;"
+                    style="background-color: #67cb88"
                 >
                     <Smartphone class="size-5" />
                 </div>
                 <div class="min-w-0 text-sm text-[#333333]">
                     <p class="font-medium">Réinitialisation par SMS</p>
                     <p class="mt-0.5 text-slate-600">
-                        En cas d'oubli, recevez un code de vérification par SMS sur votre numéro de téléphone ou celui de la pharmacie.
+                        En cas d'oubli, recevez un code de vérification par SMS
+                        sur votre numéro de téléphone ou celui de la pharmacie.
                     </p>
                 </div>
             </div>

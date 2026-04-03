@@ -2,10 +2,7 @@
 import { X, ZoomIn, ZoomOut, ExternalLink, FileText } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const props = defineProps<{
     urlfile: string;
@@ -102,27 +99,50 @@ function handleWheel(e: WheelEvent) {
         </template>
 
         <!-- Lightbox pour images -->
-        <Dialog :open="lightboxOpen" @update:open="(v: boolean) => !v && closeLightbox()">
+        <Dialog
+            :open="lightboxOpen"
+            @update:open="(v: boolean) => !v && closeLightbox()"
+        >
             <DialogContent
                 class="max-h-[90vh] max-w-[95vw] overflow-hidden p-0"
                 @pointer-down-outside="closeLightbox"
             >
                 <div class="flex flex-col">
-                    <div class="flex items-center justify-between border-b bg-muted/30 px-4 py-2">
+                    <div
+                        class="flex items-center justify-between border-b bg-muted/30 px-4 py-2"
+                    >
                         <div class="flex items-center gap-2">
-                            <Button variant="outline" size="icon" @click="zoomOut">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                @click="zoomOut"
+                            >
                                 <ZoomOut class="size-4" />
                             </Button>
-                            <span class="text-sm text-muted-foreground">{{ Math.round(zoomLevel * 100) }}%</span>
-                            <Button variant="outline" size="icon" @click="zoomIn">
+                            <span class="text-sm text-muted-foreground"
+                                >{{ Math.round(zoomLevel * 100) }}%</span
+                            >
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                @click="zoomIn"
+                            >
                                 <ZoomIn class="size-4" />
                             </Button>
-                            <Button variant="outline" size="sm" @click="openInNewTab">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                @click="openInNewTab"
+                            >
                                 <ExternalLink class="mr-1 size-3.5" />
                                 Nouvel onglet
                             </Button>
                         </div>
-                        <Button variant="ghost" size="icon" @click="closeLightbox">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            @click="closeLightbox"
+                        >
                             <X class="size-5" />
                         </Button>
                     </div>

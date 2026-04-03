@@ -18,8 +18,19 @@ const props = defineProps<{
         heurs: string;
         commentaire?: string;
         beneficiaire?: string;
-        client: { id: number; nom: string; prenom: string; tel: string; adresse?: string };
-        pharmacie: { id: number; designation: string; zone?: { designation: string }; adresse?: string };
+        client: {
+            id: number;
+            nom: string;
+            prenom: string;
+            tel: string;
+            adresse?: string;
+        };
+        pharmacie: {
+            id: number;
+            designation: string;
+            zone?: { designation: string };
+            adresse?: string;
+        };
         produits: Array<{
             id: number;
             designation: string;
@@ -29,7 +40,12 @@ const props = defineProps<{
         mode_paiement?: { id: number; designation: string };
         montant_livraison?: { id: number; designation: number };
     };
-    pharmacies: Array<{ id: number; designation: string; zone?: { designation: string }; adresse?: string }>;
+    pharmacies: Array<{
+        id: number;
+        designation: string;
+        zone?: { designation: string };
+        adresse?: string;
+    }>;
     modesPaiement: Array<{ id: number; designation: string }>;
     montantsLivraison: Array<{ id: number; designation: number }>;
 }>();
@@ -37,7 +53,10 @@ const props = defineProps<{
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
     { title: 'Commandes', href: '/commandes' },
-    { title: '#' + props.commande.numero, href: `/commandes/${props.commande.id}` },
+    {
+        title: '#' + props.commande.numero,
+        href: `/commandes/${props.commande.id}`,
+    },
     { title: 'Modifier', href: '#' },
 ];
 
@@ -55,7 +74,13 @@ const modePaiementId = ref(props.commande.mode_paiement?.id ?? '');
 const montantLivraisonId = ref(props.commande.montant_livraison?.id ?? '');
 const ordonnanceFile = ref<File | null>(null);
 
-type ProduitLigne = { id?: number; designation: string; dosage: string; quantite: number; prix_unitaire: number };
+type ProduitLigne = {
+    id?: number;
+    designation: string;
+    dosage: string;
+    quantite: number;
+    prix_unitaire: number;
+};
 const produitsSelection = ref<ProduitLigne[]>([]);
 
 watch(
@@ -69,11 +94,16 @@ watch(
             prix_unitaire: Number(p.pivot?.prix_unitaire) ?? 0,
         }));
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 function ajouterProduit() {
-    produitsSelection.value.push({ designation: '', dosage: '', quantite: 1, prix_unitaire: 0 });
+    produitsSelection.value.push({
+        designation: '',
+        dosage: '',
+        quantite: 1,
+        prix_unitaire: 0,
+    });
 }
 
 function supprimerProduit(i: number) {
@@ -82,7 +112,12 @@ function supprimerProduit(i: number) {
 
 function submit() {
     const produitsValides = produitsSelection.value
-        .filter((p) => p.designation.trim() && p.quantite > 0 && Number(p.prix_unitaire) >= 0)
+        .filter(
+            (p) =>
+                p.designation.trim() &&
+                p.quantite > 0 &&
+                Number(p.prix_unitaire) >= 0,
+        )
         .map((p) => ({
             id: p.id,
             designation: p.designation.trim(),
@@ -111,12 +146,15 @@ function submit() {
     if (ordonnanceFile.value) {
         const formData = new FormData();
         Object.entries(payload).forEach(([k, v]) => {
-            if (v !== undefined && v !== '' && k !== 'produits') formData.append(k, String(v));
+            if (v !== undefined && v !== '' && k !== 'produits')
+                formData.append(k, String(v));
         });
         formData.append('produits', JSON.stringify(produitsValides));
         formData.append('ordonnance', ordonnanceFile.value);
         formData.append('_method', 'PATCH');
-        router.post(`/commandes/${props.commande.id}`, formData, { forceFormData: true });
+        router.post(`/commandes/${props.commande.id}`, formData, {
+            forceFormData: true,
+        });
     } else {
         router.patch(`/commandes/${props.commande.id}`, payload);
     }
@@ -129,7 +167,9 @@ function submit() {
     <AppLayout :breadcrumbs="breadcrumbs">
         <form class="flex flex-1 flex-col gap-6 p-4" @submit.prevent="submit">
             <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-semibold">Modifier la commande {{ commande.numero }}</h1>
+                <h1 class="text-2xl font-semibold">
+                    Modifier la commande {{ commande.numero }}
+                </h1>
                 <Link :href="`/commandes/${commande.id}`">
                     <Button variant="outline">Annuler</Button>
                 </Link>
@@ -148,11 +188,19 @@ function submit() {
                     </div>
                     <div class="space-y-2">
                         <Label>Téléphone *</Label>
-                        <Input v-model="clientTel" required placeholder="Téléphone" />
+                        <Input
+                            v-model="clientTel"
+                            required
+                            placeholder="Téléphone"
+                        />
                     </div>
                     <div class="space-y-2">
                         <Label>Adresse *</Label>
-                        <Input v-model="clientAdresse" required placeholder="Adresse" />
+                        <Input
+                            v-model="clientAdresse"
+                            required
+                            placeholder="Adresse"
+                        />
                     </div>
                 </div>
 
@@ -166,8 +214,13 @@ function submit() {
                             class="w-full rounded-md border border-input bg-background px-3 py-2"
                         >
                             <option value="">Choisir une pharmacie</option>
-                            <option v-for="p in pharmacies" :key="p.id" :value="p.id">
-                                {{ p.designation }} ({{ p.zone?.designation }}) - {{ p.adresse }}
+                            <option
+                                v-for="p in pharmacies"
+                                :key="p.id"
+                                :value="p.id"
+                            >
+                                {{ p.designation }} ({{ p.zone?.designation }})
+                                - {{ p.adresse }}
                             </option>
                         </select>
                     </div>
@@ -183,11 +236,17 @@ function submit() {
                     </div>
                     <div class="space-y-2">
                         <Label>Bénéficiaire</Label>
-                        <Input v-model="beneficiaire" placeholder="Bénéficiaire" />
+                        <Input
+                            v-model="beneficiaire"
+                            placeholder="Bénéficiaire"
+                        />
                     </div>
                     <div class="space-y-2">
                         <Label>Commentaire</Label>
-                        <Input v-model="commentaire" placeholder="Commentaire" />
+                        <Input
+                            v-model="commentaire"
+                            placeholder="Commentaire"
+                        />
                     </div>
                 </div>
             </div>
@@ -200,19 +259,58 @@ function submit() {
                         :key="i"
                         class="flex flex-wrap items-end gap-2"
                     >
-                        <Input v-model="p.designation" placeholder="Désignation" class="min-w-[120px] flex-1" />
-                        <Input v-model="p.dosage" placeholder="Dosage" class="w-24" />
-                        <Input v-model.number="p.quantite" type="number" min="1" class="w-16" placeholder="Qté" />
-                        <Input v-model.number="p.prix_unitaire" type="number" min="0" class="w-24" placeholder="Prix" />
-                        <Button type="button" variant="destructive" size="icon" @click="supprimerProduit(i)">×</Button>
+                        <Input
+                            v-model="p.designation"
+                            placeholder="Désignation"
+                            class="min-w-[120px] flex-1"
+                        />
+                        <Input
+                            v-model="p.dosage"
+                            placeholder="Dosage"
+                            class="w-24"
+                        />
+                        <Input
+                            v-model.number="p.quantite"
+                            type="number"
+                            min="1"
+                            class="w-16"
+                            placeholder="Qté"
+                        />
+                        <Input
+                            v-model.number="p.prix_unitaire"
+                            type="number"
+                            min="0"
+                            class="w-24"
+                            placeholder="Prix"
+                        />
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            @click="supprimerProduit(i)"
+                            >×</Button
+                        >
                     </div>
-                    <Button type="button" variant="outline" @click="ajouterProduit">+ Ajouter médicament</Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="ajouterProduit"
+                        >+ Ajouter médicament</Button
+                    >
                 </div>
             </div>
 
             <div>
-                <OrdonnanceUppy v-model="ordonnanceFile" label="Nouvelle ordonnance (remplace l'actuelle)" />
-                <OrdonnanceFilePreview v-if="ordonnanceFile" :file="ordonnanceFile" class="mt-3" max-height="14rem" />
+                <OrdonnanceUppy
+                    v-model="ordonnanceFile"
+                    label="Nouvelle ordonnance (remplace l'actuelle)"
+                />
+                <OrdonnanceFilePreview
+                    v-if="ordonnanceFile"
+                    :file="ordonnanceFile"
+                    class="mt-3"
+                    max-height="14rem"
+                />
             </div>
 
             <div class="grid gap-4 md:grid-cols-2">
@@ -223,7 +321,13 @@ function submit() {
                         class="w-full rounded-md border border-input bg-background px-3 py-2"
                     >
                         <option value="">—</option>
-                        <option v-for="m in modesPaiement" :key="m.id" :value="m.id">{{ m.designation }}</option>
+                        <option
+                            v-for="m in modesPaiement"
+                            :key="m.id"
+                            :value="m.id"
+                        >
+                            {{ m.designation }}
+                        </option>
                     </select>
                 </div>
                 <div class="space-y-2">
@@ -233,8 +337,13 @@ function submit() {
                         class="w-full rounded-md border border-input bg-background px-3 py-2"
                     >
                         <option value="">—</option>
-                        <option v-for="m in montantsLivraison" :key="m.id" :value="m.id">
-                            {{ Number(m.designation).toLocaleString('fr-FR') }} XAF
+                        <option
+                            v-for="m in montantsLivraison"
+                            :key="m.id"
+                            :value="m.id"
+                        >
+                            {{ Number(m.designation).toLocaleString('fr-FR') }}
+                            XAF
                         </option>
                     </select>
                 </div>

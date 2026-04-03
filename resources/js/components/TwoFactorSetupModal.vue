@@ -48,23 +48,24 @@ const modalConfig = computed<TwoFactorConfigContent>(() => {
         return {
             title: 'Authentification à deux facteurs activée',
             description:
-                'L\'authentification à deux facteurs est maintenant activée. Scannez le code QR ou entrez la clé dans votre application d\'authentification.',
+                "L'authentification à deux facteurs est maintenant activée. Scannez le code QR ou entrez la clé dans votre application d'authentification.",
             buttonText: 'Fermer',
         };
     }
 
     if (showVerificationStep.value) {
         return {
-            title: 'Vérifier le code d\'authentification',
-            description: 'Entrez le code à 6 chiffres de votre application d\'authentification',
+            title: "Vérifier le code d'authentification",
+            description:
+                "Entrez le code à 6 chiffres de votre application d'authentification",
             buttonText: 'Continuer',
         };
     }
 
     return {
-        title: 'Activer l\'authentification à deux facteurs',
+        title: "Activer l'authentification à deux facteurs",
         description:
-            'Pour terminer l\'activation, scannez le code QR ou entrez la clé de configuration dans votre application d\'authentification',
+            "Pour terminer l'activation, scannez le code QR ou entrez la clé de configuration dans votre application d'authentification",
         buttonText: 'Continuer',
     };
 });

@@ -224,7 +224,7 @@
         z-index: 1;
     }
     .pharmacy-content-shell {
-        @apply mx-auto w-full px-4 pb-8 pt-4 sm:px-6;
+        @apply mx-auto w-full px-4 pt-4 pb-8 sm:px-6;
         max-width: min(1360px, 100% - 1rem);
     }
     .pharmacy-card {
@@ -393,6 +393,6 @@
 /* NProgress : ne pas bloquer les clics pendant le chargement Inertia */
 #nprogress,
 #nprogress *,
-[role="progressbar"] {
+[role='progressbar'] {
     pointer-events: none !important;
 }

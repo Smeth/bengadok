@@ -17,7 +17,9 @@ const navigated = ref(false);
 
 function safeRedirectUrl(): string {
     const u = props.redirectTo;
-    return typeof u === 'string' && u.startsWith('/') && !u.startsWith('//') ? u : '/dashboard';
+    return typeof u === 'string' && u.startsWith('/') && !u.startsWith('//')
+        ? u
+        : '/dashboard';
 }
 
 onMounted(() => {
@@ -26,10 +28,13 @@ onMounted(() => {
     const go = () => {
         if (navigated.value) return;
         navigated.value = true;
-        let hardNavTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-            hardNavTimer = null;
-            window.location.assign(target);
-        }, HARD_NAV_FALLBACK_MS);
+        let hardNavTimer: ReturnType<typeof setTimeout> | null = setTimeout(
+            () => {
+                hardNavTimer = null;
+                window.location.assign(target);
+            },
+            HARD_NAV_FALLBACK_MS,
+        );
 
         const clearHardNav = () => {
             if (hardNavTimer !== null) {
@@ -97,7 +102,9 @@ onMounted(() => {
 
         <!-- Zone logo + effets -->
         <div class="relative z-10 flex flex-col items-center px-4">
-            <div class="relative flex size-[min(82vw,300px)] items-center justify-center">
+            <div
+                class="relative flex size-[min(82vw,300px)] items-center justify-center"
+            >
                 <!-- Anneaux pulsants concentriques -->
                 <div
                     class="bengadok-loader-ring-1 pointer-events-none absolute inset-[-8%] rounded-full border-2 border-[#3995d2]/35"
@@ -119,7 +126,13 @@ onMounted(() => {
                 >
                     <svg class="size-full" viewBox="0 0 100 100" fill="none">
                         <defs>
-                            <linearGradient id="bengadok-loader-arc" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <linearGradient
+                                id="bengadok-loader-arc"
+                                x1="0%"
+                                y1="0%"
+                                x2="100%"
+                                y2="100%"
+                            >
                                 <stop offset="0%" stop-color="#3995d2" />
                                 <stop offset="100%" stop-color="#5bb66e" />
                             </linearGradient>
@@ -150,7 +163,11 @@ onMounted(() => {
                 </div>
             </div>
 
-            <p class="mt-8 text-sm font-medium text-[#64748b]" role="status" aria-live="polite">
+            <p
+                class="mt-8 text-sm font-medium text-[#64748b]"
+                role="status"
+                aria-live="polite"
+            >
                 Chargement de votre espace…
             </p>
         </div>

@@ -16,15 +16,24 @@ const emit = defineEmits<{
 const sousTotal = computed(() => {
     const cmd = props.commande;
     if (!cmd?.produits) return 0;
-    return cmd.produits.reduce((s, p) => s + p.pivot.quantite * Number(p.pivot.prix_unitaire), 0);
+    return cmd.produits.reduce(
+        (s, p) => s + p.pivot.quantite * Number(p.pivot.prix_unitaire),
+        0,
+    );
 });
 
-const livraison = computed(() => Number(props.commande?.montant_livraison?.designation ?? 0));
+const livraison = computed(() =>
+    Number(props.commande?.montant_livraison?.designation ?? 0),
+);
 const totalPaye = computed(() => sousTotal.value + livraison.value);
 
 function formatDate(d: string) {
     if (!d) return '-';
-    return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return new Date(d).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    });
 }
 
 function getClientName() {
@@ -36,13 +45,21 @@ function getClientName() {
 function imprimer() {
     if (!props.commande) return;
     // Ouvre la page reçu et déclenche l'impression
-    window.open(`/commandes/${props.commande.id}/recu?print=1`, '_blank', 'noopener,noreferrer');
+    window.open(
+        `/commandes/${props.commande.id}/recu?print=1`,
+        '_blank',
+        'noopener,noreferrer',
+    );
 }
 
 function telecharger() {
     if (!props.commande) return;
     // Télécharge le PDF généré côté serveur
-    window.open(`/commandes/${props.commande.id}/recu?download=1`, '_blank', 'noopener,noreferrer');
+    window.open(
+        `/commandes/${props.commande.id}/recu?download=1`,
+        '_blank',
+        'noopener,noreferrer',
+    );
 }
 
 function fermer() {
@@ -59,10 +76,18 @@ function fermer() {
             <!-- Fond gradient + contenu (visible à l'écran) -->
             <div
                 class="relative max-h-[90vh] overflow-y-auto rounded-xl"
-                style="background: linear-gradient(60deg, rgb(57, 149, 210) 35.89%, rgb(91, 182, 110) 92.85%)"
+                style="
+                    background: linear-gradient(
+                        60deg,
+                        rgb(57, 149, 210) 35.89%,
+                        rgb(91, 182, 110) 92.85%
+                    );
+                "
             >
                 <!-- Barre d'actions (hors zone d'impression) -->
-                <div class="sticky top-0 z-20 flex items-center justify-between gap-3 px-4 py-3 print:hidden">
+                <div
+                    class="sticky top-0 z-20 flex items-center justify-between gap-3 px-4 py-3 print:hidden"
+                >
                     <div class="flex items-center gap-3">
                         <button
                             type="button"
@@ -97,7 +122,9 @@ function fermer() {
                 >
                     <!-- Logo + Titre -->
                     <div class="mb-4 flex flex-col items-center">
-                        <div class="mb-2 flex size-12 items-center justify-center rounded-full bg-[#3995D2]">
+                        <div
+                            class="mb-2 flex size-12 items-center justify-center rounded-full bg-[#3995D2]"
+                        >
                             <svg class="size-7" viewBox="0 0 32 32" fill="none">
                                 <circle cx="16" cy="16" r="14" fill="white" />
                                 <path
@@ -106,39 +133,72 @@ function fermer() {
                                 />
                             </svg>
                         </div>
-                        <h1 class="text-center text-[16px] font-bold uppercase tracking-wide text-[#666]">
+                        <h1
+                            class="text-center text-[16px] font-bold uppercase tracking-wide text-[#666]"
+                        >
                             Reçu Commande Client
                         </h1>
                     </div>
 
                     <!-- En-tête : N° commande, Date, Statut -->
-                    <div class="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-gray-200 pb-4">
+                    <div
+                        class="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-gray-200 pb-4"
+                    >
                         <div>
                             <p class="text-[13px] text-[rgba(0,0,0,0.74)]">
-                                Numéro Commande : <span class="font-bold text-[14px]">{{ commande.numero }}</span>
+                                Numéro Commande :
+                                <span class="font-bold text-[14px]">{{
+                                    commande.numero
+                                }}</span>
                             </p>
                             <p class="mt-1 text-[13px] text-[rgba(0,0,0,0.74)]">
-                                Date : <span class="font-bold">{{ formatDate(commande.date) }}</span>
+                                Date :
+                                <span class="font-bold">{{
+                                    formatDate(commande.date)
+                                }}</span>
                             </p>
                         </div>
-                        <div class="flex items-center gap-1.5 rounded-[10px] border border-[#016630] bg-[#016630] px-3 py-1">
+                        <div
+                            class="flex items-center gap-1.5 rounded-[10px] border border-[#016630] bg-[#016630] px-3 py-1"
+                        >
                             <Truck class="size-4 text-white" />
-                            <span class="text-[12px] font-bold text-white">Livrée</span>
+                            <span class="text-[12px] font-bold text-white"
+                                >Livrée</span
+                            >
                         </div>
                     </div>
 
                     <!-- Informations du client -->
                     <div class="mb-4">
                         <div class="mb-2 flex items-center gap-2">
-                            <div class="flex size-6 items-center justify-center rounded-full bg-[rgba(92,89,89,0.25)]">
+                            <div
+                                class="flex size-6 items-center justify-center rounded-full bg-[rgba(92,89,89,0.25)]"
+                            >
                                 <User class="size-3 text-[#5c5959]" />
                             </div>
-                            <h2 class="text-[14px] font-bold text-[rgba(92,89,89,0.6)]">Informations du client</h2>
+                            <h2
+                                class="text-[14px] font-bold text-[rgba(92,89,89,0.6)]"
+                            >
+                                Informations du client
+                            </h2>
                         </div>
-                        <div class="space-y-0.5 pl-8 text-[13px] text-[rgba(0,0,0,0.74)]">
-                            <p><span class="font-light text-black">Nom :</span> {{ getClientName() }}</p>
-                            <p><span class="font-light text-black">Tel :</span> {{ commande.client?.tel ?? '-' }}</p>
-                            <p><span class="font-light text-black">Adresse :</span> {{ commande.client?.adresse ?? '-' }}</p>
+                        <div
+                            class="space-y-0.5 pl-8 text-[13px] text-[rgba(0,0,0,0.74)]"
+                        >
+                            <p>
+                                <span class="font-light text-black">Nom :</span>
+                                {{ getClientName() }}
+                            </p>
+                            <p>
+                                <span class="font-light text-black">Tel :</span>
+                                {{ commande.client?.tel ?? '-' }}
+                            </p>
+                            <p>
+                                <span class="font-light text-black"
+                                    >Adresse :</span
+                                >
+                                {{ commande.client?.adresse ?? '-' }}
+                            </p>
                         </div>
                     </div>
 
@@ -147,14 +207,24 @@ function fermer() {
                     <!-- Pharmacie -->
                     <div class="mb-4">
                         <div class="mb-2 flex items-center gap-2">
-                            <div class="flex size-6 items-center justify-center rounded-full bg-[rgba(92,89,89,0.25)]">
+                            <div
+                                class="flex size-6 items-center justify-center rounded-full bg-[rgba(92,89,89,0.25)]"
+                            >
                                 <Building2 class="size-3 text-[#5c5959]" />
                             </div>
-                            <h2 class="text-[14px] font-bold text-[rgba(92,89,89,0.6)]">Pharmacie</h2>
+                            <h2
+                                class="text-[14px] font-bold text-[rgba(92,89,89,0.6)]"
+                            >
+                                Pharmacie
+                            </h2>
                         </div>
                         <div class="space-y-0.5 pl-8 text-[13px]">
-                            <p class="font-medium text-black">{{ commande.pharmacie?.designation ?? '-' }}</p>
-                            <p class="text-[rgba(0,0,0,0.74)]">{{ commande.pharmacie?.adresse ?? '-' }}</p>
+                            <p class="font-medium text-black">
+                                {{ commande.pharmacie?.designation ?? '-' }}
+                            </p>
+                            <p class="text-[rgba(0,0,0,0.74)]">
+                                {{ commande.pharmacie?.adresse ?? '-' }}
+                            </p>
                         </div>
                     </div>
 
@@ -163,32 +233,70 @@ function fermer() {
                     <!-- Détails des médicaments -->
                     <div class="mb-4">
                         <div class="mb-2 flex items-center gap-2">
-                            <div class="flex size-6 items-center justify-center rounded-full bg-[rgba(92,89,89,0.25)]">
+                            <div
+                                class="flex size-6 items-center justify-center rounded-full bg-[rgba(92,89,89,0.25)]"
+                            >
                                 <Pill class="size-3 text-[#5c5959]" />
                             </div>
-                            <h2 class="text-[14px] font-bold text-[rgba(92,89,89,0.6)]">Détails des Médicaments</h2>
+                            <h2
+                                class="text-[14px] font-bold text-[rgba(92,89,89,0.6)]"
+                            >
+                                Détails des Médicaments
+                            </h2>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-[12px]">
                                 <thead>
-                                    <tr class="border-b border-gray-200 text-left">
-                                        <th class="pb-1 font-light text-black">Médicaments</th>
-                                        <th class="pb-1 font-light text-black">Qté</th>
-                                        <th class="pb-1 font-light text-black">Prix unit.</th>
-                                        <th class="pb-1 font-light text-black text-right">Total</th>
+                                    <tr
+                                        class="border-b border-gray-200 text-left"
+                                    >
+                                        <th class="pb-1 font-light text-black">
+                                            Médicaments
+                                        </th>
+                                        <th class="pb-1 font-light text-black">
+                                            Qté
+                                        </th>
+                                        <th class="pb-1 font-light text-black">
+                                            Prix unit.
+                                        </th>
+                                        <th
+                                            class="pb-1 font-light text-black text-right"
+                                        >
+                                            Total
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr
-                                        v-for="p in (commande.produits ?? [])"
+                                        v-for="p in commande.produits ?? []"
                                         :key="p.id"
                                         class="border-b border-gray-100"
                                     >
-                                        <td class="py-1 font-bold">{{ p.designation }} {{ p.dosage ?? '' }}</td>
-                                        <td class="py-1 font-light">{{ p.pivot.quantite }}</td>
-                                        <td class="py-1 font-light">{{ Number(p.pivot.prix_unitaire).toLocaleString('fr-FR') }} FCFA</td>
+                                        <td class="py-1 font-bold">
+                                            {{ p.designation }}
+                                            {{ p.dosage ?? '' }}
+                                        </td>
+                                        <td class="py-1 font-light">
+                                            {{ p.pivot.quantite }}
+                                        </td>
+                                        <td class="py-1 font-light">
+                                            {{
+                                                Number(
+                                                    p.pivot.prix_unitaire,
+                                                ).toLocaleString('fr-FR')
+                                            }}
+                                            FCFA
+                                        </td>
                                         <td class="py-1 text-right font-light">
-                                            {{ (p.pivot.quantite * Number(p.pivot.prix_unitaire)).toLocaleString('fr-FR') }} FCFA
+                                            {{
+                                                (
+                                                    p.pivot.quantite *
+                                                    Number(
+                                                        p.pivot.prix_unitaire,
+                                                    )
+                                                ).toLocaleString('fr-FR')
+                                            }}
+                                            FCFA
                                         </td>
                                     </tr>
                                 </tbody>
@@ -201,26 +309,62 @@ function fermer() {
                     <!-- Informations paiement -->
                     <div class="mb-4">
                         <div class="mb-2 flex items-center gap-2">
-                            <div class="flex size-6 items-center justify-center rounded-full bg-[rgba(92,89,89,0.25)]">
+                            <div
+                                class="flex size-6 items-center justify-center rounded-full bg-[rgba(92,89,89,0.25)]"
+                            >
                                 <Banknote class="size-3 text-[#5c5959]" />
                             </div>
-                            <h2 class="text-[14px] font-bold text-[rgba(92,89,89,0.6)]">Informations paiement</h2>
+                            <h2
+                                class="text-[14px] font-bold text-[rgba(92,89,89,0.6)]"
+                            >
+                                Informations paiement
+                            </h2>
                         </div>
                         <div class="space-y-1 pl-8">
-                            <div class="flex items-center justify-between text-[13px]">
-                                <span class="font-light text-black">Sous-Total</span>
-                                <span class="font-bold">{{ sousTotal.toLocaleString('fr-FR') }} FCFA</span>
+                            <div
+                                class="flex items-center justify-between text-[13px]"
+                            >
+                                <span class="font-light text-black"
+                                    >Sous-Total</span
+                                >
+                                <span class="font-bold"
+                                    >{{
+                                        sousTotal.toLocaleString('fr-FR')
+                                    }}
+                                    FCFA</span
+                                >
                             </div>
-                            <div v-if="livraison > 0" class="flex items-center justify-between text-[13px]">
-                                <span class="font-light text-black">Livraison</span>
-                                <span class="font-bold">{{ livraison.toLocaleString('fr-FR') }} FCFA</span>
+                            <div
+                                v-if="livraison > 0"
+                                class="flex items-center justify-between text-[13px]"
+                            >
+                                <span class="font-light text-black"
+                                    >Livraison</span
+                                >
+                                <span class="font-bold"
+                                    >{{
+                                        livraison.toLocaleString('fr-FR')
+                                    }}
+                                    FCFA</span
+                                >
                             </div>
-                            <div class="flex items-center justify-between pt-2 text-[16px]">
-                                <span class="font-bold text-black">Total payé</span>
-                                <span class="font-bold text-black">{{ totalPaye.toLocaleString('fr-FR') }} FCFA</span>
+                            <div
+                                class="flex items-center justify-between pt-2 text-[16px]"
+                            >
+                                <span class="font-bold text-black"
+                                    >Total payé</span
+                                >
+                                <span class="font-bold text-black"
+                                    >{{
+                                        totalPaye.toLocaleString('fr-FR')
+                                    }}
+                                    FCFA</span
+                                >
                             </div>
                             <div v-if="commande.mode_paiement" class="mt-2">
-                                <span class="rounded-lg border border-[#016630] bg-white px-3 py-1.5 text-[13px] font-bold text-[#016630]">
+                                <span
+                                    class="rounded-lg border border-[#016630] bg-white px-3 py-1.5 text-[13px] font-bold text-[#016630]"
+                                >
                                     {{ commande.mode_paiement.designation }}
                                 </span>
                             </div>
@@ -230,7 +374,9 @@ function fermer() {
                     <!-- Footer contact -->
                     <div class="rounded-lg bg-[#0d6efd] px-4 py-2.5 text-white">
                         <p class="text-[12px]">
-                            Pour tous vos besoins en médicaments contactez-nous : <strong>+242 06 121 21 54</strong> — <strong>BengaDok</strong>
+                            Pour tous vos besoins en médicaments contactez-nous
+                            : <strong>+242 06 121 21 54</strong> —
+                            <strong>BengaDok</strong>
                         </p>
                     </div>
                 </div>
@@ -238,4 +384,3 @@ function fermer() {
         </DialogContent>
     </Dialog>
 </template>
-

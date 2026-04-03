@@ -23,7 +23,8 @@ defineProps<{
             v-if="status === 'verification-link-sent'"
             class="mb-4 text-center text-sm font-medium text-green-600"
         >
-            Un nouveau lien de vérification a été envoyé à l'adresse email que vous avez fournie lors de l'inscription.
+            Un nouveau lien de vérification a été envoyé à l'adresse email que
+            vous avez fournie lors de l'inscription.
         </div>
 
         <Form

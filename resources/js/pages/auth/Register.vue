@@ -16,6 +16,8 @@ onMounted(() => {
 <template>
     <Head title="Inscription - BengaDok" />
     <div class="flex min-h-svh items-center justify-center">
-        <p class="text-muted-foreground">Redirection vers la page de connexion...</p>
+        <p class="text-muted-foreground">
+            Redirection vers la page de connexion...
+        </p>
     </div>
 </template>

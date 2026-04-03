@@ -7,7 +7,13 @@ import type { UppyFile } from '@uppy/utils';
 import '@uppy/core/css/style.css';
 import '@uppy/dashboard/css/style.css';
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+const ALLOWED_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'application/pdf',
+];
 const MAX_SIZE = 10 * 1024 * 1024;
 
 const props = withDefaults(
@@ -102,7 +108,9 @@ watch(
 
 <template>
     <div class="ordonnance-uppy">
-        <p v-if="label" class="mb-2 text-sm font-medium text-muted-foreground">{{ label }}</p>
+        <p v-if="label" class="mb-2 text-sm font-medium text-muted-foreground">
+            {{ label }}
+        </p>
         <Dashboard v-if="ready && uppy" :uppy="uppy" :props="dashboardProps" />
     </div>
 </template>

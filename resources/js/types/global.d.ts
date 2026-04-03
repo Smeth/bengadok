@@ -20,7 +20,11 @@ declare module '@inertiajs/core' {
             auth: Auth;
             sidebarOpen: boolean;
             /** Motifs d’annulation configurés (slug, label, relance) */
-            motifs_annulation: Array<{ slug: string; label: string; autorise_relance: boolean }>;
+            motifs_annulation: Array<{
+                slug: string;
+                label: string;
+                autorise_relance: boolean;
+            }>;
             /** Heures : même pharmacie interdite en relance pendant ce délai après annulation (0 = désactivé) */
             delai_relance_meme_pharmacie_heures: number;
             [key: string]: unknown;

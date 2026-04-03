@@ -10,10 +10,14 @@ function applyCsrfToken(token: string | undefined | null): void {
         return;
     }
     axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
-    document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.setAttribute('content', token);
+    document
+        .querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
+        ?.setAttribute('content', token);
 }
 
-const metaToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.getAttribute('content');
+const metaToken = document
+    .querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
+    ?.getAttribute('content');
 applyCsrfToken(metaToken);
 
 router.on('navigate', (event) => {

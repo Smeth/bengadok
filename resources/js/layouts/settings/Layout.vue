@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { usePage } from '@inertiajs/vue3';
-import { Key, Palette, RotateCcw, Shield, ShieldCheck, User } from 'lucide-vue-next';
+import {
+    Key,
+    Palette,
+    RotateCcw,
+    Shield,
+    ShieldCheck,
+    User,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
@@ -15,8 +22,11 @@ import { edit as editPassword } from '@/routes/user-password';
 import type { NavItem } from '@/types';
 
 const page = usePage();
-const isSuperAdmin = computed(() =>
-    (page.props.auth as { user?: { roles?: string[] } })?.user?.roles?.includes('super_admin') ?? false
+const isSuperAdmin = computed(
+    () =>
+        (
+            page.props.auth as { user?: { roles?: string[] } }
+        )?.user?.roles?.includes('super_admin') ?? false,
 );
 
 const sidebarNavItems = computed<NavItem[]>(() => {
@@ -27,8 +37,16 @@ const sidebarNavItems = computed<NavItem[]>(() => {
         { title: 'Apparence', href: editAppearance(), icon: Palette },
     ];
     if (isSuperAdmin.value) {
-        items.push({ title: 'Gestion des rôles', href: '/settings/roles', icon: ShieldCheck });
-        items.push({ title: 'Réinitialiser l\'application', href: '/settings/reset', icon: RotateCcw });
+        items.push({
+            title: 'Gestion des rôles',
+            href: '/settings/roles',
+            icon: ShieldCheck,
+        });
+        items.push({
+            title: "Réinitialiser l'application",
+            href: '/settings/reset',
+            icon: RotateCcw,
+        });
     }
     return items;
 });

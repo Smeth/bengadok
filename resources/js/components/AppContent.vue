@@ -7,6 +7,7 @@ type Props = {
     class?: string;
 };
 
+
 const props = defineProps<Props>();
 const className = computed(() => props.class);
 </script>

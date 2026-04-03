@@ -36,7 +36,10 @@ const isPdf = computed(() => {
 </script>
 
 <template>
-    <div v-if="file && objectUrl" class="w-full overflow-hidden rounded-lg border bg-muted/20">
+    <div
+        v-if="file && objectUrl"
+        class="w-full overflow-hidden rounded-lg border bg-muted/20"
+    >
         <iframe
             v-if="isPdf"
             :src="`${objectUrl}#toolbar=0`"

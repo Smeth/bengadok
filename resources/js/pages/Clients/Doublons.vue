@@ -65,7 +65,9 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
-const flashSuccess = computed(() => (page.props.flash as { success?: string } | undefined)?.success);
+const flashSuccess = computed(
+    () => (page.props.flash as { success?: string } | undefined)?.success,
+);
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
     { title: 'Clients', href: '/clients' },
@@ -79,10 +81,19 @@ const optionNumeroSecondaire = ref(true);
 const showIgnorerModal = ref(false);
 const groupeToIgnorer = ref<Groupe | null>(null);
 
-watch(() => props.filters.search, (v) => { searchQuery.value = v ?? ''; });
+watch(
+    () => props.filters.search,
+    (v) => {
+        searchQuery.value = v ?? '';
+    },
+);
 
 function filtrer(key: string, value: string) {
-    router.get('/clients/doublons', { ...props.filters, [key]: value || undefined }, { preserveState: true });
+    router.get(
+        '/clients/doublons',
+        { ...props.filters, [key]: value || undefined },
+        { preserveState: true },
+    );
 }
 
 function nomComplet(c: ClientInGroup) {
@@ -131,7 +142,11 @@ function fermerModalFusion() {
 function confirmerFusion() {
     const g = groupeEnFusion.value;
     if (!g) return;
-    router.patch(`/clients/doublons/${g.id}/fusionner`, { ajouter_tel_secondaire: optionNumeroSecondaire.value }, { preserveScroll: true });
+    router.patch(
+        `/clients/doublons/${g.id}/fusionner`,
+        { ajouter_tel_secondaire: optionNumeroSecondaire.value },
+        { preserveScroll: true },
+    );
     fermerModalFusion();
 }
 
@@ -142,14 +157,25 @@ function openIgnorerModal(g: Groupe) {
 
 function confirmIgnorer() {
     if (!groupeToIgnorer.value) return;
-    router.patch(`/clients/doublons/${groupeToIgnorer.value.id}/ignorer`, {}, {
-        preserveScroll: true,
-        onSuccess: () => { showIgnorerModal.value = false; groupeToIgnorer.value = null; },
-    });
+    router.patch(
+        `/clients/doublons/${groupeToIgnorer.value.id}/ignorer`,
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showIgnorerModal.value = false;
+                groupeToIgnorer.value = null;
+            },
+        },
+    );
 }
 
 function verifier(g: Groupe) {
-    router.patch(`/clients/doublons/${g.id}/verifier`, {}, { preserveScroll: true });
+    router.patch(
+        `/clients/doublons/${g.id}/verifier`,
+        {},
+        { preserveScroll: true },
+    );
 }
 
 const statutBadgeClasses: Record<string, string> = {
@@ -173,9 +199,18 @@ const statutLabels: Record<string, string> = {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             class="flex flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6"
-            style="background: linear-gradient(to right, rgba(91, 176, 52, 0.14) 0%, rgba(52, 176, 199, 0.14) 100%);"
+            style="
+                background: linear-gradient(
+                    to right,
+                    rgba(91, 176, 52, 0.14) 0%,
+                    rgba(52, 176, 199, 0.14) 100%
+                );
+            "
         >
-            <div v-if="flashSuccess" class="rounded-lg bg-emerald-100 py-3 px-4 text-sm font-medium text-emerald-800 dark:bg-emerald-900/50">
+            <div
+                v-if="flashSuccess"
+                class="rounded-lg bg-emerald-100 py-3 px-4 text-sm font-medium text-emerald-800 dark:bg-emerald-900/50"
+            >
                 {{ flashSuccess }}
             </div>
 
@@ -188,7 +223,9 @@ const statutLabels: Record<string, string> = {
                     >
                         Liste des clients
                     </Link>
-                    <button class="rounded-lg px-4 py-2 text-sm font-medium bg-[#459cd1] text-white">
+                    <button
+                        class="rounded-lg px-4 py-2 text-sm font-medium bg-[#459cd1] text-white"
+                    >
                         Gestion des doublons Clients
                     </button>
                     <Link
@@ -201,9 +238,14 @@ const statutLabels: Record<string, string> = {
             </div>
 
             <!-- Search & Filters -->
-            <form class="flex flex-wrap items-center gap-4" @submit.prevent="filtrer('search', searchQuery)">
+            <form
+                class="flex flex-wrap items-center gap-4"
+                @submit.prevent="filtrer('search', searchQuery)"
+            >
                 <div class="relative flex-1 min-w-[200px]">
-                    <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Search
+                        class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                    />
                     <Input
                         v-model="searchQuery"
                         placeholder="Rechercher par nom ou tél..."
@@ -215,7 +257,13 @@ const statutLabels: Record<string, string> = {
                     <select
                         :value="filters.tri"
                         class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-                        @change="(e: Event) => filtrer('tri', (e.target as HTMLSelectElement).value)"
+                        @change="
+                            (e: Event) =>
+                                filtrer(
+                                    'tri',
+                                    (e.target as HTMLSelectElement).value,
+                                )
+                        "
                     >
                         <option value="">Trier par</option>
                         <option value="recent">Récent</option>
@@ -228,7 +276,13 @@ const statutLabels: Record<string, string> = {
                     <select
                         :value="filters.statut"
                         class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-                        @change="(e: Event) => filtrer('statut', (e.target as HTMLSelectElement).value)"
+                        @change="
+                            (e: Event) =>
+                                filtrer(
+                                    'statut',
+                                    (e.target as HTMLSelectElement).value,
+                                )
+                        "
                     >
                         <option value="">Toutes les statuts</option>
                         <option value="en_attente">En Attente</option>
@@ -241,21 +295,53 @@ const statutLabels: Record<string, string> = {
 
             <!-- Stats cards -->
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/50 dark:bg-amber-900/20">
-                    <p class="text-3xl font-bold text-amber-700 dark:text-amber-400">{{ stats.en_attente }}</p>
-                    <p class="text-sm text-amber-800 dark:text-amber-300">Groupes à traiter</p>
+                <div
+                    class="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/50 dark:bg-amber-900/20"
+                >
+                    <p
+                        class="text-3xl font-bold text-amber-700 dark:text-amber-400"
+                    >
+                        {{ stats.en_attente }}
+                    </p>
+                    <p class="text-sm text-amber-800 dark:text-amber-300">
+                        Groupes à traiter
+                    </p>
                 </div>
-                <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800/50 dark:bg-blue-900/20">
-                    <p class="text-3xl font-bold text-blue-700 dark:text-blue-400">{{ stats.verifies }}</p>
-                    <p class="text-sm text-blue-800 dark:text-blue-300">Groupes vérifiés</p>
+                <div
+                    class="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800/50 dark:bg-blue-900/20"
+                >
+                    <p
+                        class="text-3xl font-bold text-blue-700 dark:text-blue-400"
+                    >
+                        {{ stats.verifies }}
+                    </p>
+                    <p class="text-sm text-blue-800 dark:text-blue-300">
+                        Groupes vérifiés
+                    </p>
                 </div>
-                <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800/50 dark:bg-emerald-900/20">
-                    <p class="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{{ stats.fusionnes }}</p>
-                    <p class="text-sm text-emerald-800 dark:text-emerald-300">Profils fusionnés</p>
+                <div
+                    class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800/50 dark:bg-emerald-900/20"
+                >
+                    <p
+                        class="text-3xl font-bold text-emerald-700 dark:text-emerald-400"
+                    >
+                        {{ stats.fusionnes }}
+                    </p>
+                    <p class="text-sm text-emerald-800 dark:text-emerald-300">
+                        Profils fusionnés
+                    </p>
                 </div>
-                <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-white/5">
-                    <p class="text-3xl font-bold text-slate-800 dark:text-slate-200">{{ stats.total_clients }}</p>
-                    <p class="text-sm text-muted-foreground">Clients concernés</p>
+                <div
+                    class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-white/5"
+                >
+                    <p
+                        class="text-3xl font-bold text-slate-800 dark:text-slate-200"
+                    >
+                        {{ stats.total_clients }}
+                    </p>
+                    <p class="text-sm text-muted-foreground">
+                        Clients concernés
+                    </p>
                 </div>
             </div>
 
@@ -266,14 +352,20 @@ const statutLabels: Record<string, string> = {
                     :key="g.id"
                     class="rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/95"
                 >
-                    <div class="mb-4 flex flex-wrap items-start justify-between gap-4">
+                    <div
+                        class="mb-4 flex flex-wrap items-start justify-between gap-4"
+                    >
                         <div>
                             <h3 class="text-lg font-semibold text-foreground">
                                 Groupe de doublons #{{ g.numero }}
                             </h3>
                             <div class="mt-2 flex flex-wrap items-center gap-2">
                                 <span
-                                    :class="['rounded-full px-2 py-0.5 text-xs font-medium', statutBadgeClasses[g.statut] || 'bg-slate-100']"
+                                    :class="[
+                                        'rounded-full px-2 py-0.5 text-xs font-medium',
+                                        statutBadgeClasses[g.statut] ||
+                                            'bg-slate-100',
+                                    ]"
                                 >
                                     {{ statutLabels[g.statut] || g.statut }}
                                 </span>
@@ -286,16 +378,40 @@ const statutLabels: Record<string, string> = {
                                 </span>
                             </div>
                         </div>
-                        <div v-if="g.statut !== 'fusionne'" class="rounded-lg border border-[#459cd1]/30 bg-sky-50/50 px-4 py-2 dark:bg-sky-900/20">
-                            <p class="text-xs text-muted-foreground">Total si fusion</p>
+                        <div
+                            v-if="g.statut !== 'fusionne'"
+                            class="rounded-lg border border-[#459cd1]/30 bg-sky-50/50 px-4 py-2 dark:bg-sky-900/20"
+                        >
+                            <p class="text-xs text-muted-foreground">
+                                Total si fusion
+                            </p>
                             <p class="font-semibold text-[#459cd1]">
-                                {{ g.total_si_fusion.commandes }} Commandes · {{ Number(g.total_si_fusion.montant).toLocaleString('fr-FR') }} xaf
+                                {{ g.total_si_fusion.commandes }} Commandes ·
+                                {{
+                                    Number(
+                                        g.total_si_fusion.montant,
+                                    ).toLocaleString('fr-FR')
+                                }}
+                                xaf
                             </p>
                         </div>
-                        <div v-else class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 dark:bg-emerald-900/20">
-                            <p class="text-xs text-muted-foreground">Total si fusion</p>
-                            <p class="font-semibold text-emerald-700 dark:text-emerald-400">
-                                {{ g.total_si_fusion.commandes }} Commandes · {{ Number(g.total_si_fusion.montant).toLocaleString('fr-FR') }} xaf
+                        <div
+                            v-else
+                            class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 dark:bg-emerald-900/20"
+                        >
+                            <p class="text-xs text-muted-foreground">
+                                Total si fusion
+                            </p>
+                            <p
+                                class="font-semibold text-emerald-700 dark:text-emerald-400"
+                            >
+                                {{ g.total_si_fusion.commandes }} Commandes ·
+                                {{
+                                    Number(
+                                        g.total_si_fusion.montant,
+                                    ).toLocaleString('fr-FR')
+                                }}
+                                xaf
                             </p>
                         </div>
                     </div>
@@ -307,7 +423,9 @@ const statutLabels: Record<string, string> = {
                             class="rounded-lg border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-700 dark:bg-slate-800/50"
                         >
                             <div class="mb-2 flex items-center gap-2">
-                                <h4 class="font-semibold text-foreground">{{ nomComplet(c) }}</h4>
+                                <h4 class="font-semibold text-foreground">
+                                    {{ nomComplet(c) }}
+                                </h4>
                                 <span
                                     v-if="c.is_principal"
                                     class="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-600"
@@ -315,20 +433,32 @@ const statutLabels: Record<string, string> = {
                                     Principal suggéré
                                 </span>
                             </div>
-                            <p class="mb-1 flex items-center gap-2 text-sm text-muted-foreground">
+                            <p
+                                class="mb-1 flex items-center gap-2 text-sm text-muted-foreground"
+                            >
                                 <Phone class="size-4 shrink-0" />
                                 {{ c.tel }}
                             </p>
-                            <p class="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+                            <p
+                                class="mb-2 flex items-center gap-2 text-sm text-muted-foreground"
+                            >
                                 <MapPin class="size-4 shrink-0" />
-                                {{ c.adresse || '-' }}{{ c.zone ? `, ${c.zone}` : '' }}
+                                {{ c.adresse || '-'
+                                }}{{ c.zone ? `, ${c.zone}` : '' }}
                             </p>
                             <p class="mb-1 flex items-center gap-2 text-sm">
                                 <ListOrdered class="size-4 shrink-0" />
-                                {{ c.nb_commandes }} commandes · {{ Number(c.total_depense).toLocaleString('fr-FR') }} F
+                                {{ c.nb_commandes }} commandes ·
+                                {{
+                                    Number(c.total_depense).toLocaleString(
+                                        'fr-FR',
+                                    )
+                                }}
+                                F
                             </p>
                             <p class="text-xs text-muted-foreground">
-                                Créé le {{ c.created_at }} · Dernière commande {{ c.derniere_commande || '-' }}
+                                Créé le {{ c.created_at }} · Dernière commande
+                                {{ c.derniere_commande || '-' }}
                             </p>
                         </div>
                     </div>
@@ -343,7 +473,8 @@ const statutLabels: Record<string, string> = {
                         v-else-if="g.statut === 'ignore'"
                         class="rounded-lg bg-slate-200 py-3 px-4 text-center text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
                     >
-                        Groupe ignoré – ces clients sont considérés comme distincts
+                        Groupe ignoré – ces clients sont considérés comme
+                        distincts
                     </div>
                     <div
                         v-else-if="g.statut === 'verifie'"
@@ -360,8 +491,15 @@ const statutLabels: Record<string, string> = {
                             Fusionner quand même
                         </Button>
                     </div>
-                    <div v-else class="flex flex-wrap items-center justify-end gap-2">
-                        <Button variant="outline" class="border-slate-300" @click="openIgnorerModal(g)">
+                    <div
+                        v-else
+                        class="flex flex-wrap items-center justify-end gap-2"
+                    >
+                        <Button
+                            variant="outline"
+                            class="border-slate-300"
+                            @click="openIgnorerModal(g)"
+                        >
                             <XCircle class="mr-2 size-4" />
                             Ignorer
                         </Button>
@@ -373,7 +511,10 @@ const statutLabels: Record<string, string> = {
                             <CheckCircle2 class="mr-2 size-4" />
                             Marquer comme vérifié
                         </Button>
-                        <Button class="bg-emerald-600 text-white hover:bg-emerald-700" @click="ouvrirModalFusion(g)">
+                        <Button
+                            class="bg-emerald-600 text-white hover:bg-emerald-700"
+                            @click="ouvrirModalFusion(g)"
+                        >
                             <Merge class="mr-2 size-4" />
                             Fusionner les profils
                         </Button>
@@ -395,122 +536,253 @@ const statutLabels: Record<string, string> = {
                 class="!flex max-h-[min(85vh,600px)] !gap-0 flex-col overflow-hidden p-0 sm:max-w-xl"
                 :show-close-button="true"
             >
-                <DialogHeader class="shrink-0 border-b px-4 py-3 pr-12 text-left sm:px-5">
-                    <DialogTitle class="flex items-center gap-2 text-base font-semibold sm:text-lg">
-                        <UsersRound class="size-5 shrink-0 text-[#459cd1] sm:size-6" />
+                <DialogHeader
+                    class="shrink-0 border-b px-4 py-3 pr-12 text-left sm:px-5"
+                >
+                    <DialogTitle
+                        class="flex items-center gap-2 text-base font-semibold sm:text-lg"
+                    >
+                        <UsersRound
+                            class="size-5 shrink-0 text-[#459cd1] sm:size-6"
+                        />
                         Fusion des profils clients
                     </DialogTitle>
                 </DialogHeader>
 
-                <div class="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3 sm:px-5">
+                <div
+                    class="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3 sm:px-5"
+                >
                     <!-- Avertissement -->
-                    <div class="flex gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5 dark:border-amber-700 dark:bg-amber-900/20">
-                        <AlertCircle class="size-4 shrink-0 text-amber-600 dark:text-amber-400 sm:size-5" />
+                    <div
+                        class="flex gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5 dark:border-amber-700 dark:bg-amber-900/20"
+                    >
+                        <AlertCircle
+                            class="size-4 shrink-0 text-amber-600 dark:text-amber-400 sm:size-5"
+                        />
                         <div class="text-xs leading-snug sm:text-sm">
-                            <p class="font-semibold text-amber-800 dark:text-amber-200">Attention : Action irréversible</p>
-                            <p class="mt-0.5 text-amber-700 dark:text-amber-300">
-                                Cette opération fusionnera les deux profils en un seul. Toutes les commandes du profil dupliqué seront rattachées au profil principal.
+                            <p
+                                class="font-semibold text-amber-800 dark:text-amber-200"
+                            >
+                                Attention : Action irréversible
+                            </p>
+                            <p
+                                class="mt-0.5 text-amber-700 dark:text-amber-300"
+                            >
+                                Cette opération fusionnera les deux profils en
+                                un seul. Toutes les commandes du profil dupliqué
+                                seront rattachées au profil principal.
                             </p>
                         </div>
                     </div>
 
                     <!-- Comparaison des profils -->
                     <div class="grid gap-2.5 sm:grid-cols-2">
-                        <div class="rounded-lg border-2 border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/20">
-                            <span class="mb-2 inline-block rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-white sm:text-xs">
+                        <div
+                            class="rounded-lg border-2 border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/20"
+                        >
+                            <span
+                                class="mb-2 inline-block rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-white sm:text-xs"
+                            >
                                 Profil principal (conservé)
                             </span>
                             <template v-if="principalPourModal">
-                                <p class="text-sm font-semibold text-foreground">{{ nomComplet(principalPourModal) }}</p>
-                                <p class="mt-1.5 flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm">
-                                    <Phone class="size-4 shrink-0" />
-                                    <span class="font-medium">Téléphone principal :</span> {{ principalPourModal.tel }}
+                                <p
+                                    class="text-sm font-semibold text-foreground"
+                                >
+                                    {{ nomComplet(principalPourModal) }}
                                 </p>
-                                <p class="flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm">
+                                <p
+                                    class="mt-1.5 flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm"
+                                >
                                     <Phone class="size-4 shrink-0" />
-                                    <span class="font-medium">Téléphone secondaire :</span>
-                                    {{ premierDuplique && optionNumeroSecondaire ? premierDuplique.tel : (principalPourModal.tel || '—') }}
+                                    <span class="font-medium"
+                                        >Téléphone principal :</span
+                                    >
+                                    {{ principalPourModal.tel }}
                                 </p>
-                                <p class="flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm">
+                                <p
+                                    class="flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm"
+                                >
+                                    <Phone class="size-4 shrink-0" />
+                                    <span class="font-medium"
+                                        >Téléphone secondaire :</span
+                                    >
+                                    {{
+                                        premierDuplique &&
+                                        optionNumeroSecondaire
+                                            ? premierDuplique.tel
+                                            : principalPourModal.tel || '—'
+                                    }}
+                                </p>
+                                <p
+                                    class="flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm"
+                                >
                                     <MapPin class="size-4 shrink-0" />
-                                    {{ principalPourModal.adresse || '-' }}{{ principalPourModal.zone ? `, ${principalPourModal.zone}` : '' }}
+                                    {{ principalPourModal.adresse || '-'
+                                    }}{{
+                                        principalPourModal.zone
+                                            ? `, ${principalPourModal.zone}`
+                                            : ''
+                                    }}
                                 </p>
-                                <p class="flex items-center gap-1.5 text-xs sm:text-sm">
+                                <p
+                                    class="flex items-center gap-1.5 text-xs sm:text-sm"
+                                >
                                     <ListOrdered class="size-4 shrink-0" />
-                                    {{ principalPourModal.nb_commandes }} commandes . {{ Number(principalPourModal.total_depense).toLocaleString('fr-FR') }} xaf
+                                    {{ principalPourModal.nb_commandes }}
+                                    commandes .
+                                    {{
+                                        Number(
+                                            principalPourModal.total_depense,
+                                        ).toLocaleString('fr-FR')
+                                    }}
+                                    xaf
                                 </p>
                             </template>
                         </div>
-                        <div class="rounded-lg border-2 border-red-200 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-900/20">
-                            <span class="mb-2 inline-block rounded bg-red-600 px-2 py-0.5 text-[10px] font-medium text-white sm:text-xs">
+                        <div
+                            class="rounded-lg border-2 border-red-200 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-900/20"
+                        >
+                            <span
+                                class="mb-2 inline-block rounded bg-red-600 px-2 py-0.5 text-[10px] font-medium text-white sm:text-xs"
+                            >
                                 Profil dupliqué (sera fusionné)
                             </span>
                             <template v-if="premierDuplique">
-                                <p class="text-sm font-semibold text-foreground">{{ nomComplet(premierDuplique) }}</p>
-                                <p class="mt-1.5 flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm">
+                                <p
+                                    class="text-sm font-semibold text-foreground"
+                                >
+                                    {{ nomComplet(premierDuplique) }}
+                                </p>
+                                <p
+                                    class="mt-1.5 flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm"
+                                >
                                     <Phone class="size-4 shrink-0" />
-                                    <span class="font-medium">Téléphone principal :</span> {{ premierDuplique.tel }}
+                                    <span class="font-medium"
+                                        >Téléphone principal :</span
+                                    >
+                                    {{ premierDuplique.tel }}
                                 </p>
-                                <p class="flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm">
+                                <p
+                                    class="flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm"
+                                >
                                     <MapPin class="size-4 shrink-0" />
-                                    {{ premierDuplique.adresse || '-' }}{{ premierDuplique.zone ? `, ${premierDuplique.zone}` : '' }}
+                                    {{ premierDuplique.adresse || '-'
+                                    }}{{
+                                        premierDuplique.zone
+                                            ? `, ${premierDuplique.zone}`
+                                            : ''
+                                    }}
                                 </p>
-                                <p class="flex items-center gap-1.5 text-xs sm:text-sm">
+                                <p
+                                    class="flex items-center gap-1.5 text-xs sm:text-sm"
+                                >
                                     <ListOrdered class="size-4 shrink-0" />
-                                    {{ premierDuplique.nb_commandes }} commandes . {{ Number(premierDuplique.total_depense).toLocaleString('fr-FR') }} xaf
+                                    {{ premierDuplique.nb_commandes }} commandes
+                                    .
+                                    {{
+                                        Number(
+                                            premierDuplique.total_depense,
+                                        ).toLocaleString('fr-FR')
+                                    }}
+                                    xaf
                                 </p>
                             </template>
                             <template v-else-if="dupliquesPourModal.length > 1">
-                                <p class="text-xs text-muted-foreground sm:text-sm">{{ dupliquesPourModal.length }} profils dupliqués seront fusionnés</p>
+                                <p
+                                    class="text-xs text-muted-foreground sm:text-sm"
+                                >
+                                    {{ dupliquesPourModal.length }} profils
+                                    dupliqués seront fusionnés
+                                </p>
                             </template>
                         </div>
                     </div>
 
                     <!-- Option de fusion -->
                     <div>
-                        <h4 class="mb-1.5 text-sm font-semibold text-foreground">Option de fusion</h4>
-                        <label class="flex cursor-pointer items-center gap-2 rounded border py-2 pl-2 pr-2.5">
+                        <h4
+                            class="mb-1.5 text-sm font-semibold text-foreground"
+                        >
+                            Option de fusion
+                        </h4>
+                        <label
+                            class="flex cursor-pointer items-center gap-2 rounded border py-2 pl-2 pr-2.5"
+                        >
                             <input
                                 v-model="optionNumeroSecondaire"
                                 type="radio"
                                 :value="true"
                                 class="size-4"
                             />
-                            <span class="text-xs leading-tight sm:text-sm">Ajouter le numéro du profil dupliqué comme numéro secondaire</span>
+                            <span class="text-xs leading-tight sm:text-sm"
+                                >Ajouter le numéro du profil dupliqué comme
+                                numéro secondaire</span
+                            >
                         </label>
-                        <label class="mt-1.5 flex cursor-pointer items-center gap-2 rounded border py-2 pl-2 pr-2.5">
+                        <label
+                            class="mt-1.5 flex cursor-pointer items-center gap-2 rounded border py-2 pl-2 pr-2.5"
+                        >
                             <input
                                 v-model="optionNumeroSecondaire"
                                 type="radio"
                                 :value="false"
                                 class="size-4"
                             />
-                            <span class="text-xs leading-tight sm:text-sm">Ne pas ajouter le numéro secondaire</span>
+                            <span class="text-xs leading-tight sm:text-sm"
+                                >Ne pas ajouter le numéro secondaire</span
+                            >
                         </label>
                     </div>
 
                     <!-- Résumé de la fusion -->
                     <div>
-                        <h4 class="mb-1.5 text-sm font-semibold text-foreground">Résumé de la fusion</h4>
-                        <ul class="space-y-1 text-xs text-muted-foreground sm:text-sm">
-                            <li v-if="principalPourModal" class="flex items-center gap-2">
-                                <CheckCheck class="size-3.5 shrink-0 text-[#459cd1] sm:size-4" />
-                                Profil conservé : {{ nomComplet(principalPourModal) }}
+                        <h4
+                            class="mb-1.5 text-sm font-semibold text-foreground"
+                        >
+                            Résumé de la fusion
+                        </h4>
+                        <ul
+                            class="space-y-1 text-xs text-muted-foreground sm:text-sm"
+                        >
+                            <li
+                                v-if="principalPourModal"
+                                class="flex items-center gap-2"
+                            >
+                                <CheckCheck
+                                    class="size-3.5 shrink-0 text-[#459cd1] sm:size-4"
+                                />
+                                Profil conservé :
+                                {{ nomComplet(principalPourModal) }}
                             </li>
                             <li class="flex items-start gap-2">
-                                <CheckCheck class="size-3.5 shrink-0 text-[#459cd1] sm:size-4" />
-                                {{ commandesRattachees }} commande(s) seront rattachées au profil principal
+                                <CheckCheck
+                                    class="size-3.5 shrink-0 text-[#459cd1] sm:size-4"
+                                />
+                                {{ commandesRattachees }} commande(s) seront
+                                rattachées au profil principal
                             </li>
                             <li class="flex items-start gap-2">
-                                <CheckCheck class="size-3.5 shrink-0 text-[#459cd1] sm:size-4" />
-                                Total après fusion : {{ totalApresFusion.commandes }} commandes, {{ Number(totalApresFusion.montant).toLocaleString('fr-FR') }} xaf
+                                <CheckCheck
+                                    class="size-3.5 shrink-0 text-[#459cd1] sm:size-4"
+                                />
+                                Total après fusion :
+                                {{ totalApresFusion.commandes }} commandes,
+                                {{
+                                    Number(
+                                        totalApresFusion.montant,
+                                    ).toLocaleString('fr-FR')
+                                }}
+                                xaf
                             </li>
                         </ul>
                     </div>
                 </div>
 
                 <!-- Boutons -->
-                <DialogFooter class="shrink-0 flex-row justify-between gap-2 border-t px-4 py-3 sm:justify-between sm:px-5">
+                <DialogFooter
+                    class="shrink-0 flex-row justify-between gap-2 border-t px-4 py-3 sm:justify-between sm:px-5"
+                >
                     <Button
                         variant="destructive"
                         class="h-9 bg-red-600 px-4 text-sm text-white hover:bg-red-700"
@@ -531,7 +803,11 @@ const statutLabels: Record<string, string> = {
         <ConfirmModal
             :open="showIgnorerModal"
             title="Marquer comme ignoré"
-            :description="groupeToIgnorer ? `Marquer le groupe #${groupeToIgnorer.numero} comme ignoré ? Ces clients seront considérés comme distincts.` : ''"
+            :description="
+                groupeToIgnorer
+                    ? `Marquer le groupe #${groupeToIgnorer.numero} comme ignoré ? Ces clients seront considérés comme distincts.`
+                    : ''
+            "
             confirm-text="Ignorer"
             variant="default"
             @update:open="showIgnorerModal = $event"

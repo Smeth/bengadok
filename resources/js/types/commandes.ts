@@ -47,9 +47,19 @@ export type CommandeListItem = {
     date: string;
     status: string;
     prix_total: number;
-    client: { nom: string; prenom: string; tel: string; adresse?: string; sexe?: string };
+    client: {
+        nom: string;
+        prenom: string;
+        tel: string;
+        adresse?: string;
+        sexe?: string;
+    };
     pharmacie?: { designation: string };
-    produits: Array<{ designation: string; dosage?: string; pivot: { quantite: number } }>;
+    produits: Array<{
+        designation: string;
+        dosage?: string;
+        pivot: { quantite: number };
+    }>;
     montant_livraison?: { designation: number };
     mode_paiement?: { designation: string };
 };
@@ -72,11 +82,42 @@ export type PharmacieOption = {
 };
 
 export const STATUTS_COMMANDE = [
-    { key: 'nouvelle', label: 'Nouvelles Commandes', statsKey: 'nouvelles', color: '#0d6efd', textColor: 'white' },
-    { key: 'en_attente', label: 'En Attente', statsKey: 'en_attente', color: '#fd7e14', textColor: 'white' },
-    { key: 'annulee', label: 'Annulée', statsKey: 'annulees', color: '#e7000b', textColor: 'white' },
-    { key: 'validee', label: 'Validée', statsKey: 'validees', color: '#198754', textColor: 'white' },
-    { key: 'retiree', label: 'Livrée', statsKey: 'livrees', color: 'white', textColor: '#016630', borderColor: '#016630' },
+    {
+        key: 'nouvelle',
+        label: 'Nouvelles Commandes',
+        statsKey: 'nouvelles',
+        color: '#0d6efd',
+        textColor: 'white',
+    },
+    {
+        key: 'en_attente',
+        label: 'En Attente',
+        statsKey: 'en_attente',
+        color: '#fd7e14',
+        textColor: 'white',
+    },
+    {
+        key: 'annulee',
+        label: 'Annulée',
+        statsKey: 'annulees',
+        color: '#e7000b',
+        textColor: 'white',
+    },
+    {
+        key: 'validee',
+        label: 'Validée',
+        statsKey: 'validees',
+        color: '#198754',
+        textColor: 'white',
+    },
+    {
+        key: 'retiree',
+        label: 'Livrée',
+        statsKey: 'livrees',
+        color: 'white',
+        textColor: '#016630',
+        borderColor: '#016630',
+    },
 ] as const;
 
 /** Motif d’annulation (données partagées Inertia `motifs_annulation`) */

@@ -53,12 +53,14 @@ watch(
     () => props.open,
     (isOpen) => {
         if (isOpen) {
-            selectedNiches.value = (props.initialNiches ?? []).filter((n): n is NicheId =>
-                NICHE_OPTIONS.some((o) => o.id === n),
+            selectedNiches.value = (props.initialNiches ?? []).filter(
+                (n): n is NicheId => NICHE_OPTIONS.some((o) => o.id === n),
             );
             const c = props.initialCanal;
             selectedCanal.value =
-                c && CANAL_OPTIONS.some((o) => o.id === c) ? (c as CanalId) : null;
+                c && CANAL_OPTIONS.some((o) => o.id === c)
+                    ? (c as CanalId)
+                    : null;
         }
     },
 );
@@ -116,7 +118,11 @@ function submit() {
                 >
                     <UserPlus class="size-5" />
                 </div>
-                <h2 class="text-lg font-black tracking-wide text-[#3995d2] sm:text-xl">Rajouter les informations</h2>
+                <h2
+                    class="text-lg font-black tracking-wide text-[#3995d2] sm:text-xl"
+                >
+                    Rajouter les informations
+                </h2>
                 <button
                     type="button"
                     class="absolute right-3 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-lg text-[#dc3545] transition-colors hover:bg-red-50"
@@ -127,14 +133,24 @@ function submit() {
                 </button>
             </div>
 
-            <div class="max-h-[min(58vh,580px)] overflow-y-auto px-5 py-4 sm:px-6">
+            <div
+                class="max-h-[min(58vh,580px)] overflow-y-auto px-5 py-4 sm:px-6"
+            >
                 <!-- Niches -->
-                <div class="rounded-[10px] border border-[#ccc5c5] bg-white p-4 sm:p-5">
-                    <h3 class="text-base font-black text-[rgba(92,89,89,0.55)] sm:text-lg">
-                        Sélectionner la niche client<span class="font-mono font-normal">(s)</span>
+                <div
+                    class="rounded-[10px] border border-[#ccc5c5] bg-white p-4 sm:p-5"
+                >
+                    <h3
+                        class="text-base font-black text-[rgba(92,89,89,0.55)] sm:text-lg"
+                    >
+                        Sélectionner la niche client<span
+                            class="font-mono font-normal"
+                            >(s)</span
+                        >
                     </h3>
                     <p class="mt-1 text-sm text-foreground sm:text-base">
-                        Sélectionnez une ou plusieurs niches correspondant au profil du client.
+                        Sélectionnez une ou plusieurs niches correspondant au
+                        profil du client.
                     </p>
                     <div class="mt-4 flex flex-wrap gap-3 sm:gap-4">
                         <button
@@ -151,11 +167,21 @@ function submit() {
                         >
                             <div
                                 class="flex size-8 items-center justify-center rounded-lg border border-[rgba(92,89,89,0.35)] bg-[rgba(13,110,253,0.13)] text-[#5c5959]"
-                                :class="selectedNiches.includes(opt.id) ? 'border-[#3995d2]/50' : ''"
+                                :class="
+                                    selectedNiches.includes(opt.id)
+                                        ? 'border-[#3995d2]/50'
+                                        : ''
+                                "
                             >
-                                <component :is="opt.icon" class="size-[22px] shrink-0" stroke-width="2" />
+                                <component
+                                    :is="opt.icon"
+                                    class="size-[22px] shrink-0"
+                                    stroke-width="2"
+                                />
                             </div>
-                            <span class="px-0.5 text-[8px] font-bold leading-tight text-black sm:text-[9px]">
+                            <span
+                                class="px-0.5 text-[8px] font-bold leading-tight text-black sm:text-[9px]"
+                            >
                                 {{ opt.label }}
                             </span>
                         </button>
@@ -163,10 +189,17 @@ function submit() {
                 </div>
 
                 <!-- Canal -->
-                <div class="mt-4 rounded-[10px] border border-[#ccc5c5] bg-white p-4 sm:mt-5 sm:p-5">
-                    <h3 class="text-base font-black text-[rgba(92,89,89,0.55)] sm:text-lg">Canal d'acquisition</h3>
+                <div
+                    class="mt-4 rounded-[10px] border border-[#ccc5c5] bg-white p-4 sm:mt-5 sm:p-5"
+                >
+                    <h3
+                        class="text-base font-black text-[rgba(92,89,89,0.55)] sm:text-lg"
+                    >
+                        Canal d'acquisition
+                    </h3>
                     <p class="mt-1 text-sm text-foreground sm:text-base">
-                        Comment ce client a-t-il découvert BengaDok ? Cette information aide à optimiser nos investissements
+                        Comment ce client a-t-il découvert BengaDok ? Cette
+                        information aide à optimiser nos investissements
                         marketing.
                     </p>
                     <div class="mt-4 flex flex-wrap gap-3 sm:gap-4">
@@ -184,7 +217,11 @@ function submit() {
                         >
                             <div
                                 class="flex size-8 items-center justify-center rounded-lg border border-[rgba(92,89,89,0.35)] bg-[rgba(13,110,253,0.13)] text-[#5c5959]"
-                                :class="selectedCanal === opt.id ? 'border-[#3995d2]/50' : ''"
+                                :class="
+                                    selectedCanal === opt.id
+                                        ? 'border-[#3995d2]/50'
+                                        : ''
+                                "
                             >
                                 <component
                                     v-if="opt.icon"
@@ -204,7 +241,9 @@ function submit() {
                                     />
                                 </svg>
                             </div>
-                            <span class="px-0.5 text-[8px] font-bold leading-tight text-black sm:text-[9px]">
+                            <span
+                                class="px-0.5 text-[8px] font-bold leading-tight text-black sm:text-[9px]"
+                            >
                                 {{ opt.label }}
                             </span>
                         </button>

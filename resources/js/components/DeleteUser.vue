@@ -34,7 +34,8 @@ const passwordInput = useTemplateRef('passwordInput');
             <div class="relative space-y-0.5 text-red-600 dark:text-red-100">
                 <p class="font-medium">Attention</p>
                 <p class="text-sm">
-                    Cette action est irréversible. Veuillez procéder avec prudence.
+                    Cette action est irréversible. Veuillez procéder avec
+                    prudence.
                 </p>
             </div>
             <Dialog>
@@ -56,10 +57,14 @@ const passwordInput = useTemplateRef('passwordInput');
                     >
                         <DialogHeader class="space-y-3">
                             <DialogTitle
-                                >Êtes-vous sûr de vouloir supprimer votre compte ?</DialogTitle
+                                >Êtes-vous sûr de vouloir supprimer votre compte
+                                ?</DialogTitle
                             >
                             <DialogDescription>
-                                Une fois votre compte supprimé, toutes ses données seront définitivement effacées. Veuillez entrer votre mot de passe pour confirmer la suppression.
+                                Une fois votre compte supprimé, toutes ses
+                                données seront définitivement effacées. Veuillez
+                                entrer votre mot de passe pour confirmer la
+                                suppression.
                             </DialogDescription>
                         </DialogHeader>
 

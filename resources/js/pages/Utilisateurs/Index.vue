@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { Plus, Search, Pencil, Lock, Trash2, ShieldCheck, Users, Eye } from 'lucide-vue-next';
+import {
+    Plus,
+    Search,
+    Pencil,
+    Lock,
+    Trash2,
+    ShieldCheck,
+    Users,
+    Eye,
+} from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import { Button } from '@/components/ui/button';
@@ -22,7 +31,11 @@ type UserItem = {
     name: string;
     email: string;
     username?: string;
-    role: { name: string; label: string; permissions?: Array<{ name: string; label: string }> } | null;
+    role: {
+        name: string;
+        label: string;
+        permissions?: Array<{ name: string; label: string }>;
+    } | null;
     permissions: string[];
     permission_names?: string[];
     direct_permissions?: string[];
@@ -37,7 +50,10 @@ type RoleOption = {
     permissions: Array<{ name: string; label: string }>;
 };
 
-type PermissionsGroupées = Record<string, Array<{ name: string; label: string }>>;
+type PermissionsGroupées = Record<
+    string,
+    Array<{ name: string; label: string }>
+>;
 
 const props = defineProps<{
     users: UserItem[];
@@ -77,14 +93,20 @@ const formEdit = ref({
     role: 'admin',
 });
 
-
-const selectedRole = computed(() =>
-    props.roles.find((r) => r.name === formCreate.value.role) ||
-    props.roles.find((r) => r.name === formEdit.value.role)
+const selectedRole = computed(
+    () =>
+        props.roles.find((r) => r.name === formCreate.value.role) ||
+        props.roles.find((r) => r.name === formEdit.value.role),
 );
 
 function ouvrirCreate() {
-    formCreate.value = { name: '', email: '', username: '', password: '', role: 'admin' };
+    formCreate.value = {
+        name: '',
+        email: '',
+        username: '',
+        password: '',
+        role: 'admin',
+    };
     modalCreate.value = true;
 }
 
@@ -111,7 +133,9 @@ function ouvrirGestionAcces(user: UserItem) {
     for (const perms of Object.values(props.permissionsGroupées ?? {})) {
         for (const p of perms) allPerms.push(p.name);
     }
-    formGestionAcces.value = Object.fromEntries(allPerms.map((p) => [p, current.has(p)]));
+    formGestionAcces.value = Object.fromEntries(
+        allPerms.map((p) => [p, current.has(p)]),
+    );
     modalGestionAcces.value = true;
 }
 
@@ -121,7 +145,9 @@ function toggleGestionPerm(name: string) {
 
 function getDirectPermissionsToSync(): string[] {
     if (!userGestionAcces.value) return [];
-    const rolePerms = new Set(userGestionAcces.value.role_permission_names ?? []);
+    const rolePerms = new Set(
+        userGestionAcces.value.role_permission_names ?? [],
+    );
     return Object.entries(formGestionAcces.value)
         .filter(([, checked]) => checked)
         .map(([name]) => name)
@@ -131,14 +157,18 @@ function getDirectPermissionsToSync(): string[] {
 function soumettreGestionAcces() {
     if (!userGestionAcces.value) return;
     const perms = getDirectPermissionsToSync();
-    router.patch(`/utilisateurs/${userGestionAcces.value.id}/permissions`, { permissions: perms }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            modalGestionAcces.value = false;
-            userGestionAcces.value = null;
-            formGestionAcces.value = {};
+    router.patch(
+        `/utilisateurs/${userGestionAcces.value.id}/permissions`,
+        { permissions: perms },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                modalGestionAcces.value = false;
+                userGestionAcces.value = null;
+                formGestionAcces.value = {};
+            },
         },
-    });
+    );
 }
 
 function creerUtilisateur() {
@@ -162,7 +192,10 @@ function confirmDeleteUser() {
     if (!userToDelete.value) return;
     router.delete(`/utilisateurs/${userToDelete.value.id}`, {
         preserveScroll: true,
-        onSuccess: () => { showDeleteUserModal.value = false; userToDelete.value = null; },
+        onSuccess: () => {
+            showDeleteUserModal.value = false;
+            userToDelete.value = null;
+        },
     });
 }
 
@@ -173,7 +206,11 @@ function permissionsAffichage(permissions: string[], maxVisible = 3) {
 }
 
 function rechercher() {
-    router.get('/utilisateurs', { search: searchQuery.value.trim() || undefined }, { preserveState: true });
+    router.get(
+        '/utilisateurs',
+        { search: searchQuery.value.trim() || undefined },
+        { preserveState: true },
+    );
 }
 </script>
 
@@ -185,9 +222,13 @@ function rechercher() {
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <h1 class="text-2xl font-semibold">Utilisateurs Backoffice</h1>
                 <div class="flex items-center gap-3">
-                    <div class="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5">
+                    <div
+                        class="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5"
+                    >
                         <Users class="size-4 text-primary" />
-                        <span class="text-sm font-medium text-primary">{{ users.length }}</span>
+                        <span class="text-sm font-medium text-primary">{{
+                            users.length
+                        }}</span>
                     </div>
                     <Button @click="ouvrirCreate">
                         <Plus class="size-4" />
@@ -197,7 +238,9 @@ function rechercher() {
             </div>
 
             <div class="relative">
-                <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Search
+                    class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                />
                 <Input
                     v-model="searchQuery"
                     placeholder="Rechercher un utilisateur..."
@@ -215,7 +258,9 @@ function rechercher() {
                     <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0 flex-1">
                             <div class="mb-2 flex items-center gap-2">
-                                <span class="font-semibold truncate">{{ user.name }}</span>
+                                <span class="font-semibold truncate">{{
+                                    user.name
+                                }}</span>
                                 <span
                                     v-if="user.role"
                                     class="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary"
@@ -223,10 +268,18 @@ function rechercher() {
                                     {{ user.role.label }}
                                 </span>
                             </div>
-                            <p class="text-sm text-muted-foreground truncate">{{ user.email }}</p>
+                            <p class="text-sm text-muted-foreground truncate">
+                                {{ user.email }}
+                            </p>
                         </div>
                         <div class="flex shrink-0 gap-1">
-                            <Button variant="ghost" size="icon" class="size-8" title="Détails" @click="ouvrirDetail(user)">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="size-8"
+                                title="Détails"
+                                @click="ouvrirDetail(user)"
+                            >
                                 <Eye class="size-4" />
                             </Button>
                             <Button
@@ -237,7 +290,13 @@ function rechercher() {
                             >
                                 <Pencil class="size-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" class="size-8" title="Gestion accès" @click="ouvrirGestionAcces(user)">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="size-8"
+                                title="Gestion accès"
+                                @click="ouvrirGestionAcces(user)"
+                            >
                                 <Lock class="size-4" />
                             </Button>
                             <Button
@@ -251,7 +310,12 @@ function rechercher() {
                         </div>
                     </div>
                     <div class="mt-3 flex flex-wrap gap-1.5">
-                        <template v-for="(perm, i) in permissionsAffichage(user.permissions).visibles" :key="i">
+                        <template
+                            v-for="(perm, i) in permissionsAffichage(
+                                user.permissions,
+                            ).visibles"
+                            :key="i"
+                        >
                             <span
                                 class="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground"
                             >
@@ -259,16 +323,24 @@ function rechercher() {
                             </span>
                         </template>
                         <span
-                            v-if="permissionsAffichage(user.permissions).autres > 0"
+                            v-if="
+                                permissionsAffichage(user.permissions).autres >
+                                0
+                            "
                             class="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground"
                         >
-                            + {{ permissionsAffichage(user.permissions).autres }} autres
+                            +
+                            {{ permissionsAffichage(user.permissions).autres }}
+                            autres
                         </span>
                     </div>
                 </div>
             </div>
 
-            <p v-if="!users.length" class="py-12 text-center text-muted-foreground">
+            <p
+                v-if="!users.length"
+                class="py-12 text-center text-muted-foreground"
+            >
                 Aucun utilisateur backoffice trouvé.
             </p>
         </div>
@@ -328,15 +400,24 @@ function rechercher() {
                                 :key="role.name"
                                 type="button"
                                 class="relative flex flex-col items-start rounded-lg border p-3 text-left transition-colors"
-                                :class="formCreate.role === role.name ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'"
+                                :class="
+                                    formCreate.role === role.name
+                                        ? 'border-primary bg-primary/5'
+                                        : 'hover:bg-muted/50'
+                                "
                                 @click="formCreate.role = role.name"
                             >
                                 <ShieldCheck
                                     v-if="formCreate.role === role.name"
                                     class="absolute right-2 top-2 size-4 text-primary"
                                 />
-                                <span class="font-medium">{{ role.label }}</span>
-                                <span class="mt-1 text-xs text-muted-foreground">{{ role.description }}</span>
+                                <span class="font-medium">{{
+                                    role.label
+                                }}</span>
+                                <span
+                                    class="mt-1 text-xs text-muted-foreground"
+                                    >{{ role.description }}</span
+                                >
                             </button>
                         </div>
                     </div>
@@ -355,7 +436,12 @@ function rechercher() {
                     </div>
 
                     <DialogFooter class="flex gap-2 sm:gap-0">
-                        <Button type="button" variant="outline" class="border-destructive text-destructive" @click="modalCreate = false">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            class="border-destructive text-destructive"
+                            @click="modalCreate = false"
+                        >
                             Annuler
                         </Button>
                         <Button type="submit">Créer l'utilisateur</Button>
@@ -365,7 +451,17 @@ function rechercher() {
         </Dialog>
 
         <!-- Modal Éditer -->
-        <Dialog :open="modalEdit" @update:open="(v) => { if (!v) { modalEdit = false; userToEdit = null; } }">
+        <Dialog
+            :open="modalEdit"
+            @update:open="
+                (v) => {
+                    if (!v) {
+                        modalEdit = false;
+                        userToEdit = null;
+                    }
+                }
+            "
+        >
             <DialogContent class="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
@@ -373,7 +469,11 @@ function rechercher() {
                         Modifier l'utilisateur
                     </DialogTitle>
                 </DialogHeader>
-                <form class="space-y-4" @submit.prevent="modifierUtilisateur" v-if="userToEdit">
+                <form
+                    class="space-y-4"
+                    @submit.prevent="modifierUtilisateur"
+                    v-if="userToEdit"
+                >
                     <div class="space-y-2">
                         <Label>Nom complet</Label>
                         <Input v-model="formEdit.name" required />
@@ -394,20 +494,33 @@ function rechercher() {
                                 :key="role.name"
                                 type="button"
                                 class="relative flex flex-col items-start rounded-lg border p-3 text-left transition-colors"
-                                :class="formEdit.role === role.name ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'"
+                                :class="
+                                    formEdit.role === role.name
+                                        ? 'border-primary bg-primary/5'
+                                        : 'hover:bg-muted/50'
+                                "
                                 @click="formEdit.role = role.name"
                             >
                                 <ShieldCheck
                                     v-if="formEdit.role === role.name"
                                     class="absolute right-2 top-2 size-4 text-primary"
                                 />
-                                <span class="font-medium">{{ role.label }}</span>
-                                <span class="mt-1 text-xs text-muted-foreground">{{ role.description }}</span>
+                                <span class="font-medium">{{
+                                    role.label
+                                }}</span>
+                                <span
+                                    class="mt-1 text-xs text-muted-foreground"
+                                    >{{ role.description }}</span
+                                >
                             </button>
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="button" variant="outline" @click="modalEdit = false">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            @click="modalEdit = false"
+                        >
                             Annuler
                         </Button>
                         <Button type="submit">Enregistrer</Button>
@@ -426,11 +539,20 @@ function rechercher() {
                     </DialogTitle>
                 </DialogHeader>
                 <div v-if="userDetail" class="space-y-4">
-                    <p class="text-sm text-muted-foreground">{{ userDetail.email }}</p>
-                    <p v-if="userDetail.username" class="text-sm text-muted-foreground">@{{ userDetail.username }}</p>
+                    <p class="text-sm text-muted-foreground">
+                        {{ userDetail.email }}
+                    </p>
+                    <p
+                        v-if="userDetail.username"
+                        class="text-sm text-muted-foreground"
+                    >
+                        @{{ userDetail.username }}
+                    </p>
                     <div v-if="userDetail.role" class="flex items-center gap-2">
                         <ShieldCheck class="size-4 text-primary" />
-                        <span class="rounded-full bg-primary/15 px-2 py-0.5 text-sm font-medium text-primary">
+                        <span
+                            class="rounded-full bg-primary/15 px-2 py-0.5 text-sm font-medium text-primary"
+                        >
                             {{ userDetail.role.label }}
                         </span>
                     </div>
@@ -447,9 +569,23 @@ function rechercher() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" @click="modalDetail = false">Fermer</Button>
-                        <Button @click="ouvrirEdit(userDetail); modalDetail = false">Modifier</Button>
-                        <Button variant="secondary" @click="ouvrirGestionAcces(userDetail); modalDetail = false">
+                        <Button variant="outline" @click="modalDetail = false"
+                            >Fermer</Button
+                        >
+                        <Button
+                            @click="
+                                ouvrirEdit(userDetail);
+                                modalDetail = false;
+                            "
+                            >Modifier</Button
+                        >
+                        <Button
+                            variant="secondary"
+                            @click="
+                                ouvrirGestionAcces(userDetail);
+                                modalDetail = false;
+                            "
+                        >
                             Gestion accès
                         </Button>
                     </DialogFooter>
@@ -458,7 +594,17 @@ function rechercher() {
         </Dialog>
 
         <!-- Modal Gestion accès -->
-        <Dialog :open="modalGestionAcces" @update:open="(v) => { if (!v) { modalGestionAcces = false; userGestionAcces = null; } }">
+        <Dialog
+            :open="modalGestionAcces"
+            @update:open="
+                (v) => {
+                    if (!v) {
+                        modalGestionAcces = false;
+                        userGestionAcces = null;
+                    }
+                }
+            "
+        >
             <DialogContent class="max-h-[90vh] max-w-lg overflow-y-auto">
                 <DialogHeader v-if="userGestionAcces">
                     <DialogTitle class="flex items-center gap-2">
@@ -466,11 +612,20 @@ function rechercher() {
                         Gestion des accès – {{ userGestionAcces.name }}
                     </DialogTitle>
                     <p class="text-sm text-muted-foreground">
-                        Permissions supplémentaires (en plus du rôle). Les permissions du rôle ne peuvent pas être retirées ici.
+                        Permissions supplémentaires (en plus du rôle). Les
+                        permissions du rôle ne peuvent pas être retirées ici.
                     </p>
                 </DialogHeader>
-                <form v-if="userGestionAcces" class="space-y-4" @submit.prevent="soumettreGestionAcces">
-                    <div v-for="(perms, cat) in (permissionsGroupées ?? {})" :key="cat" class="space-y-2">
+                <form
+                    v-if="userGestionAcces"
+                    class="space-y-4"
+                    @submit.prevent="soumettreGestionAcces"
+                >
+                    <div
+                        v-for="(perms, cat) in permissionsGroupées ?? {}"
+                        :key="cat"
+                        class="space-y-2"
+                    >
                         <Label class="text-muted-foreground">{{ cat }}</Label>
                         <div class="flex flex-wrap gap-2">
                             <label
@@ -478,20 +633,37 @@ function rechercher() {
                                 :key="p.name"
                                 class="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
                                 :class="[
-                                    formGestionAcces[p.name] ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
-                                    (userGestionAcces.role_permission_names ?? []).includes(p.name) ? 'opacity-75' : '',
+                                    formGestionAcces[p.name]
+                                        ? 'border-primary bg-primary/5'
+                                        : 'hover:bg-muted/50',
+                                    (
+                                        userGestionAcces.role_permission_names ??
+                                        []
+                                    ).includes(p.name)
+                                        ? 'opacity-75'
+                                        : '',
                                 ]"
                             >
                                 <input
                                     type="checkbox"
                                     :checked="formGestionAcces[p.name]"
-                                    :disabled="(userGestionAcces.role_permission_names ?? []).includes(p.name)"
+                                    :disabled="
+                                        (
+                                            userGestionAcces.role_permission_names ??
+                                            []
+                                        ).includes(p.name)
+                                    "
                                     class="rounded"
                                     @change="toggleGestionPerm(p.name)"
                                 />
                                 {{ p.label }}
                                 <span
-                                    v-if="(userGestionAcces.role_permission_names ?? []).includes(p.name)"
+                                    v-if="
+                                        (
+                                            userGestionAcces.role_permission_names ??
+                                            []
+                                        ).includes(p.name)
+                                    "
                                     class="text-xs text-muted-foreground"
                                 >
                                     (rôle)
@@ -500,7 +672,12 @@ function rechercher() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="button" variant="outline" @click="modalGestionAcces = false">Annuler</Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            @click="modalGestionAcces = false"
+                            >Annuler</Button
+                        >
                         <Button type="submit">Enregistrer</Button>
                     </DialogFooter>
                 </form>
@@ -510,7 +687,11 @@ function rechercher() {
         <ConfirmModal
             :open="showDeleteUserModal"
             title="Supprimer l'utilisateur"
-            :description="userToDelete ? `Supprimer l'utilisateur ${userToDelete.name} ? Cette action est irréversible.` : ''"
+            :description="
+                userToDelete
+                    ? `Supprimer l'utilisateur ${userToDelete.name} ? Cette action est irréversible.`
+                    : ''
+            "
             confirm-text="Supprimer"
             variant="destructive"
             @update:open="showDeleteUserModal = $event"
