@@ -6,7 +6,7 @@
 Push sur main ou PR vers main
      │
      ▼
-[ci.yml] Lint + Tests (PHP 8.3)
+[ci.yml] Lint (Pint, ESLint) + Tests (PHP 8.3)
      │
      ▼ (push sur main uniquement, si CI passe)
 Déploiement VPS via SSH

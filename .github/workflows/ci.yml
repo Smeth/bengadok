@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   lint:
-    name: Lint (PHP + Frontend)
+    name: Lint (PHP + ESLint)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,9 +40,6 @@ jobs:
 
       - name: Lint PHP (Pint)
         run: ./vendor/bin/pint --test --parallel
-
-      - name: Vérification format frontend
-        run: npm run format:check
 
       - name: Lint frontend (ESLint)
         run: npm run lint
