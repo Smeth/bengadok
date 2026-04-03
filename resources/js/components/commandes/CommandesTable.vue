@@ -34,6 +34,7 @@ const emit = defineEmits<{
     filtrer: [key: string, value: string];
 }>();
 
+
 function civiliteFromSexe(sexe?: string | null): string {
     if (sexe === 'F') return 'Mme';
     if (sexe === 'M') return 'Mr';
