@@ -12,6 +12,7 @@ defineProps<Props>();
 const isOpen = usePage().props.sidebarOpen;
 </script>
 
+
 <template>
     <div v-if="variant === 'header'" class="flex min-h-screen w-full flex-col">
         <slot />
