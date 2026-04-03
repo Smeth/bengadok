@@ -13,9 +13,9 @@ defineProps<Props>();
 </script>
 
 <template>
-    <!-- Logo BengaDok officiel : sidebar-logo-benga.svg (seul et unique logo) -->
+    <!-- Logo BengaDok officiel : sidebar-logo-benga.png -->
     <img
-        src="/images/figma-assets/sidebar-logo-benga.svg"
+        src="/images/figma-assets/sidebar-logo-benga.png"
         alt="BengaDok"
         :class="className"
         v-bind="$attrs"

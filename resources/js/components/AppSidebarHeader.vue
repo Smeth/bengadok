@@ -13,10 +13,8 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useInitials } from '@/composables/useInitials';
 import { cn } from '@/lib/utils';
-import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import UserMenuContent from './UserMenuContent.vue';
 
@@ -91,24 +89,6 @@ const formatDate = (iso?: string) => {
         "
     >
         <div class="flex items-center gap-2" :class="props.variant === 'gradient' ? 'text-white' : ''">
-            <SidebarTrigger class="-ml-1" :class="props.variant === 'gradient' ? 'text-white hover:bg-white/20' : ''" />
-            <Link
-                :href="dashboard()"
-                class="hidden items-center gap-2 md:flex"
-            >
-                <div class="flex size-8 items-center justify-center rounded-full bg-white">
-                    <svg class="size-5" viewBox="0 0 32 32" fill="none">
-                        <circle cx="16" cy="16" r="14" fill="#3995D2" />
-                        <path
-                            d="M16 8C12.7 8 10 10.7 10 14C10 17.3 12.7 20 16 20C19.3 20 22 17.3 22 14C22 10.7 19.3 8 16 8ZM16 18C13.8 18 12 16.2 12 14C12 11.8 13.8 10 16 10C18.2 10 20 11.8 20 14C20 16.2 18.2 18 16 18Z"
-                            fill="white"
-                        />
-                    </svg>
-                </div>
-                <span class="font-semibold">
-                    <span class="text-[#3995D2]">Benga</span><span class="text-[#5BB66E]">Dok</span>
-                </span>
-            </Link>
             <template v-if="breadcrumbs && breadcrumbs.length > 0">
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </template>

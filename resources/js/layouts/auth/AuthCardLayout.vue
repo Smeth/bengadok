@@ -25,9 +25,9 @@ defineProps<{
                 class="flex items-center gap-2 self-center font-medium"
             >
                 <img
-                    src="/images/figma-assets/sidebar-logo-benga.svg"
+                    src="/images/figma-assets/sidebar-logo-benga.png"
                     alt="BengaDok"
-                    class="h-10 w-auto max-w-[140px] object-contain"
+                    class="h-14 w-auto max-w-[180px] object-contain"
                 />
             </Link>
 

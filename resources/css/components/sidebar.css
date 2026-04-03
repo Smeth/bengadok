@@ -21,7 +21,7 @@
     color: var(--sidebar-bengadok-text) !important;
 }
 [data-sidebar="sidebar"] .sidebar-menu-btn-react:not([data-active="true"]) .sidebar-menu-icon {
-    background-color: transparent !important;
+    background-color: #f1f5f9 !important;
 }
 [data-sidebar="sidebar"] .sidebar-menu-btn-react:not([data-active="true"]) .sidebar-menu-icon-svg {
     color: var(--sidebar-bengadok-icon) !important;
@@ -32,6 +32,9 @@
 [data-sidebar="sidebar"] .sidebar-menu-btn-react:not([data-active="true"]):hover {
     background-color: var(--sidebar-bengadok-hover) !important;
     color: var(--sidebar-bengadok-text) !important;
+}
+[data-sidebar="sidebar"] .sidebar-menu-btn-react:not([data-active="true"]):hover .sidebar-menu-icon {
+    background-color: #e2e8f0 !important;
 }
 
 /* ── Item actif ─────────────────────────────────────────────────────────── */
@@ -62,13 +65,12 @@
     color: var(--sidebar-bengadok-active-text) !important;
 }
 
-/* ── Déconnexion (footer) ────────────────────────────────────────────────── */
+/* ── Déconnexion (footer) : même logique cercle que le menu ─────────────── */
 [data-sidebar="footer"] .sidebar-logout-icon {
-    background-color: transparent !important;
-    width: auto !important;
-    min-width: unset !important;
-    height: auto !important;
-    border-radius: 0 !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    border-radius: 9999px !important;
 }
 [data-sidebar="footer"] .sidebar-logout-btn .sidebar-menu-icon-svg {
     color: var(--sidebar-bengadok-icon) !important;
@@ -79,6 +81,9 @@
 }
 [data-sidebar="footer"] .sidebar-logout-btn:hover {
     background-color: var(--sidebar-bengadok-hover) !important;
+}
+[data-sidebar="footer"] .sidebar-logout-btn:hover .sidebar-logout-icon {
+    background-color: #e2e8f0 !important;
 }
 [data-sidebar="footer"] .sidebar-logout-btn:hover .sidebar-menu-icon-svg {
     color: var(--sidebar-bengadok-icon) !important;
@@ -156,22 +161,22 @@
     overflow: visible !important;
 }
 
-/* ── Typo : 15px, font-weight 500, pas de troncature ───────────────────────── */
+/* ── Typo : 15px, semi-bold, pas de troncature ───────────────────────────── */
 [data-sidebar="sidebar"] .sidebar-menu-label,
 [data-sidebar="footer"] .sidebar-footer-label {
     font-size: 15px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     white-space: normal !important;
     overflow: visible !important;
     text-overflow: unset !important;
 }
 
-/* ── Icônes : 20px, stroke 1.5 ───────────────────────────────────────────── */
+/* ── Icônes : cercle 32px, picto 20px, stroke 1.5 ────────────────────────── */
 [data-state="expanded"] [data-sidebar="sidebar"] .sidebar-menu-icon {
     flex-shrink: 0 !important;
-    width: 28px !important;
-    min-width: 28px !important;
-    height: 28px !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
 }
 [data-sidebar="sidebar"] .sidebar-menu-icon-svg {
     width: 20px !important;

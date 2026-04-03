@@ -48,7 +48,7 @@
 
     <div class="recu">
         <div class="logo">
-            <img src="{{ asset('images/figma-assets/sidebar-logo-benga.svg') }}" alt="BengaDok" />
+            <img src="{{ asset('images/figma-assets/sidebar-logo-benga.png') }}" alt="BengaDok" />
         </div>
         <h1>Reçu Commande Client</h1>
 

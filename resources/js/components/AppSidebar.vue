@@ -22,8 +22,8 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
@@ -90,37 +90,46 @@ function logout() {
         variant="inset"
         class="border-r-0 bg-white shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)]"
     >
-        <SidebarHeader class="flex shrink-0 items-center justify-between gap-2 border-b-0 border-sidebar-border px-4 pt-4 pb-3 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-3 group-data-[collapsible=icon]:px-2">
-            <SidebarMenu class="flex-1 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:items-center">
-                <SidebarMenuItem class="flex items-center gap-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:gap-2">
-                    <SidebarMenuButton size="lg" as-child class="min-w-0 flex-1 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:min-w-0">
-                        <Link :href="dashboard()" class="flex w-full items-center justify-center gap-2 group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:justify-center">
+        <SidebarHeader class="relative shrink-0 border-b-0 border-sidebar-border px-3 pb-4 pt-2 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-3">
+            <SidebarMenu class="w-full group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
+                <SidebarMenuItem
+                    class="relative flex w-full items-center justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2"
+                >
+                    <SidebarMenuButton
+                        size="lg"
+                        as-child
+                        class="mx-auto min-w-0 w-auto !h-auto !min-h-0 !overflow-visible !p-0 group-data-[collapsible=icon]:mx-0 group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!overflow-hidden group-data-[collapsible=icon]:!p-2"
+                    >
+                        <Link
+                            :href="dashboard()"
+                            class="flex w-full items-center justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:justify-center"
+                        >
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
                     <SidebarTrigger
-                        class="size-8 shrink-0 rounded-[6px] bg-[#f1f5f9] text-[#6b7280] hover:bg-[#e2e8f0] hover:text-[#374151]"
+                        class="absolute right-0 top-1/2 z-10 size-8 shrink-0 -translate-y-1/2 rounded-md bg-[#f1f5f9] text-[#6b7280] hover:bg-[#e2e8f0] hover:text-[#374151] group-data-[collapsible=icon]:static group-data-[collapsible=icon]:translate-y-0"
                         aria-label="Réduire la barre latérale"
                     />
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent class="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-2 px-3 group-data-[collapsible=icon]:px-0">
+        <SidebarContent class="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden px-3 py-2 group-data-[collapsible=icon]:px-0">
             <NavMain :items="mainNavItems" />
 
-            <!-- Réglages : margin-top 56px -->
-            <div class="mt-[56px] shrink-0 px-3 pb-1 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
+            <!-- Réglages : espace net sous le bloc principal -->
+            <div class="mt-12 shrink-0 px-0 pb-1 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
                 <Link
                     :href="reglagesItem.href"
-                    class="sidebar-menu-btn-react group flex h-[44px] w-full items-center gap-3 rounded-[10px] px-3 transition-all"
+                    class="sidebar-menu-btn-react group flex h-11 w-full items-center gap-3 rounded-[10px] px-3 transition-all"
                     :class="isCurrentUrl(reglagesItem.href)
                         ? 'bg-[#22c55e] text-white'
                         : 'bg-transparent'"
                     :data-active="isCurrentUrl(reglagesItem.href) ? 'true' : undefined"
                 >
                     <div class="sidebar-menu-icon flex shrink-0 items-center justify-center rounded-full transition-colors"
-                        :class="isCurrentUrl(reglagesItem.href) ? 'bg-white/25 text-white' : 'group-hover:bg-[#f1f5f9]'">
+                        :class="isCurrentUrl(reglagesItem.href) ? 'bg-white/25 text-white' : ''">
                         <component :is="reglagesItem.icon" class="sidebar-menu-icon-svg size-5" stroke-width="1.5" />
                     </div>
                     <span class="sidebar-menu-label group-data-[collapsible=icon]:hidden">
@@ -130,17 +139,17 @@ function logout() {
             </div>
 
             <!-- Configuration (admin seulement) -->
-            <div v-if="isAdmin" class="shrink-0 px-3 pb-1 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
+            <div v-if="isAdmin" class="mt-1 shrink-0 px-0 pb-1 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
                 <Link
                     :href="parametresItem.href"
-                    class="sidebar-menu-btn-react group flex h-[44px] w-full items-center gap-3 rounded-[10px] px-3 transition-all"
+                    class="sidebar-menu-btn-react group flex h-11 w-full items-center gap-3 rounded-[10px] px-3 transition-all"
                     :class="isCurrentUrl(parametresItem.href)
                         ? 'bg-[#22c55e] text-white'
                         : 'bg-transparent'"
                     :data-active="isCurrentUrl(parametresItem.href) ? 'true' : undefined"
                 >
                     <div class="sidebar-menu-icon flex shrink-0 items-center justify-center rounded-full transition-colors"
-                        :class="isCurrentUrl(parametresItem.href) ? 'bg-white/25 text-white' : 'group-hover:bg-[#f1f5f9]'">
+                        :class="isCurrentUrl(parametresItem.href) ? 'bg-white/25 text-white' : ''">
                         <component :is="parametresItem.icon" class="sidebar-menu-icon-svg size-5" stroke-width="1.5" />
                     </div>
                     <span class="sidebar-menu-label group-data-[collapsible=icon]:hidden">
@@ -151,9 +160,9 @@ function logout() {
 
             <!-- Illustration : ~25-30% hauteur sidebar, blob bleu, docteur 3D, 4 icônes flottantes -->
             <div
-                class="pointer-events-none group-data-[collapsible=icon]:hidden relative mt-auto flex min-h-0 flex-1 items-end justify-center overflow-hidden pt-3"
+                class="pointer-events-none group-data-[collapsible=icon]:hidden relative mt-2 flex min-h-0 flex-1 items-end justify-center overflow-hidden pt-2"
             >
-                <div class="relative mx-auto h-full max-h-[200px] min-h-0 w-full max-w-[220px] shrink-0">
+                <div class="relative mx-auto h-full max-h-[min(28vh,200px)] min-h-[120px] w-full max-w-[220px] shrink-0">
                     <!-- Blob bleu organique -->
                     <div class="absolute left-1/2 top-1/2 flex h-[100px] w-[130px] -translate-x-1/2 -translate-y-1/2 items-center justify-center">
                         <div class="absolute h-[85px] w-[110px] rounded-[22px] bg-[#3995d2] shadow-[0_2px_4px_rgba(0,0,0,0.2)] -rotate-[13deg]" />
@@ -195,14 +204,16 @@ function logout() {
             </div>
         </SidebarContent>
 
-        <SidebarFooter class="shrink-0 border-t-0 px-3 pt-3 pb-5 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
+        <SidebarFooter class="shrink-0 border-t-0 px-3 pb-5 pt-2 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
             <div class="flex w-full items-center gap-3 group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:justify-center">
                 <button
                     type="button"
-                    class="sidebar-logout-btn group flex h-[44px] w-full items-center gap-3 rounded-[10px] px-3 font-medium transition-colors group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2"
+                    class="sidebar-logout-btn group flex h-11 w-full items-center gap-3 rounded-[10px] px-3 transition-colors group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2"
                     @click="logout"
                 >
-                    <div class="sidebar-logout-icon flex shrink-0 items-center justify-center">
+                    <div
+                        class="sidebar-logout-icon flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f1f5f9] text-[#64748b] transition-colors group-hover:bg-[#e2e8f0]"
+                    >
                         <LogOut class="sidebar-menu-icon-svg size-5 shrink-0" stroke-width="1.5" />
                     </div>
                     <span class="sidebar-footer-label group-data-[collapsible=icon]:hidden">Déconnexion</span>

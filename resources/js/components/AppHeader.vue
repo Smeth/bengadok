@@ -96,9 +96,9 @@ const rightNavItems: NavItem[] = [
                             >
                             <SheetHeader class="flex justify-start text-left">
                                 <img
-                                    src="/images/figma-assets/sidebar-logo-benga.svg"
+                                    src="/images/figma-assets/sidebar-logo-benga.png"
                                     alt="BengaDok"
-                                    class="h-8 w-auto max-w-[120px] object-contain"
+                                    class="h-14 w-auto max-w-[200px] object-contain"
                                 />
                             </SheetHeader>
                             <div

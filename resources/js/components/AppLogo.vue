@@ -12,16 +12,20 @@ withDefaults(
 </script>
 
 <template>
-    <!-- Logo BengaDok Figma : image officielle sidebar-logo-benga.svg -->
+    <!-- Logo BengaDok : sidebar-logo-benga.png -->
     <div
         class="group-data-[collapsible=icon]:gap-0 flex items-center justify-center"
         :class="layout === 'vertical' ? 'flex-col gap-2' : 'flex-row gap-2'"
     >
-        <img
-            src="/images/figma-assets/sidebar-logo-benga.svg"
-            alt="BengaDok"
-            class="h-[138.069px] w-auto max-w-[322.161px] shrink-0 object-contain object-center group-data-[collapsible=icon]:hidden"
-        />
+        <div
+            class="relative inline-block shrink-0 group-data-[collapsible=icon]:hidden"
+        >
+            <img
+                src="/images/figma-assets/sidebar-logo-benga.png"
+                alt="BengaDok"
+                class="h-auto max-h-[84px] w-full max-w-[145px] object-contain object-center sm:max-h-[90px] sm:max-w-[155px]"
+            />
+        </div>
         <!-- Icône réduite quand sidebar collapsed -->
         <div class="hidden shrink-0 items-center justify-center rounded-full bg-[#3995D2] size-8 group-data-[collapsible=icon]:flex">
             <svg class="size-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

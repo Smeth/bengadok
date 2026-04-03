@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Logo BengaDok officiel — sidebar-logo-benga.svg (seul et unique logo).
+ * Logo BengaDok officiel — sidebar-logo-benga.png
  */
 defineProps<{
     variant?: 'full' | 'icon-only';
@@ -9,8 +9,8 @@ defineProps<{
 
 <template>
     <img
-        src="/images/figma-assets/sidebar-logo-benga.svg"
+        src="/images/figma-assets/sidebar-logo-benga.png"
         alt="BengaDok"
-        class="h-[80px] w-auto max-w-[220px] object-contain md:h-[100px] md:max-w-[260px]"
+        class="h-[100px] w-auto max-w-[275px] object-contain md:h-[125px] md:max-w-[325px]"
     />
 </template>

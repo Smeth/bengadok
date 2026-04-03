@@ -13,7 +13,7 @@ $assets = @(
     @{ url = "https://www.figma.com/api/mcp/asset/99e47349-4a05-434c-bc73-3355a9ca8f88"; name = "icon-pharmacy" },
     @{ url = "https://www.figma.com/api/mcp/asset/a5eb8264-1feb-40fe-913c-27faba5fb12a"; name = "icon-logout" },
     @{ url = "https://www.figma.com/api/mcp/asset/ce9dea9b-f670-4920-b3e4-491134122ab3"; name = "sidebar-logo" },
-    @{ url = "https://www.figma.com/api/mcp/asset/b974491b-5f45-4278-9e97-979db5371100"; name = "sidebar-logo-benga" },
+    # sidebar-logo-benga : fichier manuel public/images/figma-assets/sidebar-logo-benga.png (pas d’URL Figma stable)
     @{ url = "https://www.figma.com/api/mcp/asset/89b41da6-2a13-417a-a778-435e312cddfe"; name = "hero-icon-1" },
     @{ url = "https://www.figma.com/api/mcp/asset/44ae880f-fc10-4063-9141-c170f53c3d43"; name = "hero-icon-2" },
     @{ url = "https://www.figma.com/api/mcp/asset/479e44bb-5f5b-41af-a909-7b2fe9266b19"; name = "hero-icon-3" },

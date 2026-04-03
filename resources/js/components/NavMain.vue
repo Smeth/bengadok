@@ -18,12 +18,12 @@ const activeColorClass = 'bg-[#22c55e]';
 </script>
 
 <template>
-    <SidebarGroup class="shrink-0 px-3 py-1">
-        <SidebarMenu class="flex flex-col gap-0.5">
+    <SidebarGroup class="shrink-0 px-0 py-0">
+        <SidebarMenu class="flex flex-col gap-1">
             <SidebarMenuItem v-for="item in items" :key="item.title" class="list-none">
                 <Link
                     :href="item.href"
-                    class="sidebar-menu-btn-react group flex h-[44px] w-full cursor-pointer items-center gap-3 rounded-[10px] px-3 font-medium transition-all"
+                    class="sidebar-menu-btn-react group flex h-11 w-full cursor-pointer items-center gap-3 rounded-[10px] px-3 transition-all"
                     :class="isCurrentUrl(item.href)
                         ? `${activeColorClass} text-white`
                         : 'bg-transparent'"
@@ -31,13 +31,11 @@ const activeColorClass = 'bg-[#22c55e]';
                 >
                     <div
                         class="sidebar-menu-icon flex shrink-0 items-center justify-center rounded-full transition-colors"
-                        :class="isCurrentUrl(item.href)
-                            ? 'bg-white/25 text-white'
-                            : 'group-hover:bg-[#f1f5f9]'"
+                        :class="isCurrentUrl(item.href) ? 'bg-white/25 text-white' : ''"
                     >
                         <component :is="item.icon" class="sidebar-menu-icon-svg size-5" stroke-width="1.5" />
                     </div>
-                    <span class="sidebar-menu-label text-[15px]">
+                    <span class="sidebar-menu-label leading-snug">
                         {{ item.title }}
                     </span>
                 </Link>

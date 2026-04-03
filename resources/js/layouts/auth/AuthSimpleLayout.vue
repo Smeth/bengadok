@@ -20,9 +20,9 @@ defineProps<{
                         class="flex flex-col items-center gap-2 font-semibold text-slate-800 dark:text-white"
                     >
                         <img
-                            src="/images/figma-assets/sidebar-logo-benga.svg"
+                            src="/images/figma-assets/sidebar-logo-benga.png"
                             alt="BengaDok"
-                            class="h-14 w-auto max-w-[160px] object-contain"
+                            class="h-20 w-auto max-w-[200px] object-contain"
                         />
                         <span class="sr-only">{{ title }}</span>
                     </Link>

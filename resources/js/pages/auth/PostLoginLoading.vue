@@ -138,14 +138,14 @@ onMounted(() => {
                     </svg>
                 </div>
 
-                <!-- Cercle blanc Figma + ombre 5px 0 10 — logo officiel sidebar-logo-benga.svg -->
+                <!-- Cercle blanc Figma + ombre — logo sidebar-logo-benga.png -->
                 <div
-                    class="bengadok-loader-logo-in relative flex aspect-square w-[min(72vw,260px)] flex-col items-center justify-center gap-2 rounded-full bg-white px-4 py-6 opacity-0 shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)]"
+                    class="bengadok-loader-logo-in relative flex aspect-square w-[min(75vw,300px)] flex-col items-center justify-center gap-2 rounded-full bg-white px-4 py-6 opacity-0 shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)]"
                 >
                     <img
-                        src="/images/figma-assets/sidebar-logo-benga.svg"
+                        src="/images/figma-assets/sidebar-logo-benga.png"
                         alt="BengaDok"
-                        class="h-[80px] w-auto max-w-[180px] object-contain sm:h-[100px] sm:max-w-[220px]"
+                        class="h-[100px] w-auto max-w-[220px] object-contain sm:h-[125px] sm:max-w-[275px]"
                     />
                 </div>
             </div>

@@ -74,7 +74,7 @@ function logout() {
             :style="{ width: `${asideWidthPx}px` }"
         >
             <!-- En-tête : logo + icône repli (PanelLeft comme l’admin) -->
-            <div class="shrink-0 border-b-0" :class="sidebarCollapsed ? 'py-3 pl-2 pr-1.5' : 'p-4'">
+            <div class="shrink-0 border-b-0" :class="sidebarCollapsed ? 'py-3 pl-2 pr-1.5' : 'px-4 pb-4 pt-5'">
                 <!-- Replié : 80px utiles → logo centré dans l’espace restant + bouton fixe à droite (plus de décalage qui coupe à gauche) -->
                 <div
                     v-if="sidebarCollapsed"
@@ -102,7 +102,7 @@ function logout() {
                 <div v-else class="flex items-center gap-1">
                     <Link
                         href="/dok-pharma"
-                        class="flex min-w-0 flex-1 items-center justify-center overflow-hidden sm:justify-start"
+                        class="flex min-w-0 flex-1 items-center justify-center overflow-visible sm:justify-start"
                     >
                         <AppLogo />
                     </Link>
