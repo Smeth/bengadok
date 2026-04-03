@@ -140,10 +140,6 @@ const pharmaciesFiltrees = computed(() => {
     return liste;
 });
 
-const pharmacieSelectionnee = computed(
-    () => props.pharmacies.find((p) => p.id === pharmacieId.value) ?? null,
-);
-
 function selectionnerZone(zone: Zone) {
     zoneSelectionnee.value = zone;
     pharmacieId.value = null;

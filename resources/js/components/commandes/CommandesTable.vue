@@ -154,19 +154,19 @@ const nextPageUrl = computed(() => {
                 Liste Commandes
             </h3>
             <table
-                class="w-full min-w-[1100px] border-collapse text-[14px] text-[rgba(0,0,0,0.74)]"
+                class="w-full min-w-[1280px] table-fixed border-collapse text-[14px] text-[rgba(0,0,0,0.74)]"
             >
                 <colgroup>
                     <col class="w-10" />
-                    <col class="w-[130px]" />
-                    <col class="w-[110px]" />
-                    <col class="w-[40px]" />
-                    <col class="w-[135px]" />
-                    <col class="w-[95px]" />
-                    <col class="w-[190px]" />
-                    <col class="w-[170px]" />
+                    <col class="w-[132px]" />
+                    <col class="w-[168px]" />
+                    <col class="w-10" />
+                    <col class="w-[156px]" />
+                    <col class="w-[100px]" />
+                    <col class="w-[180px]" />
+                    <col class="w-[200px]" />
                     <col class="w-[120px]" />
-                    <col class="w-[130px]" />
+                    <col class="w-[132px]" />
                     <col class="w-[80px]" />
                 </colgroup>
                 <thead>
@@ -207,44 +207,47 @@ const nextPageUrl = computed(() => {
                             />
                         </td>
                         <td
-                            class="py-3 pr-3 align-middle font-mono text-[12px] font-medium text-[#0d6efd]"
+                            class="max-w-0 py-3 pr-3 align-middle font-mono text-[12px] font-medium whitespace-nowrap text-[#0d6efd]"
                         >
-                            {{ cmd.numero }}
+                            <span class="block truncate" :title="cmd.numero">{{
+                                cmd.numero
+                            }}</span>
                         </td>
-                        <td class="py-3 pr-3 align-middle">
+                        <td class="max-w-0 py-3 pr-3 align-middle">
                             <span
-                                class="block truncate text-[13px] font-medium"
+                                class="block min-w-0 truncate text-[13px] font-medium"
                                 :title="getClientDisplayName(cmd.client)"
                             >
                                 {{ getClientDisplayName(cmd.client) }}
                             </span>
                         </td>
                         <td
-                            class="py-3 pr-3 align-middle text-center text-[15px]"
+                            class="py-3 pr-3 align-middle text-center text-[15px] whitespace-nowrap"
                         >
                             {{ cmd.client?.sexe || '-' }}
                         </td>
                         <td
-                            class="py-3 pr-3 align-middle font-mono text-[12px]"
+                            class="py-3 pr-3 align-middle font-mono text-[12px] whitespace-nowrap"
+                            :title="cmd.client?.tel ?? undefined"
                         >
                             {{ cmd.client?.tel ?? '-' }}
                         </td>
                         <td
-                            class="py-3 pr-3 align-middle text-[12px] text-gray-600"
+                            class="py-3 pr-3 align-middle text-[12px] whitespace-nowrap text-gray-600"
                         >
                             {{ formatDate(cmd.date) }}
                         </td>
-                        <td class="py-3 pr-3 align-middle">
+                        <td class="max-w-0 py-3 pr-3 align-middle">
                             <span
-                                class="block truncate text-[11px] text-gray-600"
+                                class="block min-w-0 truncate text-[11px] text-gray-600"
                                 :title="cmd.client?.adresse ?? ''"
                             >
                                 {{ cmd.client?.adresse || '-' }}
                             </span>
                         </td>
-                        <td class="py-3 pr-3 align-middle">
+                        <td class="max-w-0 py-3 pr-3 align-middle">
                             <span
-                                class="block truncate text-[11px] text-gray-600"
+                                class="block min-w-0 truncate text-[11px] text-gray-600"
                                 :title="getMedicamentsText(cmd.produits)"
                             >
                                 {{ getMedicamentsText(cmd.produits) }}

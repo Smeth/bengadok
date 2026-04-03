@@ -1780,8 +1780,9 @@ function downloadOrdonnance() {
                                     ? 'border-[#3995d2] bg-[#3995d2] text-white shadow-[0_4px_12px_rgba(57,149,210,0.45)] ring-2 ring-white/70'
                                     : 'border-gray-200/90 bg-white text-[#5c5959] shadow-sm hover:border-[#3995d2]/50 hover:text-[#3995d2] hover:shadow-md'
                             "
-                            v-html="link.label"
-                        />
+                        >
+                            <span v-html="link.label" />
+                        </Link>
                     </template>
                 </nav>
             </div>

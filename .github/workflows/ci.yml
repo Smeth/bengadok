@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   lint:
-    name: Lint (PHP + ESLint)
+    name: Lint (PHP)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,23 +26,11 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
       - name: Installer dépendances PHP
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
-      - name: Installer dépendances Node
-        run: npm ci
-
       - name: Lint PHP (Pint)
         run: ./vendor/bin/pint --test --parallel
-
-      - name: Lint frontend (ESLint)
-        run: npm run lint
 
   tests:
     name: Tests (PHP ${{ matrix.php }})

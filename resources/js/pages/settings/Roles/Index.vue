@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import {
     Plus,
     Search,
@@ -52,7 +52,6 @@ const props = defineProps<{
     filters: { search?: string; onglet?: string };
 }>();
 
-const page = usePage();
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
     { title: 'Mon profil', href: '/settings/profile' },
@@ -340,7 +339,7 @@ function permissionsApercu(
                         </div>
                         <div class="mt-4 min-w-0 space-y-1.5 overflow-hidden">
                             <template
-                                v-for="(perm, i) in permissionsApercu(role)"
+                                v-for="perm in permissionsApercu(role)"
                                 :key="perm.name"
                             >
                                 <div

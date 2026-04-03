@@ -1,16 +1,11 @@
 <script setup lang="ts">
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import {
     Plus,
     Search,
-    Eye,
-    MoreHorizontal,
-    X,
     AlertTriangle,
     Truck,
     FileText,
-    Download,
-    ChevronRight,
     RefreshCw,
     XCircle,
     Check,
@@ -18,11 +13,11 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import CommandeEnregistrementModal from '@/components/CommandeEnregistrementModal.vue';
+import type { FormEnregPayload } from '@/components/CommandeEnregistrementModal.vue';
 import CommandesTable from '@/components/commandes/CommandesTable.vue';
 import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
 import RecuCommandeModal from '@/components/RecuCommandeModal.vue';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -30,13 +25,6 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Sheet,
@@ -297,14 +285,6 @@ const statuts = STATUTS_COMMANDE;
 function getMotifAnnulationLabel(key: string | undefined): string {
     return (key && motifLabelBySlug.value[key]) || key || 'Non précisé';
 }
-
-const beneficiaires = [
-    'Soi-même',
-    'Sa mère',
-    'Son père',
-    'Son enfant',
-    'Autre',
-];
 
 type CommandeFilters = {
     search?: string;
@@ -590,9 +570,7 @@ function parseValidationErrors(e: unknown): Record<string, string> {
 
 const apiErrorsEnreg = ref<Record<string, string>>({});
 
-function submitEnregistrementFromModal(
-    payload: import('@/components/CommandeEnregistrementModal.vue').FormEnregPayload,
-) {
+function submitEnregistrementFromModal(payload: FormEnregPayload) {
     apiErrorsEnreg.value = {};
     if (payload.ordonnance) {
         const formData = new FormData();
@@ -644,9 +622,7 @@ function submitEnregistrementFromModal(
     }
 }
 
-function submitRelancerFromModal(
-    payload: import('@/components/CommandeEnregistrementModal.vue').FormEnregPayload,
-) {
+function submitRelancerFromModal(payload: FormEnregPayload) {
     const data: Record<string, unknown> = {
         pharmacie_id: payload.pharmacie_id,
         beneficiaire: payload.beneficiaire || undefined,
@@ -715,16 +691,6 @@ function submitRelancerFromModal(
         });
     }
 }
-
-function isNavLink(label: string): boolean {
-    return /Previous|Précédent|Next|Suivant|»|&laquo;|&raquo;/.test(label);
-}
-
-const nextPageUrl = computed(() => {
-    const links = props.commandes?.links ?? [];
-    const next = links.find((l) => /Next|Suivant|»|&raquo;/.test(l.label));
-    return next?.url ?? null;
-});
 </script>
 
 <template>

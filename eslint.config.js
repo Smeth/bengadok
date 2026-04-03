@@ -54,6 +54,11 @@ export default defineConfigWithVueTs(
             'tailwind.config.js',
             'vite.config.ts',
             'resources/js/components/ui/*',
+            // Dossiers hors appli Laravel / hors tsconfig (ex. maquettes React)
+            'React_composant/**',
+            // Fichiers générés par @laravel/vite-plugin-wayfinder (ne pas formater à la main)
+            'resources/js/actions/**',
+            'resources/js/routes/**',
         ],
     },
     prettier, // Turn off all rules that might conflict with Prettier

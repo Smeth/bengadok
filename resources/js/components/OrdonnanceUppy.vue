@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import Uppy from '@uppy/core';
-import Dashboard from '@uppy/vue/dashboard';
 import fr_FR from '@uppy/locales/lib/fr_FR.js';
 import type { UppyFile } from '@uppy/utils';
+import Dashboard from '@uppy/vue/dashboard';
+import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import '@uppy/core/css/style.css';
 import '@uppy/dashboard/css/style.css';
 

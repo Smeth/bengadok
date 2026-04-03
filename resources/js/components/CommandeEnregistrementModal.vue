@@ -14,11 +14,11 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
+import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
 import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
 
 export type ProduitEnreg = {
     designation: string;

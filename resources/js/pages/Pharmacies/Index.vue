@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import type { LayerGroup, Map as LeafletMap } from 'leaflet';
+import type LeafletDefault from 'leaflet';
 import {
     Building2,
     Clock,
@@ -261,9 +263,9 @@ watch(
 
 // Carte Leaflet (onglet Maps)
 const mapContainerRef = ref<HTMLElement | null>(null);
-let mapInstance: ReturnType<typeof import('leaflet').map> | null = null;
-let markersLayer: ReturnType<typeof import('leaflet').layerGroup> | null = null;
-let leafletModule: typeof import('leaflet') | null = null;
+let mapInstance: LeafletMap | null = null;
+let markersLayer: LayerGroup | null = null;
+let leafletModule: { default: typeof LeafletDefault } | null = null;
 
 function getMarkerColor(p: PharmacieMap): string {
     if (p.de_garde) return '#ef4444';
@@ -966,8 +968,9 @@ onUnmounted(destroyMap);
                                     ? 'border-[#3995d2] bg-[#3995d2] text-white shadow-[0_4px_12px_rgba(57,149,210,0.45)] ring-2 ring-white/70'
                                     : 'border-gray-200/90 bg-white text-[#5c5959] shadow-sm hover:border-[#3995d2]/50 hover:text-[#3995d2] hover:shadow-md'
                             "
-                            v-html="link.label"
-                        />
+                        >
+                            <span v-html="link.label" />
+                        </Link>
                     </template>
                 </nav>
             </div>

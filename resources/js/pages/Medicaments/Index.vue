@@ -744,8 +744,9 @@ const badgeTotal = computed(() =>
                                         ? 'border-[#459cd1] bg-[#459cd1] text-white'
                                         : 'border-input bg-white text-foreground'
                                 "
-                                v-html="link.label"
-                            />
+                            >
+                                <span v-html="link.label" />
+                            </Link>
                         </template>
                     </div>
                 </div>
@@ -945,8 +946,9 @@ const badgeTotal = computed(() =>
                                         ? 'border-[#459cd1] bg-[#459cd1] text-white'
                                         : 'border-input bg-white'
                                 "
-                                v-html="link.label"
-                            />
+                            >
+                                <span v-html="link.label" />
+                            </Link>
                         </template>
                     </div>
                 </div>

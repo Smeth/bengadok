@@ -638,9 +638,7 @@ function getPiePath(
                                     stroke-width="25"
                                 />
                                 <path
-                                    v-for="(
-                                        zone, i
-                                    ) in volumeParZoneWithPercent"
+                                    v-for="zone in volumeParZoneWithPercent"
                                     v-show="zone.percent > 0"
                                     :key="zone.zone_name"
                                     :d="
@@ -672,7 +670,7 @@ function getPiePath(
                         <!-- Légende avec barres de progression à droite -->
                         <div class="flex flex-1 flex-col gap-4 min-w-0">
                             <div
-                                v-for="(zone, i) in volumeParZoneWithPercent"
+                                v-for="zone in volumeParZoneWithPercent"
                                 :key="zone.zone_name"
                                 class="flex items-center gap-3 w-full"
                             >
@@ -741,7 +739,7 @@ function getPiePath(
                             class="flex flex-1 items-end justify-between ml-4 h-[250px] pb-[1.75rem]"
                         >
                             <div
-                                v-for="(item, i) in revenusParJour"
+                                v-for="item in revenusParJour"
                                 :key="item.jour"
                                 class="flex flex-col items-center flex-1 mx-1 gap-2 h-full justify-end"
                             >
