@@ -99,21 +99,21 @@ function logout() {
             class="fixed left-0 top-0 z-40 flex h-svh flex-col overflow-x-hidden overflow-y-auto bg-white shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)] transition-[width] duration-200 ease-out"
             :style="{ width: `${asideWidthPx}px` }"
         >
-            <!-- En-tête : logo + icône repli (PanelLeft comme l’admin) -->
+            <!-- En-tête : même logique que AppSidebar (grille 3 col + padding SidebarHeader) -->
             <div
                 class="shrink-0 border-b-0"
                 :class="
-                    sidebarCollapsed ? 'py-3 pl-2 pr-1.5' : 'px-4 pb-4 pt-5'
+                    sidebarCollapsed ? 'px-2 py-3' : 'px-3 pb-4 pt-2'
                 "
             >
-                <!-- Replié : 80px utiles → logo centré dans l’espace restant + bouton fixe à droite (plus de décalage qui coupe à gauche) -->
+                <!-- Replié : pile verticale centrée comme mode icône admin -->
                 <div
                     v-if="sidebarCollapsed"
-                    class="relative flex min-h-10 items-center"
+                    class="flex flex-col items-center justify-center gap-2"
                 >
                     <Link
                         href="/dok-pharma"
-                        class="flex min-w-0 flex-1 items-center justify-center pr-[34px]"
+                        class="flex items-center justify-center"
                         aria-label="Tableau de bord"
                     >
                         <span class="inline-flex origin-center scale-[0.72]">
@@ -122,7 +122,7 @@ function logout() {
                     </Link>
                     <button
                         type="button"
-                        class="absolute right-0 top-1/2 flex size-8 shrink-0 -translate-y-1/2 items-center justify-center rounded-lg bg-[rgba(92,89,89,0.08)] text-[#5c5959] transition-colors hover:bg-[rgba(92,89,89,0.15)] hover:text-[#5c5959]"
+                        class="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#f1f5f9] text-[#6b7280] transition-colors hover:bg-[#e2e8f0] hover:text-[#374151]"
                         :aria-expanded="!sidebarCollapsed"
                         aria-label="Replier ou déplier la barre latérale"
                         @click="sidebarCollapsed = !sidebarCollapsed"
@@ -130,22 +130,29 @@ function logout() {
                         <PanelLeftOpen class="size-[15px] shrink-0" />
                     </button>
                 </div>
-                <div v-else class="flex items-center gap-1">
+                <!-- Déplié : grille [spacer | logo | trigger] comme AppSidebar -->
+                <div
+                    v-else
+                    class="relative grid w-full grid-cols-[2rem_minmax(0,1fr)_2rem] items-end gap-x-1"
+                >
+                    <div class="min-w-0" aria-hidden="true" />
                     <Link
                         href="/dok-pharma"
-                        class="flex min-w-0 flex-1 items-center justify-center overflow-visible sm:justify-start"
+                        class="flex min-w-0 items-end justify-center overflow-visible"
                     >
                         <AppLogo />
                     </Link>
-                    <button
-                        type="button"
-                        class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[rgba(92,89,89,0.08)] text-[#5c5959] transition-colors hover:bg-[rgba(92,89,89,0.15)] hover:text-[#5c5959]"
-                        :aria-expanded="!sidebarCollapsed"
-                        aria-label="Replier ou déplier la barre latérale"
-                        @click="sidebarCollapsed = !sidebarCollapsed"
-                    >
-                        <PanelLeftClose class="size-[18px] shrink-0" />
-                    </button>
+                    <div class="flex justify-end self-end">
+                        <button
+                            type="button"
+                            class="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#f1f5f9] text-[#6b7280] transition-colors hover:bg-[#e2e8f0] hover:text-[#374151]"
+                            :aria-expanded="!sidebarCollapsed"
+                            aria-label="Replier ou déplier la barre latérale"
+                            @click="sidebarCollapsed = !sidebarCollapsed"
+                        >
+                            <PanelLeftClose class="size-[18px] shrink-0" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
