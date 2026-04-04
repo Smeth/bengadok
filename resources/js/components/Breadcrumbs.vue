@@ -12,14 +12,24 @@ import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
 type Props = {
     breadcrumbs: BreadcrumbItemType[];
+    /** Texte clair sur fond dégradé (header) — surcharge text-muted du fil d’Ariane */
+    light?: boolean;
 };
 
-defineProps<Props>();
+withDefaults(defineProps<Props>(), {
+    light: false,
+});
 </script>
 
 <template>
     <Breadcrumb>
-        <BreadcrumbList>
+        <BreadcrumbList
+            :class="
+                light
+                    ? '!text-white/95 drop-shadow-[0_1px_1px_rgba(0,0,0,0.2)] [&_a]:!text-white/95 [&_a:hover]:!text-white [&_span[aria-current=page]]:!text-white [&_span[aria-current=page]]:font-semibold [&_svg]:text-white/85'
+                    : undefined
+            "
+        >
             <template v-for="(item, index) in breadcrumbs" :key="index">
                 <BreadcrumbItem>
                     <template v-if="index === breadcrumbs.length - 1">

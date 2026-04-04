@@ -97,14 +97,7 @@ function nomComplet(c: Client) {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
-            class="flex flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6"
-            style="
-                background: linear-gradient(
-                    to right,
-                    rgba(91, 176, 52, 0.14) 0%,
-                    rgba(52, 176, 199, 0.14) 100%
-                );
-            "
+            class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
         >
             <p
                 v-if="flashStatus"
@@ -156,17 +149,17 @@ function nomComplet(c: Client) {
                 >
                     <div class="relative min-w-[200px] flex-1">
                         <Search
-                            class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                            class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
                         />
                         <Input
                             v-model="searchQuery"
                             placeholder="Rechercher un client..."
-                            class="pl-9"
+                            class="h-10 rounded-full border-0 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-white/90"
                         />
                     </div>
                     <select
                         :value="filters.tri"
-                        class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        class="flex h-10 rounded-lg border border-white/80 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -183,7 +176,7 @@ function nomComplet(c: Client) {
                     </select>
                     <select
                         :value="filters.zone_id"
-                        class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        class="flex h-10 rounded-lg border border-white/80 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -203,7 +196,7 @@ function nomComplet(c: Client) {
                     </select>
                     <select
                         :value="filters.frequence_id || ''"
-                        class="max-w-[220px] flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        class="flex h-10 max-w-[220px] rounded-lg border border-white/80 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -228,19 +221,6 @@ function nomComplet(c: Client) {
                         <span class="font-semibold">{{ clients.length }}</span>
                     </div>
                 </form>
-                <p class="text-xs text-muted-foreground">
-                    Les commandes comptées excluent les annulations et incluent
-                    les statuts en cours, validées et livrées (y compris anciens
-                    statuts éventuels). La fréquence affichée suit la règle à la
-                    plus haute priorité qui correspond au client. Les règles se
-                    gèrent dans
-                    <Link
-                        href="/settings/parametres?onglet=clientFrequences"
-                        class="font-medium text-[#459cd1] underline-offset-2 hover:underline"
-                    >
-                        Configuration → Fréquences clients </Link
-                    >.
-                </p>
 
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div

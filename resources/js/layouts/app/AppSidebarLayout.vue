@@ -21,7 +21,17 @@ const isDashboard = computed(
     () => page.url === '/dashboard' || page.url.startsWith('/dashboard?'),
 );
 const isCommandes = computed(() => page.url.startsWith('/commandes'));
-const hasGradientBg = computed(() => isDashboard.value || isCommandes.value);
+const isPharmacies = computed(() => page.url.startsWith('/pharmacies'));
+const isMedicaments = computed(() => page.url.startsWith('/medicaments'));
+const isClients = computed(() => page.url.startsWith('/clients'));
+const hasGradientBg = computed(
+    () =>
+        isDashboard.value ||
+        isCommandes.value ||
+        isPharmacies.value ||
+        isMedicaments.value ||
+        isClients.value,
+);
 </script>
 
 <template>

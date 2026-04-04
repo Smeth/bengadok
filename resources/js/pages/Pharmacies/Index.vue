@@ -398,14 +398,7 @@ onUnmounted(destroyMap);
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
-            class="flex flex-1 flex-col gap-6 min-h-full overflow-x-auto rounded-xl p-8"
-            style="
-                background: linear-gradient(
-                    60.02deg,
-                    rgb(57, 149, 210) 35.89%,
-                    rgb(91, 182, 110) 92.85%
-                );
-            "
+            class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
         >
             <!-- Header & Actions -->
             <div class="flex flex-col gap-5 mb-2">

@@ -106,7 +106,10 @@ const formatDate = (iso?: string) => {
             :class="props.variant === 'gradient' ? 'text-white' : ''"
         >
             <template v-if="breadcrumbs && breadcrumbs.length > 0">
-                <Breadcrumbs :breadcrumbs="breadcrumbs" />
+                <Breadcrumbs
+                    :breadcrumbs="breadcrumbs"
+                    :light="props.variant === 'gradient'"
+                />
             </template>
         </div>
 
@@ -215,7 +218,12 @@ const formatDate = (iso?: string) => {
                                 >{{ user.name }}</span
                             >
                             <span
-                                class="block text-xs text-muted-foreground leading-tight"
+                                class="block text-xs leading-tight"
+                                :class="
+                                    props.variant === 'gradient'
+                                        ? 'text-white/80'
+                                        : 'text-muted-foreground'
+                                "
                                 >{{ roleLabel }}</span
                             >
                         </div>

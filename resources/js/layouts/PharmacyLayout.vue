@@ -412,11 +412,10 @@ function logout() {
                                 @click="router.visit(item.url)"
                             >
                                 <div class="font-medium">
-                                    Commande {{ item.numero }}
+                                    Commande {{ formatOrdererName(item) }}
                                 </div>
                                 <div class="text-xs text-muted-foreground">
-                                    {{ formatOrdererName(item) }} ·
-                                    {{ item.status_label }}
+                                    {{ item.numero }} · {{ item.status_label }}
                                 </div>
                                 <div
                                     class="mt-0.5 text-xs text-muted-foreground"

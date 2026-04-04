@@ -306,14 +306,7 @@ const badgeTotal = computed(() =>
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
-            class="flex flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6"
-            style="
-                background: linear-gradient(
-                    to right,
-                    rgba(91, 176, 52, 0.14) 0%,
-                    rgba(52, 176, 199, 0.14) 100%
-                );
-            "
+            class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
         >
             <p
                 v-if="flashStatus"
