@@ -37,7 +37,21 @@ export type CommandeDetail = {
     mode_paiement?: { designation: string };
     montant_livraison?: { designation: number };
     livreur?: { id: number; nom: string; prenom: string; tel: string };
-    ordonnance?: { urlfile?: string } | null;
+    ordonnance?: {
+        urlfile?: string;
+        verification?: {
+            decision: string;
+            score: number | null;
+            status: string;
+            parsed_prescription_date?: string | null;
+            rule_results?: Record<
+                string,
+                { pass: boolean; label: string }
+            > | null;
+            flags?: Record<string, boolean> | null;
+            error_message?: string | null;
+        } | null;
+    } | null;
     acceptation_client?: boolean;
 };
 

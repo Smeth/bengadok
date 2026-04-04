@@ -103,6 +103,7 @@ class CommandeController extends Controller
             'produits' => $produits,
             'montantsLivraison' => $montantsLivraison,
             'livreurs' => $livreurs,
+            'openDetailCommandeId' => $request->filled('detail') ? $request->integer('detail') : null,
         ]);
     }
 
@@ -124,36 +125,20 @@ class CommandeController extends Controller
                 && Commande::query()->where('relance_de_commande_id', $commande->id)->exists()
         );
 
-        $pharmacieOptions = [];
-        if ($user?->hasAnyRole(['admin', 'super_admin', 'agent_call_center'])
-            && $commande->status === 'en_attente'
-            && ! $commande->parent_id
-            && $commande->client?->adresse) {
-            $pharmacieOptions = $this->pharmacieService->trouverPharmaciesProches(
-                $commande->client->adresse,
-                $commande->pharmacie_id
-            )->toArray();
-        }
-
-        // Requête fetch/AJAX (modal) : retourner JSON. Requête Inertia (navigation) : retourner la page.
+        // Requête fetch/AJAX (panneau latéral) : retourner JSON.
         if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['commande' => $commande]);
         }
 
-        $livreurs = Livreur::orderBy('nom')->orderBy('prenom')->get();
-
-        return Inertia::render('Commandes/Show', [
-            'commande' => $commande,
-            'pharmacieOptions' => $pharmacieOptions,
-            'livreurs' => $livreurs,
-        ]);
+        // Navigation plein écran : tout passe par la liste + panneau « Voir détail ».
+        return redirect()->route('commandes.index', ['detail' => $commande->id]);
     }
 
     public function recu(Request $request, Commande $commande)
     {
         $this->authorize('view', $commande);
         if ($commande->status !== 'retiree') {
-            return redirect()->route('commandes.show', $commande)
+            return redirect()->route('commandes.index', ['detail' => $commande->id])
                 ->with('error', 'Le reçu n\'est disponible que pour les commandes livrées.');
         }
 
@@ -174,7 +159,7 @@ class CommandeController extends Controller
     {
         $this->authorize('update', $commande);
         if (! in_array($commande->status, ['nouvelle', 'en_attente'])) {
-            return redirect()->route('commandes.show', $commande)
+            return redirect()->route('commandes.index', ['detail' => $commande->id])
                 ->with('error', 'Seules les commandes « nouvelle » ou « en attente » peuvent être modifiées.');
         }
 
@@ -285,7 +270,8 @@ class CommandeController extends Controller
         $montantLivraison = $validated['montant_livraison_id'] ? (MontantLivraison::find($validated['montant_livraison_id'])?->designation ?? 0) : 0;
         $commande->update(['prix_total' => $prixTotal + (float) $montantLivraison]);
 
-        return redirect()->route('commandes.show', $commande)->with('status', "Commande {$commande->numero} mise à jour.");
+        return redirect()->route('commandes.index', ['detail' => $commande->id])
+            ->with('status', "Commande {$commande->numero} mise à jour.");
     }
 
     public function bulkAnnuler(Request $request): RedirectResponse

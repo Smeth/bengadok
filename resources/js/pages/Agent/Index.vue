@@ -193,7 +193,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                             </td>
                             <td class="px-4 py-3">
                                 <Link
-                                    :href="`/commandes/${cmd.id}`"
+                                    :href="`/commandes?detail=${cmd.id}`"
                                     class="text-primary hover:underline"
                                     >Détails</Link
                                 >

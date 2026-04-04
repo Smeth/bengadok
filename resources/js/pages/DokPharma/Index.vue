@@ -18,6 +18,7 @@ import {
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
+import { clientNomComplet } from '@/lib/clientDisplayName';
 
 type Pivot = {
     quantite: number;
@@ -56,6 +57,14 @@ type Commande = {
     commentaire?: string | null;
     prix_total?: number | null;
 };
+
+/** Nom client affichable pour l’en-tête de carte (évite « - - BDK… »). */
+function nomCommandeVisible(cmd: Commande): boolean {
+    if (!cmd.client) return false;
+    const n = clientNomComplet(cmd.client).trim();
+    return n !== '' && n !== '-';
+}
+
 type PaginatedCommandes = {
     data: Commande[];
     links: { url: string | null; label: string; active: boolean }[];
@@ -442,9 +451,19 @@ function downloadOrdonnance() {
                                     class="mb-1.5 flex flex-wrap items-center gap-2"
                                 >
                                     <span
-                                        class="font-mono text-[15px] font-extrabold text-[#2563EB]"
-                                        >{{ cmd.numero }}</span
+                                        class="text-[15px] font-extrabold text-[#2563EB]"
                                     >
+                                        <template v-if="nomCommandeVisible(cmd)">
+                                            <span class="font-sans">{{
+                                                clientNomComplet(cmd.client!)
+                                            }}
+                                                -
+                                            </span>
+                                        </template>
+                                        <span class="font-mono">{{
+                                            cmd.numero
+                                        }}</span>
+                                    </span>
                                     <span
                                         class="rounded-full bg-[#DBEAFE] px-2.5 py-0.5 text-[10px] font-bold text-[#1D4ED8]"
                                         >Nouvelle commande 🔄</span
@@ -871,9 +890,19 @@ function downloadOrdonnance() {
                                     class="mb-1.5 flex flex-wrap items-center gap-2"
                                 >
                                     <span
-                                        class="font-mono text-[15px] font-extrabold text-[#4338CA]"
-                                        >{{ cmd.numero }}</span
+                                        class="text-[15px] font-extrabold text-[#4338CA]"
                                     >
+                                        <template v-if="nomCommandeVisible(cmd)">
+                                            <span class="font-sans">{{
+                                                clientNomComplet(cmd.client!)
+                                            }}
+                                                -
+                                            </span>
+                                        </template>
+                                        <span class="font-mono">{{
+                                            cmd.numero
+                                        }}</span>
+                                    </span>
                                     <span
                                         v-if="
                                             cmd.status_pharmacie ===
@@ -1162,9 +1191,19 @@ function downloadOrdonnance() {
                                     class="mb-1.5 flex flex-wrap items-center gap-2"
                                 >
                                     <span
-                                        class="font-mono text-[15px] font-extrabold text-[#2563EB]"
-                                        >{{ cmd.numero }}</span
+                                        class="text-[15px] font-extrabold text-[#2563EB]"
                                     >
+                                        <template v-if="nomCommandeVisible(cmd)">
+                                            <span class="font-sans">{{
+                                                clientNomComplet(cmd.client!)
+                                            }}
+                                                -
+                                            </span>
+                                        </template>
+                                        <span class="font-mono">{{
+                                            cmd.numero
+                                        }}</span>
+                                    </span>
                                     <span
                                         class="rounded-full bg-[#FEF3C7] px-2.5 py-0.5 text-[10px] font-bold text-[#92400E]"
                                         >Commande Validée À préparer 🔄</span
@@ -1465,9 +1504,19 @@ function downloadOrdonnance() {
                                     class="mb-1.5 flex flex-wrap items-center gap-2"
                                 >
                                     <span
-                                        class="font-mono text-[15px] font-extrabold text-gray-700"
-                                        >{{ cmd.numero }}</span
+                                        class="text-[15px] font-extrabold text-gray-700"
                                     >
+                                        <template v-if="nomCommandeVisible(cmd)">
+                                            <span class="font-sans">{{
+                                                clientNomComplet(cmd.client!)
+                                            }}
+                                                -
+                                            </span>
+                                        </template>
+                                        <span class="font-mono">{{
+                                            cmd.numero
+                                        }}</span>
+                                    </span>
                                     <span
                                         class="rounded-full bg-[#DCFCE7] px-2.5 py-0.5 text-[10px] font-bold text-[#15803D]"
                                         >Retirée ✓</span

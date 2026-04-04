@@ -56,7 +56,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Commandes', href: '/commandes' },
     {
         title: '#' + props.commande.numero,
-        href: `/commandes/${props.commande.id}`,
+        href: `/commandes?detail=${props.commande.id}`,
     },
     { title: 'Modifier', href: '#' },
 ];
@@ -216,7 +216,7 @@ function submit() {
                 <h1 class="text-2xl font-semibold">
                     Modifier la commande {{ commande.numero }}
                 </h1>
-                <Link :href="`/commandes/${commande.id}`">
+                <Link :href="`/commandes?detail=${commande.id}`">
                     <Button variant="outline">Annuler</Button>
                 </Link>
             </div>

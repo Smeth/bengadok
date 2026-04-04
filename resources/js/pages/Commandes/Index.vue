@@ -11,10 +11,11 @@ import {
     Check,
     CheckCircle2,
 } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import CommandeEnregistrementModal from '@/components/CommandeEnregistrementModal.vue';
 import type { FormEnregPayload } from '@/components/CommandeEnregistrementModal.vue';
 import CommandesTable from '@/components/commandes/CommandesTable.vue';
+import OrdonnanceAnalysisProgressBar from '@/components/OrdonnanceAnalysisProgressBar.vue';
 import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
 import RecuCommandeModal from '@/components/RecuCommandeModal.vue';
 import { Button } from '@/components/ui/button';
@@ -105,6 +106,8 @@ const props = withDefaults(
             prenom: string;
             tel: string;
         }>;
+        /** Ouvre le panneau détail (ex. redirection depuis /commandes/{id} ou lien partagé). */
+        openDetailCommandeId?: number | null;
     }>(),
     {
         commandes: () => ({ data: [], links: [] }),
@@ -115,6 +118,7 @@ const props = withDefaults(
         produits: () => [],
         montantsLivraison: () => [],
         livreurs: () => [],
+        openDetailCommandeId: null,
     },
 );
 
@@ -137,6 +141,9 @@ const canCreateCommande = computed(() => {
         ['admin', 'super_admin', 'agent_call_center'].includes(r),
     );
 });
+
+/** Même périmètre que la fiche commande : OCR / vérification ordonnance. */
+const isAgent = computed(() => canCreateCommande.value);
 
 const motifsAnnulation = computed(
     () => (page.props.motifs_annulation ?? []) as MotifAnnulationOption[],
@@ -389,7 +396,76 @@ async function openDetail(id: number) {
     }
 }
 
+async function refreshDetailSilently(id: number): Promise<void> {
+    try {
+        const r = await fetch(`/commandes/${id}`, {
+            headers: { Accept: 'application/json' },
+        });
+        if (!r.ok) return;
+        const json = await r.json();
+        if (detailCommande.value?.id === id) {
+            detailCommande.value = json.commande;
+        }
+    } catch {
+        /* ignore */
+    }
+}
+
+let verificationPollTimer: ReturnType<typeof setInterval> | null = null;
+
+function clearVerificationPoll(): void {
+    if (verificationPollTimer !== null) {
+        clearInterval(verificationPollTimer);
+        verificationPollTimer = null;
+    }
+}
+
+function verificationNeedsPolling(): boolean {
+    if (!isAgent.value || !showDetailModal.value) {
+        return false;
+    }
+    const s = detailCommande.value?.ordonnance?.verification?.status;
+
+    return s === 'pending' || s === 'processing';
+}
+
+watch(
+    () => [
+        isAgent.value,
+        showDetailModal.value,
+        detailCommande.value?.id,
+        detailCommande.value?.ordonnance?.verification?.status,
+    ],
+    () => {
+        clearVerificationPoll();
+        if (!verificationNeedsPolling()) {
+            return;
+        }
+        const id = detailCommande.value?.id;
+        if (!id) return;
+        verificationPollTimer = setInterval(() => {
+            void refreshDetailSilently(id);
+        }, 2500);
+    },
+    { immediate: true },
+);
+
+onBeforeUnmount(() => {
+    clearVerificationPoll();
+});
+
+watch(
+    () => props.openDetailCommandeId,
+    (id) => {
+        if (id) {
+            void openDetail(id);
+        }
+    },
+    { immediate: true },
+);
+
 function closeDetail() {
+    clearVerificationPoll();
     showDetailModal.value = false;
     detailCommande.value = null;
 }
@@ -1076,6 +1152,180 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 class="flex h-24 items-center justify-center text-[13px] font-medium text-gray-400"
                             >
                                 Aucune ordonnance fournie
+                            </div>
+                            <div
+                                v-if="
+                                    isAgent && detailCommande.ordonnance?.urlfile
+                                "
+                                class="mt-4 rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-left text-sm"
+                            >
+                                <template
+                                    v-if="detailCommande.ordonnance.verification"
+                                >
+                                    <OrdonnanceAnalysisProgressBar
+                                        class="mb-3"
+                                        :visible="
+                                            detailCommande.ordonnance
+                                                .verification.status ===
+                                                'pending' ||
+                                            detailCommande.ordonnance
+                                                .verification.status ===
+                                                'processing'
+                                        "
+                                        label="Analyse OCR et règles en cours…"
+                                    />
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span
+                                            class="font-medium text-gray-700"
+                                            >Vérification (OCR + règles)</span
+                                        >
+                                        <span
+                                            v-if="
+                                                detailCommande.ordonnance
+                                                    .verification.score !==
+                                                null
+                                            "
+                                            class="rounded-full bg-white px-2 py-0.5 text-xs font-bold tabular-nums"
+                                        >
+                                            {{
+                                                detailCommande.ordonnance
+                                                    .verification.score
+                                            }}
+                                            %
+                                        </span>
+                                        <span
+                                            class="rounded-full px-2 py-0.5 text-xs font-semibold uppercase"
+                                            :class="{
+                                                'bg-emerald-100 text-emerald-800':
+                                                    detailCommande.ordonnance
+                                                        .verification
+                                                        .decision === 'pass',
+                                                'bg-amber-100 text-amber-900':
+                                                    detailCommande.ordonnance
+                                                        .verification
+                                                        .decision ===
+                                                        'review' ||
+                                                    detailCommande.ordonnance
+                                                        .verification
+                                                        .decision ===
+                                                        'skipped',
+                                                'bg-red-100 text-red-800':
+                                                    detailCommande.ordonnance
+                                                        .verification
+                                                        .decision === 'fail',
+                                                'bg-gray-200 text-gray-700':
+                                                    detailCommande.ordonnance
+                                                        .verification
+                                                        .decision ===
+                                                        'pending',
+                                            }"
+                                        >
+                                            {{
+                                                detailCommande.ordonnance
+                                                    .verification.decision
+                                            }}
+                                        </span>
+                                    </div>
+                                    <p
+                                        v-if="
+                                            detailCommande.ordonnance
+                                                .verification.status ===
+                                            'pending'
+                                        "
+                                        class="mt-2 text-xs text-amber-800"
+                                    >
+                                        File d’analyse : mise à jour automatique
+                                        de cette section.
+                                    </p>
+                                    <p
+                                        v-else-if="
+                                            detailCommande.ordonnance
+                                                .verification.status ===
+                                            'processing'
+                                        "
+                                        class="mt-2 text-xs text-amber-800"
+                                    >
+                                        Traitement en cours sur le serveur…
+                                    </p>
+                                    <p
+                                        v-if="
+                                            detailCommande.ordonnance
+                                                .verification
+                                                .parsed_prescription_date
+                                        "
+                                        class="mt-2 text-xs text-gray-600"
+                                    >
+                                        Date extraite :
+                                        {{
+                                            detailCommande.ordonnance
+                                                .verification
+                                                .parsed_prescription_date
+                                        }}
+                                    </p>
+                                    <ul
+                                        v-if="
+                                            detailCommande.ordonnance
+                                                .verification.rule_results
+                                        "
+                                        class="mt-2 space-y-1 text-xs text-gray-600"
+                                    >
+                                        <li
+                                            v-for="(info, key) in detailCommande
+                                                .ordonnance.verification
+                                                .rule_results"
+                                            :key="key"
+                                            class="flex gap-2"
+                                        >
+                                            <template
+                                                v-if="
+                                                    info &&
+                                                    typeof info === 'object' &&
+                                                    'pass' in info
+                                                "
+                                            >
+                                                <span
+                                                    :class="
+                                                        info.pass
+                                                            ? 'text-emerald-600'
+                                                            : 'text-gray-400 line-through'
+                                                    "
+                                                    >{{ info.label }}</span
+                                                >
+                                            </template>
+                                            <template
+                                                v-else-if="
+                                                    typeof info === 'string'
+                                                "
+                                            >
+                                                <span class="text-gray-600">{{
+                                                    info
+                                                }}</span>
+                                            </template>
+                                        </li>
+                                    </ul>
+                                    <p
+                                        v-if="
+                                            detailCommande.ordonnance
+                                                .verification.error_message
+                                        "
+                                        class="mt-2 text-xs text-red-600"
+                                    >
+                                        {{
+                                            detailCommande.ordonnance
+                                                .verification.error_message
+                                        }}
+                                    </p>
+                                </template>
+                                <div v-else>
+                                    <span class="font-medium text-gray-700"
+                                        >Vérification (OCR + règles)</span
+                                    >
+                                    <p class="mt-2 text-xs text-gray-600">
+                                        Aucune analyse enregistrée pour ce
+                                        fichier (données antérieures ou envoi
+                                        hors compte agent / admin).
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
