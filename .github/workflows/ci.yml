@@ -145,7 +145,9 @@ jobs:
               --no-interaction \
               --prefer-dist \
               --optimize-autoloader \
-              --no-dev
+              --no-dev \
+              --no-scripts
+            composer dump-autoload --optimize --no-interaction
 
             echo "=== [4/9] Build assets frontend ==="
             rm -f public/hot
@@ -164,8 +166,9 @@ jobs:
             php artisan view:cache
             php artisan event:cache
 
-            echo "=== [8/9] Redémarrage du worker de queue ==="
+            echo "=== [8/9] Redémarrage des workers ==="
             php artisan queue:restart
+            sudo supervisorctl restart bengadok-reverb
 
             echo "=== [9/9] Désactivation mode maintenance ==="
             php artisan up

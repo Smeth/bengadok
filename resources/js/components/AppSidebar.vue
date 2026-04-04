@@ -147,7 +147,7 @@ function logout() {
         </SidebarHeader>
 
         <SidebarContent
-            class="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden px-3 py-2 group-data-[collapsible=icon]:px-0"
+            class="flex min-h-0 flex-1 flex-col gap-0 overflow-x-hidden overflow-y-auto px-3 py-2 group-data-[collapsible=icon]:px-0"
         >
             <NavMain :items="mainNavItems" />
 
@@ -228,12 +228,12 @@ function logout() {
                 </Link>
             </div>
 
-            <!-- Illustration : ~25-30% hauteur sidebar, blob bleu, docteur 3D, 4 icônes flottantes -->
+            <!-- Illustration : hauteur fixe sous Configuration (plus de flex-1 qui repousse tout en bas / compresse le bloc) -->
             <div
-                class="pointer-events-none group-data-[collapsible=icon]:hidden relative mt-2 flex min-h-0 flex-1 items-end justify-center overflow-hidden pt-2"
+                class="pointer-events-none group-data-[collapsible=icon]:hidden relative mt-3 flex shrink-0 justify-center overflow-visible pt-1"
             >
                 <div
-                    class="relative mx-auto h-full max-h-[min(28vh,200px)] min-h-[120px] w-full max-w-[220px] shrink-0"
+                    class="relative mx-auto h-[min(240px,32vh)] min-h-[200px] w-full max-w-[220px] shrink-0"
                 >
                     <!-- Blob bleu organique -->
                     <div
