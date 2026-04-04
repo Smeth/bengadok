@@ -6,6 +6,7 @@ use App\Models\Commande;
 use App\Models\Produit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -213,10 +214,12 @@ class DokPharmaController extends Controller
                 'commandes' => ['data' => [], 'links' => [], 'current_page' => 1, 'last_page' => 1, 'from' => 0, 'to' => 0, 'total' => 0],
                 'stats' => ['nouvelles' => 0, 'en_attente' => 0, 'a_preparer' => 0, 'livrees' => 0],
                 'onglet' => $request->input('onglet', 'nouvelles'),
+                'search' => Str::limit(trim((string) $request->input('search', '')), 100, ''),
             ]);
         }
 
         $onglet = $request->input('onglet', 'nouvelles');
+        $search = Str::limit(trim((string) $request->input('search', '')), 100, '');
 
         $query = Commande::with(['client', 'produits', 'ordonnance'])
             ->where('pharmacie_id', $pharmacieId);
@@ -228,6 +231,20 @@ class DokPharmaController extends Controller
             ->when($onglet === 'livrees', fn ($q) => $q->where('status_pharmacie', 'livre'))
             ->when(! in_array($onglet, ['nouvelles', 'en_attente', 'a_preparer', 'livrees']),
                 fn ($q) => $q->where('status_pharmacie', 'nouvelle'));
+
+        if ($search !== '') {
+            $like = '%'.addcslashes($search, '%_\\').'%';
+            $query->where(function ($q) use ($like) {
+                $q->where('numero', 'like', $like)
+                    ->orWhereHas('client', function ($cq) use ($like) {
+                        $cq->where('nom', 'like', $like)
+                            ->orWhere('prenom', 'like', $like);
+                    })
+                    ->orWhereHas('produits', function ($pq) use ($like) {
+                        $pq->where('designation', 'like', $like);
+                    });
+            });
+        }
 
         $commandes = $query
             ->latest('date')
@@ -276,6 +293,7 @@ class DokPharmaController extends Controller
             'commandes' => $commandes,
             'stats' => $stats,
             'onglet' => $onglet,
+            'search' => $search,
         ]);
     }
 

@@ -1048,10 +1048,7 @@ watch(
                                 variant="card"
                             />
                         </div>
-                        <div class="flex flex-col gap-1.5">
-                            <Label class="text-sm font-medium text-[#374151]"
-                                >Commentaires</Label
-                            >
+                        <div class="flex flex-col">
                             <textarea
                                 v-model="form.commentaire"
                                 placeholder="Commentaires ..."

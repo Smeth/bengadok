@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { watchDebounced } from '@vueuse/core';
 import {
     ChevronDown,
     ChevronUp,
@@ -15,8 +16,10 @@ import {
     CheckCircle2,
     Eye,
     AlertCircle,
+    Search,
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
+import { Input } from '@/components/ui/input';
 import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
 import { clientNomComplet } from '@/lib/clientDisplayName';
 
@@ -84,17 +87,46 @@ const props = defineProps<{
         livrees: number;
     };
     onglet: string;
+    search?: string;
 }>();
+
+const searchQuery = ref(props.search ?? '');
+watch(
+    () => props.search,
+    (s) => {
+        searchQuery.value = s ?? '';
+    },
+);
+
+function commandesQueryParams(onglet: string) {
+    const q = searchQuery.value.trim();
+    return {
+        onglet,
+        ...(q ? { search: q } : {}),
+    };
+}
+
+watchDebounced(
+    searchQuery,
+    (val) => {
+        const q = val.trim();
+        const serverQ = (props.search ?? '').trim();
+        if (q === serverQ) return;
+        router.get('/dok-pharma/commandes', commandesQueryParams(props.onglet), {
+            preserveScroll: true,
+            replace: true,
+        });
+    },
+    { debounce: 400 },
+);
 
 function changeOnglet(o: string) {
     /* preserveState désactivé : après validation POST, garder l’ancien état local
      * (cartes ouvertes, formulaires) provoquait des incohérences et, avec le scroll,
      * des zones pouvaient sembler « mortes » jusqu’au rechargement. */
-    router.get(
-        '/dok-pharma/commandes',
-        { onglet: o },
-        { preserveScroll: true },
-    );
+    router.get('/dok-pharma/commandes', commandesQueryParams(o), {
+        preserveScroll: true,
+    });
 }
 
 /* ─── Accordion ─────────────────────────────────────────────── */
@@ -333,6 +365,29 @@ function downloadOrdonnance() {
     <PharmacyLayout>
         <!-- Même fond et grille que le tableau de bord pharmacie -->
         <div class="pharmacy-content-shell flex min-h-full flex-1 flex-col">
+            <div class="pharmacy-card mb-4 flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
+                <div class="relative min-w-0 flex-1">
+                    <Search
+                        class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-500"
+                    />
+                    <Input
+                        v-model="searchQuery"
+                        type="search"
+                        placeholder="Rechercher par nom, n° commande ou médicament…"
+                        class="h-10 w-full rounded-xl border border-white/80 bg-white/95 pl-10 pr-10 text-sm shadow-sm placeholder:text-gray-500"
+                        autocomplete="off"
+                    />
+                    <button
+                        v-if="searchQuery.trim()"
+                        type="button"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                        aria-label="Effacer la recherche"
+                        @click="searchQuery = ''"
+                    >
+                        <X class="size-4" />
+                    </button>
+                </div>
+            </div>
             <!-- Une seule barre d’onglets (compteurs + libellés), style aligné dashboard -->
             <div
                 class="pharmacy-card mb-4 flex flex-wrap items-stretch gap-2 p-2 sm:gap-2 sm:p-3"
