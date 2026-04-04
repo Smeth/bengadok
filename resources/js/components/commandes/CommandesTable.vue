@@ -148,26 +148,26 @@ const nextPageUrl = computed(() => {
             </Button>
         </div>
 
-        <!-- Tableau -->
-        <div class="overflow-x-auto">
+        <!-- Tableau : largeurs en % pour éviter min-w fixe + scroll horizontal sur le dashboard -->
+        <div class="w-full min-w-0 overflow-x-auto">
             <h3 class="mb-4 text-[20px] font-bold text-black">
                 Liste Commandes
             </h3>
             <table
-                class="w-full min-w-[1280px] table-fixed border-collapse text-[14px] text-[rgba(0,0,0,0.74)]"
+                class="w-full min-w-0 max-w-full table-fixed border-collapse text-[14px] text-[rgba(0,0,0,0.74)]"
             >
                 <colgroup>
-                    <col class="w-10" />
-                    <col class="w-[132px]" />
-                    <col class="w-[168px]" />
-                    <col class="w-10" />
-                    <col class="w-[156px]" />
-                    <col class="w-[100px]" />
-                    <col class="w-[180px]" />
-                    <col class="w-[200px]" />
-                    <col class="w-[120px]" />
-                    <col class="w-[132px]" />
-                    <col class="w-[80px]" />
+                    <col class="w-[3%]" />
+                    <col class="w-[10%]" />
+                    <col class="w-[11%]" />
+                    <col class="w-[3%]" />
+                    <col class="w-[10%]" />
+                    <col class="w-[7%]" />
+                    <col class="w-[20%]" />
+                    <col class="w-[12%]" />
+                    <col class="w-[8%]" />
+                    <col class="w-[10%]" />
+                    <col class="w-[6%]" />
                 </colgroup>
                 <thead>
                     <tr
@@ -189,8 +189,8 @@ const nextPageUrl = computed(() => {
                         <th class="pb-3 pr-3 text-left font-bold">
                             Médicament
                         </th>
-                        <th class="pb-3 pr-3 text-left font-bold">Montant</th>
-                        <th class="pb-3 pr-3 text-left font-bold">Statut</th>
+                        <th class="pb-3 pr-6 text-left font-bold">Montant</th>
+                        <th class="pb-3 pl-2 pr-3 text-left font-bold">Statut</th>
                         <th class="pb-3 text-left font-bold">Actions</th>
                     </tr>
                 </thead>
@@ -253,9 +253,9 @@ const nextPageUrl = computed(() => {
                                 {{ getMedicamentsText(cmd.produits) }}
                             </span>
                         </td>
-                        <td class="py-3 pr-3 align-middle">
+                        <td class="py-3 pr-6 align-middle">
                             <span
-                                class="whitespace-nowrap font-mono text-[15px] font-bold text-[rgba(0,0,0,0.74)]"
+                                class="inline-block whitespace-nowrap font-mono text-[15px] font-bold text-[rgba(0,0,0,0.74)]"
                             >
                                 {{
                                     Number(cmd.prix_total).toLocaleString(
@@ -264,7 +264,7 @@ const nextPageUrl = computed(() => {
                                 }}&nbsp;FCFA
                             </span>
                         </td>
-                        <td class="py-3 pr-3 align-middle">
+                        <td class="py-3 pl-2 pr-3 align-middle">
                             <span
                                 class="inline-flex whitespace-nowrap rounded-[10px] px-3 py-1.5 text-[13px] font-bold"
                                 :style="getStatusBadgeStyle(cmd.status)"
