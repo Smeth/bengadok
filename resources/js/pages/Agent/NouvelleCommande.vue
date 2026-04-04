@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import {
     Building2,
     Phone,
@@ -17,6 +17,7 @@ import {
     FileText,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import OrdonnanceAnalysisProgressBar from '@/components/OrdonnanceAnalysisProgressBar.vue';
 import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
@@ -63,6 +64,23 @@ const props = defineProps<{
     modesPaiement: Array<{ id: number; designation: string }>;
     livreurs: Array<{ id: number; nom: string; prenom: string; tel: string }>;
 }>();
+
+const page = usePage();
+type OvSettings = { enabled?: boolean; execution_mode?: string };
+const ordonnanceVerificationSettings = computed(
+    () => page.props.ordonnanceVerificationSettings as OvSettings | undefined,
+);
+
+const analysisNoticeText = computed(() => {
+    const ov = ordonnanceVerificationSettings.value;
+    if (ov && ov.enabled === false) {
+        return 'La vérification automatique des ordonnances est désactivée dans les paramètres.';
+    }
+    if (ov?.execution_mode === 'immediate') {
+        return 'À l’envoi de la commande avec un fichier, l’analyse (OCR et règles) s’exécute pendant l’enregistrement. Le résultat est disponible sur la fiche commande.';
+    }
+    return 'À l’envoi de la commande, le fichier est enregistré puis mis en file d’analyse. Le résultat apparaît sur la fiche sous l’aperçu (mise à jour automatique).';
+});
 
 // ─── Breadcrumbs ──────────────────────────────────────────────────────────────
 
@@ -210,6 +228,24 @@ const commentaire = ref('');
 // ─── Soumission ───────────────────────────────────────────────────────────────
 
 const enSubmission = ref(false);
+
+const submitProgressLabel = computed(() => {
+    const ov = ordonnanceVerificationSettings.value;
+    if (!ordonnanceFile.value || ov?.enabled === false) {
+        return 'Enregistrement de la commande…';
+    }
+    if (ov?.execution_mode === 'immediate') {
+        return 'Enregistrement et analyse de l’ordonnance en cours…';
+    }
+    return 'Enregistrement de la commande…';
+});
+
+const showSubmitAnalysisProgress = computed(
+    () =>
+        enSubmission.value &&
+        ordonnanceFile.value !== null &&
+        ordonnanceVerificationSettings.value?.enabled !== false,
+);
 
 function submit() {
     const produitsValides = medicaments.value
@@ -728,6 +764,13 @@ function annuler() {
                             <OrdonnanceUppy
                                 v-model="ordonnanceFile"
                                 label="Ordonnance"
+                                show-analysis-notice
+                                :analysis-notice="analysisNoticeText"
+                            />
+                            <OrdonnanceAnalysisProgressBar
+                                class="mt-2"
+                                :visible="showSubmitAnalysisProgress"
+                                :label="submitProgressLabel"
                             />
                         </div>
 

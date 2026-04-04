@@ -156,13 +156,24 @@ function exportSelectedCSV() {
     URL.revokeObjectURL(a.href);
 }
 
+const typeJour = props.types.find((t) =>
+    t.designation?.toLowerCase().includes('jour'),
+);
+const typeNuit = props.types.find((t) =>
+    t.designation?.toLowerCase().includes('nuit'),
+);
+
 const form = ref({
     designation: '',
     adresse: '',
     telephone: '',
     email: '',
     zone_id: props.zones[0]?.id?.toString() ?? '',
-    type_pharmacie_id: '',
+    type_pharmacie_id:
+        typeJour?.id?.toString() ??
+        typeNuit?.id?.toString() ??
+        props.types[0]?.id?.toString() ??
+        '',
     heure_ouverture: '08:00',
     heure_fermeture: '19:00',
     proprio_nom: '',
@@ -171,6 +182,18 @@ const form = ref({
 });
 
 const errors = ref<Record<string, string>>({});
+
+/** Inertia renvoie souvent des messages en string[] ; le template attend une chaîne. */
+function normalizeInertiaErrors(e: unknown): Record<string, string> {
+    if (!e || typeof e !== 'object') return {};
+    const raw = e as Record<string, unknown>;
+    return Object.fromEntries(
+        Object.entries(raw).map(([k, v]) => [
+            k,
+            Array.isArray(v) ? String(v[0] ?? '') : String(v ?? ''),
+        ]),
+    );
+}
 
 function search() {
     router.get(
@@ -187,7 +210,11 @@ function openModal() {
         telephone: '',
         email: '',
         zone_id: props.zones[0]?.id?.toString() ?? '',
-        type_pharmacie_id: props.types[0]?.id?.toString() ?? '',
+        type_pharmacie_id:
+            typeJour?.id?.toString() ??
+            typeNuit?.id?.toString() ??
+            props.types[0]?.id?.toString() ??
+            '',
         heure_ouverture: '08:00',
         heure_fermeture: '19:00',
         proprio_nom: '',
@@ -212,7 +239,7 @@ function submitCreate() {
                 showModal.value = false;
             },
             onError: (e) => {
-                errors.value = e as Record<string, string>;
+                errors.value = normalizeInertiaErrors(e);
             },
         },
     );
@@ -242,13 +269,6 @@ function confirmDelete() {
         },
     });
 }
-
-const typeJour = props.types.find((t) =>
-    t.designation?.toLowerCase().includes('jour'),
-);
-const typeNuit = props.types.find((t) =>
-    t.designation?.toLowerCase().includes('nuit'),
-);
 
 watch(
     () => form.value.type_pharmacie_id,
@@ -1098,6 +1118,12 @@ onUnmounted(destroyMap);
                                 >
                             </label>
                         </div>
+                        <p
+                            v-if="errors.type_pharmacie_id"
+                            class="text-sm text-red-600"
+                        >
+                            {{ errors.type_pharmacie_id }}
+                        </p>
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div class="space-y-2">
                                 <Label for="heure_ouverture"

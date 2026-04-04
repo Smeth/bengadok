@@ -5,6 +5,7 @@ import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
+import RealtimeNotificationsListener from '@/components/RealtimeNotificationsListener.vue';
 import type { BreadcrumbItem } from '@/types';
 
 type Props = {
@@ -25,6 +26,7 @@ const hasGradientBg = computed(() => isDashboard.value || isCommandes.value);
 
 <template>
     <AppShell variant="sidebar">
+        <RealtimeNotificationsListener />
         <AppSidebar />
         <AppContent variant="sidebar" class="overflow-x-hidden">
             <div

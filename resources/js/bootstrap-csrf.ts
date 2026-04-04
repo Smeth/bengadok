@@ -5,6 +5,8 @@
 import { router } from '@inertiajs/vue3';
 import axios from 'axios';
 
+axios.defaults.withCredentials = true;
+
 function applyCsrfToken(token: string | undefined | null): void {
     if (!token) {
         return;

@@ -10,8 +10,14 @@ class TypePharmacieSeeder extends Seeder
 {
     public function run(): void
     {
-        $heurJour = Heur::where('ouverture', '08:00')->where('fermeture', '20:00')->first();
-        $heurNuit = Heur::where('ouverture', '19:00')->where('fermeture', '08:00')->first();
+        $heurJour = Heur::where('ouverture', '08:00')->where('fermeture', '20:00')->first()
+            ?? Heur::query()->orderBy('id')->first();
+        $heurNuit = Heur::where('ouverture', '19:00')->where('fermeture', '08:00')->first()
+            ?? $heurJour;
+
+        if (! $heurJour) {
+            return;
+        }
 
         TypePharmacie::firstOrCreate(
             ['designation' => 'Pharmacie de Jour'],

@@ -8,12 +8,9 @@ import {
     Pill,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
-import { usePolling } from '@/composables/usePolling';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-
-usePolling();
 
 const page = usePage();
 const roles = computed(

@@ -4,12 +4,9 @@ import { Download } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { usePolling } from '@/composables/usePolling';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-
-usePolling();
 
 const props = defineProps<{
     commandes: {

@@ -32,14 +32,11 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { usePolling } from '@/composables/usePolling';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { STATUTS_COMMANDE } from '@/types';
 import type { BreadcrumbItem, CommandeDetail } from '@/types';
 import type { MotifAnnulationOption } from '@/types';
-
-usePolling();
 
 const props = withDefaults(
     defineProps<{

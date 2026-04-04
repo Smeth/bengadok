@@ -22,15 +22,27 @@ class OrdonnanceVerificationProcessor
             return;
         }
 
-        $settings = OrdonnanceVerificationSetting::query()->first();
-        if (! $settings) {
-            return;
-        }
-
         $verification = OrdonnanceVerification::query()->firstOrCreate(
             ['ordonnance_id' => $ordonnance->id],
             ['status' => 'pending', 'decision' => 'pending']
         );
+
+        $settings = OrdonnanceVerificationSetting::query()->first();
+        if (! $settings) {
+            $verification->update([
+                'status' => 'completed',
+                'decision' => 'skipped',
+                'score' => null,
+                'ocr_text' => null,
+                'rule_results' => [
+                    'message' => 'Paramètres de vérification non configurés (table vide).',
+                ],
+                'flags' => [],
+                'processed_at' => now(),
+            ]);
+
+            return;
+        }
 
         $verification->update([
             'status' => 'processing',

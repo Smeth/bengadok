@@ -9,6 +9,7 @@ class BengaDokSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            ApplicationDefaultsSeeder::class,
             ZoneSeeder::class,
             HeurSeeder::class,
             TypePharmacieSeeder::class,

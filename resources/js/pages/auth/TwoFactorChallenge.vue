@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import CsrfHiddenInput from '@/components/CsrfHiddenInput.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,6 +59,7 @@ const code = ref<string>('');
                     @error="code = ''"
                     #default="{ errors, processing, clearErrors }"
                 >
+                    <CsrfHiddenInput />
                     <input type="hidden" name="code" :value="code" />
                     <div
                         class="flex flex-col items-center justify-center space-y-3 text-center"
@@ -104,6 +106,7 @@ const code = ref<string>('');
                     reset-on-error
                     #default="{ errors, processing, clearErrors }"
                 >
+                    <CsrfHiddenInput />
                     <Input
                         name="recovery_code"
                         type="text"

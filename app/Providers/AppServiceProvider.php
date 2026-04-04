@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Console\Commands\AppResetCommand;
+use App\Models\Commande;
+use App\Observers\CommandeObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->commands([AppResetCommand::class]);
+        Commande::observe(CommandeObserver::class);
         $this->configureDefaults();
     }
 

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, usePage } from '@inertiajs/vue3';
 import { Eye, EyeOff, Smartphone } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import CsrfHiddenInput from '@/components/CsrfHiddenInput.vue';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,11 @@ defineProps<{
     canRegister: boolean;
 }>();
 
+const page = usePage();
+const flashError = computed(
+    () => (page.props.flash as { error?: string } | undefined)?.error,
+);
+
 const showPassword = ref(false);
 </script>
 
@@ -31,6 +37,13 @@ const showPassword = ref(false);
         >
             {{ status }}
         </div>
+        <div
+            v-if="flashError"
+            class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-800"
+            role="alert"
+        >
+            {{ flashError }}
+        </div>
 
         <Form
             v-bind="store.form()"
@@ -38,6 +51,7 @@ const showPassword = ref(false);
             v-slot="{ errors, processing }"
             class="flex flex-col gap-5"
         >
+            <CsrfHiddenInput />
             <div class="grid gap-2">
                 <Label for="email" class="text-[#333333]">Identifiant</Label>
                 <Input

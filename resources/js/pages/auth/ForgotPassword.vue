@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import CsrfHiddenInput from '@/components/CsrfHiddenInput.vue';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ defineProps<{
 
         <div class="space-y-6">
             <Form v-bind="email.form()" v-slot="{ errors, processing }">
+                <CsrfHiddenInput />
                 <div class="grid gap-2">
                     <Label for="email">Adresse email</Label>
                     <Input

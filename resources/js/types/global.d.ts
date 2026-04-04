@@ -27,6 +27,8 @@ declare module '@inertiajs/core' {
             }>;
             /** Heures : même pharmacie interdite en relance pendant ce délai après annulation (0 = désactivé) */
             delai_relance_meme_pharmacie_heures: number;
+            /** Jeton CSRF (réponse Laravel, mis à jour à chaque navigation Inertia) */
+            csrf_token: string;
             [key: string]: unknown;
         };
     }

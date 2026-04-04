@@ -12,6 +12,7 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
+import RealtimeNotificationsListener from '@/components/RealtimeNotificationsListener.vue';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -45,8 +46,21 @@ interface NotificationItem {
     id: number;
     numero: string;
     status_label: string;
+    client?: { nom: string; prenom?: string } | null;
+    beneficiaire?: string | null;
     url: string;
     created_at: string;
+}
+
+function formatOrdererName(item: NotificationItem): string {
+    const c = item.client;
+    if (c) {
+        const full = [c.prenom, c.nom].filter(Boolean).join(' ').trim();
+        if (full) return full;
+    }
+    const b = item.beneficiaire?.trim();
+    if (b && b !== 'Soi-même') return b;
+    return '—';
 }
 
 const notifications = computed(() => {
@@ -80,6 +94,7 @@ function logout() {
 
 <template>
     <div class="flex min-h-svh bg-white">
+        <RealtimeNotificationsListener />
         <aside
             class="fixed left-0 top-0 z-40 flex h-svh flex-col overflow-x-hidden overflow-y-auto bg-white shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)] transition-[width] duration-200 ease-out"
             :style="{ width: `${asideWidthPx}px` }"
@@ -400,6 +415,7 @@ function logout() {
                                     Commande {{ item.numero }}
                                 </div>
                                 <div class="text-xs text-muted-foreground">
+                                    {{ formatOrdererName(item) }} ·
                                     {{ item.status_label }}
                                 </div>
                                 <div

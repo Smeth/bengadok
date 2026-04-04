@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -25,7 +26,8 @@ class Ordonnance extends Model
     }
 
     /**
-     * Stocke le fichier, calcule l’empreinte SHA-256 et lance l’analyse OCR + règles après commit :
+     * Stocke le fichier, calcule l’empreinte SHA-256 et lance l’analyse OCR + règles après commit
+     * (uniquement si l’upload est effectué par un compte back-office : admin, super_admin, agent) :
      * file d’attente ({@see OrdonnanceVerificationSetting::EXECUTION_MODE_QUEUE})
      * ou exécution synchrone ({@see OrdonnanceVerificationSetting::EXECUTION_MODE_IMMEDIATE}).
      */
@@ -42,6 +44,16 @@ class Ordonnance extends Model
         ]);
 
         DB::afterCommit(function () use ($ordonnance) {
+            $user = Auth::user();
+            if ($user === null || ! $user->hasAnyRole(['admin', 'super_admin', 'agent_call_center'])) {
+                return;
+            }
+
+            OrdonnanceVerification::query()->firstOrCreate(
+                ['ordonnance_id' => $ordonnance->id],
+                ['status' => 'pending', 'decision' => 'pending']
+            );
+
             $settings = OrdonnanceVerificationSetting::query()->first();
             $immediate = $settings
                 && $settings->execution_mode === OrdonnanceVerificationSetting::EXECUTION_MODE_IMMEDIATE;

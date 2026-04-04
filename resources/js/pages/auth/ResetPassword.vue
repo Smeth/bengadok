@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import CsrfHiddenInput from '@/components/CsrfHiddenInput.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ const inputEmail = ref(props.email);
             :reset-on-success="['password', 'password_confirmation']"
             v-slot="{ errors, processing }"
         >
+            <CsrfHiddenInput />
             <div class="grid gap-6">
                 <div class="grid gap-2">
                     <Label for="email">Email</Label>

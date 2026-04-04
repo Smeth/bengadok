@@ -31,6 +31,7 @@ type UserItem = {
     name: string;
     email: string;
     username?: string;
+    phone?: string | null;
     role: {
         name: string;
         label: string;
@@ -83,6 +84,7 @@ const formCreate = ref({
     name: '',
     email: '',
     username: '',
+    phone: '',
     password: '',
     role: 'admin',
 });
@@ -90,6 +92,7 @@ const formEdit = ref({
     name: '',
     email: '',
     username: '',
+    phone: '',
     role: 'admin',
 });
 
@@ -104,6 +107,7 @@ function ouvrirCreate() {
         name: '',
         email: '',
         username: '',
+        phone: '',
         password: '',
         role: 'admin',
     };
@@ -116,6 +120,7 @@ function ouvrirEdit(user: UserItem) {
         name: user.name,
         email: user.email,
         username: user.username ?? '',
+        phone: user.phone ?? '',
         role: user.role?.name ?? 'admin',
     };
     modalEdit.value = true;
@@ -271,6 +276,12 @@ function rechercher() {
                             <p class="text-sm text-muted-foreground truncate">
                                 {{ user.email }}
                             </p>
+                            <p
+                                v-if="user.phone"
+                                class="text-xs text-muted-foreground truncate"
+                            >
+                                {{ user.phone }}
+                            </p>
                         </div>
                         <div class="flex shrink-0 gap-1">
                             <Button
@@ -383,6 +394,15 @@ function rechercher() {
                         />
                     </div>
                     <div class="space-y-2">
+                        <Label>Téléphone</Label>
+                        <Input
+                            v-model="formCreate.phone"
+                            type="tel"
+                            autocomplete="tel"
+                            placeholder="Ex : +242 06 000 00 00"
+                        />
+                    </div>
+                    <div class="space-y-2">
                         <Label>Mot de passe</Label>
                         <Input
                             v-model="formCreate.password"
@@ -486,6 +506,15 @@ function rechercher() {
                         <Label>Nom d'utilisateur</Label>
                         <Input v-model="formEdit.username" />
                     </div>
+                    <div class="space-y-2">
+                        <Label>Téléphone</Label>
+                        <Input
+                            v-model="formEdit.phone"
+                            type="tel"
+                            autocomplete="tel"
+                            placeholder="Ex : +242 06 000 00 00"
+                        />
+                    </div>
                     <div class="space-y-3">
                         <Label>Rôle</Label>
                         <div class="grid gap-2 sm:grid-cols-2">
@@ -547,6 +576,12 @@ function rechercher() {
                         class="text-sm text-muted-foreground"
                     >
                         @{{ userDetail.username }}
+                    </p>
+                    <p
+                        v-if="userDetail.phone"
+                        class="text-sm text-muted-foreground"
+                    >
+                        {{ userDetail.phone }}
                     </p>
                     <div v-if="userDetail.role" class="flex items-center gap-2">
                         <ShieldCheck class="size-4 text-primary" />

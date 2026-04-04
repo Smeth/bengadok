@@ -12,11 +12,17 @@ class PharmacieSeeder extends Seeder
 {
     public function run(): void
     {
-        $heurs = Heur::where('ouverture', '08:00')->where('fermeture', '20:00')->first();
-        $heursClairon = Heur::where('ouverture', '09:00')->where('fermeture', '19:00')->first();
+        $heurs = Heur::where('ouverture', '08:00')->where('fermeture', '20:00')->first()
+            ?? Heur::query()->orderBy('id')->first();
+        $heursClairon = Heur::where('ouverture', '09:00')->where('fermeture', '19:00')->first()
+            ?? $heurs;
         $typeJour = TypePharmacie::where('designation', 'Pharmacie de Jour')->first();
         $typeNuit = TypePharmacie::where('designation', 'like', '%nuit%')->first();
-        $zone1 = Zone::first();
+        $zone1 = Zone::query()->orderBy('id')->first();
+
+        if (! $zone1 || ! $heurs || ! $typeJour) {
+            return;
+        }
 
         Pharmacie::firstOrCreate(
             ['designation' => 'Pharmacie Clairon'],

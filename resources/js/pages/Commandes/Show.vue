@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import OrdonnanceAnalysisProgressBar from '@/components/OrdonnanceAnalysisProgressBar.vue';
 import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -214,6 +215,49 @@ watch(
     () => initLignes(),
     { immediate: true },
 );
+
+let verificationPollTimer: ReturnType<typeof setInterval> | null = null;
+
+function clearVerificationPoll(): void {
+    if (verificationPollTimer !== null) {
+        clearInterval(verificationPollTimer);
+        verificationPollTimer = null;
+    }
+}
+
+function verificationNeedsPolling(): boolean {
+    if (!isAgent.value) {
+        return false;
+    }
+    const s = props.commande.ordonnance?.verification?.status;
+
+    return s === 'pending' || s === 'processing';
+}
+
+watch(
+    () => [
+        isAgent.value,
+        props.commande.id,
+        props.commande.ordonnance?.verification?.status,
+    ],
+    () => {
+        clearVerificationPoll();
+        if (!verificationNeedsPolling()) {
+            return;
+        }
+        verificationPollTimer = setInterval(() => {
+            router.reload({
+                only: ['commande'],
+                preserveScroll: true,
+            });
+        }, 2500);
+    },
+    { immediate: true },
+);
+
+onBeforeUnmount(() => {
+    clearVerificationPoll();
+});
 
 function renvoyerPharmacie() {
     router.post(`/agent/commande/${props.commande.id}/renvoyer-pharmacie`);
@@ -685,95 +729,6 @@ function renvoyerPharmaciePartiel() {
 
             <div class="rounded-xl border p-4">
                 <h3 class="mb-3 font-semibold">Ordonnance</h3>
-                <div
-                    v-if="commande.ordonnance?.verification"
-                    class="mb-4 rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-sm"
-                >
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="font-medium text-gray-700"
-                            >Vérification (OCR + règles)</span
-                        >
-                        <span
-                            v-if="
-                                commande.ordonnance.verification.score !== null
-                            "
-                            class="rounded-full bg-white px-2 py-0.5 text-xs font-bold tabular-nums"
-                        >
-                            {{ commande.ordonnance.verification.score }} %
-                        </span>
-                        <span
-                            class="rounded-full px-2 py-0.5 text-xs font-semibold uppercase"
-                            :class="{
-                                'bg-emerald-100 text-emerald-800':
-                                    commande.ordonnance.verification.decision ===
-                                    'pass',
-                                'bg-amber-100 text-amber-900':
-                                    commande.ordonnance.verification.decision ===
-                                        'review' ||
-                                    commande.ordonnance.verification
-                                        .decision === 'skipped',
-                                'bg-red-100 text-red-800':
-                                    commande.ordonnance.verification.decision ===
-                                    'fail',
-                                'bg-gray-200 text-gray-700':
-                                    commande.ordonnance.verification.decision ===
-                                    'pending',
-                            }"
-                        >
-                            {{ commande.ordonnance.verification.decision }}
-                        </span>
-                    </div>
-                    <p
-                        v-if="
-                            commande.ordonnance.verification
-                                .parsed_prescription_date
-                        "
-                        class="mt-2 text-xs text-gray-600"
-                    >
-                        Date extraite :
-                        {{
-                            commande.ordonnance.verification
-                                .parsed_prescription_date
-                        }}
-                    </p>
-                    <ul
-                        v-if="commande.ordonnance.verification.rule_results"
-                        class="mt-2 space-y-1 text-xs text-gray-600"
-                    >
-                        <li
-                            v-for="(info, key) in commande.ordonnance
-                                .verification.rule_results"
-                            :key="key"
-                            class="flex gap-2"
-                        >
-                            <template
-                                v-if="
-                                    info &&
-                                    typeof info === 'object' &&
-                                    'pass' in info
-                                "
-                            >
-                                <span
-                                    :class="
-                                        info.pass
-                                            ? 'text-emerald-600'
-                                            : 'text-gray-400 line-through'
-                                    "
-                                    >{{ info.label }}</span
-                                >
-                            </template>
-                            <template v-else-if="typeof info === 'string'">
-                                <span class="text-gray-600">{{ info }}</span>
-                            </template>
-                        </li>
-                    </ul>
-                    <p
-                        v-if="commande.ordonnance.verification.error_message"
-                        class="mt-2 text-xs text-red-600"
-                    >
-                        {{ commande.ordonnance.verification.error_message }}
-                    </p>
-                </div>
                 <OrdonnanceViewer
                     v-if="commande.ordonnance?.urlfile"
                     :urlfile="commande.ordonnance.urlfile"
@@ -782,6 +737,138 @@ function renvoyerPharmaciePartiel() {
                 <p v-else class="py-6 text-center text-muted-foreground">
                     Aucune ordonnance
                 </p>
+                <div
+                    v-if="isAgent && commande.ordonnance?.urlfile"
+                    class="mt-4 rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-sm"
+                >
+                    <template v-if="commande.ordonnance.verification">
+                        <OrdonnanceAnalysisProgressBar
+                            class="mb-3"
+                            :visible="
+                                commande.ordonnance.verification.status ===
+                                    'pending' ||
+                                commande.ordonnance.verification.status ===
+                                    'processing'
+                            "
+                            label="Analyse OCR et règles en cours…"
+                        />
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="font-medium text-gray-700"
+                                >Vérification (OCR + règles)</span
+                            >
+                            <span
+                                v-if="
+                                    commande.ordonnance.verification.score !==
+                                    null
+                                "
+                                class="rounded-full bg-white px-2 py-0.5 text-xs font-bold tabular-nums"
+                            >
+                                {{ commande.ordonnance.verification.score }} %
+                            </span>
+                            <span
+                                class="rounded-full px-2 py-0.5 text-xs font-semibold uppercase"
+                                :class="{
+                                    'bg-emerald-100 text-emerald-800':
+                                        commande.ordonnance.verification
+                                            .decision === 'pass',
+                                    'bg-amber-100 text-amber-900':
+                                        commande.ordonnance.verification
+                                            .decision === 'review' ||
+                                        commande.ordonnance.verification
+                                            .decision === 'skipped',
+                                    'bg-red-100 text-red-800':
+                                        commande.ordonnance.verification
+                                            .decision === 'fail',
+                                    'bg-gray-200 text-gray-700':
+                                        commande.ordonnance.verification
+                                            .decision === 'pending',
+                                }"
+                            >
+                                {{ commande.ordonnance.verification.decision }}
+                            </span>
+                        </div>
+                        <p
+                            v-if="
+                                commande.ordonnance.verification.status ===
+                                'pending'
+                            "
+                            class="mt-2 text-xs text-amber-800"
+                        >
+                            File d’analyse : mise à jour automatique de cette
+                            section.
+                        </p>
+                        <p
+                            v-else-if="
+                                commande.ordonnance.verification.status ===
+                                'processing'
+                            "
+                            class="mt-2 text-xs text-amber-800"
+                        >
+                            Traitement en cours sur le serveur…
+                        </p>
+                        <p
+                            v-if="
+                                commande.ordonnance.verification
+                                    .parsed_prescription_date
+                            "
+                            class="mt-2 text-xs text-gray-600"
+                        >
+                            Date extraite :
+                            {{
+                                commande.ordonnance.verification
+                                    .parsed_prescription_date
+                            }}
+                        </p>
+                        <ul
+                            v-if="commande.ordonnance.verification.rule_results"
+                            class="mt-2 space-y-1 text-xs text-gray-600"
+                        >
+                            <li
+                                v-for="(info, key) in commande.ordonnance
+                                    .verification.rule_results"
+                                :key="key"
+                                class="flex gap-2"
+                            >
+                                <template
+                                    v-if="
+                                        info &&
+                                        typeof info === 'object' &&
+                                        'pass' in info
+                                    "
+                                >
+                                    <span
+                                        :class="
+                                            info.pass
+                                                ? 'text-emerald-600'
+                                                : 'text-gray-400 line-through'
+                                        "
+                                        >{{ info.label }}</span
+                                    >
+                                </template>
+                                <template v-else-if="typeof info === 'string'">
+                                    <span class="text-gray-600">{{ info }}</span>
+                                </template>
+                            </li>
+                        </ul>
+                        <p
+                            v-if="
+                                commande.ordonnance.verification.error_message
+                            "
+                            class="mt-2 text-xs text-red-600"
+                        >
+                            {{ commande.ordonnance.verification.error_message }}
+                        </p>
+                    </template>
+                    <div v-else>
+                        <span class="font-medium text-gray-700"
+                            >Vérification (OCR + règles)</span
+                        >
+                        <p class="mt-2 text-xs text-gray-600">
+                            Aucune analyse enregistrée pour ce fichier (données
+                            antérieures ou envoi hors compte agent / admin).
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <div class="rounded-xl border p-4">

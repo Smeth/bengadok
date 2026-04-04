@@ -46,7 +46,8 @@ class UtilisateurBackofficeController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('username', 'like', "%{$search}%");
+                    ->orWhere('username', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
@@ -85,6 +86,7 @@ class UtilisateurBackofficeController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'username' => 'nullable|string|max:50|unique:users,username',
+            'phone' => 'nullable|string|max:32',
             'password' => ['required', Password::defaults()],
             'role' => 'required|in:'.implode(',', self::ROLES_BACKOFFICE),
         ]);
@@ -93,6 +95,7 @@ class UtilisateurBackofficeController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'username' => $validated['username'] ?? null,
+            'phone' => $validated['phone'] ?? null,
             'password' => Hash::make($validated['password']),
             'pharmacie_id' => null,
             'email_verified_at' => now(),
@@ -111,6 +114,7 @@ class UtilisateurBackofficeController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,'.$user->id,
             'username' => 'nullable|string|max:50|unique:users,username,'.$user->id,
+            'phone' => 'nullable|string|max:32',
             'role' => 'required|in:'.implode(',', self::ROLES_BACKOFFICE),
         ]);
 
@@ -118,6 +122,7 @@ class UtilisateurBackofficeController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'username' => $validated['username'] ?? null,
+            'phone' => $validated['phone'] ?? null,
         ]);
         $user->syncRoles([$validated['role']]);
 
@@ -228,6 +233,7 @@ class UtilisateurBackofficeController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'username' => $user->username,
+            'phone' => $user->phone,
             'role' => $role ? [
                 'name' => $role->name,
                 'label' => $this->roleLabel($role->name),

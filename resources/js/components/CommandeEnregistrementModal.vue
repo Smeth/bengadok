@@ -242,13 +242,6 @@ function isOuverte(heurs?: {
     return n >= oh * 60 + om && n <= fh * 60 + fm;
 }
 
-const totalEnreg = computed(() =>
-    form.value.produits.reduce(
-        (s, p) => s + (Number(p.prix_unitaire) || 0) * (p.quantite || 0),
-        0,
-    ),
-);
-
 function getProduitError(index: number, field: string): string {
     return errors.value[`produits.${index}.${field}`] ?? '';
 }
@@ -819,7 +812,7 @@ watch(
                         </div>
                     </div>
 
-                    <!-- Section 3 — Médicaments (Figma: Nom | Quantité | Prix unitaire | Total, bouton #0d6efd) -->
+                    <!-- Section 3 — Médicaments : ligne 1 (Nom | Dosage | Forme | Qté), ligne 2 (Prix unitaire | Total) -->
                     <div class="rounded-[10px] border border-[#ccc5c5] p-5">
                         <div
                             class="mb-4 flex flex-wrap items-center justify-between gap-2"
@@ -850,13 +843,14 @@ watch(
                             :key="i"
                             class="mb-4 flex flex-col gap-3 rounded-[10px] border border-[#ccc5c5] bg-white p-4 last:mb-0"
                         >
-                            <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-start justify-between gap-3">
                                 <div
-                                    class="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:grid-cols-4"
+                                    class="grid min-w-0 flex-1 grid-cols-1 gap-x-4 gap-y-4 pr-1 md:grid-cols-[minmax(9.5rem,1.35fr)_minmax(5.75rem,0.85fr)_minmax(6.5rem,0.95fr)_minmax(7.25rem,1.05fr)]"
                                 >
-                                    <div class="flex flex-col gap-1">
+                                    <!-- Ligne 1 — colonnes inégales pour éviter que « Nom Médicament » empiète sur Dosage -->
+                                    <div class="flex min-w-0 flex-col gap-1 pr-0.5">
                                         <Label
-                                            class="text-base font-light text-black"
+                                            class="whitespace-nowrap text-base font-light text-black"
                                             >Nom Médicament</Label
                                         >
                                         <input
@@ -888,7 +882,41 @@ watch(
                                             }}
                                         </p>
                                     </div>
-                                    <div class="flex flex-col gap-1">
+                                    <div class="flex min-w-0 flex-col gap-1 pl-0.5">
+                                        <Label
+                                            class="whitespace-nowrap text-base font-light text-black"
+                                            >Dosage</Label
+                                        >
+                                        <input
+                                            v-model="p.dosage"
+                                            placeholder="Ex : 1000"
+                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none"
+                                        />
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Forme</Label
+                                        >
+                                        <select
+                                            v-model="p.forme"
+                                            class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                        >
+                                            <option value="">
+                                                Choisir la forme
+                                            </option>
+                                            <option
+                                                v-for="f in formesPharmaceutiques"
+                                                :key="f"
+                                                :value="f"
+                                            >
+                                                {{ f }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div
+                                        class="flex min-w-0 flex-col gap-1 md:min-w-[7.25rem]"
+                                    >
                                         <Label
                                             class="text-base font-light text-black"
                                             >Quantité</Label
@@ -897,7 +925,7 @@ watch(
                                             v-model.number="p.quantite"
                                             type="number"
                                             min="1"
-                                            class="h-[42px] w-[59px] rounded-[10px] border border-[#ccc5c5] bg-white px-2 py-2 text-center text-base text-[#5c5959] focus:border-[#0d6efd] focus:outline-none"
+                                            class="box-border h-[42px] w-full min-w-0 max-w-full rounded-[10px] border border-[#ccc5c5] bg-white px-2 py-2 text-center text-base text-[#5c5959] focus:border-[#0d6efd] focus:outline-none md:max-w-[7.5rem]"
                                             :class="{
                                                 'border-[#dc3545]':
                                                     getProduitError(
@@ -915,7 +943,8 @@ watch(
                                             {{ getProduitError(i, 'quantite') }}
                                         </p>
                                     </div>
-                                    <div class="flex flex-col gap-1">
+                                    <!-- Ligne 2 : sous Nom + Dosage (2 premières colonnes en md+) -->
+                                    <div class="flex min-w-0 flex-col gap-1">
                                         <Label
                                             class="text-base font-light text-black"
                                             >Prix unitaire</Label
@@ -960,25 +989,23 @@ watch(
                                             }}
                                         </p>
                                     </div>
-                                    <div class="flex flex-col gap-1">
+                                    <div class="flex min-w-0 flex-col gap-1">
                                         <Label
                                             class="text-base font-light text-black"
                                             >Total</Label
                                         >
                                         <div
-                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white"
+                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-[#f8fafc] px-3 text-sm text-black"
                                         >
+                                            <span class="min-w-0 flex-1 font-medium tabular-nums">{{
+                                                (
+                                                    (Number(p.prix_unitaire) ||
+                                                        0) *
+                                                    (p.quantite || 0)
+                                                ).toFixed(1)
+                                            }}</span>
                                             <span
-                                                class="flex-1 px-3 text-base font-medium text-black"
-                                                >{{
-                                                    (
-                                                        (p.prix_unitaire || 0) *
-                                                        (p.quantite || 0)
-                                                    ).toFixed(1)
-                                                }}</span
-                                            >
-                                            <span
-                                                class="pr-3 text-base font-medium text-black"
+                                                class="pl-1 text-base font-medium text-black"
                                                 >xaf</span
                                             >
                                         </div>
@@ -986,61 +1013,14 @@ watch(
                                 </div>
                                 <button
                                     type="button"
-                                    class="shrink-0 text-[rgba(92,89,89,0.4)] hover:text-[#dc3545]"
+                                    class="mt-1 shrink-0 self-start text-[rgba(92,89,89,0.4)] hover:text-[#dc3545]"
                                     @click="removeProduit(i)"
                                 >
                                     <X class="size-4" />
                                 </button>
                             </div>
-                            <div
-                                class="grid grid-cols-2 gap-3 border-t border-[#ccc5c5] pt-2 sm:grid-cols-4"
-                            >
-                                <div class="flex flex-col gap-1">
-                                    <Label
-                                        class="text-xs font-medium text-black"
-                                        >Dosage</Label
-                                    >
-                                    <input
-                                        v-model="p.dosage"
-                                        placeholder="Ex : 500mg"
-                                        class="h-[38px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none"
-                                    />
-                                </div>
-                                <div class="flex flex-col gap-1">
-                                    <Label
-                                        class="text-xs font-medium text-black"
-                                        >Forme</Label
-                                    >
-                                    <select
-                                        v-model="p.forme"
-                                        class="h-[38px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
-                                    >
-                                        <option value="">
-                                            Choisir la forme
-                                        </option>
-                                        <option
-                                            v-for="f in formesPharmaceutiques"
-                                            :key="f"
-                                            :value="f"
-                                        >
-                                            {{ f }}
-                                        </option>
-                                    </select>
-                                </div>
-                            </div>
                         </div>
                     </div>
-
-                    <!-- Section 4 — Total -->
-                    <p class="text-base font-bold text-[#1a1a2e]">
-                        Total montant commande :
-                        <span class="text-[20px] font-bold">{{
-                            totalEnreg.toFixed(1)
-                        }}</span>
-                        <span class="ml-1 text-sm font-normal text-[#94a3b8]"
-                            >xaf</span
-                        >
-                    </p>
 
                     <!-- Ordonnance (dashed #e2e8f0) + Commentaires (solid #e2e8f0) : deux blocs égaux côte à côte -->
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1063,7 +1043,10 @@ watch(
                                 — ajoutez un fichier ci-dessous pour la
                                 remplacer (facultatif).
                             </p>
-                            <OrdonnanceUppy v-model="form.ordonnance" />
+                            <OrdonnanceUppy
+                                v-model="form.ordonnance"
+                                variant="card"
+                            />
                         </div>
                         <div class="flex flex-col gap-1.5">
                             <Label class="text-sm font-medium text-[#374151]"

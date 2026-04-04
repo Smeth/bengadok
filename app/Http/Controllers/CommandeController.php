@@ -11,7 +11,9 @@ use App\Models\MontantLivraison;
 use App\Models\Ordonnance;
 use App\Models\Pharmacie;
 use App\Models\Produit;
+use App\Models\User;
 use App\Models\Zone;
+use App\Services\BroadcastCommandeNotificationTargets;
 use App\Services\CommandeService;
 use App\Services\PharmacieProximiteService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -49,8 +51,12 @@ class CommandeController extends Controller
         }
         $this->authorize('viewAny', Commande::class);
 
-        $query = $this->commandesIndexBaseQuery($request)
-            ->with(['client', 'pharmacie', 'produits', 'livreur', 'modePaiement', 'montantLivraison', 'ordonnance.verification']);
+        $with = ['client', 'pharmacie', 'produits', 'livreur', 'modePaiement', 'montantLivraison'];
+        $with[] = $this->backofficePeutVoirVerificationOrdonnance($user)
+            ? 'ordonnance.verification'
+            : 'ordonnance';
+
+        $query = $this->commandesIndexBaseQuery($request)->with($with);
 
         $this->applyCommandeIndexSearch($query, $request->input('search'));
 
@@ -105,7 +111,12 @@ class CommandeController extends Controller
         $this->authorize('view', $commande);
         $user = $request->user();
 
-        $commande->load(['client', 'pharmacie', 'pharmacieRefusee', 'produits', 'ordonnance.verification', 'modePaiement', 'livreur', 'montantLivraison', 'enfants.pharmacie', 'enfants.produits', 'parent']);
+        $relations = ['client', 'pharmacie', 'pharmacieRefusee', 'produits', 'modePaiement', 'livreur', 'montantLivraison', 'enfants.pharmacie', 'enfants.produits', 'parent'];
+        $relations[] = $this->backofficePeutVoirVerificationOrdonnance($user)
+            ? 'ordonnance.verification'
+            : 'ordonnance';
+
+        $commande->load($relations);
 
         $commande->setAttribute(
             'deja_relancee',
@@ -293,12 +304,18 @@ class CommandeController extends Controller
             $query->where('pharmacie_id', $request->user()->pharmacie_id);
         }
 
+        $pharmacieIds = (clone $query)->whereNotIn('status', ['annulee'])->pluck('pharmacie_id')->unique();
+
         $count = $query->whereNotIn('status', ['annulee'])->update([
             'status' => 'annulee',
             'status_pharmacie' => 'annulee',
             'motif_annulation' => $validated['motif_annulation'],
             'note_annulation' => $validated['note_annulation'] ?? null,
         ]);
+
+        if ($count > 0) {
+            BroadcastCommandeNotificationTargets::dispatchForPharmacieIds($pharmacieIds);
+        }
 
         return back()->with('status', "{$count} commande(s) annulée(s).");
     }
@@ -345,10 +362,15 @@ class CommandeController extends Controller
 
         // Si validation de la commande parente, valider aussi les commandes enfants (déjà en_attente)
         if ($validated['status'] === 'validee' && $commande->parent_id === null) {
+            $pharmacieIdsEnfants = $commande->enfants()
+                ->where('status', 'en_attente')
+                ->pluck('pharmacie_id')
+                ->unique();
             $commande->enfants()->where('status', 'en_attente')->update([
                 'status' => 'validee',
                 'status_pharmacie' => 'valide_a_preparer',
             ]);
+            BroadcastCommandeNotificationTargets::dispatchForPharmacieIds($pharmacieIdsEnfants);
         }
 
         return back();
@@ -451,5 +473,13 @@ class CommandeController extends Controller
             'mois' => $query->whereRaw('COALESCE(commandes.date, DATE(commandes.created_at)) >= ?', [now()->copy()->startOfMonth()->toDateString()]),
             default => null,
         };
+    }
+
+    /**
+     * OCR / règles métier : réservé au back-office (pas aux comptes pharmacie).
+     */
+    private function backofficePeutVoirVerificationOrdonnance(?User $user): bool
+    {
+        return $user !== null && $user->hasAnyRole(['admin', 'super_admin', 'agent_call_center']);
     }
 }

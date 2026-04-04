@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import CsrfHiddenInput from '@/components/CsrfHiddenInput.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -32,6 +33,7 @@ defineProps<{
             class="space-y-6 text-center"
             v-slot="{ processing }"
         >
+            <CsrfHiddenInput />
             <Button :disabled="processing" variant="secondary">
                 <Spinner v-if="processing" />
                 Renvoyer l'email de vérification

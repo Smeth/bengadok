@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\AppSetting;
 use App\Models\Commande;
 use App\Models\MotifAnnulation;
+use App\Models\OrdonnanceVerificationSetting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -70,6 +71,16 @@ class HandleInertiaRequests extends Middleware
             'motifs_annulation' => fn () => MotifAnnulation::orderedForShare(),
             /** Délai (heures) avant de pouvoir resélectionner la même pharmacie lors d'une relance */
             'delai_relance_meme_pharmacie_heures' => fn () => AppSetting::delaiRelanceMemePharmacieHeures(),
+            /** OCR / règles ordonnance : mode d’exécution pour l’UI (barre d’attente, etc.) */
+            'ordonnanceVerificationSettings' => function () {
+                $row = OrdonnanceVerificationSetting::query()->first();
+
+                return [
+                    'enabled' => $row?->enabled ?? true,
+                    'execution_mode' => $row?->execution_mode
+                        ?? OrdonnanceVerificationSetting::EXECUTION_MODE_QUEUE,
+                ];
+            },
         ];
     }
 
@@ -92,8 +103,9 @@ class HandleInertiaRequests extends Middleware
         $query = Commande::query();
 
         if ($isPharmacie && $user->pharmacie_id) {
-            // Pharmacie : nouvelles commandes — pas de chargement client (données sensibles, non exposées au front)
-            $query->where('pharmacie_id', $user->pharmacie_id)
+            // Pharmacie : nouvelles commandes — prénom/nom du client (nécessaire pour préparer / contacter)
+            $query->with(['client:id,nom,prenom'])
+                ->where('pharmacie_id', $user->pharmacie_id)
                 ->where('status_pharmacie', 'nouvelle');
         } elseif ($isBackoffice) {
             // Backoffice : commandes en attente de validation admin
@@ -107,7 +119,7 @@ class HandleInertiaRequests extends Middleware
         $count = (clone $query)->count();
         $items = $query->orderByDesc('created_at')
             ->limit(10)
-            ->get(['id', 'numero', 'status', 'status_pharmacie', 'client_id', 'pharmacie_id', 'created_at', 'updated_at'])
+            ->get(['id', 'numero', 'status', 'status_pharmacie', 'client_id', 'pharmacie_id', 'beneficiaire', 'created_at', 'updated_at'])
             ->map(function (Commande $c) use ($isPharmacie) {
                 return [
                     'id' => $c->id,
@@ -115,7 +127,8 @@ class HandleInertiaRequests extends Middleware
                     'status' => $c->status,
                     'status_pharmacie' => $c->status_pharmacie,
                     'status_label' => Commande::STATUSES[$c->status] ?? $c->status,
-                    'client' => $isPharmacie ? null : ($c->client ? ['nom' => $c->client->nom, 'prenom' => $c->client->prenom] : null),
+                    'client' => $c->client ? ['nom' => $c->client->nom, 'prenom' => $c->client->prenom] : null,
+                    'beneficiaire' => $c->beneficiaire,
                     'pharmacie' => $isPharmacie ? null : ($c->pharmacie ? ['designation' => $c->pharmacie->designation] : null),
                     'created_at' => $c->created_at?->toIso8601String(),
                     'url' => $this->notificationCommandesListUrl($c, $isPharmacie),

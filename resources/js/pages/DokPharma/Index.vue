@@ -13,15 +13,11 @@ import {
     RefreshCw,
     X,
     CheckCircle2,
-    ShieldCheck,
     Eye,
     AlertCircle,
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
-import { usePolling } from '@/composables/usePolling';
 import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
-
-usePolling();
 
 type Pivot = {
     quantite: number;
@@ -1941,25 +1937,8 @@ function downloadOrdonnance() {
                             <p class="text-[13px]">Ordonnance non disponible</p>
                         </div>
                     </div>
-                    <!-- Section vérification IA -->
-                    <div class="border-t border-gray-100 px-5 py-4 space-y-3">
-                        <div class="rounded-xl bg-[#EFF6FF] px-4 py-3">
-                            <div class="mb-1 flex items-center gap-2">
-                                <ShieldCheck class="size-4 text-[#3B82F6]" />
-                                <span
-                                    class="text-[13px] font-bold text-[#1D4ED8]"
-                                    >Prêt à vérifier</span
-                                >
-                            </div>
-                            <p class="mb-3 text-[11px] text-[#3B82F6]">
-                                Analyse par IA
-                            </p>
-                            <button
-                                class="w-full rounded-xl bg-[#3B82F6] py-2.5 text-[13px] font-bold text-white shadow hover:bg-[#2563EB] transition-colors"
-                            >
-                                Lancer l'authentification
-                            </button>
-                        </div>
+                    <!-- Points de vérification (ordonnance) -->
+                    <div class="border-t border-gray-100 px-5 py-4">
                         <div>
                             <p
                                 class="mb-2 flex items-center gap-1.5 text-[12px] font-bold text-[#3B82F6]"

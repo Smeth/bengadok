@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import CsrfHiddenInput from '@/components/CsrfHiddenInput.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ import { store } from '@/routes/password/confirm';
             reset-on-success
             v-slot="{ errors, processing }"
         >
+            <CsrfHiddenInput />
             <div class="space-y-6">
                 <div class="grid gap-2">
                     <Label htmlFor="password">Mot de passe</Label>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+import OrdonnanceAnalysisProgressBar from '@/components/OrdonnanceAnalysisProgressBar.vue';
 import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
 import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
 import { Button } from '@/components/ui/button';
@@ -73,6 +74,42 @@ const commentaire = ref(props.commande.commentaire ?? '');
 const modePaiementId = ref(props.commande.mode_paiement?.id ?? '');
 const montantLivraisonId = ref(props.commande.montant_livraison?.id ?? '');
 const ordonnanceFile = ref<File | null>(null);
+const enSubmission = ref(false);
+
+const page = usePage();
+type OvSettings = { enabled?: boolean; execution_mode?: string };
+const ordonnanceVerificationSettings = computed(
+    () => page.props.ordonnanceVerificationSettings as OvSettings | undefined,
+);
+
+const analysisNoticeText = computed(() => {
+    const ov = ordonnanceVerificationSettings.value;
+    if (ov && ov.enabled === false) {
+        return 'La vérification automatique des ordonnances est désactivée dans les paramètres.';
+    }
+    if (ov?.execution_mode === 'immediate') {
+        return 'À l’enregistrement avec un nouveau fichier, l’analyse (OCR et règles) s’exécute pendant la requête. Le résultat est visible sur la fiche commande.';
+    }
+    return 'Après enregistrement, le fichier est mis en file d’analyse. Le résultat apparaît sur la fiche sous l’aperçu (mise à jour automatique).';
+});
+
+const submitProgressLabel = computed(() => {
+    const ov = ordonnanceVerificationSettings.value;
+    if (!ordonnanceFile.value || ov?.enabled === false) {
+        return 'Enregistrement des modifications…';
+    }
+    if (ov?.execution_mode === 'immediate') {
+        return 'Enregistrement et analyse de l’ordonnance en cours…';
+    }
+    return 'Enregistrement des modifications…';
+});
+
+const showSubmitAnalysisProgress = computed(
+    () =>
+        enSubmission.value &&
+        ordonnanceFile.value !== null &&
+        ordonnanceVerificationSettings.value?.enabled !== false,
+);
 
 type ProduitLigne = {
     id?: number;
@@ -127,6 +164,8 @@ function submit() {
         }));
     if (!produitsValides.length) return;
 
+    enSubmission.value = true;
+
     const payload: Record<string, unknown> = {
         client_id: clientId.value || undefined,
         client_nom: clientNom.value.trim(),
@@ -154,9 +193,16 @@ function submit() {
         formData.append('_method', 'PATCH');
         router.post(`/commandes/${props.commande.id}`, formData, {
             forceFormData: true,
+            onFinish: () => {
+                enSubmission.value = false;
+            },
         });
     } else {
-        router.patch(`/commandes/${props.commande.id}`, payload);
+        router.patch(`/commandes/${props.commande.id}`, payload, {
+            onFinish: () => {
+                enSubmission.value = false;
+            },
+        });
     }
 }
 </script>
@@ -304,6 +350,13 @@ function submit() {
                 <OrdonnanceUppy
                     v-model="ordonnanceFile"
                     label="Nouvelle ordonnance (remplace l'actuelle)"
+                    show-analysis-notice
+                    :analysis-notice="analysisNoticeText"
+                />
+                <OrdonnanceAnalysisProgressBar
+                    class="mt-2"
+                    :visible="showSubmitAnalysisProgress"
+                    :label="submitProgressLabel"
                 />
                 <OrdonnanceFilePreview
                     v-if="ordonnanceFile"
