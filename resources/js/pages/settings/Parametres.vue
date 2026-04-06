@@ -171,7 +171,7 @@ const onglets = [
     { id: 'relanceCommande', label: 'Relance commandes', icon: Timer },
     {
         id: 'ordonnanceVerification',
-        label: 'Vérif. ordonnances',
+        label: 'Ordonnances (OCR)',
         icon: FileCheck,
     },
     { id: 'motifsAnnulation', label: "Motifs d'annulation", icon: RefreshCw },
@@ -580,13 +580,16 @@ function sauverRelanceDelai() {
 }
 
 const OV_RULE_KEYS = [
-    { key: 'date_found', label: 'Date détectée dans le texte' },
-    { key: 'date_not_future', label: 'Date non postérieure à aujourd’hui' },
-    { key: 'date_within_max_age', label: 'Éligibilité (fenêtre max.)' },
-    { key: 'prescriber_keywords', label: 'Indices prescripteur (mots-clés)' },
-    { key: 'patient_keywords', label: 'Indices patient (mots-clés)' },
-    { key: 'medicament_keywords', label: 'Indices médicaments (mots-clés)' },
-    { key: 'no_duplicate_file', label: 'Fichier unique (empreinte)' },
+    { key: 'date_found', label: 'Date repérée dans le document' },
+    { key: 'date_not_future', label: 'Date de prescription non future' },
+    {
+        key: 'date_within_max_age',
+        label: 'Prescription dans la durée autorisée (ancienneté max.)',
+    },
+    { key: 'prescriber_keywords', label: 'Mots-clés prescripteur / structure' },
+    { key: 'patient_keywords', label: 'Mots-clés patient' },
+    { key: 'medicament_keywords', label: 'Mots-clés médicament / posologie' },
+    { key: 'no_duplicate_file', label: 'Fichier non déjà utilisé (empreinte)' },
 ] as const;
 
 const DEFAULT_OV_WEIGHTS: Record<string, number> = {
@@ -1935,25 +1938,26 @@ function sauverOrdonnanceVerification() {
                         class="font-semibold text-gray-700 flex items-center gap-2"
                     >
                         <FileCheck class="h-4 w-4 text-teal-600" />
-                        Vérification des ordonnances (OCR + règles)
+                        Contrôle automatique des ordonnances
                     </h2>
                 </div>
                 <div
                     class="space-y-3 border-b border-teal-100 bg-teal-50/40 px-5 py-4"
                 >
                     <p class="text-sm leading-relaxed text-gray-600">
-                        Après chaque upload, l’analyse du
-                        <span class="font-semibold">PDF</span> (texte natif) ou
-                        des
-                        <span class="font-semibold">images</span> via
-                        <span class="font-semibold">Tesseract</span> (exécutable
-                        configurable ci‑dessous) peut être lancée en
+                        Après chaque envoi, le texte est extrait du
+                        <span class="font-semibold">PDF</span> (texte intégré) ou
+                        reconnu sur les
+                        <span class="font-semibold">images</span> avec
+                        <span class="font-semibold">Tesseract</span> (voir
+                        ci‑dessous). L’analyse peut tourner en
                         <span class="font-semibold">file d’attente</span> ou
-                        <span class="font-semibold">immédiatement</span> (voir le
-                        mode d’exécution). Le score est calculé selon les
-                        <span class="font-semibold">pondérations</span> et
-                        comparé aux seuils. Les mots-clés sont recherchés dans le
-                        texte brut (insensible à la casse).
+                        <span class="font-semibold">pendant l’envoi</span> selon le
+                        mode choisi. Un
+                        <span class="font-semibold">score</span> est calculé à
+                        partir des pondérations puis comparé aux seuils. Les
+                        listes de mots-clés sont cherchées dans le texte brut, sans
+                        tenir compte des majuscules.
                     </p>
                 </div>
                 <form
@@ -1968,30 +1972,29 @@ function sauverOrdonnanceVerification() {
                             type="checkbox"
                             class="size-4 rounded border-gray-300"
                         />
-                        Activer la vérification automatique
+                        Activer le contrôle automatique
                     </label>
 
                     <div class="max-w-xl">
                         <label
                             class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
-                            >Mode d’exécution</label
+                            >Quand lancer l’analyse</label
                         >
                         <select
                             v-model="ovForm.execution_mode"
                             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800"
                         >
                             <option value="queue">
-                                File d’attente (asynchrone) — nécessite un worker
-                                (ex. php artisan queue:work)
+                                File d’attente (asynchrone)
                             </option>
                             <option value="immediate">
-                                Immédiat — pendant l’upload (la réponse HTTP attend
-                                la fin de l’analyse)
+                                Immédiat — pendant l’upload
                             </option>
                         </select>
                         <p class="mt-1 text-xs text-gray-500">
-                            Le mode immédiat peut allonger le temps de réponse ;
-                            prévoir un timeout serveur suffisant pour l’OCR.
+                            En mode immédiat, la réponse HTTP attend la fin de
+                            l’analyse : prévoir un délai d’attente serveur
+                            suffisant pour l’OCR.
                         </p>
                     </div>
 
@@ -1999,7 +2002,7 @@ function sauverOrdonnanceVerification() {
                         <div>
                             <label
                                 class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
-                                >Âge max. prescription (jours)</label
+                                >Ancienneté max. de la prescription (jours)</label
                             >
                             <input
                                 v-model.number="ovForm.max_prescription_age_days"
@@ -2013,7 +2016,7 @@ function sauverOrdonnanceVerification() {
                         <div>
                             <label
                                 class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
-                                >Seuil « conforme » (%)</label
+                                >Score minimum pour « conforme » (%)</label
                             >
                             <input
                                 v-model.number="ovForm.threshold_pass"
@@ -2027,7 +2030,7 @@ function sauverOrdonnanceVerification() {
                         <div>
                             <label
                                 class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
-                                >Seuil « revue » (%)</label
+                                >Score minimum pour « revue » (%)</label
                             >
                             <input
                                 v-model.number="ovForm.threshold_review"
@@ -2048,14 +2051,14 @@ function sauverOrdonnanceVerification() {
                             type="checkbox"
                             class="size-4 rounded border-gray-300"
                         />
-                        Forcer une « revue » si le fichier est déjà utilisé
-                        (même empreinte SHA-256)
+                        Mettre en « revue » si le même fichier a déjà été déposé
+                        (empreinte SHA-256 identique)
                     </label>
 
                     <div>
                         <label
                             class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
-                            >Binaire Tesseract</label
+                            >Commande Tesseract (OCR sur images)</label
                         >
                         <input
                             v-model="ovForm.tesseract_binary"
@@ -2064,8 +2067,9 @@ function sauverOrdonnanceVerification() {
                             placeholder="tesseract"
                         />
                         <p class="mt-1 text-xs text-gray-500">
-                            Windows : chemin complet si nécessaire. Les PDF sont
-                            lisés sans OCR.
+                            Indiquez « tesseract » si l’exécutable est dans le PATH
+                            du serveur ; sous Windows, utilisez le chemin complet si
+                            besoin. Les PDF avec texte intégré sont lus sans OCR.
                         </p>
                     </div>
 
@@ -2073,7 +2077,7 @@ function sauverOrdonnanceVerification() {
                         <p
                             class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400"
                         >
-                            Pondérations des critères (points)
+                            Pondération de chaque critère (points)
                         </p>
                         <div class="grid gap-3 sm:grid-cols-2">
                             <div
@@ -2094,8 +2098,9 @@ function sauverOrdonnanceVerification() {
                             </div>
                         </div>
                         <p class="mt-2 text-xs text-gray-500">
-                            Le score final est le pourcentage des points obtenus
-                            sur la somme des pondérations actives.
+                            Le score affiché est le pourcentage des points obtenus
+                            par rapport à la somme des pondérations strictement
+                            positives.
                         </p>
                     </div>
 
@@ -2103,7 +2108,8 @@ function sauverOrdonnanceVerification() {
                         <div>
                             <label
                                 class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
-                                >Mots-clés prescripteur (1 par ligne)</label
+                                >Liste prescripteur / structure (1 mot-clé par
+                                ligne)</label
                             >
                             <textarea
                                 v-model="ovForm.kw_prescriber"
@@ -2114,7 +2120,7 @@ function sauverOrdonnanceVerification() {
                         <div>
                             <label
                                 class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
-                                >Mots-clés patient (1 par ligne)</label
+                                >Liste patient (1 mot-clé par ligne)</label
                             >
                             <textarea
                                 v-model="ovForm.kw_patient"
@@ -2125,7 +2131,8 @@ function sauverOrdonnanceVerification() {
                         <div>
                             <label
                                 class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
-                                >Mots-clés médicaments (1 par ligne)</label
+                                >Liste médicament / posologie (1 mot-clé par
+                                ligne)</label
                             >
                             <textarea
                                 v-model="ovForm.kw_medicament"

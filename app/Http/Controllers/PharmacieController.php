@@ -23,7 +23,8 @@ class PharmacieController extends Controller
         $query = Pharmacie::with(['zone', 'typePharmacie', 'heurs', 'users'])
             ->when($search, fn ($q) => $q->where('designation', 'like', "%{$search}%")
                 ->orWhere('adresse', 'like', "%{$search}%")
-                ->orWhere('telephone', 'like', "%{$search}%"));
+                ->orWhere('telephone', 'like', "%{$search}%"))
+            ->orderByDesc('created_at');
 
         $pharmacies = $query->paginate(8)->withQueryString()->through(function ($p) {
             $lat = $p->latitude ?? ($p->zone?->latitude ? (float) $p->zone->latitude + ($p->id * 0.001) : -4.2694 + ($p->id % 6) * 0.01);
@@ -54,6 +55,7 @@ class PharmacieController extends Controller
             ->when($search, fn ($q) => $q->where('designation', 'like', "%{$search}%")
                 ->orWhere('adresse', 'like', "%{$search}%")
                 ->orWhere('telephone', 'like', "%{$search}%"))
+            ->orderByDesc('created_at')
             ->get()
             ->map(function ($p) {
                 $lat = $p->latitude ?? ($p->zone?->latitude ? (float) $p->zone->latitude + ($p->id * 0.001) : -4.2694 + ($p->id % 6) * 0.01);

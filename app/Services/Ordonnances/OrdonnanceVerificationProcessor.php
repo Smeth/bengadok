@@ -166,27 +166,27 @@ class OrdonnanceVerificationProcessor
         return [
             'date_found' => [
                 'pass' => $dateFound,
-                'label' => 'Date de prescription détectée dans le texte',
+                'label' => 'Date repérée dans le document',
             ],
             'date_not_future' => [
                 'pass' => $notFuture,
-                'label' => 'Date non postérieure à aujourd’hui',
+                'label' => 'Date de prescription non future',
             ],
             'date_within_max_age' => [
                 'pass' => $withinAge,
-                'label' => 'Date dans la fenêtre d’âge maximum (éligibilité)',
+                'label' => 'Prescription dans la durée autorisée (ancienneté max.)',
             ],
             'prescriber_keywords' => [
                 'pass' => $hasPrescriber,
-                'label' => 'Indices prescripteur / structure (mots-clés)',
+                'label' => 'Mots-clés prescripteur / structure',
             ],
             'patient_keywords' => [
                 'pass' => $hasPatient,
-                'label' => 'Indices patient (mots-clés)',
+                'label' => 'Mots-clés patient',
             ],
             'medicament_keywords' => [
                 'pass' => $hasMedic,
-                'label' => 'Indices médicaments (mots-clés)',
+                'label' => 'Mots-clés médicament / posologie',
             ],
             'no_duplicate_file' => [
                 'pass' => ! $isDuplicate,
