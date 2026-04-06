@@ -164,9 +164,9 @@ const nextPageUrl = computed(() => {
                     <col class="w-[10%]" />
                     <col class="w-[7%]" />
                     <col class="w-[20%]" />
-                    <col class="w-[12%]" />
-                    <col class="w-[8%]" />
                     <col class="w-[10%]" />
+                    <col class="w-[8%]" />
+                    <col class="w-[12%]" />
                     <col class="w-[6%]" />
                 </colgroup>
                 <thead>
@@ -264,10 +264,13 @@ const nextPageUrl = computed(() => {
                                 }}&nbsp;FCFA
                             </span>
                         </td>
-                        <td class="py-3 pl-2 pr-3 align-middle">
+                        <td
+                            class="max-w-0 min-w-0 py-3 pl-2 pr-3 align-middle"
+                        >
                             <span
-                                class="inline-flex whitespace-nowrap rounded-[10px] px-3 py-1.5 text-[13px] font-bold"
+                                class="inline-block max-w-full min-w-0 rounded-[10px] px-2 py-1.5 text-center text-[12px] font-bold leading-snug break-words whitespace-normal"
                                 :style="getStatusBadgeStyle(cmd.status)"
+                                :title="getStatusLabel(cmd.status)"
                             >
                                 {{ getStatusLabel(cmd.status) }}
                             </span>
