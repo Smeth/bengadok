@@ -380,6 +380,37 @@ function formatDate(d: string) {
     });
 }
 
+/** Libellés FR pour la décision (l’API stocke pass, review, fail, etc.). */
+function libelleDecisionVerification(decision: string | undefined): string {
+    const map: Record<string, string> = {
+        pass: 'Validé',
+        review: 'À revoir',
+        fail: 'Refusé',
+        pending: 'En attente',
+        skipped: 'Non analysé',
+    };
+    const key = (decision ?? '').toLowerCase();
+    return map[key] ?? (decision ? decision : '—');
+}
+
+/** Texte d’aide affiché au survol du statut de vérification. */
+function descriptionDecisionVerification(decision: string | undefined): string {
+    const key = (decision ?? '').toLowerCase();
+    const map: Record<string, string> = {
+        pass:
+            'Le score dépasse le seuil de validation : les critères (dates, mots-clés, fichier unique, etc.) sont suffisamment remplis.',
+        review:
+            'Contrôle manuel conseillé : score moyen ou règle métier (par ex. même fichier déjà utilisé). Vérifiez les détails dans la liste des critères.',
+        fail:
+            'Score sous le seuil minimum : trop peu de critères validés par l’OCR et les règles. Vérifiez la qualité du scan et le contenu.',
+        pending:
+            'Analyse en cours ou en file d’attente : le score et le statut final seront mis à jour automatiquement.',
+        skipped:
+            'Vérification automatique non exécutée : désactivée dans les paramètres ou configuration absente.',
+    };
+    return map[key] ?? 'Décision de vérification ordonnance (OCR + règles).';
+}
+
 async function openDetail(id: number) {
     loadingDetail.value = true;
     showDetailModal.value = true;
@@ -1194,7 +1225,13 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                             %
                                         </span>
                                         <span
-                                            class="rounded-full px-2 py-0.5 text-xs font-semibold uppercase"
+                                            class="cursor-help rounded-full px-2 py-0.5 text-xs font-semibold"
+                                            :title="
+                                                descriptionDecisionVerification(
+                                                    detailCommande.ordonnance
+                                                        .verification.decision,
+                                                )
+                                            "
                                             :class="{
                                                 'bg-emerald-100 text-emerald-800':
                                                     detailCommande.ordonnance
@@ -1221,8 +1258,10 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                             }"
                                         >
                                             {{
-                                                detailCommande.ordonnance
-                                                    .verification.decision
+                                                libelleDecisionVerification(
+                                                    detailCommande.ordonnance
+                                                        .verification.decision,
+                                                )
                                             }}
                                         </span>
                                     </div>
