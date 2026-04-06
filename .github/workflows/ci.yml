@@ -168,6 +168,7 @@ jobs:
 
             echo "=== [8/9] Redémarrage des workers ==="
             php artisan queue:restart
+            sudo supervisorctl restart bengadok-worker:*
             sudo supervisorctl restart bengadok-reverb
 
             echo "=== [9/9] Désactivation mode maintenance ==="

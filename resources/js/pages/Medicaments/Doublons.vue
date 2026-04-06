@@ -247,24 +247,24 @@ const statutLabels: Record<string, string> = {
                 <div class="flex gap-2">
                     <Link
                         href="/medicaments"
-                        class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/80"
+                        class="rounded-lg px-4 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/20 hover:text-white"
                     >
                         Catalogue médicaments
                     </Link>
                     <Link
                         :href="`/medicaments?onglet=db_medicament`"
-                        class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/80"
+                        class="rounded-lg px-4 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/20 hover:text-white"
                     >
                         DB médicament
                     </Link>
                     <button
-                        class="rounded-lg px-4 py-2 text-sm font-medium bg-[#459cd1] text-white"
+                        class="rounded-lg px-4 py-2 text-sm font-medium bg-white/25 text-white backdrop-blur-sm"
                     >
                         Gestion des doublons
                     </button>
                     <Link
                         href="/medicaments"
-                        class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/80"
+                        class="rounded-lg px-4 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/20 hover:text-white"
                     >
                         Statistiques
                     </Link>
