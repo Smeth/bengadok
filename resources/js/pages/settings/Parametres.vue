@@ -18,6 +18,8 @@ import {
     FileCheck,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
+import Heading from '@/components/Heading.vue';
+import SettingsPageShell from '@/components/settings/SettingsPageShell.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -28,8 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { dashboard } from '@/routes';
+import SettingsLayout from '@/layouts/settings/Layout.vue';
 import type { BreadcrumbItem } from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -149,9 +150,11 @@ const flashStatus = computed(
     () => (page.props.flash as { status?: string })?.status,
 );
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Tableau de bord', href: dashboard() },
-    { title: 'Configuration', href: '/settings/parametres' },
+const breadcrumbItems: BreadcrumbItem[] = [
+    {
+        title: 'Configuration',
+        href: '/settings/parametres',
+    },
 ];
 
 // ─── Onglet actif ─────────────────────────────────────────────────────────────
@@ -675,18 +678,18 @@ function sauverOrdonnanceVerification() {
 </script>
 
 <template>
-    <Head title="Configuration — BengaDok" />
+    <SettingsPageShell :breadcrumbs="breadcrumbItems">
+        <Head title="Configuration — BengaDok" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="mx-auto max-w-5xl p-6 space-y-6">
-            <!-- En-tête page -->
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">Configuration</h1>
-                <p class="mt-1 text-sm text-gray-500">
-                    Configurez les données de référence utilisées dans
-                    l'application.
-                </p>
-            </div>
+        <h1 class="sr-only">Configuration</h1>
+
+        <SettingsLayout>
+            <div class="space-y-6">
+                <Heading
+                    variant="small"
+                    title="Configuration"
+                    description="Configurez les données de référence utilisées dans l'application."
+                />
 
             <p
                 v-if="flashStatus"
@@ -2413,6 +2416,7 @@ function sauverOrdonnanceVerification() {
                     </tbody>
                 </table>
             </section>
-        </div>
-    </AppLayout>
+            </div>
+        </SettingsLayout>
+    </SettingsPageShell>
 </template>

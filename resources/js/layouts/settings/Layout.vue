@@ -7,6 +7,7 @@ import {
     RotateCcw,
     Shield,
     ShieldCheck,
+    SlidersHorizontal,
     User,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
@@ -29,6 +30,12 @@ const isSuperAdmin = computed(
         )?.user?.roles?.includes('super_admin') ?? false,
 );
 
+const canAccessConfiguration = computed(() => {
+    const roles =
+        (page.props.auth as { user?: { roles?: string[] } })?.user?.roles ?? [];
+    return roles.includes('admin') || roles.includes('super_admin');
+});
+
 const sidebarNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
         { title: 'Profil', href: editProfile(), icon: User },
@@ -36,6 +43,13 @@ const sidebarNavItems = computed<NavItem[]>(() => {
         { title: 'Authentification 2FA', href: show(), icon: Shield },
         { title: 'Apparence', href: editAppearance(), icon: Palette },
     ];
+    if (canAccessConfiguration.value) {
+        items.push({
+            title: 'Configuration',
+            href: '/settings/parametres',
+            icon: SlidersHorizontal,
+        });
+    }
     if (isSuperAdmin.value) {
         items.push({
             title: 'Gestion des rôles',

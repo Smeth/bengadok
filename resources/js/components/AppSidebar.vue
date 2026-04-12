@@ -30,7 +30,7 @@ import type { NavItem } from '@/types';
 import AppLogo from './AppLogo.vue';
 
 const page = usePage();
-const { isCurrentUrl } = useCurrentUrl();
+const { isCurrentUrl, currentUrl } = useCurrentUrl();
 const roles = computed(
     () =>
         (page.props.auth as { user?: { roles?: string[] } })?.user?.roles ?? [],
@@ -88,13 +88,11 @@ const mainNavItems = computed<NavItem[]>(() => {
 });
 
 const reglagesItem = { title: 'Réglages', href: '/reglages', icon: Settings };
-const parametresItem = {
-    title: 'Configuration',
-    href: '/settings/parametres',
-    icon: Settings,
-};
-const isAdmin = computed(
-    () => roles.value.includes('admin') || roles.value.includes('super_admin'),
+
+const isReglagesSectionActive = computed(
+    () =>
+        currentUrl.value.startsWith('/settings') ||
+        isCurrentUrl(reglagesItem.href),
 );
 
 function logout() {
@@ -159,18 +157,18 @@ function logout() {
                     :href="reglagesItem.href"
                     class="sidebar-menu-btn-react group flex h-11 w-full items-center gap-3 rounded-[10px] px-3 transition-all"
                     :class="
-                        isCurrentUrl(reglagesItem.href)
+                        isReglagesSectionActive
                             ? 'bg-[#22c55e] text-white'
                             : 'bg-transparent'
                     "
                     :data-active="
-                        isCurrentUrl(reglagesItem.href) ? 'true' : undefined
+                        isReglagesSectionActive ? 'true' : undefined
                     "
                 >
                     <div
                         class="sidebar-menu-icon flex shrink-0 items-center justify-center rounded-full transition-colors"
                         :class="
-                            isCurrentUrl(reglagesItem.href)
+                            isReglagesSectionActive
                                 ? 'bg-white/25 text-white'
                                 : ''
                         "
@@ -189,46 +187,7 @@ function logout() {
                 </Link>
             </div>
 
-            <!-- Configuration (admin seulement) -->
-            <div
-                v-if="isAdmin"
-                class="mt-1 shrink-0 px-0 pb-1 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center"
-            >
-                <Link
-                    :href="parametresItem.href"
-                    class="sidebar-menu-btn-react group flex h-11 w-full items-center gap-3 rounded-[10px] px-3 transition-all"
-                    :class="
-                        isCurrentUrl(parametresItem.href)
-                            ? 'bg-[#22c55e] text-white'
-                            : 'bg-transparent'
-                    "
-                    :data-active="
-                        isCurrentUrl(parametresItem.href) ? 'true' : undefined
-                    "
-                >
-                    <div
-                        class="sidebar-menu-icon flex shrink-0 items-center justify-center rounded-full transition-colors"
-                        :class="
-                            isCurrentUrl(parametresItem.href)
-                                ? 'bg-white/25 text-white'
-                                : ''
-                        "
-                    >
-                        <component
-                            :is="parametresItem.icon"
-                            class="sidebar-menu-icon-svg size-5"
-                            stroke-width="1.5"
-                        />
-                    </div>
-                    <span
-                        class="sidebar-menu-label group-data-[collapsible=icon]:hidden"
-                    >
-                        {{ parametresItem.title }}
-                    </span>
-                </Link>
-            </div>
-
-            <!-- Illustration : hauteur fixe sous Configuration (plus de flex-1 qui repousse tout en bas / compresse le bloc) -->
+            <!-- Illustration : hauteur fixe sous Réglages -->
             <div
                 class="pointer-events-none group-data-[collapsible=icon]:hidden relative mt-3 flex shrink-0 justify-center overflow-visible pt-1"
             >
