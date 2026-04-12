@@ -21,7 +21,7 @@ import {
 import { ref, watch } from 'vue';
 import { Input } from '@/components/ui/input';
 import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
-import { clientNomComplet } from '@/lib/clientDisplayName';
+import { clientNomAvecCivilite } from '@/lib/clientDisplayName';
 
 type Pivot = {
     quantite: number;
@@ -53,18 +53,19 @@ type Commande = {
     date: string;
     status: string;
     status_pharmacie: string;
-    client: { nom: string; prenom: string } | null;
+    client: { nom: string; prenom: string; sexe?: string | null } | null;
     produits: Produit[];
     ordonnance_id?: number | null;
     ordonnance_url?: string | null;
     commentaire?: string | null;
-    prix_total?: number | null;
+    /** Montant médicaments (hors livraison) — seul total visible côté pharmacie */
+    prix_medicaments?: number | null;
 };
 
 /** Nom client affichable pour l’en-tête de carte (évite « - - BDK… »). */
 function nomCommandeVisible(cmd: Commande): boolean {
     if (!cmd.client) return false;
-    const n = clientNomComplet(cmd.client).trim();
+    const n = clientNomAvecCivilite(cmd.client).trim();
     return n !== '' && n !== '-';
 }
 
@@ -298,6 +299,14 @@ function envoyer(cmd: Commande) {
                 const next = new Set(expandedCards.value);
                 next.delete(cmd.id);
                 expandedCards.value = next;
+                dispoSuccessToast.value = {
+                    show: true,
+                    message:
+                        'Disponibilité et prix envoyés au back-office. La commande est en attente de validation.',
+                };
+                window.setTimeout(() => {
+                    dispoSuccessToast.value.show = false;
+                }, 6500);
             },
         },
     );
@@ -329,6 +338,8 @@ function confirmerAchat() {
 /* ─── Modal ordonnance ───────────────────────────────────────── */
 const ordModal = ref({ open: false, url: '', numero: '' });
 const zoom = ref(100);
+
+const dispoSuccessToast = ref({ show: false, message: '' });
 
 function openOrdonnance(cmd: Commande) {
     ordModal.value = {
@@ -363,6 +374,13 @@ function downloadOrdonnance() {
     <Head title="Commandes - BengaDok" />
 
     <PharmacyLayout>
+        <div
+            v-if="dispoSuccessToast.show"
+            class="pointer-events-none fixed bottom-6 left-1/2 z-[100] w-[min(92vw,28rem)] -translate-x-1/2 rounded-xl border border-emerald-200/90 bg-emerald-50/95 px-4 py-3 text-center text-[13px] font-semibold leading-snug text-emerald-900 shadow-lg backdrop-blur-sm"
+            role="status"
+        >
+            {{ dispoSuccessToast.message }}
+        </div>
         <!-- Même fond et grille que le tableau de bord pharmacie -->
         <div class="pharmacy-content-shell flex min-h-full flex-1 flex-col">
             <div class="pharmacy-card mb-4 flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
@@ -510,7 +528,7 @@ function downloadOrdonnance() {
                                     >
                                         <template v-if="nomCommandeVisible(cmd)">
                                             <span class="font-sans">{{
-                                                clientNomComplet(cmd.client!)
+                                                clientNomAvecCivilite(cmd.client!)
                                             }}
                                                 -
                                             </span>
@@ -714,7 +732,7 @@ function downloadOrdonnance() {
                                                                             p,
                                                                         )
                                                                       ? 'border-red-400 bg-red-50 text-red-700 focus:outline-none focus:ring-1 focus:ring-red-400'
-                                                                      : 'border-gray-200 bg-white text-gray-800 focus:border-[#3B82F6] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]'
+                                                                      : 'border-[#2563eb]/70 bg-[#eff6ff] text-[#1e3a8a] focus:border-[#1d4ed8] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/40'
                                                             "
                                                         />
                                                         <!-- Hint max -->
@@ -765,7 +783,7 @@ function downloadOrdonnance() {
                                                                 formLignes[
                                                                     cmd.id
                                                                 ]?.[p.id]?.dispo
-                                                                    ? 'border-gray-200 bg-white text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]'
+                                                                    ? 'border-[#2563eb]/70 bg-[#eff6ff] text-[#1e3a8a] focus:border-[#1d4ed8] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/40'
                                                                     : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
                                                             "
                                                         />
@@ -858,13 +876,22 @@ function downloadOrdonnance() {
                                 >
                             </div>
 
-                            <!-- Commentaires -->
-                            <textarea
-                                v-model="formCommentaires[cmd.id]"
-                                placeholder="Commentaires ..."
-                                rows="3"
-                                class="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-[13px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                            />
+                            <!-- Commentaires pharmacien -->
+                            <div class="space-y-1.5">
+                                <label
+                                    :for="`comment-pharma-${cmd.id}`"
+                                    class="block text-[13px] font-bold tracking-wide text-[#1d4ed8]"
+                                >
+                                    Commentaires du pharmacien
+                                </label>
+                                <textarea
+                                    :id="`comment-pharma-${cmd.id}`"
+                                    v-model="formCommentaires[cmd.id]"
+                                    placeholder="Informations utiles pour le back-office (facultatif)…"
+                                    rows="3"
+                                    class="w-full resize-none rounded-xl border border-[#93c5fd]/80 bg-white px-4 py-3 text-[13px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/35"
+                                />
+                            </div>
 
                             <div class="flex items-center justify-between">
                                 <!-- Message d'erreur quantité -->
@@ -949,7 +976,7 @@ function downloadOrdonnance() {
                                     >
                                         <template v-if="nomCommandeVisible(cmd)">
                                             <span class="font-sans">{{
-                                                clientNomComplet(cmd.client!)
+                                                clientNomAvecCivilite(cmd.client!)
                                             }}
                                                 -
                                             </span>
@@ -1250,7 +1277,7 @@ function downloadOrdonnance() {
                                     >
                                         <template v-if="nomCommandeVisible(cmd)">
                                             <span class="font-sans">{{
-                                                clientNomComplet(cmd.client!)
+                                                clientNomAvecCivilite(cmd.client!)
                                             }}
                                                 -
                                             </span>
@@ -1512,7 +1539,7 @@ function downloadOrdonnance() {
                                 <span
                                     class="text-2xl font-bold text-gray-900"
                                     >{{
-                                        Number(cmd.prix_total || 0).toFixed(1)
+                                        Number(cmd.prix_medicaments || 0).toFixed(1)
                                     }}</span
                                 >
                                 <span class="text-[12px] text-gray-500"
@@ -1563,7 +1590,7 @@ function downloadOrdonnance() {
                                     >
                                         <template v-if="nomCommandeVisible(cmd)">
                                             <span class="font-sans">{{
-                                                clientNomComplet(cmd.client!)
+                                                clientNomAvecCivilite(cmd.client!)
                                             }}
                                                 -
                                             </span>
@@ -1808,7 +1835,7 @@ function downloadOrdonnance() {
                                 <span
                                     class="text-2xl font-bold text-gray-900"
                                     >{{
-                                        Number(cmd.prix_total || 0).toFixed(1)
+                                        Number(cmd.prix_medicaments || 0).toFixed(1)
                                     }}</span
                                 >
                                 <span class="text-[12px] text-gray-500"

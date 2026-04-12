@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { Users, ShieldCheck, Shield, Copy, RefreshCw } from 'lucide-vue-next';
+import {
+    Users,
+    ShieldCheck,
+    Shield,
+    Copy,
+    RefreshCw,
+    CheckCircle2,
+    X,
+} from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,7 +28,8 @@ const props = defineProps<{
     vendeurs: Array<{
         id: number;
         name: string;
-        email: string;
+        email: string | null;
+        phone: string | null;
         username?: string;
     }>;
     pharmacie: { id: number; designation: string };
@@ -34,9 +43,15 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const modalCreate = ref(false);
+const formErrors = ref<Record<string, string>>({});
+const createSuccessToast = ref<{
+    show: boolean;
+    title: string;
+}>({ show: false, title: '' });
 const form = ref({
     name: '',
     email: '',
+    phone: '',
     role: 'vendeur' as 'gerant' | 'vendeur',
     password: '',
 });
@@ -72,13 +87,19 @@ function regeneratePassword() {
     form.value.password = generatePassword();
 }
 
-function ouvrirCreate() {
+function resetCreateForm() {
+    formErrors.value = {};
     form.value = {
         name: '',
         email: '',
+        phone: '',
         role: 'vendeur',
         password: generatePassword(),
     };
+}
+
+function ouvrirCreate() {
+    resetCreateForm();
     modalCreate.value = true;
 }
 
@@ -88,17 +109,35 @@ function copyCredentials() {
 }
 
 function creerVendeur() {
+    formErrors.value = {};
     router.post(
         '/pharmacie/vendeurs',
         {
             name: form.value.name,
-            email: form.value.email,
+            email: form.value.email || undefined,
+            phone: form.value.phone,
             password: form.value.password,
             role: form.value.role,
         },
         {
-            onSuccess: () => {
+            onSuccess: (page) => {
                 modalCreate.value = false;
+                resetCreateForm();
+                const flash = (
+                    page.props as { flash?: { status?: string } }
+                ).flash;
+                createSuccessToast.value = {
+                    show: true,
+                    title:
+                        flash?.status?.trim() ||
+                        'Utilisateur créé. Transmettez les identifiants au collaborateur.',
+                };
+                window.setTimeout(() => {
+                    createSuccessToast.value.show = false;
+                }, 10000);
+            },
+            onError: (e) => {
+                formErrors.value = e as Record<string, string>;
             },
         },
     );
@@ -132,6 +171,9 @@ function creerVendeur() {
                                 Email
                             </th>
                             <th class="px-4 py-3 text-left font-medium">
+                                Téléphone
+                            </th>
+                            <th class="px-4 py-3 text-left font-medium">
                                 Identifiant
                             </th>
                         </tr>
@@ -143,7 +185,8 @@ function creerVendeur() {
                             class="border-b last:border-0 hover:bg-muted/30"
                         >
                             <td class="px-4 py-3">{{ v.name }}</td>
-                            <td class="px-4 py-3">{{ v.email }}</td>
+                            <td class="px-4 py-3">{{ v.email || '—' }}</td>
+                            <td class="px-4 py-3">{{ v.phone || '—' }}</td>
                             <td
                                 class="px-4 py-3 font-mono text-muted-foreground"
                             >
@@ -186,14 +229,39 @@ function creerVendeur() {
                         />
                     </div>
                     <div class="space-y-2">
-                        <Label for="email">Email</Label>
+                        <Label for="vendeur-phone"
+                            >Téléphone (obligatoire — SMS / OTP)</Label
+                        >
+                        <Input
+                            id="vendeur-phone"
+                            v-model="form.phone"
+                            type="tel"
+                            required
+                            autocomplete="tel"
+                            placeholder="Ex: +242 06 123 45 67"
+                        />
+                        <p
+                            v-if="formErrors.phone"
+                            class="text-sm text-red-600"
+                        >
+                            {{ formErrors.phone }}
+                        </p>
+                    </div>
+                    <div class="space-y-2">
+                        <Label for="email">Email (facultatif)</Label>
                         <Input
                             id="email"
                             v-model="form.email"
                             type="email"
-                            required
-                            placeholder="Exemple@gmail.com"
+                            autocomplete="email"
+                            placeholder="Laisser vide si non utilisé"
                         />
+                        <p
+                            v-if="formErrors.email"
+                            class="text-sm text-red-600"
+                        >
+                            {{ formErrors.email }}
+                        </p>
                     </div>
 
                     <div class="space-y-3">
@@ -312,17 +380,6 @@ function creerVendeur() {
                         </Button>
                     </div>
 
-                    <div class="space-y-2">
-                        <Label for="email">Email *</Label>
-                        <Input
-                            id="email"
-                            v-model="form.email"
-                            type="email"
-                            required
-                            placeholder="Exemple@gmail.com"
-                        />
-                    </div>
-
                     <DialogFooter class="gap-2">
                         <Button
                             type="button"
@@ -341,5 +398,37 @@ function creerVendeur() {
                 </form>
             </DialogContent>
         </Dialog>
+
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="translate-y-2 opacity-0"
+                enter-to-class="translate-y-0 opacity-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+            >
+                <div
+                    v-if="createSuccessToast.show"
+                    class="fixed bottom-6 right-6 z-[200] flex max-w-md items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-lg dark:border-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-100"
+                    role="status"
+                >
+                    <CheckCircle2
+                        class="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                    />
+                    <p class="min-w-0 flex-1 font-semibold">
+                        {{ createSuccessToast.title }}
+                    </p>
+                    <button
+                        type="button"
+                        class="rounded p-1 text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900"
+                        aria-label="Fermer"
+                        @click="createSuccessToast.show = false"
+                    >
+                        <X class="size-4" />
+                    </button>
+                </div>
+            </Transition>
+        </Teleport>
     </AppLayout>
 </template>

@@ -12,13 +12,14 @@ class Commande extends Model
     protected $fillable = [
         'numero', 'client_id', 'pharmacie_id', 'parent_id', 'relance_de_commande_id', 'pharmacie_refusee_id', 'ordonnance_id',
         'mode_paiement_id', 'livreur_id', 'montant_livraison_id',
-        'date', 'heurs', 'commentaire', 'prix_total',
+        'date', 'heurs', 'commentaire', 'prix_total', 'prix_medicaments',
         'beneficiaire', 'designation', 'status', 'status_pharmacie', 'acceptation_client', 'motif_annulation', 'note_annulation',
     ];
 
     protected $casts = [
         'date' => 'date',
         'prix_total' => 'decimal:2',
+        'prix_medicaments' => 'decimal:2',
         'acceptation_client' => 'boolean',
     ];
 
@@ -116,5 +117,37 @@ class Commande extends Model
         return $this->belongsToMany(Produit::class, 'commande_produit')
             ->withPivot('quantite', 'quantite_confirmee', 'prix_unitaire', 'status')
             ->withTimestamps();
+    }
+
+    /**
+     * Montant des médicaments (hors livraison), calculé depuis les lignes pivot.
+     */
+    public function computePrixMedicamentsFromProduits(): float
+    {
+        $this->loadMissing('produits');
+
+        return (float) $this->produits->sum(function ($p) {
+            if (($p->pivot->status ?? '') === 'indisponible') {
+                return 0;
+            }
+            $qte = $p->pivot->quantite_confirmee ?? $p->pivot->quantite;
+
+            return $qte * (float) $p->pivot->prix_unitaire;
+        });
+    }
+
+    public function montantLivraisonClient(): float
+    {
+        $this->loadMissing('montantLivraison');
+
+        return (float) ($this->montantLivraison?->designation ?? 0);
+    }
+
+    /**
+     * Total client (médicaments + livraison) à partir des lignes et du tarif de livraison.
+     */
+    public function computePrixTotalClient(): float
+    {
+        return $this->computePrixMedicamentsFromProduits() + $this->montantLivraisonClient();
     }
 }

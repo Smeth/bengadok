@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Client;
 use App\Models\Commande;
+use App\Models\MontantLivraison;
 use App\Models\Ordonnance;
 use App\Models\Produit;
 use Illuminate\Http\UploadedFile;
@@ -41,8 +42,15 @@ class CommandeService
                 'status_pharmacie' => 'nouvelle',
             ]);
 
-            $prixTotal = $this->attachProduits($commande, $data['produits']);
-            $commande->update(['prix_total' => $prixTotal]);
+            $prixMedicaments = $this->attachProduits($commande, $data['produits']);
+            $liv = 0.0;
+            if (! empty($data['montant_livraison_id'])) {
+                $liv = (float) (MontantLivraison::query()->find((int) $data['montant_livraison_id'])?->designation ?? 0);
+            }
+            $commande->update([
+                'prix_medicaments' => $prixMedicaments,
+                'prix_total' => $prixMedicaments + $liv,
+            ]);
 
             return $commande;
         });
@@ -52,9 +60,9 @@ class CommandeService
     {
         if (! empty($data['client_id'])) {
             $client = Client::findOrFail($data['client_id']);
-            if (isset($data['client_nom'])) {
+            if (isset($data['client_nom']) || isset($data['client_prenom'])) {
                 $attrs = [
-                    'nom' => $data['client_nom'],
+                    'nom' => $this->trimOrNull($data['client_nom'] ?? null),
                     'prenom' => $this->trimOrNull($data['client_prenom'] ?? null),
                     'tel' => $data['client_tel'],
                     'adresse' => $data['client_adresse'],
@@ -71,7 +79,7 @@ class CommandeService
         }
 
         return Client::create([
-            'nom' => $data['client_nom'],
+            'nom' => $this->trimOrNull($data['client_nom'] ?? null),
             'prenom' => $this->trimOrNull($data['client_prenom'] ?? null),
             'tel' => $data['client_tel'],
             'adresse' => $data['client_adresse'],

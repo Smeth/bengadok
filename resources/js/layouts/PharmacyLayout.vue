@@ -37,7 +37,15 @@ const asideWidthPx = computed(() =>
 
 const pharmacie = computed(() => page.props.auth?.user?.pharmacie);
 const user = computed(() => page.props.auth?.user);
-const userEmail = computed(() => page.props.auth?.user?.email ?? '');
+const roleLabel = computed(() => {
+    const roles = (
+        page.props.auth?.user as { roles?: string[] } | undefined
+    )?.roles;
+    const r = roles?.[0];
+    if (r === 'gerant') return 'Gérant';
+    if (r === 'vendeur') return 'Vendeur';
+    return r ? r.charAt(0).toUpperCase() + r.slice(1) : '';
+});
 
 /** Même fond que l’admin sur /settings (AppSidebarLayout sans dégradé dashboard). */
 const isSettingsRoute = computed(() => page.url.startsWith('/settings'));
@@ -154,6 +162,13 @@ function logout() {
                         </button>
                     </div>
                 </div>
+                <p
+                    v-if="!sidebarCollapsed && pharmacie?.designation"
+                    class="mt-3 max-w-full truncate px-2 text-center text-[11px] font-bold leading-tight text-[#5c5959]"
+                    :title="pharmacie.designation"
+                >
+                    {{ pharmacie.designation }}
+                </p>
             </div>
 
             <div
@@ -471,14 +486,18 @@ function logout() {
                                 <p
                                     class="truncate text-[15px] font-black text-black"
                                 >
-                                    {{
-                                        pharmacie?.designation ?? 'Ma pharmacie'
-                                    }}
+                                    {{ user?.name ?? 'Utilisateur' }}
                                 </p>
                                 <p
-                                    class="truncate text-[13px] font-medium text-black/70"
+                                    v-if="roleLabel"
+                                    class="truncate text-[12px] font-semibold text-[#3995d2]"
                                 >
-                                    {{ userEmail }}
+                                    {{ roleLabel }}
+                                </p>
+                                <p
+                                    class="truncate text-[12px] font-medium text-black/65"
+                                >
+                                    {{ pharmacie?.designation ?? 'Pharmacie' }}
                                 </p>
                             </div>
                             <ChevronDown

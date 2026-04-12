@@ -47,15 +47,17 @@ class DashboardController extends Controller
             $baseQuery->where('pharmacie_id', $pharmacieId);
         }
 
+        $colRevenu = $pharmacieId ? 'prix_medicaments' : 'prix_total';
+
         $revenuTotal = (clone $baseQuery)
             ->whereBetween('date', [$currentStart, $currentEnd])
             ->whereIn('status', ['validee', 'retiree'])
-            ->sum('prix_total');
+            ->sum($colRevenu);
 
         $revenuSemainePrec = (clone $baseQuery)
             ->whereBetween('date', [$prevStart, $prevEnd])
             ->whereIn('status', ['validee', 'retiree'])
-            ->sum('prix_total');
+            ->sum($colRevenu);
 
         $nbPharmacies = $pharmacieId
             ? 1
@@ -151,7 +153,7 @@ class DashboardController extends Controller
             $revenusBruts = (clone $baseQuery)
                 ->whereBetween('date', [$jourDebut, $jourFin])
                 ->whereIn('status', ['validee', 'retiree'])
-                ->selectRaw('DATE(date) as jour, COALESCE(SUM(prix_total), 0) as total')
+                ->selectRaw('DATE(date) as jour, COALESCE(SUM(prix_medicaments), 0) as total')
                 ->groupBy(DB::raw('DATE(date)'))
                 ->orderBy('jour')
                 ->get()

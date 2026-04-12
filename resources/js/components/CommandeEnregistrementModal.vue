@@ -350,8 +350,8 @@ function close() {
 
 function onSubmit() {
     const err: Record<string, string> = {};
-    if (!form.value.client_nom?.trim())
-        err.client_nom = 'Le nom du client est obligatoire.';
+    if (!form.value.client_prenom?.trim())
+        err.client_prenom = 'Le prénom du client est obligatoire.';
     if (!form.value.client_tel?.trim())
         err.client_tel = 'Le téléphone est obligatoire.';
     if (!form.value.client_adresse?.trim())
@@ -487,12 +487,38 @@ watch(
                         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                             <div class="flex flex-col gap-1.5">
                                 <Label class="text-sm font-medium text-black"
-                                    >Nom du Client</Label
+                                    >Prénom du client
+                                    <span class="text-[#dc3545]">*</span></Label
+                                >
+                                <input
+                                    v-model="form.client_prenom"
+                                    type="text"
+                                    required
+                                    placeholder="Ex : Didier"
+                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                    :class="{
+                                        'border-[#dc3545]': errors.client_prenom,
+                                    }"
+                                />
+                                <p
+                                    v-if="errors.client_prenom"
+                                    class="text-xs text-[#dc3545]"
+                                >
+                                    {{ errors.client_prenom }}
+                                </p>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <Label class="text-sm font-medium text-black"
+                                    >Nom du client
+                                    <span
+                                        class="text-xs font-normal text-[rgba(92,89,89,0.6)]"
+                                        >(facultatif)</span
+                                    ></Label
                                 >
                                 <input
                                     v-model="form.client_nom"
                                     type="text"
-                                    placeholder="Ex : Fofana Didier"
+                                    placeholder="Ex : Fofana"
                                     class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
                                     :class="{
                                         'border-[#dc3545]': errors.client_nom,
@@ -507,18 +533,8 @@ watch(
                             </div>
                             <div class="flex flex-col gap-1.5">
                                 <Label class="text-sm font-medium text-black"
-                                    >Prénom du Client</Label
-                                >
-                                <input
-                                    v-model="form.client_prenom"
-                                    type="text"
-                                    placeholder="Ex : Fofana Didier"
-                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
-                                />
-                            </div>
-                            <div class="flex flex-col gap-1.5">
-                                <Label class="text-sm font-medium text-black"
-                                    >Téléphone</Label
+                                    >Téléphone
+                                    <span class="text-[#dc3545]">*</span></Label
                                 >
                                 <div
                                     class="flex h-[42px] overflow-hidden rounded-[10px] border border-[#ccc5c5] focus-within:border-[#0d6efd] focus-within:ring-1 focus-within:ring-[#0d6efd]"
@@ -592,7 +608,8 @@ watch(
                             </div>
                             <div class="flex flex-col gap-1.5 md:col-span-2">
                                 <Label class="text-sm font-medium text-black"
-                                    >Adresse</Label
+                                    >Adresse
+                                    <span class="text-[#dc3545]">*</span></Label
                                 >
                                 <input
                                     v-model="form.client_adresse"
@@ -623,6 +640,7 @@ watch(
                         </p>
                         <p class="mb-4 text-base text-black">
                             Sélectionner une pharmacie
+                            <span class="text-[#dc3545]">*</span>
                         </p>
 
                         <div
@@ -671,7 +689,8 @@ watch(
                                     Retour
                                 </button>
                                 <span class="text-base text-black"
-                                    >Sélectionner une pharmacie</span
+                                    >Sélectionner une pharmacie
+                                    <span class="text-[#dc3545]">*</span></span
                                 >
                             </div>
                             <div class="flex flex-col gap-3 sm:flex-row">
@@ -821,6 +840,7 @@ watch(
                                 class="text-[20px] font-black italic text-[rgba(92,89,89,0.4)]"
                             >
                                 Médicaments
+                                <span class="text-[#dc3545] not-italic">*</span>
                             </p>
                             <button
                                 type="button"
@@ -851,7 +871,8 @@ watch(
                                     <div class="flex min-w-0 flex-col gap-1 pr-0.5">
                                         <Label
                                             class="whitespace-nowrap text-base font-light text-black"
-                                            >Nom Médicament</Label
+                                            >Nom Médicament
+                                            <span class="text-[#dc3545]">*</span></Label
                                         >
                                         <input
                                             v-model="p.designation"
@@ -919,7 +940,8 @@ watch(
                                     >
                                         <Label
                                             class="text-base font-light text-black"
-                                            >Quantité</Label
+                                            >Quantité
+                                            <span class="text-[#dc3545]">*</span></Label
                                         >
                                         <input
                                             v-model.number="p.quantite"
@@ -947,7 +969,8 @@ watch(
                                     <div class="flex min-w-0 flex-col gap-1">
                                         <Label
                                             class="text-base font-light text-black"
-                                            >Prix unitaire</Label
+                                            >Prix unitaire
+                                            <span class="text-[#dc3545]">*</span></Label
                                         >
                                         <div
                                             class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white"

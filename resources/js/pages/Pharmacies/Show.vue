@@ -19,6 +19,8 @@ import {
     RefreshCw,
     Eye,
     EyeOff,
+    CheckCircle2,
+    X,
 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
@@ -39,6 +41,8 @@ import type { BreadcrumbItem } from '@/types';
 type UserItem = {
     id: number;
     name: string;
+    email: string | null;
+    phone: string | null;
     username: string;
     role: string;
 };
@@ -93,6 +97,7 @@ const userForAction = ref<UserItem | null>(null);
 const formUser = ref({
     name: '',
     email: '',
+    phone: '',
     role: 'vendeur' as 'gerant' | 'vendeur',
     password: '',
     passwordMode: 'auto' as 'auto' | 'manual',
@@ -112,12 +117,27 @@ const form = ref({
 });
 const errors = ref<Record<string, string>>({});
 
+/** Toast après création d’utilisateur (visible en bas à droite) */
+const userCreateToast = ref<{
+    show: boolean;
+    title: string;
+    subtitle?: string;
+}>({ show: false, title: '' });
+
+const userActionErrorToast = ref<{ show: boolean; message: string }>({
+    show: false,
+    message: '',
+});
+
 const page = usePage();
 const flashStatus = computed(
     () => (page.props.flash as { status?: string })?.status,
 );
 const createdUsername = computed(
     () => (page.props.flash as { createdUsername?: string })?.createdUsername,
+);
+const flashError = computed(
+    () => (page.props.flash as { error?: string })?.error,
 );
 
 const typeJour = computed(() =>
@@ -197,6 +217,7 @@ function openRemoveUserModal(user: UserItem) {
 
 function confirmRemoveUser() {
     if (!userForAction.value) return;
+    userActionErrorToast.value = { show: false, message: '' };
     router.delete(
         `/pharmacies/${props.pharmacie.id}/users/${userForAction.value.id}`,
         {
@@ -204,6 +225,20 @@ function confirmRemoveUser() {
             onSuccess: () => {
                 showRemoveUserModal.value = false;
                 userForAction.value = null;
+                router.reload({ only: ['pharmacie'] });
+            },
+            onError: () => {
+                userActionErrorToast.value = {
+                    show: true,
+                    message:
+                        'Impossible de retirer cet utilisateur. Vérifiez que vous êtes bien connecté en admin, puis réessayez.',
+                };
+                window.setTimeout(
+                    () => {
+                        userActionErrorToast.value.show = false;
+                    },
+                    8000,
+                );
             },
         },
     );
@@ -240,15 +275,20 @@ function regeneratePassword() {
     formUser.value.password = generatePassword();
 }
 
-function ouvrirCreateUser() {
+function resetFormUser() {
     errors.value = {};
     formUser.value = {
         name: '',
         email: '',
+        phone: '',
         role: 'vendeur',
         password: generatePassword(),
         passwordMode: 'auto',
     };
+}
+
+function ouvrirCreateUser() {
+    resetFormUser();
     modalCreateUser.value = true;
 }
 
@@ -289,14 +329,34 @@ function creerUtilisateur() {
         `/pharmacies/${props.pharmacie.id}/users`,
         {
             name: formUser.value.name,
-            email: formUser.value.email,
+            email: formUser.value.email || undefined,
+            phone: formUser.value.phone,
             password: formUser.value.password,
             role: formUser.value.role,
         },
         {
             preserveScroll: true,
-            onSuccess: () => {
+            onSuccess: (page) => {
                 modalCreateUser.value = false;
+                resetFormUser();
+                const flash = (
+                    page.props as {
+                        flash?: {
+                            status?: string;
+                            createdUsername?: string;
+                        };
+                    }
+                ).flash;
+                const title =
+                    flash?.status?.trim() ||
+                    'Utilisateur créé. Les identifiants ont été enregistrés.';
+                const subtitle = flash?.createdUsername
+                    ? `Identifiant : ${flash.createdUsername}`
+                    : undefined;
+                userCreateToast.value = { show: true, title, subtitle };
+                window.setTimeout(() => {
+                    userCreateToast.value.show = false;
+                }, 10000);
             },
             onError: (e) => {
                 errors.value = normalizeErrors(e);
@@ -323,6 +383,13 @@ function creerUtilisateur() {
                 </Link>
             </Button>
 
+            <div
+                v-if="flashError"
+                class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/30 dark:text-red-200"
+                role="alert"
+            >
+                {{ flashError }}
+            </div>
             <div
                 v-if="flashStatus || createdUsername"
                 class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200"
@@ -510,6 +577,14 @@ function creerUtilisateur() {
                                 <p class="text-sm text-muted-foreground">
                                     {{ user.username || '-' }}
                                 </p>
+                                <p
+                                    v-if="user.email || user.phone"
+                                    class="text-xs text-muted-foreground"
+                                >
+                                    <span v-if="user.email">{{ user.email }}</span>
+                                    <span v-if="user.email && user.phone"> · </span>
+                                    <span v-if="user.phone">{{ user.phone }}</span>
+                                </p>
                             </div>
                             <div class="flex items-center gap-2">
                                 <span
@@ -541,7 +616,7 @@ function creerUtilisateur() {
                                     variant="ghost"
                                     size="icon"
                                     class="size-8 text-red-600"
-                                    title="Retirer de la pharmacie"
+                                    title="Supprimer définitivement ce compte"
                                     @click="openRemoveUserModal(user)"
                                 >
                                     <Trash2 class="size-4" />
@@ -573,7 +648,7 @@ function creerUtilisateur() {
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div class="space-y-2 sm:col-span-2">
                             <Label for="edit-designation"
-                                >Nom de la pharmacie</Label
+                                >Nom de la pharmacie *</Label
                             >
                             <Input
                                 id="edit-designation"
@@ -587,7 +662,7 @@ function creerUtilisateur() {
                             </p>
                         </div>
                         <div class="space-y-2 sm:col-span-2">
-                            <Label for="edit-adresse">Adresse</Label>
+                            <Label for="edit-adresse">Adresse *</Label>
                             <Input id="edit-adresse" v-model="form.adresse" />
                             <p
                                 v-if="errors.adresse"
@@ -597,7 +672,7 @@ function creerUtilisateur() {
                             </p>
                         </div>
                         <div class="space-y-2">
-                            <Label for="edit-telephone">Téléphone</Label>
+                            <Label for="edit-telephone">Téléphone *</Label>
                             <Input
                                 id="edit-telephone"
                                 v-model="form.telephone"
@@ -629,7 +704,7 @@ function creerUtilisateur() {
                             </select>
                         </div>
                         <div class="space-y-2">
-                            <Label>Type de pharmacie</Label>
+                            <Label>Type de pharmacie *</Label>
                             <div class="flex gap-4">
                                 <label
                                     class="flex flex-1 cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm"
@@ -667,7 +742,7 @@ function creerUtilisateur() {
                         </div>
                         <div class="space-y-2">
                             <Label for="edit-heure_ouverture"
-                                >Heure d'ouverture</Label
+                                >Heure d'ouverture *</Label
                             >
                             <Input
                                 id="edit-heure_ouverture"
@@ -677,7 +752,7 @@ function creerUtilisateur() {
                         </div>
                         <div class="space-y-2">
                             <Label for="edit-heure_fermeture"
-                                >Heure de fermeture</Label
+                                >Heure de fermeture *</Label
                             >
                             <Input
                                 id="edit-heure_fermeture"
@@ -753,7 +828,7 @@ function creerUtilisateur() {
 
                 <form class="space-y-6" @submit.prevent="creerUtilisateur">
                     <div class="space-y-2">
-                        <Label for="user-name">Nom complet</Label>
+                        <Label for="user-name">Nom complet *</Label>
                         <Input
                             id="user-name"
                             v-model="formUser.name"
@@ -765,13 +840,29 @@ function creerUtilisateur() {
                         </p>
                     </div>
                     <div class="space-y-2">
-                        <Label for="user-email">Email</Label>
+                        <Label for="user-phone"
+                            >Téléphone * (récupération SMS / OTP)</Label
+                        >
+                        <Input
+                            id="user-phone"
+                            v-model="formUser.phone"
+                            type="tel"
+                            required
+                            autocomplete="tel"
+                            placeholder="Ex: +242 06 123 45 67"
+                        />
+                        <p v-if="errors.phone" class="text-sm text-red-600">
+                            {{ errors.phone }}
+                        </p>
+                    </div>
+                    <div class="space-y-2">
+                        <Label for="user-email">E-mail (facultatif)</Label>
                         <Input
                             id="user-email"
                             v-model="formUser.email"
                             type="email"
-                            required
-                            placeholder="Exemple@gmail.com"
+                            autocomplete="email"
+                            placeholder="Laisser vide si non utilisé"
                         />
                         <p v-if="errors.email" class="text-sm text-red-600">
                             {{ errors.email }}
@@ -779,7 +870,7 @@ function creerUtilisateur() {
                     </div>
 
                     <div class="space-y-3">
-                        <Label>Définir le rôle de l'utilisateur</Label>
+                        <Label>Définir le rôle de l'utilisateur *</Label>
                         <div class="flex gap-4">
                             <label
                                 class="flex flex-1 cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors"
@@ -843,7 +934,11 @@ function creerUtilisateur() {
                             </p>
                         </div>
                         <div class="space-y-3">
-                            <Label>Mot de passe</Label>
+                            <Label>{{
+                                formUser.passwordMode === 'manual'
+                                    ? 'Mot de passe *'
+                                    : 'Mot de passe'
+                            }}</Label>
                             <div class="flex gap-4">
                                 <label
                                     class="flex flex-1 cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm"
@@ -1007,15 +1102,80 @@ function creerUtilisateur() {
         />
         <ConfirmModal
             :open="showRemoveUserModal"
-            title="Retirer l'utilisateur"
+            title="Supprimer définitivement ce compte"
             :description="
                 userForAction
-                    ? `Retirer ${userForAction.name} de cette pharmacie ? L'utilisateur ne pourra plus y accéder.`
+                    ? `Supprimer ${userForAction.name} ? Cette action est irréversible : le compte, l’e-mail et le numéro seront retirés du système.`
                     : ''
             "
-            confirm-text="Retirer"
+            confirm-text="Supprimer"
+            variant="destructive"
             @update:open="showRemoveUserModal = $event"
             @confirm="confirmRemoveUser"
         />
+
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="translate-y-2 opacity-0"
+                enter-to-class="translate-y-0 opacity-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+            >
+                <div
+                    v-if="userCreateToast.show"
+                    class="fixed bottom-6 right-6 z-[200] flex max-w-md flex-col gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-lg dark:border-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-100"
+                    role="status"
+                >
+                    <div class="flex items-start gap-3">
+                        <CheckCircle2
+                            class="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                        />
+                        <div class="min-w-0 flex-1">
+                            <p class="font-semibold">{{ userCreateToast.title }}</p>
+                            <p
+                                v-if="userCreateToast.subtitle"
+                                class="mt-1 font-mono text-xs text-emerald-800 dark:text-emerald-200"
+                            >
+                                {{ userCreateToast.subtitle }}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="rounded p-1 text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900"
+                            aria-label="Fermer"
+                            @click="userCreateToast.show = false"
+                        >
+                            <X class="size-4" />
+                        </button>
+                    </div>
+                </div>
+            </Transition>
+            <Transition
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="translate-y-2 opacity-0"
+                enter-to-class="translate-y-0 opacity-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+            >
+                <div
+                    v-if="userActionErrorToast.show"
+                    class="fixed bottom-6 right-6 z-[200] flex max-w-md items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 shadow-lg dark:border-red-800 dark:bg-red-950/90 dark:text-red-100"
+                    role="alert"
+                >
+                    <p class="flex-1">{{ userActionErrorToast.message }}</p>
+                    <button
+                        type="button"
+                        class="rounded p-1 hover:bg-red-100 dark:hover:bg-red-900"
+                        aria-label="Fermer"
+                        @click="userActionErrorToast.show = false"
+                    >
+                        <X class="size-4" />
+                    </button>
+                </div>
+            </Transition>
+        </Teleport>
     </AppLayout>
 </template>

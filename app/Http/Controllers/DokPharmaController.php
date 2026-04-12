@@ -13,6 +13,32 @@ use Inertia\Response;
 class DokPharmaController extends Controller
 {
     /**
+     * Affichage cohérent : date métier + heure de la commande (fuseau application).
+     */
+    private function formatCommandeDateHeure(Commande $c): string
+    {
+        if ($c->date) {
+            $time = $c->heurs ? trim((string) $c->heurs) : '00:00';
+            if (! preg_match('/^\d{1,2}:\d{2}$/', $time)) {
+                $time = '00:00';
+            }
+            $datePart = $c->date instanceof \Carbon\CarbonInterface
+                ? $c->date->format('Y-m-d')
+                : \Carbon\Carbon::parse($c->date)->format('Y-m-d');
+
+            return \Carbon\Carbon::parse($datePart.' '.$time)
+                ->timezone(config('app.timezone'))
+                ->format('d/m/Y H:i');
+        }
+
+        if ($c->created_at) {
+            return $c->created_at->copy()->timezone(config('app.timezone'))->format('d/m/Y H:i');
+        }
+
+        return '';
+    }
+
+    /**
      * Dashboard pharmacie : stats, graphiques, meilleures ventes.
      */
     public function dashboard(Request $request): Response
@@ -63,12 +89,12 @@ class DokPharmaController extends Controller
         $revenuActuel = (float) Commande::where('pharmacie_id', $pharmacieId)
             ->whereIn('status_pharmacie', $statusRevenu)
             ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
-            ->sum('prix_total');
+            ->sum('prix_medicaments');
 
         $revenuPrec = (float) Commande::where('pharmacie_id', $pharmacieId)
             ->whereIn('status_pharmacie', $statusRevenu)
             ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->sum('prix_total');
+            ->sum('prix_medicaments');
 
         $pctRevenu = $revenuPrec > 0
             ? round((($revenuActuel - $revenuPrec) / $revenuPrec) * 100)
@@ -109,7 +135,7 @@ class DokPharmaController extends Controller
         $revenusBruts = Commande::where('pharmacie_id', $pharmacieId)
             ->whereIn('status_pharmacie', $statusRevenu)
             ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
-            ->select(DB::raw('DATE(created_at) as jour'), DB::raw('SUM(prix_total) as total'))
+            ->select(DB::raw('DATE(created_at) as jour'), DB::raw('SUM(prix_medicaments) as total'))
             ->groupBy('jour')
             ->orderBy('jour')
             ->get()
@@ -255,13 +281,15 @@ class DokPharmaController extends Controller
                 return [
                     'id' => $c->id,
                     'numero' => $c->numero,
-                    'date' => $c->date
-                        ? \Carbon\Carbon::parse($c->date)->format('d/m/Y H:i')
-                        : ($c->created_at ? $c->created_at->format('d/m/Y H:i') : ''),
+                    'date' => $this->formatCommandeDateHeure($c),
                     'status' => $c->status,
                     'status_pharmacie' => $c->status_pharmacie,
                     'client' => $c->client
-                        ? ['nom' => $c->client->nom, 'prenom' => $c->client->prenom]
+                        ? [
+                            'nom' => $c->client->nom,
+                            'prenom' => $c->client->prenom,
+                            'sexe' => $c->client->sexe,
+                        ]
                         : null,
                     'produits' => $c->produits->map(fn ($p) => [
                         'id' => $p->id,
@@ -278,7 +306,7 @@ class DokPharmaController extends Controller
                         ? asset('storage/'.ltrim($c->ordonnance->urlfile, '/'))
                         : null,
                     'commentaire' => $c->commentaire,
-                    'prix_total' => (float) ($c->prix_total ?? 0),
+                    'prix_medicaments' => (float) ($c->prix_medicaments ?? 0),
                 ];
             });
 
@@ -373,21 +401,17 @@ class DokPharmaController extends Controller
 
         $commentairePharmacie = trim($request->input('commentaire', ''));
 
-        if ($nbDispo === 0) {
-            $commande->update([
-                'status' => 'en_attente',
-                'status_pharmacie' => 'indisponible',
-                'pharmacie_refusee_id' => $pharmacieId,
-                ...($commentairePharmacie !== '' ? ['commentaire' => $commentairePharmacie] : []),
-            ]);
-        } else {
-            $commande->update([
-                'status' => 'en_attente',
-                'status_pharmacie' => 'attente_confirmation',
-                'prix_total' => $prixTotal,
-                ...($commentairePharmacie !== '' ? ['commentaire' => $commentairePharmacie] : []),
-            ]);
-        }
+        $commande->load('montantLivraison');
+        $liv = (float) ($commande->montantLivraison?->designation ?? 0);
+
+        $commande->update([
+            'status' => 'en_attente',
+            'status_pharmacie' => $nbDispo === 0 ? 'indisponible' : 'attente_confirmation',
+            'pharmacie_refusee_id' => $nbDispo === 0 ? $pharmacieId : null,
+            'prix_medicaments' => $prixTotal,
+            'prix_total' => $prixTotal + $liv,
+            ...($commentairePharmacie !== '' ? ['commentaire' => $commentairePharmacie] : []),
+        ]);
 
         return back()->with('status', 'Disponibilité envoyée.');
     }

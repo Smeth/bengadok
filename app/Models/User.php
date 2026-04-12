@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -31,6 +32,18 @@ class User extends Authenticatable
     public function pharmacie(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Pharmacie::class);
+    }
+
+    /**
+     * Supprime les traces d’auth liées à ce compte (sessions, jetons reset e-mail)
+     * pour que l’adresse e-mail puisse être réutilisée ou ne plus apparaître côté « oubli mot de passe ».
+     */
+    public function purgeAuthenticationFootprint(): void
+    {
+        if ($this->email !== null && $this->email !== '') {
+            DB::table('password_reset_tokens')->where('email', $this->email)->delete();
+        }
+        DB::table('sessions')->where('user_id', $this->id)->delete();
     }
 
     /**

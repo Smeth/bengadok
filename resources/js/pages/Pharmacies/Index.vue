@@ -1004,7 +1004,7 @@ onUnmounted(destroyMap);
                 <form class="min-w-0 space-y-6" @submit.prevent="submitCreate">
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div class="space-y-2">
-                            <Label for="designation">Nom de la pharmacie</Label>
+                            <Label for="designation">Nom de la pharmacie *</Label>
                             <Input
                                 id="designation"
                                 v-model="form.designation"
@@ -1018,7 +1018,7 @@ onUnmounted(destroyMap);
                             </p>
                         </div>
                         <div class="space-y-2 sm:col-span-2">
-                            <Label for="adresse">Adresse</Label>
+                            <Label for="adresse">Adresse *</Label>
                             <Input
                                 id="adresse"
                                 v-model="form.adresse"
@@ -1032,7 +1032,7 @@ onUnmounted(destroyMap);
                             </p>
                         </div>
                         <div class="space-y-2">
-                            <Label for="telephone">Téléphone</Label>
+                            <Label for="telephone">Téléphone *</Label>
                             <Input
                                 id="telephone"
                                 v-model="form.telephone"
@@ -1046,7 +1046,9 @@ onUnmounted(destroyMap);
                             </p>
                         </div>
                         <div class="space-y-2">
-                            <Label for="email">Email de la pharmacie</Label>
+                            <Label for="email"
+                                >E-mail de la pharmacie (facultatif)</Label
+                            >
                             <Input
                                 id="email"
                                 v-model="form.email"
@@ -1062,7 +1064,7 @@ onUnmounted(destroyMap);
                     <div
                         class="space-y-3 rounded-lg border border-input bg-muted/30 p-4"
                     >
-                        <Label>Type de pharmacie</Label>
+                        <Label>Type de pharmacie *</Label>
                         <div class="flex flex-col gap-3 sm:flex-row sm:gap-4">
                             <label
                                 class="flex flex-1 cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors"
@@ -1120,7 +1122,7 @@ onUnmounted(destroyMap);
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div class="space-y-2">
                                 <Label for="heure_ouverture"
-                                    >Heure d'ouverture</Label
+                                    >Heure d'ouverture *</Label
                                 >
                                 <Input
                                     id="heure_ouverture"
@@ -1130,7 +1132,7 @@ onUnmounted(destroyMap);
                             </div>
                             <div class="space-y-2">
                                 <Label for="heure_fermeture"
-                                    >Heure de fermeture</Label
+                                    >Heure de fermeture *</Label
                                 >
                                 <Input
                                     id="heure_fermeture"
@@ -1150,7 +1152,7 @@ onUnmounted(destroyMap);
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="space-y-2">
                                 <Label for="proprio_nom"
-                                    >Nom complet propriétaire</Label
+                                    >Nom complet propriétaire *</Label
                                 >
                                 <Input
                                     id="proprio_nom"
@@ -1166,7 +1168,7 @@ onUnmounted(destroyMap);
                             </div>
                             <div class="space-y-2">
                                 <Label for="proprio_email"
-                                    >Email propriétaire</Label
+                                    >E-mail propriétaire (facultatif)</Label
                                 >
                                 <Input
                                     id="proprio_email"
@@ -1183,7 +1185,7 @@ onUnmounted(destroyMap);
                             </div>
                             <div class="space-y-2">
                                 <Label for="proprio_tel"
-                                    >Téléphone propriétaire</Label
+                                    >Téléphone propriétaire (facultatif)</Label
                                 >
                                 <Input
                                     id="proprio_tel"

@@ -29,6 +29,10 @@ declare module '@inertiajs/core' {
             delai_relance_meme_pharmacie_heures: number;
             /** Jeton CSRF (réponse Laravel, mis à jour à chaque navigation Inertia) */
             csrf_token: string;
+            /** Réinitialisations destructives (local ou configuration serveur) */
+            allowPharmacyReset: boolean;
+            /** Réinitialisation « base neuve » réservée à l’environnement de développement */
+            allowLocalAppReset: boolean;
             [key: string]: unknown;
         };
     }

@@ -138,6 +138,9 @@ class UtilisateurBackofficeController extends Controller
             return back()->with('error', 'Vous ne pouvez pas supprimer votre propre compte.');
         }
 
+        $user->syncRoles([]);
+        $user->syncPermissions([]);
+        $user->purgeAuthenticationFootprint();
         $user->delete();
 
         return back()->with('status', 'Utilisateur supprimé.');

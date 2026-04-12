@@ -21,6 +21,12 @@ class StoreCommandeRequest extends FormRequest
         } elseif ($this->routeIs('commandes.store')) {
             $this->normalizeCommandesInput();
         }
+
+        foreach (['client_nom', 'client_prenom'] as $key) {
+            if ($this->has($key) && $this->input($key) === '') {
+                $this->merge([$key => null]);
+            }
+        }
     }
 
     private function normalizeAgentInput(): void
@@ -136,8 +142,8 @@ class StoreCommandeRequest extends FormRequest
     {
         return [
             'client_id' => 'nullable|exists:clients,id',
-            'client_nom' => 'required_without:client_id|string|max:100',
-            'client_prenom' => 'nullable|string|max:100',
+            'client_nom' => 'nullable|string|max:100',
+            'client_prenom' => 'required_without:client_id|string|max:100',
             'client_tel' => 'required_without:client_id|string|max:20',
             'client_adresse' => 'required_without:client_id|string',
             'client_sexe' => 'nullable|in:M,F',

@@ -6,6 +6,7 @@ use App\Models\AppSetting;
 use App\Models\Commande;
 use App\Models\MotifAnnulation;
 use App\Models\OrdonnanceVerificationSetting;
+use App\Services\PharmacyDataResetService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -81,6 +82,10 @@ class HandleInertiaRequests extends Middleware
                         ?? OrdonnanceVerificationSetting::EXECUTION_MODE_QUEUE,
                 ];
             },
+            /** Réinitialisations destructives (page /settings/reset) */
+            'allowPharmacyReset' => fn () => PharmacyDataResetService::isAllowed(),
+            /** Réinitialisation « base neuve » (local uniquement) */
+            'allowLocalAppReset' => fn () => config('app.env') === 'local',
         ];
     }
 

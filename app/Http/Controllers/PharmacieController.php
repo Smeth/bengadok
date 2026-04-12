@@ -9,8 +9,10 @@ use App\Models\User;
 use App\Models\Zone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -113,6 +115,8 @@ class PharmacieController extends Controller
                 'users' => $pharmacie->users->map(fn ($u) => [
                     'id' => $u->id,
                     'name' => $u->name,
+                    'email' => $u->email,
+                    'phone' => $u->phone,
                     'username' => $u->username ?? $u->email,
                     'role' => $u->getRoleNames()->first() ?? 'Utilisateur',
                 ]),
@@ -248,9 +252,14 @@ class PharmacieController extends Controller
             abort(403, 'Seuls les admins peuvent ajouter des utilisateurs à une pharmacie.');
         }
 
+        $request->merge([
+            'email' => $request->filled('email') ? trim((string) $request->input('email')) : null,
+        ]);
+
         $rules = [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => ['nullable', 'email', Rule::unique('users', 'email')],
+            'phone' => ['required', 'string', 'max:32', Rule::unique('users', 'phone')],
             'role' => 'required|in:gerant,vendeur',
         ];
         $rules['password'] = ['nullable', Password::defaults()];
@@ -261,13 +270,16 @@ class PharmacieController extends Controller
             ? $validated['password']
             : Str::random(10);
 
+        $email = $validated['email'] ?? null;
+
         $newUser = User::create([
             'name' => $validated['name'],
-            'email' => $validated['email'],
+            'email' => $email,
+            'phone' => $validated['phone'],
             'username' => null,
             'password' => Hash::make($password),
             'pharmacie_id' => $pharmacie->id,
-            'email_verified_at' => now(),
+            'email_verified_at' => $email ? now() : null,
         ]);
         $newUser->assignRole($validated['role']);
 
@@ -305,9 +317,23 @@ class PharmacieController extends Controller
             abort(403, "Cet utilisateur n'appartient pas à cette pharmacie.");
         }
 
-        $user->update(['pharmacie_id' => null]);
-        $user->syncRoles([]);
+        if ($request->user()->id === $user->id) {
+            return back()->with('error', 'Vous ne pouvez pas supprimer votre propre compte.');
+        }
 
-        return back()->with('status', "Utilisateur {$user->name} retiré de la pharmacie.");
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            return back()->with('error', 'Impossible de supprimer un compte administrateur depuis cette page.');
+        }
+
+        $label = $user->name;
+
+        DB::transaction(function () use ($user): void {
+            $user->syncRoles([]);
+            $user->syncPermissions([]);
+            $user->purgeAuthenticationFootprint();
+            $user->delete();
+        });
+
+        return back()->with('status', "Utilisateur « {$label} » supprimé définitivement.");
     }
 }

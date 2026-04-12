@@ -2,6 +2,7 @@
 import { X, User, Building2, Pill, Banknote, Truck } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { sousTotalCommandeProduits } from '@/lib/commandeTotals';
 import type { CommandeDetail } from '@/types';
 
 const props = defineProps<{
@@ -13,14 +14,9 @@ const emit = defineEmits<{
     'update:open': [value: boolean];
 }>();
 
-const sousTotal = computed(() => {
-    const cmd = props.commande;
-    if (!cmd?.produits) return 0;
-    return cmd.produits.reduce(
-        (s, p) => s + p.pivot.quantite * Number(p.pivot.prix_unitaire),
-        0,
-    );
-});
+const sousTotal = computed(() =>
+    sousTotalCommandeProduits(props.commande?.produits),
+);
 
 const livraison = computed(() =>
     Number(props.commande?.montant_livraison?.designation ?? 0),
@@ -70,6 +66,7 @@ function fermer() {
 <template>
     <Dialog :open="open" @update:open="emit('update:open', $event)">
         <DialogContent
+            :show-close-button="false"
             class="max-w-[560px] max-h-[90vh] overflow-hidden p-0 border-0 bg-transparent shadow-none print:block"
             :class="{ 'flex items-center justify-center': open }"
         >

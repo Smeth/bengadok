@@ -186,10 +186,17 @@ class CommandeController extends Controller
             $request->merge(['produits' => is_array($produitsDecoded) ? $produitsDecoded : []]);
         }
 
+        if ($request->input('client_nom') === '') {
+            $request->merge(['client_nom' => null]);
+        }
+        if ($request->input('client_prenom') === '') {
+            $request->merge(['client_prenom' => null]);
+        }
+
         $validated = $request->validate([
             'client_id' => 'nullable|exists:clients,id',
-            'client_nom' => 'required_without:client_id|string|max:100',
-            'client_prenom' => 'nullable|string|max:100',
+            'client_nom' => 'nullable|string|max:100',
+            'client_prenom' => 'required_without:client_id|string|max:100',
             'client_tel' => 'required_without:client_id|string|max:20',
             'client_adresse' => 'required_without:client_id|string',
             'pharmacie_id' => 'required|exists:pharmacies,id',
@@ -208,19 +215,21 @@ class CommandeController extends Controller
             'commentaire' => 'nullable|string',
         ]);
 
+        $trim = static fn (?string $v): ?string => $v !== null && trim($v) !== '' ? trim($v) : null;
+
         $client = $validated['client_id']
             ? Client::findOrFail($validated['client_id'])
             : Client::create([
-                'nom' => $validated['client_nom'],
-                'prenom' => ! empty(trim($validated['client_prenom'] ?? '')) ? trim($validated['client_prenom']) : null,
+                'nom' => $trim($validated['client_nom'] ?? null),
+                'prenom' => $trim($validated['client_prenom'] ?? null),
                 'tel' => $validated['client_tel'],
                 'adresse' => $validated['client_adresse'],
             ]);
 
-        if ($validated['client_id'] && isset($validated['client_nom'])) {
+        if ($validated['client_id']) {
             $client->update([
-                'nom' => $validated['client_nom'],
-                'prenom' => ! empty(trim($validated['client_prenom'] ?? '')) ? trim($validated['client_prenom']) : null,
+                'nom' => $trim($validated['client_nom'] ?? null),
+                'prenom' => $trim($validated['client_prenom'] ?? null),
                 'tel' => $validated['client_tel'],
                 'adresse' => $validated['client_adresse'],
             ]);
@@ -268,7 +277,10 @@ class CommandeController extends Controller
         }
 
         $montantLivraison = $validated['montant_livraison_id'] ? (MontantLivraison::find($validated['montant_livraison_id'])?->designation ?? 0) : 0;
-        $commande->update(['prix_total' => $prixTotal + (float) $montantLivraison]);
+        $commande->update([
+            'prix_medicaments' => $prixTotal,
+            'prix_total' => $prixTotal + (float) $montantLivraison,
+        ]);
 
         return redirect()->route('commandes.index', ['detail' => $commande->id])
             ->with('status', "Commande {$commande->numero} mise à jour.");
@@ -399,11 +411,19 @@ class CommandeController extends Controller
         ]);
 
         $montant = MontantLivraison::findOrFail($validated['montant_livraison_id']);
-        $sousTotal = $commande->produits->sum(fn ($p) => $p->pivot->quantite * (float) $p->pivot->prix_unitaire);
+        $sousTotal = $commande->produits->sum(function ($p) {
+            if ($p->pivot->status === 'indisponible') {
+                return 0;
+            }
+            $qte = $p->pivot->quantite_confirmee ?? $p->pivot->quantite;
+
+            return $qte * (float) $p->pivot->prix_unitaire;
+        });
         $nouveauTotal = $sousTotal + (float) $montant->designation;
 
         $commande->update([
             'montant_livraison_id' => $validated['montant_livraison_id'],
+            'prix_medicaments' => $sousTotal,
             'prix_total' => $nouveauTotal,
         ]);
 

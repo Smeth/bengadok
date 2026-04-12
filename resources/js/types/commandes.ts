@@ -32,7 +32,12 @@ export type CommandeDetail = {
         id: number;
         designation: string;
         dosage?: string;
-        pivot: { quantite: number; prix_unitaire: number; status: string };
+        pivot: {
+            quantite: number;
+            quantite_confirmee?: number | null;
+            prix_unitaire: number;
+            status: string;
+        };
     }>;
     mode_paiement?: { designation: string };
     montant_livraison?: { designation: number };

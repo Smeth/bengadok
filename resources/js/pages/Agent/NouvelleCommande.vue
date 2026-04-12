@@ -17,9 +17,14 @@ import {
     FileText,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import InputError from '@/components/InputError.vue';
 import OrdonnanceAnalysisProgressBar from '@/components/OrdonnanceAnalysisProgressBar.vue';
 import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import {
+    fieldError,
+    normalizeInertiaErrors,
+} from '@/lib/validationErrors';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
@@ -66,6 +71,20 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
+/** Erreurs de validation locale (avant envoi) ; les erreurs serveur viennent de `page.props.errors`. */
+const localErrors = ref<Record<string, string>>({});
+
+const errors = computed(() => {
+    const server = normalizeInertiaErrors(
+        (page.props as { errors?: Record<string, unknown> }).errors,
+    );
+    return { ...localErrors.value, ...server };
+});
+
+function produitErr(i: number, field: string): string | undefined {
+    return fieldError(errors.value, `produits.${i}.${field}`);
+}
+
 type OvSettings = { enabled?: boolean; execution_mode?: string };
 const ordonnanceVerificationSettings = computed(
     () => page.props.ordonnanceVerificationSettings as OvSettings | undefined,
@@ -248,8 +267,35 @@ const showSubmitAnalysisProgress = computed(
 );
 
 function submit() {
+    localErrors.value = {};
+
+    const e: Record<string, string> = {};
+    if (!clientPrenom.value?.trim())
+        e.client_prenom = 'Le prénom du client est obligatoire.';
+    if (!clientTel.value?.trim())
+        e.client_tel = 'Le téléphone est obligatoire.';
+    if (!clientAdresse.value?.trim())
+        e.client_adresse = "L'adresse est obligatoire.";
+    if (!pharmacieId.value)
+        e.pharmacie_id = 'Veuillez sélectionner une pharmacie.';
+
+    medicaments.value.forEach((m, i) => {
+        if (!m.designation?.trim())
+            e[`produits.${i}.designation`] = 'La désignation est obligatoire.';
+        if (!m.quantite || m.quantite < 1)
+            e[`produits.${i}.quantite`] = 'La quantité doit être au moins 1.';
+        if (Number(m.prix_unitaire) < 0)
+            e[`produits.${i}.prix_unitaire`] =
+                'Le prix unitaire doit être positif ou nul.';
+    });
+
     const produitsValides = medicaments.value
-        .filter((m) => m.designation.trim() && m.quantite > 0)
+        .filter(
+            (m) =>
+                m.designation.trim() &&
+                m.quantite > 0 &&
+                Number(m.prix_unitaire) >= 0,
+        )
         .map((m) => ({
             designation: m.designation.trim(),
             dosage: m.dosage.trim() || null,
@@ -258,15 +304,36 @@ function submit() {
             prix_unitaire: Number(m.prix_unitaire),
         }));
 
-    if (!produitsValides.length || !pharmacieId.value) return;
+    const hasProduitFieldError = Object.keys(e).some((k) =>
+        k.startsWith('produits.'),
+    );
+    if (!produitsValides.length && !hasProduitFieldError) {
+        e.produits =
+            'Ajoutez au moins un médicament avec désignation, quantité et prix unitaire (≥ 0).';
+    }
+
+    if (Object.keys(e).length) {
+        localErrors.value = e;
+        return;
+    }
 
     enSubmission.value = true;
 
     const clientNouveau = {
-        nom: clientNom.value,
-        prenom: clientPrenom.value,
-        tel: clientTel.value,
-        adresse: clientAdresse.value,
+        nom: clientNom.value.trim(),
+        prenom: clientPrenom.value.trim(),
+        tel: clientTel.value.trim(),
+        adresse: clientAdresse.value.trim(),
+    };
+
+    const opts = {
+        preserveScroll: true,
+        onFinish: () => {
+            enSubmission.value = false;
+        },
+        onSuccess: () => {
+            localErrors.value = {};
+        },
     };
 
     if (ordonnanceFile.value) {
@@ -283,9 +350,7 @@ function submit() {
             formData.append('commentaire', commentaire.value);
         router.post('/agent/commande', formData, {
             forceFormData: true,
-            onFinish: () => {
-                enSubmission.value = false;
-            },
+            ...opts,
         });
     } else {
         router.post(
@@ -298,11 +363,7 @@ function submit() {
                 livreur_id: beneficiaireId.value || undefined,
                 commentaire: commentaire.value || undefined,
             },
-            {
-                onFinish: () => {
-                    enSubmission.value = false;
-                },
-            },
+            opts,
         );
     }
 }
@@ -351,39 +412,56 @@ function annuler() {
 
                 <!-- ── Corps (scrollable) ── -->
                 <div class="max-h-[75vh] overflow-y-auto px-6 py-5 space-y-5">
+                    <div
+                        v-if="Object.keys(errors).length > 0"
+                        class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                        role="alert"
+                    >
+                        Veuillez corriger les champs indiqués ci-dessous.
+                    </div>
+
                     <!-- ── Section Client ── -->
 
-                    <!-- Ligne 1 : Nom | Prénom | Adresse -->
-                    <div class="grid grid-cols-3 gap-4">
+                    <!-- Ligne 1 : Prénom | Nom | Adresse -->
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div>
                             <label class="text-sm font-medium text-gray-700"
-                                >Nom du Client</label
-                            >
-                            <input
-                                v-model="clientNom"
-                                placeholder="Ex : Fofana Didier"
-                                class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-                        <div>
-                            <label class="text-sm font-medium text-gray-700"
-                                >Prénom du Client</label
+                                >Prénom du client
+                                <span class="text-red-600">*</span></label
                             >
                             <input
                                 v-model="clientPrenom"
-                                placeholder="Ex : Fofana Didier"
+                                placeholder="Ex : Didier"
                                 class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
+                            <InputError :message="errors.client_prenom" />
                         </div>
                         <div>
                             <label class="text-sm font-medium text-gray-700"
-                                >Adresse</label
+                                >Nom
+                                <span
+                                    class="text-xs font-normal text-gray-500"
+                                    >(facultatif)</span
+                                ></label
+                            >
+                            <input
+                                v-model="clientNom"
+                                placeholder="Ex : Fofana"
+                                class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <InputError :message="errors.client_nom" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-700"
+                                >Adresse
+                                <span class="text-red-600">*</span></label
                             >
                             <input
                                 v-model="clientAdresse"
                                 placeholder="Ex : 20 rue Loby Moungali"
                                 class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
+                            <InputError :message="errors.client_adresse" />
                         </div>
                     </div>
 
@@ -416,7 +494,8 @@ function annuler() {
                         </div>
                         <div>
                             <label class="text-sm font-medium text-gray-700"
-                                >Téléphone</label
+                                >Téléphone
+                                <span class="text-red-600">*</span></label
                             >
                             <div class="relative mt-1">
                                 <Phone
@@ -428,6 +507,7 @@ function annuler() {
                                     class="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
+                            <InputError :message="errors.client_tel" />
                         </div>
                     </div>
 
@@ -435,12 +515,14 @@ function annuler() {
                     <div class="rounded-xl border border-gray-200 p-4">
                         <h2 class="mb-3 text-sm font-semibold text-gray-400">
                             Pharmacie Partenaire
+                            <span class="text-red-600">*</span>
                         </h2>
 
                         <!-- Étape 1 : sélection de zone -->
                         <template v-if="etape === 'zone'">
                             <p class="mb-3 text-sm text-gray-600">
                                 Sélectionner d'abord une zone de Brazzaville
+                                <span class="text-red-600">*</span>
                             </p>
                             <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                                 <button
@@ -586,6 +668,7 @@ function annuler() {
                                 </p>
                             </div>
                         </template>
+                        <InputError :message="errors.pharmacie_id" />
                     </div>
 
                     <!-- ── Section Médicaments ── -->
@@ -593,6 +676,7 @@ function annuler() {
                         <div class="mb-3 flex items-center justify-between">
                             <h2 class="text-sm font-semibold text-gray-400">
                                 Médicaments
+                                <span class="text-red-600">*</span>
                             </h2>
                             <button
                                 type="button"
@@ -603,14 +687,21 @@ function annuler() {
                             </button>
                         </div>
 
+                        <InputError :message="errors.produits" />
                         <!-- En-têtes colonnes -->
                         <div
                             class="mb-2 grid grid-cols-4 gap-2 text-xs font-medium text-gray-600"
                         >
-                            <span>Nom Médicament</span>
+                            <span
+                                >Nom Médicament
+                                <span class="text-red-600">*</span></span
+                            >
                             <span>Dosage</span>
                             <span>Forme</span>
-                            <span>Quantité</span>
+                            <span
+                                >Quantité
+                                <span class="text-red-600">*</span></span
+                            >
                         </div>
 
                         <!-- Lignes -->
@@ -621,42 +712,62 @@ function annuler() {
                         >
                             <!-- Ligne 1 : désignation / dosage / forme / quantité -->
                             <div class="mb-2 grid grid-cols-4 gap-2">
-                                <input
-                                    v-model="m.designation"
-                                    placeholder="Ex : 1000"
-                                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                />
-                                <input
-                                    v-model="m.dosage"
-                                    placeholder="Ex : 1000"
-                                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                />
-                                <div class="relative">
-                                    <select
-                                        v-model="m.forme"
-                                        class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                    >
-                                        <option value="">
-                                            Choisir la forme
-                                        </option>
-                                        <option
-                                            v-for="f in formes"
-                                            :key="f"
-                                            :value="f"
-                                        >
-                                            {{ f }}
-                                        </option>
-                                    </select>
-                                    <ChevronDown
-                                        class="pointer-events-none absolute right-2 top-2.5 h-4 w-4 text-gray-400"
+                                <div class="flex flex-col gap-0.5">
+                                    <input
+                                        v-model="m.designation"
+                                        placeholder="Ex : 1000"
+                                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    />
+                                    <InputError
+                                        :message="produitErr(i, 'designation')"
                                     />
                                 </div>
-                                <input
-                                    v-model.number="m.quantite"
-                                    type="number"
-                                    min="1"
-                                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                />
+                                <div class="flex flex-col gap-0.5">
+                                    <input
+                                        v-model="m.dosage"
+                                        placeholder="Ex : 1000"
+                                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    />
+                                    <InputError
+                                        :message="produitErr(i, 'dosage')"
+                                    />
+                                </div>
+                                <div class="flex flex-col gap-0.5">
+                                    <div class="relative">
+                                        <select
+                                            v-model="m.forme"
+                                            class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                        >
+                                            <option value="">
+                                                Choisir la forme
+                                            </option>
+                                            <option
+                                                v-for="f in formes"
+                                                :key="f"
+                                                :value="f"
+                                            >
+                                                {{ f }}
+                                            </option>
+                                        </select>
+                                        <ChevronDown
+                                            class="pointer-events-none absolute right-2 top-2.5 h-4 w-4 text-gray-400"
+                                        />
+                                    </div>
+                                    <InputError
+                                        :message="produitErr(i, 'forme')"
+                                    />
+                                </div>
+                                <div class="flex flex-col gap-0.5">
+                                    <input
+                                        v-model.number="m.quantite"
+                                        type="number"
+                                        min="1"
+                                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    />
+                                    <InputError
+                                        :message="produitErr(i, 'quantite')"
+                                    />
+                                </div>
                             </div>
 
                             <!-- Ligne 2 : prix unitaire / total -->
@@ -664,7 +775,8 @@ function annuler() {
                                 <div>
                                     <span
                                         class="mb-1 block text-xs text-gray-500"
-                                        >Prix unitaire</span
+                                        >Prix unitaire
+                                        <span class="text-red-600">*</span></span
                                     >
                                     <div class="flex items-center gap-1">
                                         <input
@@ -679,6 +791,9 @@ function annuler() {
                                             >xaf</span
                                         >
                                     </div>
+                                    <InputError
+                                        :message="produitErr(i, 'prix_unitaire')"
+                                    />
                                 </div>
                                 <div>
                                     <span
@@ -729,31 +844,34 @@ function annuler() {
                         <h2 class="mb-3 text-sm font-semibold text-gray-400">
                             Informations paiement
                         </h2>
-                        <div class="flex items-center gap-4">
-                            <label
-                                class="shrink-0 text-sm font-medium text-gray-700"
-                                >Mode de paiement</label
-                            >
-                            <div class="relative flex-1">
-                                <select
-                                    v-model="modePaiementId"
-                                    class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center gap-4">
+                                <label
+                                    class="shrink-0 text-sm font-medium text-gray-700"
+                                    >Mode de paiement</label
                                 >
-                                    <option value="">
-                                        choisir le mode de paiement
-                                    </option>
-                                    <option
-                                        v-for="m in modesPaiement"
-                                        :key="m.id"
-                                        :value="m.id"
+                                <div class="relative flex-1">
+                                    <select
+                                        v-model="modePaiementId"
+                                        class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
-                                        {{ m.designation }}
-                                    </option>
-                                </select>
-                                <ChevronDown
-                                    class="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-gray-400"
-                                />
+                                        <option value="">
+                                            choisir le mode de paiement
+                                        </option>
+                                        <option
+                                            v-for="m in modesPaiement"
+                                            :key="m.id"
+                                            :value="m.id"
+                                        >
+                                            {{ m.designation }}
+                                        </option>
+                                    </select>
+                                    <ChevronDown
+                                        class="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-gray-400"
+                                    />
+                                </div>
                             </div>
+                            <InputError :message="errors.mode_paiement_id" />
                         </div>
                     </div>
 
@@ -767,6 +885,7 @@ function annuler() {
                                 show-analysis-notice
                                 :analysis-notice="analysisNoticeText"
                             />
+                            <InputError :message="errors.ordonnance" />
                             <OrdonnanceAnalysisProgressBar
                                 class="mt-2"
                                 :visible="showSubmitAnalysisProgress"

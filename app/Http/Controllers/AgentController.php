@@ -216,11 +216,17 @@ class AgentController extends Controller
             ]);
             $prixTotalEnfant += $p['quantite'] * $p['prix_unitaire'];
         }
-        $commandeEnfant->update(['prix_total' => $prixTotalEnfant]);
+        $commandeEnfant->update([
+            'prix_medicaments' => $prixTotalEnfant,
+            'prix_total' => $prixTotalEnfant,
+        ]);
 
         $commande->load('produits');
         $prixParent = $commande->produits->sum(fn ($p) => $p->pivot->quantite * (float) $p->pivot->prix_unitaire);
-        $commande->update(['prix_total' => $prixParent]);
+        $commande->update([
+            'prix_medicaments' => $prixParent,
+            'prix_total' => $prixParent,
+        ]);
 
         $pharmacie = Pharmacie::findOrFail($pharmacieId);
 

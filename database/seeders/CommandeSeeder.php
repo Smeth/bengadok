@@ -47,10 +47,12 @@ class CommandeSeeder extends Seeder
         }
 
         $clientIdPourGeneriques = $clientDiallo?->id ?? $clientFallback->id;
+        $livDesignation = (float) ($montantLivraison?->designation ?? 0);
 
         for ($i = 1; $i <= 10; $i++) {
             [$statusAdmin, $statusPharmacie] = $this->statutEtPharmacieAleatoires();
             $acceptationClient = $statusAdmin === 'retiree';
+            $prixMedicaments = (float) rand(5000, 50000);
 
             $commande = Commande::firstOrCreate(
                 ['numero' => 'BDK'.now()->format('ymd').str_pad((string) $i, 3, '0', STR_PAD_LEFT)],
@@ -62,7 +64,8 @@ class CommandeSeeder extends Seeder
                     'livreur_id' => ($livreur1 && $i % 2 === 1) ? $livreur1->id : null,
                     'date' => now()->subDays(rand(0, 14)),
                     'heurs' => '10:'.str_pad((string) rand(0, 59), 2, '0', STR_PAD_LEFT),
-                    'prix_total' => rand(5000, 50000),
+                    'prix_medicaments' => $prixMedicaments,
+                    'prix_total' => $prixMedicaments + $livDesignation,
                     'status' => $statusAdmin,
                     'status_pharmacie' => $statusPharmacie,
                     'acceptation_client' => $acceptationClient,
@@ -96,7 +99,8 @@ class CommandeSeeder extends Seeder
                         'livreur_id' => $livreur1?->id,
                         'date' => $date,
                         'heurs' => '10:30',
-                        'prix_total' => $prix,
+                        'prix_medicaments' => (float) $prix,
+                        'prix_total' => (float) $prix + $livDesignation,
                         'status' => 'retiree',
                         'status_pharmacie' => 'livre',
                         'acceptation_client' => true,
@@ -125,7 +129,8 @@ class CommandeSeeder extends Seeder
                         'livreur_id' => $livreur1?->id,
                         'date' => $date,
                         'heurs' => '14:00',
-                        'prix_total' => $prix,
+                        'prix_medicaments' => (float) $prix,
+                        'prix_total' => (float) $prix + $livDesignation,
                         'status' => 'retiree',
                         'status_pharmacie' => 'livre',
                         'acceptation_client' => true,

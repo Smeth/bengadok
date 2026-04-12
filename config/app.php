@@ -123,4 +123,15 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Réinitialisation des données pharmacies (super_admin / commande Artisan)
+    |--------------------------------------------------------------------------
+    |
+    | Activé si true, ou implicitement en APP_ENV=local.
+    |
+    */
+
+    'allow_pharmacy_reset' => (bool) env('ALLOW_PHARMACY_RESET', false),
+
 ];

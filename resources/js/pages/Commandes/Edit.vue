@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import InputError from '@/components/InputError.vue';
 import OrdonnanceAnalysisProgressBar from '@/components/OrdonnanceAnalysisProgressBar.vue';
 import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
 import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { fieldError, normalizeInertiaErrors } from '@/lib/validationErrors';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
@@ -77,6 +79,15 @@ const ordonnanceFile = ref<File | null>(null);
 const enSubmission = ref(false);
 
 const page = usePage();
+const errors = computed(() =>
+    normalizeInertiaErrors(
+        (page.props as { errors?: Record<string, unknown> }).errors,
+    ),
+);
+function produitErr(i: number, field: string): string | undefined {
+    return fieldError(errors.value, `produits.${i}.${field}`);
+}
+
 type OvSettings = { enabled?: boolean; execution_mode?: string };
 const ordonnanceVerificationSettings = computed(
     () => page.props.ordonnanceVerificationSettings as OvSettings | undefined,
@@ -193,12 +204,14 @@ function submit() {
         formData.append('_method', 'PATCH');
         router.post(`/commandes/${props.commande.id}`, formData, {
             forceFormData: true,
+            preserveScroll: true,
             onFinish: () => {
                 enSubmission.value = false;
             },
         });
     } else {
         router.patch(`/commandes/${props.commande.id}`, payload, {
+            preserveScroll: true,
             onFinish: () => {
                 enSubmission.value = false;
             },
@@ -221,39 +234,60 @@ function submit() {
                 </Link>
             </div>
 
+            <div
+                v-if="Object.keys(errors).length > 0"
+                class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+                role="alert"
+            >
+                Veuillez corriger les champs indiqués ci-dessous.
+            </div>
+
             <div class="grid gap-6 lg:grid-cols-2">
                 <div class="space-y-4">
                     <h3 class="font-semibold">Client</h3>
                     <div class="space-y-2">
-                        <Label>Nom *</Label>
-                        <Input v-model="clientNom" required placeholder="Nom" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label>Prénom</Label>
+                        <Label>Prénom (recommandé)</Label>
                         <Input v-model="clientPrenom" placeholder="Prénom" />
+                        <InputError :message="errors.client_prenom" />
                     </div>
                     <div class="space-y-2">
-                        <Label>Téléphone *</Label>
+                        <Label>Nom (facultatif)</Label>
+                        <Input v-model="clientNom" placeholder="Nom" />
+                        <InputError :message="errors.client_nom" />
+                    </div>
+                    <div class="space-y-2">
+                        <Label
+                            >Téléphone
+                            <span class="text-red-600">*</span></Label
+                        >
                         <Input
                             v-model="clientTel"
                             required
                             placeholder="Téléphone"
                         />
+                        <InputError :message="errors.client_tel" />
                     </div>
                     <div class="space-y-2">
-                        <Label>Adresse *</Label>
+                        <Label
+                            >Adresse
+                            <span class="text-red-600">*</span></Label
+                        >
                         <Input
                             v-model="clientAdresse"
                             required
                             placeholder="Adresse"
                         />
+                        <InputError :message="errors.client_adresse" />
                     </div>
                 </div>
 
                 <div class="space-y-4">
                     <h3 class="font-semibold">Commande</h3>
                     <div class="space-y-2">
-                        <Label>Pharmacie *</Label>
+                        <Label
+                            >Pharmacie
+                            <span class="text-red-600">*</span></Label
+                        >
                         <select
                             v-model="pharmacieId"
                             required
@@ -269,15 +303,24 @@ function submit() {
                                 - {{ p.adresse }}
                             </option>
                         </select>
+                        <InputError :message="errors.pharmacie_id" />
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-2">
-                            <Label>Date *</Label>
+                            <Label
+                                >Date
+                                <span class="text-red-600">*</span></Label
+                            >
                             <Input v-model="date" type="date" required />
+                            <InputError :message="errors.date" />
                         </div>
                         <div class="space-y-2">
-                            <Label>Heure *</Label>
+                            <Label
+                                >Heure
+                                <span class="text-red-600">*</span></Label
+                            >
                             <Input v-model="heurs" type="time" required />
+                            <InputError :message="errors.heurs" />
                         </div>
                     </div>
                     <div class="space-y-2">
@@ -286,6 +329,7 @@ function submit() {
                             v-model="beneficiaire"
                             placeholder="Bénéficiaire"
                         />
+                        <InputError :message="errors.beneficiaire" />
                     </div>
                     <div class="space-y-2">
                         <Label>Commentaire</Label>
@@ -293,46 +337,79 @@ function submit() {
                             v-model="commentaire"
                             placeholder="Commentaire"
                         />
+                        <InputError :message="errors.commentaire" />
                     </div>
                 </div>
             </div>
 
             <div>
-                <Label>Médicaments *</Label>
+                <Label
+                    >Médicaments
+                    <span class="text-red-600">*</span></Label
+                >
+                <InputError :message="errors.produits" />
                 <div class="mt-2 space-y-2">
                     <div
                         v-for="(p, i) in produitsSelection"
                         :key="i"
-                        class="flex flex-wrap items-end gap-2"
+                        class="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-end"
                     >
-                        <Input
-                            v-model="p.designation"
-                            placeholder="Désignation"
-                            class="min-w-[120px] flex-1"
-                        />
-                        <Input
-                            v-model="p.dosage"
-                            placeholder="Dosage"
-                            class="w-24"
-                        />
-                        <Input
-                            v-model.number="p.quantite"
-                            type="number"
-                            min="1"
-                            class="w-16"
-                            placeholder="Qté"
-                        />
-                        <Input
-                            v-model.number="p.prix_unitaire"
-                            type="number"
-                            min="0"
-                            class="w-24"
-                            placeholder="Prix"
-                        />
+                        <div class="flex min-w-[120px] flex-1 flex-col gap-1">
+                            <span class="text-xs text-muted-foreground"
+                                >Désignation
+                                <span class="text-red-600">*</span></span
+                            >
+                            <Input
+                                v-model="p.designation"
+                                placeholder="Désignation"
+                                class="w-full"
+                            />
+                            <InputError :message="produitErr(i, 'designation')" />
+                        </div>
+                        <div class="flex w-24 flex-col gap-1">
+                            <span class="text-xs text-muted-foreground"
+                                >Dosage</span
+                            >
+                            <Input
+                                v-model="p.dosage"
+                                placeholder="Dosage"
+                                class="w-full"
+                            />
+                            <InputError :message="produitErr(i, 'dosage')" />
+                        </div>
+                        <div class="flex w-16 flex-col gap-1">
+                            <span class="text-xs text-muted-foreground"
+                                >Qté
+                                <span class="text-red-600">*</span></span
+                            >
+                            <Input
+                                v-model.number="p.quantite"
+                                type="number"
+                                min="1"
+                                class="w-full"
+                                placeholder="Qté"
+                            />
+                            <InputError :message="produitErr(i, 'quantite')" />
+                        </div>
+                        <div class="flex w-24 flex-col gap-1">
+                            <span class="text-xs text-muted-foreground"
+                                >Prix
+                                <span class="text-red-600">*</span></span
+                            >
+                            <Input
+                                v-model.number="p.prix_unitaire"
+                                type="number"
+                                min="0"
+                                class="w-full"
+                                placeholder="Prix"
+                            />
+                            <InputError :message="produitErr(i, 'prix_unitaire')" />
+                        </div>
                         <Button
                             type="button"
                             variant="destructive"
                             size="icon"
+                            class="self-end"
                             @click="supprimerProduit(i)"
                             >×</Button
                         >
@@ -353,6 +430,7 @@ function submit() {
                     show-analysis-notice
                     :analysis-notice="analysisNoticeText"
                 />
+                <InputError :message="errors.ordonnance" />
                 <OrdonnanceAnalysisProgressBar
                     class="mt-2"
                     :visible="showSubmitAnalysisProgress"
@@ -382,6 +460,7 @@ function submit() {
                             {{ m.designation }}
                         </option>
                     </select>
+                    <InputError :message="errors.mode_paiement_id" />
                 </div>
                 <div class="space-y-2">
                     <Label>Montant livraison</Label>
@@ -399,6 +478,7 @@ function submit() {
                             XAF
                         </option>
                     </select>
+                    <InputError :message="errors.montant_livraison_id" />
                 </div>
             </div>
 

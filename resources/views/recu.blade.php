@@ -105,9 +105,15 @@
                     @php $sousTotal = 0; @endphp
                     @foreach($commande->produits ?? [] as $p)
                         @php
-                            $qte = $p->pivot->quantite ?? 0;
-                            $pu = (float) ($p->pivot->prix_unitaire ?? 0);
-                            $ligne = $qte * $pu;
+                            $status = $p->pivot->status ?? '';
+                            if ($status === 'indisponible') {
+                                $qte = 0;
+                                $ligne = 0;
+                            } else {
+                                $qte = $p->pivot->quantite_confirmee ?? $p->pivot->quantite ?? 0;
+                                $pu = (float) ($p->pivot->prix_unitaire ?? 0);
+                                $ligne = $qte * $pu;
+                            }
                             $sousTotal += $ligne;
                         @endphp
                         <tr>

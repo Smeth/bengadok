@@ -61,6 +61,7 @@ return [
 
     'attributes' => [
         'email' => 'adresse email',
+        'phone' => 'téléphone',
         'name' => 'nom',
         'password' => 'mot de passe',
         'password_confirmation' => 'confirmation du mot de passe',

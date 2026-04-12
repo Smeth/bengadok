@@ -8,6 +8,7 @@ import {
     FileText,
     RefreshCw,
     XCircle,
+    X,
     Check,
     CheckCircle2,
 } from 'lucide-vue-next';
@@ -34,6 +35,8 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { sousTotalCommandeProduits } from '@/lib/commandeTotals';
+import { normalizeInertiaErrors } from '@/lib/validationErrors';
 import { dashboard } from '@/routes';
 import { STATUTS_COMMANDE } from '@/types';
 import type { BreadcrumbItem, CommandeDetail } from '@/types';
@@ -646,30 +649,27 @@ function openEnregistrementModal() {
     showEnregistrementModal.value = true;
 }
 
-const sousTotal = () => {
-    const cmd = detailCommande.value;
-    if (!cmd?.produits) return 0;
-    return cmd.produits.reduce(
-        (s, p) => s + p.pivot.quantite * Number(p.pivot.prix_unitaire),
-        0,
-    );
-};
+const sousTotal = () =>
+    sousTotalCommandeProduits(detailCommande.value?.produits);
 
 const livraison = () =>
     Number(detailCommande.value?.montant_livraison?.designation ?? 0);
 const totalDetail = () => sousTotal() + livraison();
 
 function parseValidationErrors(e: unknown): Record<string, string> {
-    const data = (
-        e as { response?: { data?: { errors?: Record<string, string[]> } } }
-    )?.response?.data;
-    const err = data?.errors ?? {};
-    return Object.fromEntries(
-        Object.entries(err).map(([k, v]) => [
-            k,
-            Array.isArray(v) ? v[0] : String(v),
-        ]),
-    );
+    if (e && typeof e === 'object' && 'response' in (e as object)) {
+        const data = (
+            e as { response?: { data?: { errors?: Record<string, string[]> } } }
+        )?.response?.data;
+        const err = data?.errors ?? {};
+        return Object.fromEntries(
+            Object.entries(err).map(([k, v]) => [
+                k,
+                Array.isArray(v) ? v[0] : String(v),
+            ]),
+        );
+    }
+    return normalizeInertiaErrors(e as Record<string, unknown>);
 }
 
 const apiErrorsEnreg = ref<Record<string, string>>({});
@@ -1001,6 +1001,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
         <!-- Modal Détails -> Remplacée par un Sheet (Tiroir) -->
         <Sheet :open="showDetailModal" @update:open="showDetailModal = $event">
             <SheetContent
+                :show-close-button="false"
                 class="w-full max-h-[100dvh] min-h-0 sm:max-w-[500px] md:max-w-[540px] overflow-y-auto overflow-x-hidden bg-[#fafafa] p-0 border-l-0 shadow-2xl"
                 @pointer-down-outside="closeDetail"
             >
@@ -1038,9 +1039,9 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                 <div v-else-if="detailCommande">
                     <!-- En-tête (défile avec le reste) -->
                     <div
-                        class="flex items-center justify-between border-b border-gray-100 bg-white px-6 py-4 shadow-sm"
+                        class="flex items-center justify-between gap-3 border-b border-gray-100 bg-white px-4 py-4 shadow-sm sm:px-6"
                     >
-                        <div>
+                        <div class="min-w-0 flex-1">
                             <p class="text-[18px] font-bold text-gray-800">
                                 {{ detailCommande.numero }}
                             </p>
@@ -1049,11 +1050,19 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                             </p>
                         </div>
                         <span
-                            class="rounded-full px-3 py-1 text-[12px] font-bold"
+                            class="shrink-0 rounded-full px-3 py-1 text-[12px] font-bold"
                             :style="getStatusBadgeStyle(detailCommande.status)"
                         >
                             {{ getStatusLabel(detailCommande.status) }}
                         </span>
+                        <button
+                            type="button"
+                            class="shrink-0 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                            aria-label="Fermer le panneau"
+                            @click="closeDetail"
+                        >
+                            <X class="size-5" />
+                        </button>
                     </div>
 
                     <div class="space-y-4 p-6 pb-8">
