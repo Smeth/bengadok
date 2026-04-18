@@ -214,43 +214,6 @@ function logout() {
                             filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
                         "
                     />
-                    <!-- 4 icônes flottantes : caducée, pilules, flacon, graphique -->
-                    <img
-                        src="/images/figma-assets/sidebar-icon-caduceus.svg"
-                        alt=""
-                        class="absolute left-0 top-[6%] w-[34px] h-auto opacity-90"
-                        style="
-                            filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
-                            transform: rotate(-17deg);
-                        "
-                    />
-                    <img
-                        src="/images/figma-assets/sidebar-icon-pills.png"
-                        alt=""
-                        class="absolute left-[42%] top-[4%] w-[32px] h-auto opacity-90"
-                        style="
-                            filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
-                            transform: rotate(10deg);
-                        "
-                    />
-                    <img
-                        src="/images/figma-assets/sidebar-icon-bottle.png"
-                        alt=""
-                        class="absolute right-[8%] top-[6%] w-[30px] h-auto opacity-90"
-                        style="
-                            filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
-                            transform: rotate(27deg);
-                        "
-                    />
-                    <img
-                        src="/images/figma-assets/sidebar-icon-barchart.png"
-                        alt=""
-                        class="absolute right-0 top-[20%] w-[32px] h-auto opacity-90"
-                        style="
-                            filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
-                            transform: rotate(13deg);
-                        "
-                    />
                 </div>
             </div>
         </SidebarContent>
