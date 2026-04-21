@@ -158,6 +158,18 @@ const enAttentePharmacieToutIndisponible = computed(() => {
     );
 });
 
+/** Frais de livraison obligatoires avant validation admin (statut → validée). */
+const peutValiderCommandeEnAttente = computed(() => {
+    const c = detailCommande.value;
+    if (!c || c.status !== 'en_attente') {
+        return false;
+    }
+    if (enAttentePharmacieToutIndisponible.value) {
+        return false;
+    }
+    return !!c.montant_livraison;
+});
+
 /** Même périmètre que la fiche commande : OCR / vérification ordonnance. */
 const isAgent = computed(() => canCreateCommande.value);
 
@@ -544,11 +556,16 @@ function updateStatus(status: string) {
 }
 
 function openValiderModal() {
+    if (!peutValiderCommandeEnAttente.value) {
+        return;
+    }
     showValiderModal.value = true;
 }
 
 function confirmValiderCommande() {
-    if (!detailCommande.value) return;
+    if (!detailCommande.value || !detailCommande.value.montant_livraison) {
+        return;
+    }
     const id = detailCommande.value.id;
     showValiderModal.value = false;
     router.patch(
@@ -1766,11 +1783,28 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                     <button
                                         v-if="!enAttentePharmacieToutIndisponible"
                                         type="button"
-                                        class="flex h-12 w-full items-center justify-center rounded-full bg-[#0d6efd] text-[15px] font-bold text-white transition-colors hover:bg-blue-700"
+                                        :disabled="!peutValiderCommandeEnAttente"
+                                        class="flex h-12 w-full items-center justify-center rounded-full text-[15px] font-bold text-white transition-colors"
+                                        :class="
+                                            peutValiderCommandeEnAttente
+                                                ? 'bg-[#0d6efd] hover:bg-blue-700'
+                                                : 'cursor-not-allowed bg-gray-400'
+                                        "
                                         @click="openValiderModal"
                                     >
                                         Valider
                                     </button>
+                                    <p
+                                        v-if="
+                                            !enAttentePharmacieToutIndisponible &&
+                                            !peutValiderCommandeEnAttente
+                                        "
+                                        class="text-center text-[12px] font-medium text-amber-800"
+                                    >
+                                        Définissez le montant de la livraison
+                                        (section paiement ci-dessus) avant de
+                                        valider.
+                                    </p>
                                     <p
                                         v-else
                                         class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium text-amber-900"
@@ -1863,7 +1897,8 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                         detailCommande?.numero
                     }}</span>
                     ? Le statut passera à « Validée » et la pharmacie pourra
-                    préparer la commande.
+                    préparer la commande. Les frais de livraison sont
+                    renseignés.
                 </p>
                 <DialogFooter
                     class="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
@@ -1879,6 +1914,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                     <Button
                         type="button"
                         class="rounded-[10px] bg-[#0d6efd] font-bold text-white hover:bg-blue-700"
+                        :disabled="!detailCommande?.montant_livraison"
                         @click="confirmValiderCommande"
                     >
                         Confirmer la validation

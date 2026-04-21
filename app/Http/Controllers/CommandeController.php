@@ -335,6 +335,10 @@ class CommandeController extends Controller
             return back()->with('error', 'Aucun médicament n\'est disponible sur cette commande. Vous ne pouvez que l\'annuler (ou un agent peut la renvoyer vers une autre pharmacie).');
         }
 
+        if ($validated['status'] === 'validee' && $commande->montant_livraison_id === null) {
+            return back()->with('error', 'Veuillez d\'abord définir le montant de la livraison avant de valider la commande.');
+        }
+
         if ($validated['status'] === 'retiree' && $commande->status_pharmacie !== 'livre') {
             return back()->with('error', 'La pharmacie doit d\'abord confirmer la remise au livreur avant de marquer la commande comme livrée.');
         }
