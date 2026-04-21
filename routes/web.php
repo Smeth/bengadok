@@ -84,6 +84,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('{commande}/status', [CommandeController::class, 'updateStatus'])->name('update-status');
         Route::patch('{commande}/acceptation-client', [CommandeController::class, 'setAcceptationClient'])->name('acceptation-client');
         Route::patch('{commande}/montant-livraison', [CommandeController::class, 'setMontantLivraison'])->name('montant-livraison');
+        Route::patch('{commande}/mode-paiement', [CommandeController::class, 'setModePaiement'])->name('mode-paiement');
         Route::patch('{commande}/livreur', [CommandeController::class, 'setLivreur'])->name('livreur');
     });
 

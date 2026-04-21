@@ -45,6 +45,17 @@ class Commande extends Model
         'a_preparer',
     ];
 
+    /**
+     * Statuts commande pour lesquels les lignes produit comptent dans les stats de ventes (médicaments, CA).
+     * Exclut nouvelle / en_attente / annulée : la vente n'est comptée qu'après validation admin.
+     */
+    public const STATUTS_STATS_VENTES = [
+        'validee',
+        'a_preparer',
+        'retiree',
+        'livree',
+    ];
+
     // Statuts côté pharmacie
     public const STATUSES_PHARMACIE = [
         'nouvelle' => 'Nouvelle commande',

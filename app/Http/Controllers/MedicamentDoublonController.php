@@ -149,8 +149,12 @@ class MedicamentDoublonController extends Controller
     {
         return DB::table('commande_produit')
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
-            ->whereIn('commandes.status', Commande::STATUTS_COMPTABILISES_CLIENT)
-            ->selectRaw('commande_produit.produit_id, COALESCE(SUM(commande_produit.quantite), 0) as total')
+            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->where(function ($q) {
+                $q->whereNull('commande_produit.status')
+                    ->orWhere('commande_produit.status', '<>', 'indisponible');
+            })
+            ->selectRaw('commande_produit.produit_id, COALESCE(SUM(COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite)), 0) as total')
             ->groupBy('commande_produit.produit_id')
             ->pluck('total', 'produit_id')
             ->toArray();
@@ -160,8 +164,12 @@ class MedicamentDoublonController extends Controller
     {
         return DB::table('commande_produit')
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
-            ->whereIn('commandes.status', Commande::STATUTS_COMPTABILISES_CLIENT)
-            ->selectRaw('commande_produit.produit_id, COALESCE(SUM(commande_produit.quantite * commande_produit.prix_unitaire), 0) as total')
+            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->where(function ($q) {
+                $q->whereNull('commande_produit.status')
+                    ->orWhere('commande_produit.status', '<>', 'indisponible');
+            })
+            ->selectRaw('commande_produit.produit_id, COALESCE(SUM(COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite) * commande_produit.prix_unitaire), 0) as total')
             ->groupBy('commande_produit.produit_id')
             ->pluck('total', 'produit_id')
             ->toArray();

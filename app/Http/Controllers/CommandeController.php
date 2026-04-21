@@ -102,6 +102,7 @@ class CommandeController extends Controller
             'zones' => $zones,
             'produits' => $produits,
             'montantsLivraison' => $montantsLivraison,
+            'modesPaiement' => ModePaiement::query()->orderBy('designation')->get(),
             'livreurs' => $livreurs,
             'openDetailCommandeId' => $request->filled('detail') ? $request->integer('detail') : null,
         ]);
@@ -207,6 +208,7 @@ class CommandeController extends Controller
             'produits.*.id' => 'nullable|integer|exists:produits,id',
             'produits.*.designation' => 'required|string|max:255',
             'produits.*.dosage' => 'nullable|string|max:50',
+            'produits.*.forme' => 'nullable|string|max:50',
             'produits.*.quantite' => 'required|integer|min:1',
             'produits.*.prix_unitaire' => 'required|numeric|min:0',
             'ordonnance' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
@@ -255,17 +257,12 @@ class CommandeController extends Controller
         $commande->produits()->detach();
         $prixTotal = 0;
         foreach ($validated['produits'] as $p) {
-            $produit = Produit::firstOrCreate(
-                [
-                    'designation' => trim($p['designation']),
-                    'dosage' => trim($p['dosage'] ?? '') ?: null,
-                ],
-                [
-                    'pu' => (float) $p['prix_unitaire'],
-                    'forme' => null,
-                    'type' => 'Vente libre',
-                ]
-            );
+            $produit = Produit::fromCommandeLine([
+                'designation' => $p['designation'],
+                'dosage' => $p['dosage'] ?? null,
+                'forme' => $p['forme'] ?? null,
+                'prix_unitaire' => $p['prix_unitaire'],
+            ]);
             $quantite = (int) $p['quantite'];
             $prixUnitaire = (float) $p['prix_unitaire'];
             $commande->produits()->attach($produit->id, [
@@ -334,6 +331,10 @@ class CommandeController extends Controller
             'note_annulation' => 'nullable|string|max:1000',
         ]);
 
+        if ($validated['status'] === 'validee' && $commande->status_pharmacie === 'indisponible') {
+            return back()->with('error', 'Aucun médicament n\'est disponible sur cette commande. Vous ne pouvez que l\'annuler (ou un agent peut la renvoyer vers une autre pharmacie).');
+        }
+
         if ($validated['status'] === 'retiree' && $commande->status_pharmacie !== 'livre') {
             return back()->with('error', 'La pharmacie doit d\'abord confirmer la remise au livreur avant de marquer la commande comme livrée.');
         }
@@ -378,6 +379,10 @@ class CommandeController extends Controller
     {
         $this->authorize('assignLivreur', $commande);
 
+        if ($commande->status === 'en_attente' && $commande->status_pharmacie === 'indisponible') {
+            return back()->with('error', 'Impossible d\'attribuer un livreur tant qu\'aucun médicament n\'est disponible.');
+        }
+
         $validated = $request->validate([
             'livreur_id' => 'sometimes|nullable|integer|exists:livreurs,id',
         ]);
@@ -406,6 +411,10 @@ class CommandeController extends Controller
 
     public function setMontantLivraison(Request $request, Commande $commande): RedirectResponse
     {
+        if ($commande->status === 'en_attente' && $commande->status_pharmacie === 'indisponible') {
+            return back()->with('error', 'Impossible de définir les frais de livraison tant qu\'aucun médicament n\'est disponible.');
+        }
+
         $validated = $request->validate([
             'montant_livraison_id' => 'required|exists:montants_livraison,id',
         ]);
@@ -425,6 +434,32 @@ class CommandeController extends Controller
             'montant_livraison_id' => $validated['montant_livraison_id'],
             'prix_medicaments' => $sousTotal,
             'prix_total' => $nouveauTotal,
+        ]);
+
+        return back();
+    }
+
+    /**
+     * Définir ou modifier le mode de paiement (commande en attente après retour pharmacie).
+     */
+    public function setModePaiement(Request $request, Commande $commande): RedirectResponse
+    {
+        $this->authorize('update', $commande);
+
+        if ($commande->status !== 'en_attente') {
+            return back()->with('error', 'Le mode de paiement ne peut être défini que pour les commandes en attente.');
+        }
+
+        if ($commande->status_pharmacie === 'indisponible') {
+            return back()->with('error', 'Impossible de modifier le mode de paiement tant qu\'aucun médicament n\'est disponible.');
+        }
+
+        $validated = $request->validate([
+            'mode_paiement_id' => 'required|exists:modes_paiement,id',
+        ]);
+
+        $commande->update([
+            'mode_paiement_id' => $validated['mode_paiement_id'],
         ]);
 
         return back();

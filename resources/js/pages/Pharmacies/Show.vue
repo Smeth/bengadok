@@ -921,10 +921,12 @@ function creerUtilisateur() {
                         </h4>
                         <div class="space-y-2">
                             <Label>Identifiant (auto-généré)</Label>
-                            <Input
-                                :model-value="identifiantPreview"
+                            <input
+                                type="text"
                                 readonly
-                                class="bg-muted font-mono text-sm"
+                                tabindex="-1"
+                                :value="identifiantPreview"
+                                class="flex h-9 w-full min-w-0 rounded-md border border-input bg-muted px-3 py-1 font-mono text-sm shadow-xs outline-none md:text-sm"
                             />
                             <p class="text-xs text-[#459cd1]">
                                 L'aperçu affiche l'identifiant estimé (basé sur
@@ -977,11 +979,12 @@ function creerUtilisateur() {
                                 v-if="formUser.passwordMode === 'auto'"
                                 class="flex gap-2"
                             >
-                                <Input
-                                    v-model="formUser.password"
-                                    readonly
+                                <input
                                     type="text"
-                                    class="flex-1 font-mono"
+                                    readonly
+                                    tabindex="-1"
+                                    :value="formUser.password"
+                                    class="flex h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-3 py-1 font-mono text-base shadow-xs outline-none md:text-sm"
                                 />
                                 <Button
                                     type="button"

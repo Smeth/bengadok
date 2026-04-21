@@ -1333,7 +1333,7 @@ function downloadOrdonnance() {
                                     @click.stop="askValiderAchat(cmd)"
                                 >
                                     <ShoppingCart class="size-4" />
-                                    Valider l'achat et la récupération
+                                    Valider l'achat et la remise au livreur
                                 </button>
                                 <button @click="toggleCard(cmd)">
                                     <component
@@ -1937,7 +1937,7 @@ function downloadOrdonnance() {
                         </div>
                         <div>
                             <p class="text-[15px] font-extrabold text-gray-900">
-                                Confirmer la récupération
+                                Confirmer la remise au livreur
                             </p>
                             <p class="text-[12px] text-gray-500">
                                 Commande {{ confirmModal.cmd?.numero }}
@@ -1947,8 +1947,9 @@ function downloadOrdonnance() {
                     <!-- Corps -->
                     <div class="px-6 py-5">
                         <p class="text-[14px] text-gray-700">
-                            Vous êtes sur le point de valider que le patient a
-                            bien récupéré ou payé sa commande.
+                            Vous confirmez que l’achat est validé et que la
+                            commande a bien été remise au livreur en pharmacie
+                            (et non au patient final).
                         </p>
                         <p
                             class="mt-2 text-[13px] font-semibold text-[#92400E] bg-[#FFFBEB] rounded-lg px-3 py-2 border border-[#FCD34D]"
@@ -1972,7 +1973,7 @@ function downloadOrdonnance() {
                             @click="confirmerAchat"
                         >
                             <ShoppingCart class="size-4" />
-                            Confirmer la récupération
+                            Confirmer la remise au livreur
                         </button>
                     </div>
                 </div>

@@ -16,6 +16,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { formatDateFrLocal } from '@/lib/formatDateLocal';
 import type { CommandeListItem } from '@/types';
 import { STATUTS_COMMANDE } from '@/types';
 
@@ -78,12 +79,7 @@ function getMedicamentsText(
 }
 
 function formatDate(d: string) {
-    if (!d) return '-';
-    return new Date(d).toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-    });
+    return formatDateFrLocal(d);
 }
 
 const statutsList = computed(() => props.statuts ?? STATUTS_COMMANDE);

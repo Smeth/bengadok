@@ -4,6 +4,8 @@ export type CommandeDetail = {
     date: string;
     heurs?: string;
     status: string;
+    /** État côté pharmacie (ex. indisponible = aucune ligne disponible après retour pharmacie). */
+    status_pharmacie?: string;
     prix_total: number;
     commentaire?: string;
     motif_annulation?: string;
@@ -32,6 +34,7 @@ export type CommandeDetail = {
         id: number;
         designation: string;
         dosage?: string;
+        forme?: string | null;
         pivot: {
             quantite: number;
             quantite_confirmee?: number | null;
@@ -39,7 +42,7 @@ export type CommandeDetail = {
             status: string;
         };
     }>;
-    mode_paiement?: { designation: string };
+    mode_paiement?: { id?: number; designation: string };
     montant_livraison?: { designation: number };
     livreur?: { id: number; nom: string; prenom: string; tel: string };
     ordonnance?: {
@@ -80,7 +83,7 @@ export type CommandeListItem = {
         pivot: { quantite: number };
     }>;
     montant_livraison?: { designation: number };
-    mode_paiement?: { designation: string };
+    mode_paiement?: { id?: number; designation: string };
 };
 
 export type CommandeListResponse = {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Commande;
 use App\Models\DbMedicament;
 use App\Models\Pharmacie;
 use App\Models\Produit;
@@ -41,18 +42,30 @@ class MedicamentController extends Controller
             $query->whereHas('pharmacies', fn ($q) => $q->where('pharmacies.id', (int) $pharmacieId));
         }
 
+        $ventesOrderSub = $this->ventesTotalesSubquerySql();
+
         match ($tri) {
             'prix' => $query->orderBy('pu'),
-            'ventes' => $query->orderByRaw('(SELECT COALESCE(SUM(cp.quantite), 0) FROM commande_produit cp WHERE cp.produit_id = produits.id) DESC'),
+            'ventes' => $query->orderByRaw("({$ventesOrderSub}) DESC"),
             'designation' => $query->orderBy('designation'),
             default => $query->orderBy('designation'),
         };
 
-        $rankingMap = collect(DB::table('commande_produit')
-            ->select('produit_id', DB::raw('SUM(quantite) as total'))
-            ->groupBy('produit_id')
-            ->orderByDesc('total')
-            ->pluck('produit_id'))
+        $rankingMap = collect(
+            DB::table('commande_produit')
+                ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
+                ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+                ->where(function ($q) {
+                    $q->whereNull('commande_produit.status')
+                        ->orWhere('commande_produit.status', '<>', 'indisponible');
+                })
+                ->selectRaw(
+                    'commande_produit.produit_id as produit_id, SUM(COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite)) as total',
+                )
+                ->groupBy('commande_produit.produit_id')
+                ->orderByDesc('total')
+                ->pluck('produit_id'),
+        )
             ->flip()
             ->map(fn ($i) => $i + 1);
 
@@ -61,14 +74,8 @@ class MedicamentController extends Controller
             $prixMin = $prixPharmacy->isEmpty() ? (float) $p->pu : $prixPharmacy->min();
             $prixMax = $prixPharmacy->isEmpty() ? (float) $p->pu : $prixPharmacy->max();
             $prixMoyen = $prixPharmacy->isEmpty() ? (float) $p->pu : round($prixPharmacy->avg(), 0);
-            $ca = DB::table('commande_produit')
-                ->where('produit_id', $p->id)
-                ->selectRaw('COALESCE(SUM(quantite * prix_unitaire), 0) as total')
-                ->value('total') ?? 0;
-            $ventes = DB::table('commande_produit')
-                ->where('produit_id', $p->id)
-                ->selectRaw('COALESCE(SUM(quantite), 0) as total')
-                ->value('total') ?? 0;
+            $ca = $this->caProduitValide($p->id);
+            $ventes = $this->ventesProduitValide($p->id);
 
             return [
                 'id' => $p->id,
@@ -132,44 +139,67 @@ class MedicamentController extends Controller
 
     public function show(Produit $produit): Response
     {
-        $produit->load(['pharmacies' => fn ($q) => $q->orderBy('designation')->withPivot('prix', 'stock')]);
+        $ventes = $this->ventesProduitValide($produit->id);
 
-        $ventes = DB::table('commande_produit')
-            ->where('produit_id', $produit->id)
-            ->selectRaw('COALESCE(SUM(quantite), 0) as total')
-            ->value('total') ?? 0;
-
-        $ca = DB::table('commande_produit')
-            ->where('produit_id', $produit->id)
-            ->selectRaw('COALESCE(SUM(quantite * prix_unitaire), 0) as total')
-            ->value('total') ?? 0;
+        $ca = $this->caProduitValide($produit->id);
 
         $allProduitsVentes = DB::table('commande_produit')
-            ->select('produit_id', DB::raw('SUM(quantite) as total'))
-            ->groupBy('produit_id')
+            ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
+            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->where(function ($q) {
+                $q->whereNull('commande_produit.status')
+                    ->orWhere('commande_produit.status', '<>', 'indisponible');
+            })
+            ->select(
+                'commande_produit.produit_id',
+                DB::raw('SUM(COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite)) as total'),
+            )
+            ->groupBy('commande_produit.produit_id')
             ->orderByDesc('total')
             ->get();
         $position = $allProduitsVentes->search(fn ($r) => $r->produit_id == $produit->id);
         $classement = $position !== false ? $position + 1 : null;
 
-        $prixList = $produit->pharmacies->map(fn ($ph) => (float) ($ph->pivot->prix ?? $produit->pu))->filter(fn ($v) => $v > 0)->values();
-        $prixMin = $prixList->isEmpty() ? (float) $produit->pu : $prixList->min();
-        $prixMax = $prixList->isEmpty() ? (float) $produit->pu : $prixList->max();
-        $prixMoyen = $prixList->isEmpty() ? (float) $produit->pu : round($prixList->avg(), 0);
-        $ecart = $prixMax - $prixMin;
-        $ecartPct = $prixMin > 0 ? round(($ecart / $prixMin) * 100) : 0;
+        $referencePu = (float) $produit->pu;
 
-        $comparaison = $produit->pharmacies->map(function ($ph) use ($produit, $prixMin, $prixMax) {
-            $prix = (float) ($ph->pivot->prix ?? $produit->pu);
+        $pharmaciesRows = Pharmacie::query()
+            ->orderBy('pharmacies.designation')
+            ->leftJoin('produit_pharmacie', function ($join) use ($produit) {
+                $join->on('pharmacies.id', '=', 'produit_pharmacie.pharmacie_id')
+                    ->where('produit_pharmacie.produit_id', '=', $produit->id);
+            })
+            ->select('pharmacies.id', 'pharmacies.designation', 'produit_pharmacie.prix as pharmacie_prix')
+            ->get();
+
+        $prixParLigne = $pharmaciesRows->map(fn ($row) => (float) ($row->pharmacie_prix ?? $referencePu));
+        $prixPositifs = $prixParLigne->filter(fn ($v) => $v > 0)->values();
+
+        if ($prixPositifs->isEmpty()) {
+            $prixMin = 0.0;
+            $prixMax = 0.0;
+            $prixMoyen = 0.0;
+        } else {
+            $prixMin = (float) $prixPositifs->min();
+            $prixMax = (float) $prixPositifs->max();
+            $prixMoyen = round((float) $prixPositifs->avg(), 0);
+        }
+
+        $ecart = $prixMax - $prixMin;
+        $ecartPct = $prixMin > 0 ? (int) round(($ecart / $prixMin) * 100) : 0;
+        $plusieursTarifs = $prixMax - $prixMin > 0.009;
+
+        $comparaison = $pharmaciesRows->map(function ($row) use ($referencePu, $prixMin, $prixMax, $plusieursTarifs) {
+            $prix = (float) ($row->pharmacie_prix ?? $referencePu);
+            $hasPrice = $prix > 0;
 
             return [
-                'id' => $ph->id,
-                'designation' => $ph->designation,
+                'id' => (int) $row->id,
+                'designation' => $row->designation,
                 'prix' => $prix,
-                'plus_bas' => $prix > 0 && abs($prix - $prixMin) < 0.01,
-                'plus_eleve' => $prix > 0 && abs($prix - $prixMax) < 0.01,
+                'plus_bas' => $hasPrice && $prixMin > 0 && abs($prix - $prixMin) < 0.01,
+                'plus_eleve' => $hasPrice && $plusieursTarifs && abs($prix - $prixMax) < 0.01,
             ];
-        });
+        })->values()->all();
 
         return Inertia::render('Medicaments/Show', [
             'produit' => [
@@ -190,5 +220,42 @@ class MedicamentController extends Controller
                 'comparaison' => $comparaison,
             ],
         ]);
+    }
+
+    private function ventesTotalesSubquerySql(): string
+    {
+        $in = collect(Commande::STATUTS_STATS_VENTES)
+            ->map(fn (string $s) => "'".addslashes($s)."'")
+            ->implode(',');
+
+        return "SELECT COALESCE(SUM(COALESCE(cp.quantite_confirmee, cp.quantite)), 0) FROM commande_produit cp INNER JOIN commandes c ON c.id = cp.commande_id WHERE cp.produit_id = produits.id AND c.status IN ({$in}) AND (cp.status IS NULL OR cp.status <> 'indisponible')";
+    }
+
+    private function ventesProduitValide(int $produitId): int
+    {
+        return (int) (DB::table('commande_produit')
+            ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
+            ->where('commande_produit.produit_id', $produitId)
+            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->where(function ($q) {
+                $q->whereNull('commande_produit.status')
+                    ->orWhere('commande_produit.status', '<>', 'indisponible');
+            })
+            ->selectRaw('COALESCE(SUM(COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite)), 0) as total')
+            ->value('total') ?? 0);
+    }
+
+    private function caProduitValide(int $produitId): float
+    {
+        return (float) (DB::table('commande_produit')
+            ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
+            ->where('commande_produit.produit_id', $produitId)
+            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->where(function ($q) {
+                $q->whereNull('commande_produit.status')
+                    ->orWhere('commande_produit.status', '<>', 'indisponible');
+            })
+            ->selectRaw('COALESCE(SUM(COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite) * commande_produit.prix_unitaire), 0) as total')
+            ->value('total') ?? 0);
     }
 }

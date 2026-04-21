@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/sheet';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { sousTotalCommandeProduits } from '@/lib/commandeTotals';
+import { formatDateFrLocal } from '@/lib/formatDateLocal';
 import { normalizeInertiaErrors } from '@/lib/validationErrors';
 import { dashboard } from '@/routes';
 import { STATUTS_COMMANDE } from '@/types';
@@ -103,6 +104,7 @@ const props = withDefaults(
             pu: number;
         }>;
         montantsLivraison?: Array<{ id: number; designation: number }>;
+        modesPaiement?: Array<{ id: number; designation: string }>;
         livreurs?: Array<{
             id: number;
             nom: string;
@@ -120,6 +122,7 @@ const props = withDefaults(
         zones: () => [],
         produits: () => [],
         montantsLivraison: () => [],
+        modesPaiement: () => [],
         livreurs: () => [],
         openDetailCommandeId: null,
     },
@@ -142,6 +145,16 @@ const canCreateCommande = computed(() => {
         (page.props.auth as { user?: { roles?: string[] } })?.user?.roles ?? [];
     return roles.some((r) =>
         ['admin', 'super_admin', 'agent_call_center'].includes(r),
+    );
+});
+
+/** Pharmacie a déclaré toutes les lignes indisponibles : seule l'annulation est proposée côté admin. */
+const enAttentePharmacieToutIndisponible = computed(() => {
+    const c = detailCommande.value;
+    return (
+        !!c &&
+        c.status === 'en_attente' &&
+        c.status_pharmacie === 'indisponible'
     );
 });
 
@@ -374,13 +387,24 @@ function getClientDisplayName(
 }
 
 function formatDate(d: string) {
-    if (!d) return '-';
-    const dt = new Date(d);
-    return dt.toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-    });
+    return formatDateFrLocal(d);
+}
+
+/** Libellé ligne médicament (pivot commande_produit). */
+function libellePivotStatusProduit(status: string | undefined | null): string {
+    const v = (status ?? 'disponible').toLowerCase();
+    if (v === 'indisponible') return 'Indisponible';
+    if (v === 'partiel') return 'Partiel';
+    if (v === 'disponible') return 'Disponible';
+    return status?.trim() || 'Disponible';
+}
+
+function classesPivotStatusProduit(status: string | undefined | null): string {
+    const v = (status ?? 'disponible').toLowerCase();
+    if (v === 'indisponible') {
+        return 'border-red-400 bg-red-50 text-red-700';
+    }
+    return 'border-[#016630] bg-[#e1f3e7] text-[#016630]';
 }
 
 /** Libellés FR pour la décision (l’API stocke pass, review, fail, etc.). */
@@ -545,6 +569,25 @@ function setMontantLivraison(montantId: number) {
     router.patch(
         `/commandes/${id}/montant-livraison`,
         { montant_livraison_id: montantId },
+        {
+            preserveScroll: true,
+            onSuccess: async () => {
+                await openDetail(id);
+                router.reload({
+                    only: ['commandes', 'stats'],
+                    preserveState: true,
+                });
+            },
+        },
+    );
+}
+
+function setModePaiementCommande(modePaiementId: number) {
+    if (!detailCommande.value) return;
+    const id = detailCommande.value.id;
+    router.patch(
+        `/commandes/${id}/mode-paiement`,
+        { mode_paiement_id: modePaiementId },
         {
             preserveScroll: true,
             onSuccess: async () => {
@@ -1141,6 +1184,15 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                     >
                                         {{ p.designation }} {{ p.dosage ?? '' }}
                                     </p>
+                                    <p
+                                        v-if="p.forme"
+                                        class="mb-2 text-[13px] text-gray-600"
+                                    >
+                                        Forme :
+                                        <span class="font-medium text-gray-800">{{
+                                            p.forme
+                                        }}</span>
+                                    </p>
                                     <div
                                         class="flex items-center justify-between"
                                     >
@@ -1160,9 +1212,14 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                             </p>
                                         </div>
                                         <span
-                                            class="rounded-full border border-[#016630] bg-[#e1f3e7] px-3 py-0.5 text-[11px] font-bold text-[#016630]"
+                                            class="rounded-full border px-3 py-0.5 text-[11px] font-bold"
+                                            :class="classesPivotStatusProduit(p.pivot.status)"
                                         >
-                                            {{ p.pivot.status || 'Disponible' }}
+                                            {{
+                                                libellePivotStatusProduit(
+                                                    p.pivot.status,
+                                                )
+                                            }}
                                         </span>
                                     </div>
                                 </div>
@@ -1473,23 +1530,67 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 Informations paiement
                             </h3>
 
-                            <div class="mb-4 flex items-center justify-between">
+                            <div
+                                class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                            >
                                 <span class="text-[13px] text-gray-500"
                                     >Mode de paiement</span
                                 >
-                                <span
-                                    v-if="detailCommande.mode_paiement"
-                                    class="rounded-full border border-[#016630] bg-[#e1f3e7] px-3 py-1 text-[12px] font-bold text-[#016630]"
+                                <template
+                                    v-if="
+                                        detailCommande.status ===
+                                            'en_attente' &&
+                                        canCreateCommande &&
+                                        modesPaiement.length &&
+                                        !enAttentePharmacieToutIndisponible
+                                    "
                                 >
-                                    {{
-                                        detailCommande.mode_paiement.designation
-                                    }}
-                                </span>
-                                <span
-                                    v-else
-                                    class="text-[13px] font-medium text-gray-400"
-                                    >Non défini</span
-                                >
+                                    <select
+                                        class="h-10 min-w-[12rem] max-w-full rounded-xl border border-gray-200 bg-white px-3 text-[13px] font-semibold text-gray-900 focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                        :value="
+                                            detailCommande.mode_paiement?.id ??
+                                            ''
+                                        "
+                                        @change="
+                                            ($event) => {
+                                                const v = (
+                                                    $event.target as HTMLSelectElement
+                                                ).value;
+                                                if (v)
+                                                    setModePaiementCommande(
+                                                        Number(v),
+                                                    );
+                                            }
+                                        "
+                                    >
+                                        <option value="" disabled>
+                                            Choisir un mode
+                                        </option>
+                                        <option
+                                            v-for="m in modesPaiement"
+                                            :key="m.id"
+                                            :value="m.id"
+                                        >
+                                            {{ m.designation }}
+                                        </option>
+                                    </select>
+                                </template>
+                                <template v-else>
+                                    <span
+                                        v-if="detailCommande.mode_paiement"
+                                        class="rounded-full border border-[#016630] bg-[#e1f3e7] px-3 py-1 text-[12px] font-bold text-[#016630]"
+                                    >
+                                        {{
+                                            detailCommande.mode_paiement
+                                                .designation
+                                        }}
+                                    </span>
+                                    <span
+                                        v-else
+                                        class="text-[13px] font-medium text-gray-400"
+                                        >Non défini</span
+                                    >
+                                </template>
                             </div>
 
                             <div class="space-y-2 text-[14px]">
@@ -1509,7 +1610,8 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                     v-if="
                                         detailCommande.status ===
                                             'en_attente' &&
-                                        !detailCommande.montant_livraison
+                                        !detailCommande.montant_livraison &&
+                                        !enAttentePharmacieToutIndisponible
                                     "
                                     class="flex flex-col gap-2 pt-1 border-t border-gray-100"
                                 >
@@ -1574,7 +1676,8 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                             v-if="
                                 detailCommande.livreur ||
                                 (canCreateCommande &&
-                                    peutAssignerLivreurDetail())
+                                    peutAssignerLivreurDetail() &&
+                                    !enAttentePharmacieToutIndisponible)
                             "
                             class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
                         >
@@ -1586,7 +1689,8 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                             <div
                                 v-if="
                                     canCreateCommande &&
-                                    peutAssignerLivreurDetail()
+                                    peutAssignerLivreurDetail() &&
+                                    !enAttentePharmacieToutIndisponible
                                 "
                                 class="flex flex-col gap-2"
                             >
@@ -1660,12 +1764,21 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                     "
                                 >
                                     <button
+                                        v-if="!enAttentePharmacieToutIndisponible"
                                         type="button"
                                         class="flex h-12 w-full items-center justify-center rounded-full bg-[#0d6efd] text-[15px] font-bold text-white transition-colors hover:bg-blue-700"
                                         @click="openValiderModal"
                                     >
                                         Valider
                                     </button>
+                                    <p
+                                        v-else
+                                        class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium text-amber-900"
+                                    >
+                                        Aucun médicament disponible : annulez la
+                                        commande ou faites-la renvoyer vers une
+                                        autre pharmacie (agent).
+                                    </p>
                                     <button
                                         type="button"
                                         class="flex h-12 w-full flex-row items-center justify-center rounded-full bg-[#e7000b] text-[15px] font-bold text-white transition-colors hover:bg-red-700"

@@ -13,26 +13,52 @@ use Inertia\Response;
 class DokPharmaController extends Controller
 {
     /**
-     * Affichage cohérent : date métier + heure de la commande (fuseau application).
+     * Extrait une heure HH:MM depuis le champ métier `heurs` (ex. "14:30" ou plage "08:00-19:00").
+     */
+    private function extractHeureCommande(?string $heursRaw): ?string
+    {
+        if ($heursRaw === null || trim($heursRaw) === '') {
+            return null;
+        }
+        $s = trim($heursRaw);
+        if (preg_match('/^(\d{1,2}:\d{2})$/', $s, $m)) {
+            return $m[1];
+        }
+        if (preg_match('/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/', $s, $m)) {
+            return $m[1];
+        }
+        if (preg_match('/(\d{1,2}:\d{2})/', $s, $m)) {
+            return $m[1];
+        }
+
+        return null;
+    }
+
+    /**
+     * Affichage cohérent : date métier + heure (fuseau application).
+     * Si `heurs` est absent ou illisible, on utilise l'heure de création en base.
      */
     private function formatCommandeDateHeure(Commande $c): string
     {
+        $tz = (string) config('app.timezone');
+
         if ($c->date) {
-            $time = $c->heurs ? trim((string) $c->heurs) : '00:00';
-            if (! preg_match('/^\d{1,2}:\d{2}$/', $time)) {
+            $time = $this->extractHeureCommande($c->heurs ? (string) $c->heurs : null);
+            if ($time === null && $c->created_at) {
+                $time = $c->created_at->copy()->timezone($tz)->format('H:i');
+            }
+            if ($time === null) {
                 $time = '00:00';
             }
             $datePart = $c->date instanceof \Carbon\CarbonInterface
                 ? $c->date->format('Y-m-d')
                 : \Carbon\Carbon::parse($c->date)->format('Y-m-d');
 
-            return \Carbon\Carbon::parse($datePart.' '.$time)
-                ->timezone(config('app.timezone'))
-                ->format('d/m/Y H:i');
+            return \Carbon\Carbon::parse($datePart.' '.$time, $tz)->format('d/m/Y H:i');
         }
 
         if ($c->created_at) {
-            return $c->created_at->copy()->timezone(config('app.timezone'))->format('d/m/Y H:i');
+            return $c->created_at->copy()->timezone($tz)->format('d/m/Y H:i');
         }
 
         return '';

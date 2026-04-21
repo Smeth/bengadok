@@ -125,18 +125,12 @@ class CommandeService
     {
         $prixTotal = 0;
         foreach ($produits as $p) {
-            $forme = $this->trimOrNull($p['forme'] ?? null);
-            $produit = Produit::firstOrCreate(
-                [
-                    'designation' => trim($p['designation']),
-                    'dosage' => $this->trimOrNull($p['dosage'] ?? null),
-                ],
-                [
-                    'pu' => (float) ($p['prix_unitaire'] ?? 0),
-                    'forme' => $forme,
-                    'type' => 'Vente libre',
-                ]
-            );
+            $produit = Produit::fromCommandeLine([
+                'designation' => $p['designation'],
+                'dosage' => $p['dosage'] ?? null,
+                'forme' => $p['forme'] ?? null,
+                'prix_unitaire' => $p['prix_unitaire'] ?? 0,
+            ]);
             $quantite = (int) $p['quantite'];
             $prixUnitaire = (float) ($p['prix_unitaire'] ?? 0);
             $commande->produits()->attach($produit->id, [

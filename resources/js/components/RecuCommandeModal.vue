@@ -2,6 +2,7 @@
 import { X, User, Building2, Pill, Banknote, Truck } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { formatDateFrLocal } from '@/lib/formatDateLocal';
 import { sousTotalCommandeProduits } from '@/lib/commandeTotals';
 import type { CommandeDetail } from '@/types';
 
@@ -24,12 +25,7 @@ const livraison = computed(() =>
 const totalPaye = computed(() => sousTotal.value + livraison.value);
 
 function formatDate(d: string) {
-    if (!d) return '-';
-    return new Date(d).toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-    });
+    return formatDateFrLocal(d);
 }
 
 function getClientName() {

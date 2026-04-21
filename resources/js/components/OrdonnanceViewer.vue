@@ -104,6 +104,7 @@ function handleWheel(e: WheelEvent) {
             @update:open="(v: boolean) => !v && closeLightbox()"
         >
             <DialogContent
+                :show-close-button="false"
                 class="max-h-[90vh] max-w-[95vw] overflow-hidden p-0"
                 @pointer-down-outside="closeLightbox"
             >

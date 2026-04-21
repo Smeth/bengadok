@@ -33,4 +33,38 @@ class Produit extends Model
 
         return implode(' ', $parts);
     }
+
+    /**
+     * Trouve ou crée le produit catalogue à partir d'une ligne de commande.
+     * Met à jour la forme si elle était vide en base (firstOrCreate ne remplit pas à la correspondance).
+     *
+     * @param  array{designation: string, dosage?: string|null, forme?: string|null, prix_unitaire?: float|int}  $line
+     */
+    public static function fromCommandeLine(array $line): self
+    {
+        $designation = trim($line['designation']);
+        $dosageRaw = $line['dosage'] ?? null;
+        $dosage = is_string($dosageRaw) && trim($dosageRaw) !== '' ? trim($dosageRaw) : null;
+        $formeRaw = $line['forme'] ?? null;
+        $forme = is_string($formeRaw) && trim($formeRaw) !== '' ? trim($formeRaw) : null;
+        $pu = (float) ($line['prix_unitaire'] ?? 0);
+
+        $produit = static::firstOrCreate(
+            [
+                'designation' => $designation,
+                'dosage' => $dosage,
+            ],
+            [
+                'pu' => $pu,
+                'forme' => $forme,
+                'type' => 'Vente libre',
+            ],
+        );
+
+        if ($forme !== null && $forme !== '' && trim((string) ($produit->forme ?? '')) === '') {
+            $produit->update(['forme' => $forme]);
+        }
+
+        return $produit;
+    }
 }

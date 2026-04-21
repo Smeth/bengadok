@@ -67,8 +67,15 @@ class ClientController extends Controller
                 ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
                 ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
                 ->where('commandes.client_id', $c->id)
-                ->whereIn('commandes.status', $statutsKpi)
-                ->select('produits.designation', DB::raw('SUM(commande_produit.quantite) as total'))
+                ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+                ->where(function ($q) {
+                    $q->whereNull('commande_produit.status')
+                        ->orWhere('commande_produit.status', '<>', 'indisponible');
+                })
+                ->select(
+                    'produits.designation',
+                    DB::raw('SUM(COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite)) as total'),
+                )
                 ->groupBy('produits.id', 'produits.designation')
                 ->orderByDesc('total')
                 ->limit(3)
@@ -218,8 +225,15 @@ class ClientController extends Controller
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
             ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
             ->where('commandes.client_id', $client->id)
-            ->whereIn('commandes.status', Commande::STATUTS_COMPTABILISES_CLIENT)
-            ->select('produits.designation', DB::raw('SUM(commande_produit.quantite) as total'))
+            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->where(function ($q) {
+                $q->whereNull('commande_produit.status')
+                    ->orWhere('commande_produit.status', '<>', 'indisponible');
+            })
+            ->select(
+                'produits.designation',
+                DB::raw('SUM(COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite)) as total'),
+            )
             ->groupBy('produits.id', 'produits.designation')
             ->orderByDesc('total')
             ->limit(5)

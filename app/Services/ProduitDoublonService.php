@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Commande;
 use App\Models\GroupeDoublonsProduit;
 use App\Models\Produit;
 use Illuminate\Support\Facades\DB;
@@ -142,8 +143,14 @@ class ProduitDoublonService
     private function choisirPrincipalSuggere($produits)
     {
         $ventesMap = DB::table('commande_produit')
-            ->selectRaw('produit_id, SUM(quantite) as total')
-            ->groupBy('produit_id')
+            ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
+            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->where(function ($q) {
+                $q->whereNull('commande_produit.status')
+                    ->orWhere('commande_produit.status', '<>', 'indisponible');
+            })
+            ->selectRaw('commande_produit.produit_id, SUM(COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite)) as total')
+            ->groupBy('commande_produit.produit_id')
             ->pluck('total', 'produit_id')
             ->toArray();
 
