@@ -10,7 +10,6 @@ import {
     ShoppingCart,
     ZoomIn,
     ZoomOut,
-    Download,
     RefreshCw,
     X,
     CheckCircle2,
@@ -360,13 +359,6 @@ function zoomOut() {
 }
 function resetZoom() {
     zoom.value = 100;
-}
-function downloadOrdonnance() {
-    if (!ordModal.value.url) return;
-    const a = document.createElement('a');
-    a.href = ordModal.value.url;
-    a.download = `ordonnance-${ordModal.value.numero}`;
-    a.click();
 }
 </script>
 
@@ -2004,9 +1996,6 @@ function downloadOrdonnance() {
                             <p class="text-[14px] font-extrabold text-gray-900">
                                 Ordonnance — Commande {{ ordModal.numero }}
                             </p>
-                            <p class="text-[11px] text-gray-400">
-                                Vérification d'authenticité
-                            </p>
                         </div>
                         <button
                             class="flex size-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
@@ -2041,13 +2030,6 @@ function downloadOrdonnance() {
                         >
                             <RefreshCw class="size-3.5" />
                         </button>
-                        <div class="flex-1" />
-                        <button
-                            class="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-gray-600 hover:bg-gray-100"
-                            @click="downloadOrdonnance"
-                        >
-                            <Download class="size-3.5" />Télécharger
-                        </button>
                     </div>
                     <!-- Visionneuse -->
                     <div
@@ -2067,38 +2049,6 @@ function downloadOrdonnance() {
                         <div v-else class="m-auto text-center text-gray-400">
                             <FileText class="mx-auto mb-2 size-12 opacity-30" />
                             <p class="text-[13px]">Ordonnance non disponible</p>
-                        </div>
-                    </div>
-                    <!-- Points de vérification (ordonnance) -->
-                    <div class="border-t border-gray-100 px-5 py-4">
-                        <div>
-                            <p
-                                class="mb-2 flex items-center gap-1.5 text-[12px] font-bold text-[#3B82F6]"
-                            >
-                                <Eye class="size-3.5" />Point de vérification
-                            </p>
-                            <ul class="space-y-1 text-[12px] text-gray-600">
-                                <li class="flex items-center gap-2">
-                                    <span
-                                        class="size-1.5 rounded-full bg-gray-400 shrink-0"
-                                    />Cachet du médecin
-                                </li>
-                                <li class="flex items-center gap-2">
-                                    <span
-                                        class="size-1.5 rounded-full bg-gray-400 shrink-0"
-                                    />Signature du médecin
-                                </li>
-                                <li class="flex items-center gap-2">
-                                    <span
-                                        class="size-1.5 rounded-full bg-gray-400 shrink-0"
-                                    />Date de prescription
-                                </li>
-                                <li class="flex items-center gap-2">
-                                    <span
-                                        class="size-1.5 rounded-full bg-gray-400 shrink-0"
-                                    />Nom du patient
-                                </li>
-                            </ul>
                         </div>
                     </div>
                 </div>
