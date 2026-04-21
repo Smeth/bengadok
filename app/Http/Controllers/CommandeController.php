@@ -320,7 +320,10 @@ class CommandeController extends Controller
         $data = $request->getDataForService();
         $commande = $this->commandeService->create($data, $request->file('ordonnance'));
 
-        return redirect()->route('commandes.index')->with('status', "Commande {$commande->numero} créée.");
+        return redirect()->route('commandes.index')->with(
+            'status',
+            "Commande {$commande->numero} créée avec succès.",
+        );
     }
 
     public function updateStatus(Request $request, Commande $commande): RedirectResponse
@@ -376,7 +379,19 @@ class CommandeController extends Controller
             BroadcastCommandeNotificationTargets::dispatchForPharmacieIds($pharmacieIdsEnfants);
         }
 
-        return back();
+        $numero = $commande->numero;
+        $nouveauStatut = $validated['status'];
+
+        $message = match ($nouveauStatut) {
+            'validee' => "Commande {$numero} validée. La pharmacie peut préparer la commande.",
+            'retiree' => "Commande {$numero} marquée comme livrée.",
+            'annulee' => "Commande {$numero} annulée.",
+            'en_attente' => "Commande {$numero} remise en attente.",
+            'nouvelle' => "Commande {$numero} remise au statut nouvelle.",
+            default => "Commande {$numero} mise à jour.",
+        };
+
+        return back()->with('status', $message);
     }
 
     public function setLivreur(Request $request, Commande $commande): RedirectResponse

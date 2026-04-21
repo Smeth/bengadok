@@ -867,6 +867,30 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                 class="relative overflow-hidden rounded-[30px] bg-white p-8 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
             >
                 <div class="relative z-10">
+                    <!-- Notifications session (création / validation commande, etc.) -->
+                    <div
+                        v-if="flashError"
+                        class="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[14px] font-medium text-red-800 shadow-sm"
+                        role="alert"
+                    >
+                        <AlertTriangle
+                            class="size-5 shrink-0 text-red-600"
+                            aria-hidden="true"
+                        />
+                        <span class="min-w-0 flex-1">{{ flashError }}</span>
+                    </div>
+                    <div
+                        v-if="flashStatus"
+                        class="mb-4 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[14px] font-medium text-emerald-900 shadow-sm"
+                        role="status"
+                    >
+                        <CheckCircle2
+                            class="size-5 shrink-0 text-emerald-600"
+                            aria-hidden="true"
+                        />
+                        <span class="min-w-0 flex-1">{{ flashStatus }}</span>
+                    </div>
+
                     <!-- Tabs design React -->
                     <div class="mb-6 flex gap-8 border-b-2 border-transparent">
                         <button
@@ -1757,19 +1781,6 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                             <p v-else class="text-[13px] text-gray-500">
                                 Aucun livreur assigné.
                             </p>
-                        </div>
-
-                        <div
-                            v-if="flashError"
-                            class="rounded-xl border border-red-200 bg-red-50 p-4 text-[13px] font-medium text-red-700 shadow-sm"
-                        >
-                            {{ flashError }}
-                        </div>
-                        <div
-                            v-if="flashStatus"
-                            class="rounded-xl border border-green-200 bg-green-50 p-4 text-[13px] font-medium text-green-700 shadow-sm"
-                        >
-                            {{ flashStatus }}
                         </div>
 
                         <!-- Actions (suite du scroll, pas de barre fixe) -->
