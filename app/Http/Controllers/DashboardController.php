@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Commande;
 use App\Models\Pharmacie;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -11,9 +12,17 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request): Response|RedirectResponse
     {
         $user = $request->user();
+        if (
+            $user
+            && $user->hasRole('agent_call_center')
+            && ! $user->hasAnyRole(['admin', 'super_admin'])
+        ) {
+            return redirect('/commandes');
+        }
+
         $pharmacieId = $user->pharmacie_id;
 
         $period = $request->get('period', 'month');

@@ -7,7 +7,6 @@ import {
     LayoutGrid,
     LogOut,
     Package,
-    PhoneCall,
     Settings,
     Users,
     UserCog,
@@ -35,14 +34,30 @@ const roles = computed(
     () =>
         (page.props.auth as { user?: { roles?: string[] } })?.user?.roles ?? [],
 );
+const isAdminRole = computed(
+    () =>
+        roles.value.includes('admin') || roles.value.includes('super_admin'),
+);
 const isGerant = computed(() => roles.value.includes('gerant'));
 const isVendeur = computed(() => roles.value.includes('vendeur'));
 const isPharma = computed(() => isGerant.value || isVendeur.value);
+/** Agent call center sans rôle admin : accès limité (commandes + médicaments). */
+const isAgentCallCenterOnly = computed(
+    () =>
+        roles.value.includes('agent_call_center') && !isAdminRole.value,
+);
+const sidebarLogoHref = computed(() => {
+    if (isVendeur.value && !isGerant.value && !isAdminRole.value) {
+        return '/dok-pharma/commandes';
+    }
+    if (isPharma.value) return '/dok-pharma';
+    if (isAgentCallCenterOnly.value) return '/commandes';
+    return dashboard();
+});
 
 // Nav items exact order: Tableau de bord, Commandes, Pharmacies, Médicaments, Clients, Utilisateurs Backoffice
 const mainNavItems = computed<NavItem[]>(() => {
-    const isAdmin =
-        roles.value.includes('admin') || roles.value.includes('super_admin');
+    const isAdmin = isAdminRole.value;
     const isGerant = roles.value.includes('gerant');
     const isAgent = roles.value.includes('agent_call_center');
     const isVendeur = roles.value.includes('vendeur');
@@ -66,9 +81,8 @@ const mainNavItems = computed<NavItem[]>(() => {
 
     if (isAgent && !isAdmin) {
         return [
-            { title: 'Tableau de bord', href: dashboard(), icon: LayoutGrid },
-            { title: 'Mes réceptions', href: '/agent', icon: PhoneCall },
-            { title: 'Clients', href: '/clients', icon: Users },
+            { title: 'Commandes', href: '/commandes', icon: ClipboardList },
+            { title: 'Médicaments', href: '/medicaments', icon: Package },
         ];
     }
     if (isGerant && !isAdmin) {
@@ -80,8 +94,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     }
     if (isVendeur && !isAdmin) {
         return [
-            { title: 'Tableau de bord', href: dashboard(), icon: LayoutGrid },
-            { title: 'Commandes', href: '/dok-pharma', icon: ClipboardList },
+            { title: 'Commandes', href: '/dok-pharma/commandes', icon: ClipboardList },
         ];
     }
     return items;
@@ -126,7 +139,7 @@ function logout() {
                         class="min-w-0 justify-self-center !h-auto !min-h-0 !overflow-visible !p-0 group-data-[collapsible=icon]:mx-0 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!overflow-hidden group-data-[collapsible=icon]:!p-2"
                     >
                         <Link
-                            :href="dashboard()"
+                            :href="sidebarLogoHref"
                             class="flex w-full min-w-0 items-end justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center"
                         >
                             <AppLogo />
@@ -151,6 +164,7 @@ function logout() {
 
             <!-- Réglages : espace net sous le bloc principal -->
             <div
+                v-if="!isAgentCallCenterOnly"
                 class="mt-12 shrink-0 px-0 pb-1 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center"
             >
                 <Link
@@ -189,6 +203,7 @@ function logout() {
 
             <!-- Illustration : hauteur fixe sous Réglages -->
             <div
+                v-if="!isAgentCallCenterOnly"
                 class="pointer-events-none group-data-[collapsible=icon]:hidden relative mt-3 flex shrink-0 justify-center overflow-visible pt-1"
             >
                 <div

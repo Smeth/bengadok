@@ -358,7 +358,9 @@ function rechercher() {
 
         <!-- Modal Créer -->
         <Dialog :open="modalCreate" @update:open="modalCreate = $event">
-            <DialogContent class="sm:max-w-lg">
+            <DialogContent
+                class="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+            >
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
                         <Users class="size-5" />
@@ -370,7 +372,10 @@ function rechercher() {
                 </DialogHeader>
                 <form class="space-y-4" @submit.prevent="creerUtilisateur">
                     <div class="space-y-2">
-                        <Label>Nom complet</Label>
+                        <Label>
+                            Nom complet
+                            <span class="text-destructive">*</span>
+                        </Label>
                         <Input
                             v-model="formCreate.name"
                             required
@@ -378,7 +383,10 @@ function rechercher() {
                         />
                     </div>
                     <div class="space-y-2">
-                        <Label>Email</Label>
+                        <Label>
+                            Email
+                            <span class="text-destructive">*</span>
+                        </Label>
                         <Input
                             v-model="formCreate.email"
                             type="email"
@@ -403,7 +411,10 @@ function rechercher() {
                         />
                     </div>
                     <div class="space-y-2">
-                        <Label>Mot de passe</Label>
+                        <Label>
+                            Mot de passe
+                            <span class="text-destructive">*</span>
+                        </Label>
                         <Input
                             v-model="formCreate.password"
                             type="password"
@@ -413,7 +424,10 @@ function rechercher() {
                     </div>
 
                     <div class="space-y-3">
-                        <Label>Rôles et permission</Label>
+                        <Label>
+                            Rôles et permissions
+                            <span class="text-destructive">*</span>
+                        </Label>
                         <div class="grid gap-2 sm:grid-cols-2">
                             <button
                                 v-for="role in roles"

@@ -25,7 +25,6 @@ import {
     fieldError,
     normalizeInertiaErrors,
 } from '@/lib/validationErrors';
-import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -104,8 +103,7 @@ const analysisNoticeText = computed(() => {
 // ─── Breadcrumbs ──────────────────────────────────────────────────────────────
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Tableau de bord', href: dashboard() },
-    { title: 'Agent', href: '/agent' },
+    { title: 'Commandes', href: '/commandes' },
     { title: 'Nouvelle commande', href: '#' },
 ];
 
@@ -369,7 +367,7 @@ function submit() {
 }
 
 function annuler() {
-    router.visit('/agent');
+    router.visit('/commandes');
 }
 </script>
 

@@ -133,7 +133,7 @@ class PharmacieController extends Controller
             'adresse' => 'required|string',
             'telephone' => 'required|string|max:20',
             'email' => 'nullable|email',
-            'zone_id' => 'nullable|exists:zones,id',
+            'zone_id' => 'required|exists:zones,id',
             'type_pharmacie_id' => 'required|exists:type_pharmacies,id',
             'heure_ouverture' => 'required|string',
             'heure_fermeture' => 'required|string',
@@ -146,14 +146,9 @@ class PharmacieController extends Controller
             ['ouverture' => $validated['heure_ouverture'], 'fermeture' => $validated['heure_fermeture']]
         );
 
-        $zoneId = $validated['zone_id'] ?? null;
-        if (! $zoneId) {
-            $zoneId = Zone::first()?->id;
-        }
-
-        $pharmacie = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $heur, $zoneId) {
+        $pharmacie = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $heur) {
             $pharmacie = Pharmacie::create([
-                'zone_id' => $zoneId,
+                'zone_id' => $validated['zone_id'],
                 'type_pharmacie_id' => $validated['type_pharmacie_id'],
                 'heurs_id' => $heur->id,
                 'designation' => $validated['designation'],

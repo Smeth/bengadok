@@ -16,8 +16,16 @@ class TwoFactorLoginResponse implements TwoFactorLoginResponseContract
         $user = $request->user();
         $roles = $user?->getRoleNames()->toArray() ?? [];
         $isPharmacie = in_array('gerant', $roles) || in_array('vendeur', $roles);
+        $isVendeurSeul = in_array('vendeur', $roles) && ! in_array('gerant', $roles);
+        $isAdmin = in_array('admin', $roles) || in_array('super_admin', $roles);
+        $isAgentCallCenterOnly =
+            in_array('agent_call_center', $roles) && ! $isAdmin;
 
-        $fallback = $isPharmacie ? '/dok-pharma' : config('fortify.home');
+        $fallback = $isVendeurSeul
+            ? '/dok-pharma/commandes'
+            : ($isPharmacie
+                ? '/dok-pharma'
+                : ($isAgentCallCenterOnly ? '/commandes' : config('fortify.home')));
         PostLoginRedirect::storeTarget($request, $fallback);
 
         if ($request->wantsJson()) {

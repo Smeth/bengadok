@@ -17,7 +17,17 @@ class PostLoginLoadingController extends Controller
             $user = $request->user();
             $roles = $user?->getRoleNames()->toArray() ?? [];
             $isPharmacie = in_array('gerant', $roles) || in_array('vendeur', $roles);
-            $target = $isPharmacie ? '/dok-pharma' : (string) config('fortify.home', '/dashboard');
+            $isVendeurSeul = in_array('vendeur', $roles) && ! in_array('gerant', $roles);
+            $isAdmin = in_array('admin', $roles) || in_array('super_admin', $roles);
+            $isAgentCallCenterOnly =
+                in_array('agent_call_center', $roles) && ! $isAdmin;
+            $target = $isVendeurSeul
+                ? '/dok-pharma/commandes'
+                : ($isPharmacie
+                    ? '/dok-pharma'
+                    : ($isAgentCallCenterOnly
+                        ? '/commandes'
+                        : (string) config('fortify.home', '/dashboard')));
         }
 
         return Inertia::render('auth/PostLoginLoading', [

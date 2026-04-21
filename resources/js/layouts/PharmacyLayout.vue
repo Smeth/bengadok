@@ -37,6 +37,20 @@ const asideWidthPx = computed(() =>
 
 const pharmacie = computed(() => page.props.auth?.user?.pharmacie);
 const user = computed(() => page.props.auth?.user);
+/** Vendeur sans rôle gérant : pas d’accès au tableau de bord pharmacie. */
+const userRoles = computed(
+    () =>
+        (page.props.auth?.user as { roles?: string[] } | undefined)?.roles ??
+        [],
+);
+const isVendeurSeul = computed(
+    () =>
+        userRoles.value.includes('vendeur') &&
+        !userRoles.value.includes('gerant'),
+);
+const pharmaHomeHref = computed(() =>
+    isVendeurSeul.value ? '/dok-pharma/commandes' : '/dok-pharma',
+);
 const roleLabel = computed(() => {
     const roles = (
         page.props.auth?.user as { roles?: string[] } | undefined
@@ -120,9 +134,11 @@ function logout() {
                     class="flex flex-col items-center justify-center gap-2"
                 >
                     <Link
-                        href="/dok-pharma"
+                        :href="pharmaHomeHref"
                         class="flex items-center justify-center"
-                        aria-label="Tableau de bord"
+                        :aria-label="
+                            isVendeurSeul ? 'Commandes' : 'Tableau de bord'
+                        "
                     >
                         <span class="inline-flex origin-center scale-[0.72]">
                             <AppLogo icon-only />
@@ -145,7 +161,7 @@ function logout() {
                 >
                     <div class="min-w-0" aria-hidden="true" />
                     <Link
-                        href="/dok-pharma"
+                        :href="pharmaHomeHref"
                         class="flex min-w-0 items-end justify-center overflow-visible"
                     >
                         <AppLogo />
@@ -180,6 +196,7 @@ function logout() {
                     :class="sidebarCollapsed ? 'items-center px-0' : ''"
                 >
                     <Link
+                        v-if="!isVendeurSeul"
                         href="/dok-pharma"
                         class="sidebar-menu-btn-react group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150"
                         :class="

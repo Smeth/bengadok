@@ -95,7 +95,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::prefix('agent')->name('agent.')->middleware('role:agent_call_center|admin|super_admin')->group(function () {
-        Route::get('/', [AgentController::class, 'index'])->name('index');
+        Route::redirect('/', '/commandes')->name('index');
         Route::get('nouvelle-commande', [AgentController::class, 'nouvelleCommande'])->name('nouvelle-commande');
         Route::post('commande', [AgentController::class, 'storeCommande'])->name('store-commande');
         Route::post('commande/{commande}/renvoyer-pharmacie', [AgentController::class, 'renvoyerPharmacie'])->name('renvoyer-pharmacie');

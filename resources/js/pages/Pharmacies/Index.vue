@@ -128,7 +128,7 @@ function exportSelectedCSV() {
     if (!selected.length) return;
     const headers = [
         'Pharmacie',
-        'Zone',
+        'Arrondissement',
         'Adresse',
         'Tél',
         'Heures',
@@ -168,7 +168,7 @@ const form = ref({
     adresse: '',
     telephone: '',
     email: '',
-    zone_id: props.zones[0]?.id?.toString() ?? '',
+    zone_id: '',
     type_pharmacie_id:
         typeJour?.id?.toString() ??
         typeNuit?.id?.toString() ??
@@ -209,7 +209,7 @@ function openModal() {
         adresse: '',
         telephone: '',
         email: '',
-        zone_id: props.zones[0]?.id?.toString() ?? '',
+        zone_id: '',
         type_pharmacie_id:
             typeJour?.id?.toString() ??
             typeNuit?.id?.toString() ??
@@ -231,7 +231,6 @@ function submitCreate() {
         '/pharmacies',
         {
             ...form.value,
-            zone_id: form.value.zone_id || props.zones[0]?.id,
         },
         {
             preserveScroll: true,
@@ -562,7 +561,7 @@ onUnmounted(destroyMap);
                                 <th
                                     class="min-w-[90px] px-4 py-3 text-left font-medium"
                                 >
-                                    Zone
+                                    Arrondissement
                                 </th>
                                 <th
                                     class="min-w-[160px] px-4 py-3 text-left font-medium"
@@ -1057,6 +1056,32 @@ onUnmounted(destroyMap);
                             />
                             <p v-if="errors.email" class="text-sm text-red-600">
                                 {{ errors.email }}
+                            </p>
+                        </div>
+                        <div class="space-y-2 sm:col-span-2">
+                            <Label for="create-zone">Arrondissement *</Label>
+                            <select
+                                id="create-zone"
+                                v-model="form.zone_id"
+                                class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                required
+                            >
+                                <option value="">
+                                    Sélectionner un arrondissement
+                                </option>
+                                <option
+                                    v-for="z in zones"
+                                    :key="z.id"
+                                    :value="String(z.id)"
+                                >
+                                    {{ z.designation }}
+                                </option>
+                            </select>
+                            <p
+                                v-if="errors.zone_id"
+                                class="text-sm text-red-600"
+                            >
+                                {{ errors.zone_id }}
                             </p>
                         </div>
                     </div>

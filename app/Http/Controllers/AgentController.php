@@ -22,16 +22,6 @@ class AgentController extends Controller
         private CommandeService $commandeService
     ) {}
 
-    public function index(Request $request): Response
-    {
-        return Inertia::render('Agent/Index', [
-            'commandes' => Commande::with(['client', 'pharmacie', 'produits'])
-                ->whereNull('parent_id')
-                ->latest('created_at')
-                ->paginate(15),
-        ]);
-    }
-
     public function nouvelleCommande(Request $request): Response
     {
         return Inertia::render('Agent/NouvelleCommande', [
@@ -79,7 +69,7 @@ class AgentController extends Controller
         $data['livreur_id'] = $data['livreur_id'] ?? null;
         $commande = $this->commandeService->create($data, $request->file('ordonnance'));
 
-        return redirect()->route('agent.index')->with('success', "Commande {$commande->numero} créée.");
+        return redirect()->route('commandes.index')->with('success', "Commande {$commande->numero} créée.");
     }
 
     /**

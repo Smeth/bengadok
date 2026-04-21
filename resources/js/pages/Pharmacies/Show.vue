@@ -687,13 +687,13 @@ function creerUtilisateur() {
                             />
                         </div>
                         <div class="space-y-2">
-                            <Label for="edit-zone">Zone</Label>
+                            <Label for="edit-zone">Arrondissement</Label>
                             <select
                                 id="edit-zone"
                                 v-model="form.zone_id"
                                 class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
                             >
-                                <option value="">Sélectionner</option>
+                                <option value="">Sélectionner un arrondissement</option>
                                 <option
                                     v-for="z in zones"
                                     :key="z.id"

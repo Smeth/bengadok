@@ -43,6 +43,11 @@ class DokPharmaController extends Controller
      */
     public function dashboard(Request $request): Response
     {
+        $user = $request->user();
+        if ($user && $user->hasRole('vendeur') && ! $user->hasRole('gerant')) {
+            return redirect('/dok-pharma/commandes');
+        }
+
         $pharmacieId = $request->user()?->pharmacie_id;
         if (! $pharmacieId) {
             return $this->emptyDashboard($request);
