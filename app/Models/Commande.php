@@ -12,7 +12,7 @@ class Commande extends Model
     protected $fillable = [
         'numero', 'client_id', 'pharmacie_id', 'parent_id', 'relance_de_commande_id', 'pharmacie_refusee_id', 'ordonnance_id',
         'mode_paiement_id', 'livreur_id', 'montant_livraison_id',
-        'date', 'heurs', 'commentaire', 'prix_total', 'prix_medicaments',
+        'date', 'heurs', 'commentaire', 'commentaire_pharmacie', 'prix_total', 'prix_medicaments',
         'beneficiaire', 'designation', 'status', 'status_pharmacie', 'acceptation_client', 'motif_annulation', 'note_annulation',
     ];
 

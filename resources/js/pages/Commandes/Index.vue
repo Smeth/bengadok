@@ -589,7 +589,7 @@ function setMontantLivraison(montantId: number) {
         {
             preserveScroll: true,
             onSuccess: async () => {
-                await openDetail(id);
+                await refreshDetailSilently(id);
                 router.reload({
                     only: ['commandes', 'stats'],
                     preserveState: true,
@@ -608,7 +608,7 @@ function setModePaiementCommande(modePaiementId: number) {
         {
             preserveScroll: true,
             onSuccess: async () => {
-                await openDetail(id);
+                await refreshDetailSilently(id);
                 router.reload({
                     only: ['commandes', 'stats'],
                     preserveState: true,
@@ -632,7 +632,7 @@ function setLivreurCommande(livreurId: number | null) {
         {
             preserveScroll: true,
             onSuccess: async () => {
-                await openDetail(id);
+                await refreshDetailSilently(id);
                 router.reload({
                     only: ['commandes', 'stats'],
                     preserveState: true,
@@ -1475,23 +1475,44 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                             </div>
                         </div>
 
-                        <!-- Commentaires -->
+                        <!-- Commentaires commande / pharmacien -->
                         <div
-                            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                            class="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
                         >
-                            <h3
-                                class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
+                            <div>
+                                <h3
+                                    class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
+                                >
+                                    Commentaire (back-office)
+                                </h3>
+                                <p
+                                    class="text-[14px] text-gray-700 whitespace-pre-wrap leading-relaxed"
+                                >
+                                    {{
+                                        detailCommande.commentaire ||
+                                        'Aucun commentaire.'
+                                    }}
+                                </p>
+                            </div>
+                            <div
+                                v-if="
+                                    (
+                                        detailCommande.commentaire_pharmacie ??
+                                        ''
+                                    ).trim() !== ''
+                                "
                             >
-                                Commentaires ...
-                            </h3>
-                            <p
-                                class="text-[14px] text-gray-700 whitespace-pre-wrap leading-relaxed"
-                            >
-                                {{
-                                    detailCommande.commentaire ||
-                                    'Aucun commentaire.'
-                                }}
-                            </p>
+                                <h3
+                                    class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
+                                >
+                                    Commentaires du pharmacien
+                                </h3>
+                                <p
+                                    class="text-[14px] text-gray-700 whitespace-pre-wrap leading-relaxed"
+                                >
+                                    {{ detailCommande.commentaire_pharmacie }}
+                                </p>
+                            </div>
                         </div>
 
                         <!-- Bloc annulation (commande annulée) -->

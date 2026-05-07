@@ -2,39 +2,202 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>Reçu Commande {{ $commande->numero }} - BengaDok</title>
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; color: #333; }
-        .recu { max-width: 700px; margin: 0 auto; border: 2px solid #3995d2; border-radius: 17px; padding: 40px; background: #fff; }
-        .logo { width: 120px; height: 48px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; }
-        .logo img { width: 100%; height: 100%; object-fit: contain; }
-        h1 { text-align: center; font-size: 22px; font-weight: 700; text-transform: uppercase; color: #666; margin: 0 0 24px; }
-        .header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb; margin-bottom: 24px; }
-        .header p { margin: 0; font-size: 15px; color: rgba(0,0,0,0.74); }
-        .header .numero { font-weight: 700; font-size: 18px; }
-        .badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 12px; background: #016630; color: #fff; font-size: 14px; font-weight: 700; }
-        .section { margin-bottom: 24px; }
-        .section-title { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-        .section-icon { width: 32px; height: 32px; border-radius: 50%; background: rgba(92,89,89,0.25); display: flex; align-items: center; justify-content: center; font-size: 14px; }
-        .section-title h2 { margin: 0; font-size: 18px; font-weight: 700; color: rgba(92,89,89,0.6); }
-        .section-content { padding-left: 40px; font-size: 16px; }
-        .section-content p { margin: 4px 0; }
-        .divider { border-top: 1px solid #e5e7eb; margin: 24px 0; }
-        table { width: 100%; border-collapse: collapse; font-size: 15px; }
-        th { text-align: left; padding: 8px 0; border-bottom: 1px solid #e5e7eb; font-weight: 400; }
-        td { padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
-        td:last-child { text-align: right; }
-        .total-row { font-size: 20px; font-weight: 700; padding-top: 12px; }
-        .mode-paiement { display: inline-block; margin-top: 12px; padding: 8px 16px; border: 1px solid #016630; border-radius: 8px; font-size: 13px; font-weight: 700; color: #016630; }
-        .footer { margin-top: 24px; padding: 16px 24px; background: #0d6efd; color: #fff; border-radius: 8px; font-size: 15px; }
-        .footer strong { font-weight: 700; }
-        .actions { display: flex; gap: 12px; margin-bottom: 20px; }
-        .btn { padding: 10px 24px; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; border: none; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        @page {
+            margin: 24px 28px;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: DejaVu Sans, sans-serif;
+            font-size: 11pt;
+            line-height: 1.45;
+            color: #1f2937;
+            margin: 0;
+            padding: 0;
+        }
+        .actions {
+            margin-bottom: 16px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 8px;
+        }
         .btn-primary { background: #0d6efd; color: #fff; }
         .btn-secondary { background: #fff; color: #0d6efd; border: 1px solid #0d6efd; }
-        @media print { .actions { display: none !important; } body { padding: 0; } }
+
+        /* Conteneur principal : pas de bordure arrondie globale (casse DomPDF sur plusieurs pages) */
+        .recu {
+            max-width: 100%;
+            border-top: 3px solid #3995d2;
+            padding-top: 16px;
+        }
+
+        .logo-wrap {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .logo-wrap img {
+            max-width: 140px;
+            height: auto;
+        }
+        .logo-text {
+            font-size: 18pt;
+            font-weight: 700;
+            color: #3995d2;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 14pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #4b5563;
+            margin: 0 0 16px;
+            letter-spacing: 0.02em;
+        }
+
+        /* En-tête commande : tableau pleine largeur (fiable sous DomPDF) */
+        .tbl {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+        .tbl td {
+            vertical-align: top;
+            padding: 4px 0;
+            font-size: 11pt;
+        }
+        .tbl .numero {
+            font-weight: 700;
+            font-size: 12pt;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            background: #016630;
+            color: #fff;
+            font-size: 10pt;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        h2 {
+            font-size: 11pt;
+            font-weight: 700;
+            color: #6b7280;
+            margin: 0 0 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .section {
+            margin-bottom: 14px;
+        }
+        .section p {
+            margin: 3px 0;
+            font-size: 11pt;
+        }
+
+        .hr {
+            border: none;
+            border-top: 1px solid #e5e7eb;
+            margin: 14px 0;
+        }
+
+        /* Tableau médicaments */
+        table.meds {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10pt;
+            margin-top: 4px;
+        }
+        table.meds th,
+        table.meds td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: top;
+        }
+        table.meds th {
+            text-align: left;
+            font-weight: 700;
+            color: #374151;
+            background: #f9fafb;
+            border-bottom: 2px solid #d1d5db;
+        }
+        table.meds .col-qty { width: 12%; text-align: center; }
+        table.meds .col-pu { width: 22%; text-align: right; }
+        table.meds .col-tot { width: 22%; text-align: right; }
+        table.meds td.col-qty { text-align: center; }
+        table.meds td.col-pu,
+        table.meds td.col-tot { text-align: right; }
+
+        /* Bloc paiement : éviter coupure page au milieu des totaux */
+        .paiement-wrap {
+            page-break-inside: avoid;
+            margin-top: 8px;
+        }
+        .totaux {
+            width: 100%;
+            max-width: 320px;
+            margin-left: auto;
+            border-collapse: collapse;
+            font-size: 11pt;
+        }
+        .totaux td {
+            padding: 6px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .totaux td:last-child {
+            text-align: right;
+            font-weight: 600;
+        }
+        .totaux tr.total-final td {
+            border-bottom: none;
+            border-top: 2px solid #374151;
+            padding-top: 10px;
+            font-size: 12pt;
+            font-weight: 700;
+        }
+
+        .mode-paiement {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 6px 12px;
+            border: 1px solid #016630;
+            border-radius: 6px;
+            font-size: 10pt;
+            font-weight: 700;
+            color: #016630;
+        }
+
+        .footer {
+            margin-top: 20px;
+            padding: 12px 16px;
+            background: #0d6efd;
+            color: #fff;
+            font-size: 10pt;
+            text-align: center;
+            page-break-inside: avoid;
+        }
+        .footer strong {
+            font-weight: 700;
+        }
+
+        @media print {
+            .actions { display: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -46,59 +209,79 @@
     </div>
     @endif
 
+    @php
+        $logoPath = public_path('images/figma-assets/sidebar-logo-benga.png');
+        $logoBase64 = (is_readable($logoPath ?? '')) ? base64_encode(file_get_contents($logoPath)) : null;
+    @endphp
+
     <div class="recu">
-        <div class="logo">
-            <img src="{{ asset('images/figma-assets/sidebar-logo-benga.png') }}" alt="BengaDok" />
+        <div class="logo-wrap">
+            @if($logoBase64)
+                <img src="data:image/png;base64,{{ $logoBase64 }}" alt="BengaDok" />
+            @else
+                <div class="logo-text">BengaDok</div>
+            @endif
         </div>
-        <h1>Reçu Commande Client</h1>
 
-        <div class="header">
-            <div>
-                <p>Numéro Commande : <span class="numero">{{ $commande->numero }}</span></p>
-                <p style="margin-top:8px">Date : <strong>{{ $commande->date?->format('d/m/Y') ?? '-' }}</strong></p>
-            </div>
-            <div class="badge">Livrée</div>
-        </div>
+        <h1>Reçu commande client</h1>
+
+        <table class="tbl">
+            <tr>
+                <td>
+                    <p style="margin:0 0 6px">Numéro commande : <span class="numero">{{ $commande->numero }}</span></p>
+                    <p style="margin:0">Date : <strong>{{ $commande->date?->format('d/m/Y') ?? '-' }}</strong></p>
+                </td>
+                <td style="text-align: right; width: 120px;">
+                    <span class="badge">Livrée</span>
+                </td>
+            </tr>
+        </table>
 
         <div class="section">
-            <div class="section-title">
-                <div class="section-icon">👤</div>
-                <h2>Informations du client</h2>
-            </div>
-            <div class="section-content">
-                <p>Nom : {{ $commande->client?->prenom }} {{ $commande->client?->nom }}</p>
-                <p>Tel : {{ $commande->client?->tel ?? '-' }}</p>
-                <p>Adresse : {{ $commande->client?->adresse ?? '-' }}</p>
-            </div>
+            <h2>Informations du client</h2>
+            <p><strong>Nom :</strong> {{ $commande->client?->prenom }} {{ $commande->client?->nom }}</p>
+            <p><strong>Tél. :</strong> {{ $commande->client?->tel ?? '-' }}</p>
+            <p><strong>Adresse :</strong> {{ $commande->client?->adresse ?? '-' }}</p>
         </div>
 
-        <div class="divider"></div>
+        <hr class="hr">
 
         <div class="section">
-            <div class="section-title">
-                <div class="section-icon">🏥</div>
-                <h2>Pharmacie</h2>
-            </div>
-            <div class="section-content">
-                <p><strong>{{ $commande->pharmacie?->designation ?? '-' }}</strong></p>
-                <p>{{ $commande->pharmacie?->adresse ?? '-' }}</p>
-            </div>
+            <h2>Pharmacie</h2>
+            <p><strong>{{ $commande->pharmacie?->designation ?? '-' }}</strong></p>
+            <p>{{ $commande->pharmacie?->adresse ?? '-' }}</p>
         </div>
 
-        <div class="divider"></div>
+        @php
+            $comCommande = trim((string) ($commande->commentaire ?? ''));
+            $comPharma = trim((string) ($commande->commentaire_pharmacie ?? ''));
+        @endphp
+        @if($comCommande !== '' || $comPharma !== '')
+            <hr class="hr">
+            <div class="section">
+                <h2>Commentaires</h2>
+                @if($comCommande !== '')
+                    <p style="margin:0 0 8px"><strong>Commande (back-office)</strong></p>
+                    <p style="margin:0;white-space:pre-wrap">{{ $comCommande }}</p>
+                @endif
+                @if($comPharma !== '')
+                    <p style="margin:12px 0 8px"><strong>Pharmacie</strong></p>
+                    <p style="margin:0;white-space:pre-wrap">{{ $comPharma }}</p>
+                @endif
+            </div>
+        @endif
+
+        <hr class="hr">
 
         <div class="section">
-            <div class="section-title">
-                <div class="section-icon">💊</div>
-                <h2>Détails des Médicaments</h2>
-            </div>
-            <table>
+            <h2>Détails des médicaments</h2>
+            <table class="meds">
                 <thead>
                     <tr>
-                        <th>Médicaments</th>
-                        <th>Quantité</th>
-                        <th>Prix unitaire</th>
-                        <th>Total</th>
+                        <th>Médicament</th>
+                        <th class="col-qty">Qté</th>
+                        <th class="col-pu">Prix unitaire</th>
+                        <th class="col-tot">Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -106,49 +289,55 @@
                     @foreach($commande->produits ?? [] as $p)
                         @php
                             $status = $p->pivot->status ?? '';
-                            if ($status === 'indisponible') {
-                                $qte = 0;
-                                $ligne = 0;
-                            } else {
-                                $qte = $p->pivot->quantite_confirmee ?? $p->pivot->quantite ?? 0;
+                            $pu = 0.0;
+                            $qte = 0;
+                            $ligne = 0.0;
+                            if ($status !== 'indisponible') {
+                                $qte = (int) ($p->pivot->quantite_confirmee ?? $p->pivot->quantite ?? 0);
                                 $pu = (float) ($p->pivot->prix_unitaire ?? 0);
                                 $ligne = $qte * $pu;
                             }
                             $sousTotal += $ligne;
                         @endphp
                         <tr>
-                            <td><strong>{{ $p->designation }} {{ $p->dosage ?? '' }}</strong></td>
-                            <td>{{ $qte }}</td>
-                            <td>{{ number_format($pu, 0, ',', ' ') }} FCFA</td>
-                            <td>{{ number_format($ligne, 0, ',', ' ') }} FCFA</td>
+                            <td><strong>{{ $p->designation }}@if($p->dosage) {{ $p->dosage }}@endif</strong>@if($p->forme) <br><span style="font-size:9pt;color:#6b7280">Forme : {{ $p->forme }}</span>@endif</td>
+                            <td class="col-qty">{{ $qte }}</td>
+                            <td class="col-pu">{{ number_format($pu, 0, ',', ' ') }} FCFA</td>
+                            <td class="col-tot">{{ number_format($ligne, 0, ',', ' ') }} FCFA</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
         </div>
 
-        <div class="divider"></div>
+        <hr class="hr">
 
         @php
             $livraison = (float) ($commande->montantLivraison?->designation ?? 0);
             $total = $sousTotal + $livraison;
         @endphp
 
-        <div class="section">
-            <div class="section-title">
-                <div class="section-icon">💰</div>
-                <h2>Informations paiement</h2>
-            </div>
-            <div class="section-content">
-                <p>Sous-Total : <strong>{{ number_format($sousTotal, 0, ',', ' ') }} FCFA</strong></p>
+        <div class="paiement-wrap">
+            <h2>Informations paiement</h2>
+            <table class="totaux">
+                <tr>
+                    <td>Sous-total</td>
+                    <td>{{ number_format($sousTotal, 0, ',', ' ') }} FCFA</td>
+                </tr>
                 @if($livraison > 0)
-                    <p>Livraison : <strong>{{ number_format($livraison, 0, ',', ' ') }} FCFA</strong></p>
+                    <tr>
+                        <td>Livraison</td>
+                        <td>{{ number_format($livraison, 0, ',', ' ') }} FCFA</td>
+                    </tr>
                 @endif
-                <p class="total-row">Total payé : <strong>{{ number_format($total, 0, ',', ' ') }} FCFA</strong></p>
-                @if($commande->modePaiement)
-                    <span class="mode-paiement">{{ $commande->modePaiement->designation }}</span>
-                @endif
-            </div>
+                <tr class="total-final">
+                    <td>Total payé</td>
+                    <td>{{ number_format($total, 0, ',', ' ') }} FCFA</td>
+                </tr>
+            </table>
+            @if($commande->modePaiement)
+                <span class="mode-paiement">{{ $commande->modePaiement->designation }}</span>
+            @endif
         </div>
 
         <div class="footer">

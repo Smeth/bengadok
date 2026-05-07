@@ -57,6 +57,7 @@ type Commande = {
     ordonnance_id?: number | null;
     ordonnance_url?: string | null;
     commentaire?: string | null;
+    commentaire_pharmacie?: string | null;
     /** Montant médicaments (hors livraison) — seul total visible côté pharmacie */
     prix_medicaments?: number | null;
 };
@@ -201,7 +202,7 @@ function initForm(cmd: Commande) {
         };
     });
     if (formCommentaires.value[cmd.id] === undefined) {
-        formCommentaires.value[cmd.id] = '';
+        formCommentaires.value[cmd.id] = cmd.commentaire_pharmacie ?? '';
     }
 }
 
@@ -866,6 +867,30 @@ function resetZoom() {
                                 <span class="text-[12px] text-gray-500"
                                     >xaf</span
                                 >
+                            </div>
+
+                            <!-- Commentaire commande (back-office, lecture seule) -->
+                            <div
+                                class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-[13px]"
+                            >
+                                <p
+                                    class="mb-1.5 text-[12px] font-bold uppercase tracking-wide text-gray-500"
+                                >
+                                    Commentaire (commande)
+                                </p>
+                                <p
+                                    class="whitespace-pre-wrap text-gray-800"
+                                    :class="
+                                        cmd.commentaire?.trim()
+                                            ? ''
+                                            : 'text-gray-400'
+                                    "
+                                >
+                                    {{
+                                        cmd.commentaire?.trim() ||
+                                        'Aucun commentaire du back-office.'
+                                    }}
+                                </p>
                             </div>
 
                             <!-- Commentaires pharmacien -->
@@ -1539,16 +1564,43 @@ function resetZoom() {
                                 >
                             </div>
 
-                            <!-- Commentaire (lecture seule) -->
-                            <div
-                                class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-[13px]"
-                                :class="
-                                    cmd.commentaire
-                                        ? 'text-gray-700'
-                                        : 'text-gray-400'
-                                "
-                            >
-                                {{ cmd.commentaire || 'Commentaires ...' }}
+                            <!-- Commentaires commande / pharmacien (lecture seule) -->
+                            <div class="space-y-2 text-[13px]">
+                                <div
+                                    class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3"
+                                >
+                                    <p
+                                        class="mb-1 text-[11px] font-bold uppercase tracking-wide text-gray-500"
+                                    >
+                                        Commentaire (commande)
+                                    </p>
+                                    <p
+                                        class="whitespace-pre-wrap"
+                                        :class="
+                                            cmd.commentaire?.trim()
+                                                ? 'text-gray-700'
+                                                : 'text-gray-400'
+                                        "
+                                    >
+                                        {{
+                                            cmd.commentaire?.trim() ||
+                                            'Aucun.'
+                                        }}
+                                    </p>
+                                </div>
+                                <div
+                                    v-if="(cmd.commentaire_pharmacie ?? '').trim()"
+                                    class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700"
+                                >
+                                    <p
+                                        class="mb-1 text-[11px] font-bold uppercase tracking-wide text-gray-500"
+                                    >
+                                        Commentaires du pharmacien
+                                    </p>
+                                    <p class="whitespace-pre-wrap">
+                                        {{ cmd.commentaire_pharmacie }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1835,16 +1887,43 @@ function resetZoom() {
                                 >
                             </div>
 
-                            <!-- Commentaire (lecture seule) -->
-                            <div
-                                class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-[13px]"
-                                :class="
-                                    cmd.commentaire
-                                        ? 'text-gray-700'
-                                        : 'text-gray-400'
-                                "
-                            >
-                                {{ cmd.commentaire || 'Commentaires ...' }}
+                            <!-- Commentaires commande / pharmacien (lecture seule) -->
+                            <div class="space-y-2 text-[13px]">
+                                <div
+                                    class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3"
+                                >
+                                    <p
+                                        class="mb-1 text-[11px] font-bold uppercase tracking-wide text-gray-500"
+                                    >
+                                        Commentaire (commande)
+                                    </p>
+                                    <p
+                                        class="whitespace-pre-wrap"
+                                        :class="
+                                            cmd.commentaire?.trim()
+                                                ? 'text-gray-700'
+                                                : 'text-gray-400'
+                                        "
+                                    >
+                                        {{
+                                            cmd.commentaire?.trim() ||
+                                            'Aucun.'
+                                        }}
+                                    </p>
+                                </div>
+                                <div
+                                    v-if="(cmd.commentaire_pharmacie ?? '').trim()"
+                                    class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700"
+                                >
+                                    <p
+                                        class="mb-1 text-[11px] font-bold uppercase tracking-wide text-gray-500"
+                                    >
+                                        Commentaires du pharmacien
+                                    </p>
+                                    <p class="whitespace-pre-wrap">
+                                        {{ cmd.commentaire_pharmacie }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

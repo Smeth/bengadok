@@ -193,6 +193,7 @@ class AgentController extends Controller
             'date' => $commande->date,
             'heurs' => $commande->heurs,
             'commentaire' => $commande->commentaire,
+            'commentaire_pharmacie' => null,
             'status' => 'nouvelle',
             'status_pharmacie' => 'nouvelle',
         ]);

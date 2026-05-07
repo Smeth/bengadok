@@ -8,6 +8,8 @@ export type CommandeDetail = {
     status_pharmacie?: string;
     prix_total: number;
     commentaire?: string;
+    /** Note saisie par la pharmacie lors de la validation de disponibilité. */
+    commentaire_pharmacie?: string | null;
     motif_annulation?: string;
     note_annulation?: string;
     /** True si une commande a déjà été créée en relance depuis celle-ci (statut annulée). */

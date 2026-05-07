@@ -337,6 +337,7 @@ class DokPharmaController extends Controller
                         ? asset('storage/'.ltrim($c->ordonnance->urlfile, '/'))
                         : null,
                     'commentaire' => $c->commentaire,
+                    'commentaire_pharmacie' => $c->commentaire_pharmacie,
                     'prix_medicaments' => (float) ($c->prix_medicaments ?? 0),
                 ];
             });
@@ -441,7 +442,7 @@ class DokPharmaController extends Controller
             'pharmacie_refusee_id' => $nbDispo === 0 ? $pharmacieId : null,
             'prix_medicaments' => $prixTotal,
             'prix_total' => $prixTotal + $liv,
-            ...($commentairePharmacie !== '' ? ['commentaire' => $commentairePharmacie] : []),
+            ...($commentairePharmacie !== '' ? ['commentaire_pharmacie' => $commentairePharmacie] : []),
         ]);
 
         return back()->with('status', 'Disponibilité envoyée.');
