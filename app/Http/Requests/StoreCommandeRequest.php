@@ -3,9 +3,11 @@
 namespace App\Http\Requests;
 
 use App\Models\AppSetting;
+use App\Models\Client;
 use App\Models\Commande;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreCommandeRequest extends FormRequest
 {
@@ -27,6 +29,10 @@ class StoreCommandeRequest extends FormRequest
                 $this->merge([$key => null]);
             }
         }
+
+        if ($this->has('client_arrondissement') && $this->input('client_arrondissement') === '') {
+            $this->merge(['client_arrondissement' => null]);
+        }
     }
 
     private function normalizeAgentInput(): void
@@ -47,6 +53,7 @@ class StoreCommandeRequest extends FormRequest
                 'client_prenom' => $clientNouveau['prenom'] ?? null,
                 'client_tel' => $clientNouveau['tel'] ?? '',
                 'client_adresse' => $clientNouveau['adresse'] ?? '',
+                'client_arrondissement' => $clientNouveau['arrondissement'] ?? $this->input('client_arrondissement'),
             ]);
         }
     }
@@ -146,6 +153,12 @@ class StoreCommandeRequest extends FormRequest
             'client_prenom' => 'required_without:client_id|string|max:100',
             'client_tel' => 'required_without:client_id|string|max:20',
             'client_adresse' => 'required_without:client_id|string',
+            'client_arrondissement' => [
+                Rule::requiredIf(fn () => $this->routeIs('commandes.store')),
+                'nullable',
+                'string',
+                Rule::in(Client::ARRONDISSEMENTS),
+            ],
             'client_sexe' => 'nullable|in:M,F',
             'pharmacie_id' => 'required|exists:pharmacies,id',
             'beneficiaire' => 'nullable|string|max:100',

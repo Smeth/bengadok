@@ -70,6 +70,7 @@ return [
         'client_prenom' => 'prénom du client',
         'client_tel' => 'téléphone',
         'client_adresse' => 'adresse',
+        'client_arrondissement' => 'arrondissement',
         'pharmacie_id' => 'pharmacie',
         'produits' => 'médicaments',
         'produits.*.designation' => 'désignation du médicament',

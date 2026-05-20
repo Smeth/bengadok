@@ -27,6 +27,7 @@ const props = defineProps<{
             prenom: string;
             tel: string;
             adresse?: string;
+            arrondissement?: string | null;
         };
         pharmacie: {
             id: number;
@@ -51,6 +52,7 @@ const props = defineProps<{
     }>;
     modesPaiement: Array<{ id: number; designation: string }>;
     montantsLivraison: Array<{ id: number; designation: number }>;
+    arrondissements: string[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -68,6 +70,9 @@ const clientNom = ref(props.commande.client?.nom ?? '');
 const clientPrenom = ref(props.commande.client?.prenom ?? '');
 const clientTel = ref(props.commande.client?.tel ?? '');
 const clientAdresse = ref(props.commande.client?.adresse ?? '');
+const clientArrondissement = ref(
+    props.commande.client?.arrondissement ?? '',
+);
 const pharmacieId = ref(props.commande.pharmacie?.id ?? '');
 const date = ref(props.commande.date?.slice(0, 10) ?? '');
 const heurs = ref(props.commande.heurs ?? '08:00');
@@ -126,10 +131,25 @@ type ProduitLigne = {
     id?: number;
     designation: string;
     dosage: string;
+    forme: string;
     quantite: number;
     prix_unitaire: number;
 };
 const produitsSelection = ref<ProduitLigne[]>([]);
+
+const formesPharmaceutiques = [
+    'Comprimé',
+    'Gélule',
+    'Sirop',
+    'Injectable',
+    'Pommade',
+    'Suppositoire',
+    'Collyre',
+    'Spray',
+    'Sachet',
+    'Ampoule',
+    'Patch',
+] as const;
 
 watch(
     () => props.commande?.produits,
@@ -138,6 +158,7 @@ watch(
             id: p.id,
             designation: p.designation ?? '',
             dosage: p.dosage ?? '',
+            forme: (p as { forme?: string | null }).forme ?? '',
             quantite: p.pivot?.quantite ?? 1,
             prix_unitaire: Number(p.pivot?.prix_unitaire) ?? 0,
         }));
@@ -149,6 +170,7 @@ function ajouterProduit() {
     produitsSelection.value.push({
         designation: '',
         dosage: '',
+        forme: '',
         quantite: 1,
         prix_unitaire: 0,
     });
@@ -170,6 +192,7 @@ function submit() {
             id: p.id,
             designation: p.designation.trim(),
             dosage: (p.dosage ?? '').trim() || null,
+            forme: (p.forme ?? '').trim() || null,
             quantite: p.quantite,
             prix_unitaire: Number(p.prix_unitaire),
         }));
@@ -183,6 +206,7 @@ function submit() {
         client_prenom: clientPrenom.value.trim(),
         client_tel: clientTel.value.trim(),
         client_adresse: clientAdresse.value.trim(),
+        client_arrondissement: clientArrondissement.value || undefined,
         pharmacie_id: pharmacieId.value || undefined,
         date: date.value,
         heurs: heurs.value,
@@ -278,6 +302,23 @@ function submit() {
                             placeholder="Adresse"
                         />
                         <InputError :message="errors.client_adresse" />
+                    </div>
+                    <div class="space-y-2">
+                        <Label>Arrondissement</Label>
+                        <select
+                            v-model="clientArrondissement"
+                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                            <option value="">Non renseigné</option>
+                            <option
+                                v-for="a in arrondissements"
+                                :key="a"
+                                :value="a"
+                            >
+                                {{ a }}
+                            </option>
+                        </select>
+                        <InputError :message="errors.client_arrondissement" />
                     </div>
                 </div>
 
@@ -376,6 +417,25 @@ function submit() {
                                 class="w-full"
                             />
                             <InputError :message="produitErr(i, 'dosage')" />
+                        </div>
+                        <div class="flex w-28 flex-col gap-1">
+                            <span class="text-xs text-muted-foreground"
+                                >Forme</span
+                            >
+                            <select
+                                v-model="p.forme"
+                                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            >
+                                <option value="">—</option>
+                                <option
+                                    v-for="f in formesPharmaceutiques"
+                                    :key="f"
+                                    :value="f"
+                                >
+                                    {{ f }}
+                                </option>
+                            </select>
+                            <InputError :message="produitErr(i, 'forme')" />
                         </div>
                         <div class="flex w-16 flex-col gap-1">
                             <span class="text-xs text-muted-foreground"

@@ -22,6 +22,7 @@ export type CommandeDetail = {
         prenom: string;
         tel: string;
         adresse?: string;
+        arrondissement?: string;
         sexe?: string;
     };
     pharmacie: {
@@ -76,6 +77,7 @@ export type CommandeListItem = {
         prenom: string;
         tel: string;
         adresse?: string;
+        arrondissement?: string;
         sexe?: string;
     };
     pharmacie?: { designation: string };

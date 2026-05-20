@@ -57,9 +57,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:super_admin')
         ->name('settings.reset.pharmacies');
 
-    Route::post('settings/reset/full', [ResetController::class, 'full'])
+    Route::post('settings/reset/db-medicaments', [ResetController::class, 'dbMedicaments'])
         ->middleware('role:super_admin')
-        ->name('settings.reset.full');
+        ->name('settings.reset.db-medicaments');
 
     // ── Paramètres métier ──────────────────────────────────────────────────
     Route::prefix('settings/parametres')

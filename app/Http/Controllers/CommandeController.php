@@ -104,6 +104,7 @@ class CommandeController extends Controller
             'montantsLivraison' => $montantsLivraison,
             'modesPaiement' => ModePaiement::query()->orderBy('designation')->get(),
             'livreurs' => $livreurs,
+            'arrondissements' => Client::ARRONDISSEMENTS,
             'openDetailCommandeId' => $request->filled('detail') ? $request->integer('detail') : null,
         ]);
     }
@@ -171,6 +172,7 @@ class CommandeController extends Controller
             'pharmacies' => Pharmacie::with('zone')->get(),
             'modesPaiement' => ModePaiement::all(),
             'montantsLivraison' => MontantLivraison::all(),
+            'arrondissements' => Client::ARRONDISSEMENTS,
         ]);
     }
 
@@ -193,6 +195,9 @@ class CommandeController extends Controller
         if ($request->input('client_prenom') === '') {
             $request->merge(['client_prenom' => null]);
         }
+        if ($request->input('client_arrondissement') === '') {
+            $request->merge(['client_arrondissement' => null]);
+        }
 
         $validated = $request->validate([
             'client_id' => 'nullable|exists:clients,id',
@@ -200,6 +205,7 @@ class CommandeController extends Controller
             'client_prenom' => 'required_without:client_id|string|max:100',
             'client_tel' => 'required_without:client_id|string|max:20',
             'client_adresse' => 'required_without:client_id|string',
+            'client_arrondissement' => ['nullable', Rule::in(Client::ARRONDISSEMENTS)],
             'pharmacie_id' => 'required|exists:pharmacies,id',
             'beneficiaire' => 'nullable|string|max:100',
             'date' => 'required|date',
@@ -226,6 +232,7 @@ class CommandeController extends Controller
                 'prenom' => $trim($validated['client_prenom'] ?? null),
                 'tel' => $validated['client_tel'],
                 'adresse' => $validated['client_adresse'],
+                'arrondissement' => $validated['client_arrondissement'] ?? null,
             ]);
 
         if ($validated['client_id']) {
@@ -234,6 +241,7 @@ class CommandeController extends Controller
                 'prenom' => $trim($validated['client_prenom'] ?? null),
                 'tel' => $validated['client_tel'],
                 'adresse' => $validated['client_adresse'],
+                'arrondissement' => $validated['client_arrondissement'] ?? null,
             ]);
         }
 
@@ -340,6 +348,10 @@ class CommandeController extends Controller
 
         if ($validated['status'] === 'validee' && $commande->montant_livraison_id === null) {
             return back()->with('error', 'Veuillez d\'abord définir le montant de la livraison avant de valider la commande.');
+        }
+
+        if ($validated['status'] === 'validee' && $commande->mode_paiement_id === null) {
+            return back()->with('error', 'Veuillez d\'abord choisir un mode de paiement avant de valider la commande.');
         }
 
         if ($validated['status'] === 'retiree' && $commande->status_pharmacie !== 'livre') {

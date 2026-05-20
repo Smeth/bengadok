@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Models\DbMedicament;
 use App\Services\ClientsDataResetService;
 use App\Services\CommandesDataResetService;
 use App\Services\FullDataResetExceptAdminsService;
@@ -67,16 +68,31 @@ class ResetController extends Controller
             );
         }
 
+        $portee = (string) $request->input('portee', 'commandes_seulement');
+        $purgeCatalogue = $portee === 'commandes_et_catalogue';
+
         try {
-            $stats = $service->resetAllCommandes();
+            $stats = $service->resetAllCommandes($purgeCatalogue);
         } catch (\Throwable $e) {
             return back()->with('error', 'Erreur : '.$e->getMessage());
+        }
+
+        if ($purgeCatalogue) {
+            return back()->with(
+                'status',
+                sprintf(
+                    'Commandes supprimées : %d commande(s), %d ordonnance(s). Catalogue médicaments (produits) vidé : %d entrée(s).',
+                    $stats['commandes'],
+                    $stats['ordonnances'],
+                    $stats['produits_catalogue'],
+                ),
+            );
         }
 
         return back()->with(
             'status',
             sprintf(
-                'Commandes supprimées : %d commande(s), %d ordonnance(s).',
+                'Commandes supprimées : %d commande(s), %d ordonnance(s). Le catalogue n’a pas été modifié.',
                 $stats['commandes'],
                 $stats['ordonnances'],
             ),
@@ -210,6 +226,46 @@ class ResetController extends Controller
                 $stats['pharmacies'],
                 $stats['produits'],
                 $stats['users'],
+            ),
+        );
+    }
+
+    /**
+     * Supprime toutes les entrées de la table DB médicament (référentiel local).
+     */
+    public function dbMedicaments(Request $request): RedirectResponse
+    {
+        if (! $request->user()?->hasRole('super_admin')) {
+            abort(403);
+        }
+
+        if (! PharmacyDataResetService::isAllowed()) {
+            return back()->with(
+                'error',
+                'Cette opération n\'est pas disponible dans cet environnement.',
+            );
+        }
+
+        $confirm = (string) $request->input('confirmation', '');
+        if ($confirm !== 'VIDER DB MEDICAMENTS') {
+            return back()->with(
+                'error',
+                'Confirmation invalide : saisissez exactement « VIDER DB MEDICAMENTS ».',
+            );
+        }
+
+        try {
+            $count = DbMedicament::query()->count();
+            DbMedicament::query()->delete();
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Erreur : '.$e->getMessage());
+        }
+
+        return back()->with(
+            'status',
+            sprintf(
+                'Base locale DB médicament vidée : %d référence(s) supprimée(s).',
+                $count,
             ),
         );
     }

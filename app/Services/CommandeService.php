@@ -70,9 +70,14 @@ class CommandeService
                 if (array_key_exists('client_sexe', $data)) {
                     $attrs['sexe'] = $data['client_sexe'] ?: null;
                 }
+                if (array_key_exists('client_arrondissement', $data) && $data['client_arrondissement'] !== null && $data['client_arrondissement'] !== '') {
+                    $attrs['arrondissement'] = $data['client_arrondissement'];
+                }
                 $client->update($attrs);
             } elseif (array_key_exists('client_sexe', $data)) {
                 $client->update(['sexe' => $data['client_sexe'] ?: null]);
+            } elseif (array_key_exists('client_arrondissement', $data) && $data['client_arrondissement'] !== null && $data['client_arrondissement'] !== '') {
+                $client->update(['arrondissement' => $data['client_arrondissement']]);
             }
 
             return $client;
@@ -83,6 +88,7 @@ class CommandeService
             'prenom' => $this->trimOrNull($data['client_prenom'] ?? null),
             'tel' => $data['client_tel'],
             'adresse' => $data['client_adresse'],
+            'arrondissement' => $data['client_arrondissement'] ?? null,
             'sexe' => ! empty($data['client_sexe']) ? $data['client_sexe'] : null,
         ]);
     }

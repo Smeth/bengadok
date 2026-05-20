@@ -145,6 +145,7 @@ const medModalOpen = ref(false);
 const medModalMode = ref<'create' | 'edit'>('create');
 const editingId = ref<number | null>(null);
 const medForm = ref<MedFormState>(emptyMedForm());
+const selectedDbMedicamentIds = ref<Set<number>>(new Set());
 
 watch(
     () => props.filters.search,
@@ -157,6 +158,18 @@ watch(
     () => props.onglet,
     (o) => {
         if (o === 'db_medicament') activeTab.value = 'db_medicament';
+    },
+);
+
+watch(
+    () => props.dbMedicaments?.data ?? [],
+    (rows) => {
+        const pageIds = new Set(rows.map((r) => r.id));
+        const next = new Set<number>();
+        selectedDbMedicamentIds.value.forEach((id) => {
+            if (pageIds.has(id)) next.add(id);
+        });
+        selectedDbMedicamentIds.value = next;
     },
 );
 
@@ -175,6 +188,46 @@ function goCatalogueTab() {
             },
         );
     }
+}
+
+function toggleDbMedicamentRow(id: number) {
+    const next = new Set(selectedDbMedicamentIds.value);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selectedDbMedicamentIds.value = next;
+}
+
+function toggleAllDbMedicamentsPage() {
+    const rows = props.dbMedicaments.data;
+    const allOnPage =
+        rows.length > 0 &&
+        rows.every((r) => selectedDbMedicamentIds.value.has(r.id));
+    const next = new Set(selectedDbMedicamentIds.value);
+    if (allOnPage) rows.forEach((r) => next.delete(r.id));
+    else rows.forEach((r) => next.add(r.id));
+    selectedDbMedicamentIds.value = next;
+}
+
+function destroySelectedDbMedicaments() {
+    const ids = [...selectedDbMedicamentIds.value];
+    if (!ids.length) return;
+    if (
+        !confirm(
+            `Supprimer définitivement ${ids.length} référence(s) de la base locale ?`,
+        )
+    ) {
+        return;
+    }
+    router.post(
+        '/medicaments/db-medicaments/destroy-bulk',
+        { ids },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                selectedDbMedicamentIds.value = new Set();
+            },
+        },
+    );
 }
 
 function goDbMedicamentTab() {
@@ -781,14 +834,31 @@ const badgeTotal = computed(() =>
                             indépendant du reste du système.
                         </p>
                     </div>
-                    <Button
-                        v-if="isAdmin"
-                        class="h-10 shrink-0 gap-2 bg-[#459cd1] px-4 text-white hover:bg-[#3a87b8]"
-                        @click="openCreateMedicamentModal"
-                    >
-                        <Plus class="size-4" />
-                        Nouveau médicament
-                    </Button>
+                    <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+                        <Button
+                            v-if="
+                                isAdmin &&
+                                dbMedicaments.data.length > 0 &&
+                                selectedDbMedicamentIds.size > 0
+                            "
+                            variant="destructive"
+                            class="h-10 gap-2"
+                            @click="destroySelectedDbMedicaments"
+                        >
+                            <Trash2 class="size-4" />
+                            Supprimer la sélection ({{
+                                selectedDbMedicamentIds.size
+                            }})
+                        </Button>
+                        <Button
+                            v-if="isAdmin"
+                            class="h-10 shrink-0 gap-2 bg-[#459cd1] px-4 text-white hover:bg-[#3a87b8]"
+                            @click="openCreateMedicamentModal"
+                        >
+                            <Plus class="size-4" />
+                            Nouveau médicament
+                        </Button>
+                    </div>
                 </div>
 
                 <p v-if="!isAdmin" class="text-sm text-muted-foreground">
@@ -800,6 +870,24 @@ const badgeTotal = computed(() =>
                     <table class="w-full min-w-[900px] text-sm">
                         <thead class="border-b bg-muted/50">
                             <tr>
+                                <th
+                                    v-if="isAdmin"
+                                    class="w-10 px-2 py-3 text-left font-medium"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        class="size-4 rounded border-input"
+                                        :checked="
+                                            dbMedicaments.data.length > 0 &&
+                                            dbMedicaments.data.every((r) =>
+                                                selectedDbMedicamentIds.has(
+                                                    r.id,
+                                                ),
+                                            )
+                                        "
+                                        @change="toggleAllDbMedicamentsPage"
+                                    />
+                                </th>
                                 <th class="px-3 py-3 text-left font-medium">
                                     Désignation
                                 </th>
@@ -838,6 +926,16 @@ const badgeTotal = computed(() =>
                                 :key="row.id"
                                 class="border-b border-border/60 last:border-0 transition-colors hover:bg-muted/30"
                             >
+                                <td v-if="isAdmin" class="px-2 py-3">
+                                    <input
+                                        type="checkbox"
+                                        class="size-4 rounded border-input"
+                                        :checked="
+                                            selectedDbMedicamentIds.has(row.id)
+                                        "
+                                        @change="toggleDbMedicamentRow(row.id)"
+                                    />
+                                </td>
                                 <td class="px-3 py-3 font-medium">
                                     {{ row.designation }}
                                 </td>

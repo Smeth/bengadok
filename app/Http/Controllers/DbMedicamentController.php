@@ -54,6 +54,25 @@ class DbMedicamentController extends Controller
             ->with('status', 'Référence mise à jour.');
     }
 
+    public function destroyBulk(Request $request): RedirectResponse
+    {
+        $this->authorizeAdmin($request);
+
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:db_medicaments,id',
+        ]);
+
+        DbMedicament::query()->whereIn('id', $validated['ids'])->delete();
+
+        $n = count($validated['ids']);
+
+        return redirect()->route('medicaments.index', ['onglet' => 'db_medicament'])
+            ->with('status', $n > 1
+                ? sprintf('%d références supprimées de la base locale.', $n)
+                : 'Référence supprimée de la base locale.');
+    }
+
     public function destroy(Request $request, DbMedicament $dbMedicament): RedirectResponse
     {
         $this->authorizeAdmin($request);

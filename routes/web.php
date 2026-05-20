@@ -43,6 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('doublons/{groupe}/ignorer', [MedicamentDoublonController::class, 'ignorer'])->name('doublons.ignorer');
         Route::patch('doublons/{groupe}/verifier', [MedicamentDoublonController::class, 'verifier'])->name('doublons.verifier');
         Route::patch('doublons/{groupe}/fusionner', [MedicamentDoublonController::class, 'fusionner'])->name('doublons.fusionner');
+        Route::post('db-medicaments/destroy-bulk', [DbMedicamentController::class, 'destroyBulk'])->name('db-medicaments.destroy-bulk')->middleware('role:admin|super_admin');
         Route::post('db-medicaments', [DbMedicamentController::class, 'store'])->name('db-medicaments.store')->middleware('role:admin|super_admin');
         Route::patch('db-medicaments/{dbMedicament}', [DbMedicamentController::class, 'update'])->name('db-medicaments.update')->middleware('role:admin|super_admin');
         Route::delete('db-medicaments/{dbMedicament}', [DbMedicamentController::class, 'destroy'])->name('db-medicaments.destroy')->middleware('role:admin|super_admin');

@@ -32,8 +32,21 @@ class Client extends Model
         'Autre' => 'Autre',
     ];
 
+    /** Arrondissements de Brazzaville (liste fermée — adresse / livraison). */
+    public const ARRONDISSEMENTS = [
+        'Bacongo',
+        'Djiri',
+        'Madibou',
+        'Makélékélé',
+        'Mfilou',
+        'Moungali',
+        'Ouenzé',
+        'Poto-Poto',
+        'Talangaï',
+    ];
+
     protected $fillable = [
-        'nom', 'prenom', 'tel', 'tel_secondaire', 'adresse', 'sexe', 'email', 'zone_id', 'client_depuis',
+        'nom', 'prenom', 'tel', 'tel_secondaire', 'adresse', 'arrondissement', 'sexe', 'email', 'zone_id', 'client_depuis',
         'niches', 'canal_acquisition',
     ];
 

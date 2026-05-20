@@ -113,6 +113,8 @@ const props = withDefaults(
         }>;
         /** Ouvre le panneau détail (ex. redirection depuis /commandes/{id} ou lien partagé). */
         openDetailCommandeId?: number | null;
+        /** Arrondissements (Brazzaville) pour les formulaires commande. */
+        arrondissements?: string[];
     }>(),
     {
         commandes: () => ({ data: [], links: [] }),
@@ -125,6 +127,7 @@ const props = withDefaults(
         modesPaiement: () => [],
         livreurs: () => [],
         openDetailCommandeId: null,
+        arrondissements: () => [],
     },
 );
 
@@ -167,7 +170,7 @@ const peutValiderCommandeEnAttente = computed(() => {
     if (enAttentePharmacieToutIndisponible.value) {
         return false;
     }
-    return !!c.montant_livraison;
+    return !!c.montant_livraison && !!c.mode_paiement;
 });
 
 /** Même périmètre que la fiche commande : OCR / vérification ordonnance. */
@@ -563,7 +566,11 @@ function openValiderModal() {
 }
 
 function confirmValiderCommande() {
-    if (!detailCommande.value || !detailCommande.value.montant_livraison) {
+    if (
+        !detailCommande.value ||
+        !detailCommande.value.montant_livraison ||
+        !detailCommande.value.mode_paiement
+    ) {
         return;
     }
     const id = detailCommande.value.id;
@@ -742,6 +749,7 @@ function submitEnregistrementFromModal(payload: FormEnregPayload) {
         formData.append('client_prenom', payload.client_prenom);
         formData.append('client_tel', payload.client_tel);
         formData.append('client_adresse', payload.client_adresse);
+        formData.append('client_arrondissement', payload.client_arrondissement);
         if (payload.client_sexe)
             formData.append('client_sexe', payload.client_sexe);
         formData.append('pharmacie_id', payload.pharmacie_id);
@@ -768,6 +776,7 @@ function submitEnregistrementFromModal(payload: FormEnregPayload) {
             client_prenom: payload.client_prenom,
             client_tel: payload.client_tel,
             client_adresse: payload.client_adresse,
+            client_arrondissement: payload.client_arrondissement,
             client_sexe: payload.client_sexe || undefined,
             pharmacie_id: payload.pharmacie_id,
             beneficiaire: payload.beneficiaire || undefined,
@@ -798,21 +807,31 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
     }
     if (payload.client_id) {
         data.client_id = payload.client_id;
+        data.client_arrondissement = payload.client_arrondissement;
     } else {
         data.client_nom = payload.client_nom;
         data.client_prenom = payload.client_prenom;
         data.client_tel = payload.client_tel;
         data.client_adresse = payload.client_adresse;
+        data.client_arrondissement = payload.client_arrondissement;
     }
     if (payload.ordonnance) {
         const formData = new FormData();
-        if (payload.client_id)
+        if (payload.client_id) {
             formData.append('client_id', String(payload.client_id));
-        else {
+            formData.append(
+                'client_arrondissement',
+                payload.client_arrondissement,
+            );
+        } else {
             formData.append('client_nom', payload.client_nom);
             formData.append('client_prenom', payload.client_prenom);
             formData.append('client_tel', payload.client_tel);
             formData.append('client_adresse', payload.client_adresse);
+            formData.append(
+                'client_arrondissement',
+                payload.client_arrondissement,
+            );
         }
         if (payload.client_sexe)
             formData.append('client_sexe', payload.client_sexe);
@@ -1812,46 +1831,75 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                         detailCommande.status === 'en_attente'
                                     "
                                 >
-                                    <button
-                                        v-if="!enAttentePharmacieToutIndisponible"
-                                        type="button"
-                                        :disabled="!peutValiderCommandeEnAttente"
-                                        class="flex h-12 w-full items-center justify-center rounded-full text-[15px] font-bold text-white transition-colors"
-                                        :class="
-                                            peutValiderCommandeEnAttente
-                                                ? 'bg-[#0d6efd] hover:bg-blue-700'
-                                                : 'cursor-not-allowed bg-gray-400'
-                                        "
-                                        @click="openValiderModal"
-                                    >
-                                        Valider
-                                    </button>
-                                    <p
+                                    <!-- Explications toujours au-dessus des boutons d'action -->
+                                    <div
                                         v-if="
-                                            !enAttentePharmacieToutIndisponible &&
-                                            !peutValiderCommandeEnAttente
+                                            enAttentePharmacieToutIndisponible ||
+                                            !detailCommande.montant_livraison ||
+                                            (!!detailCommande.montant_livraison &&
+                                                !detailCommande.mode_paiement)
                                         "
-                                        class="text-center text-[12px] font-medium text-amber-800"
+                                        class="flex flex-col gap-2"
                                     >
-                                        Définissez le montant de la livraison
-                                        (section paiement ci-dessus) avant de
-                                        valider.
-                                    </p>
-                                    <p
-                                        v-else
-                                        class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium text-amber-900"
-                                    >
-                                        Aucun médicament disponible : annulez la
-                                        commande ou faites-la renvoyer vers une
-                                        autre pharmacie (agent).
-                                    </p>
-                                    <button
-                                        type="button"
-                                        class="flex h-12 w-full flex-row items-center justify-center rounded-full bg-[#e7000b] text-[15px] font-bold text-white transition-colors hover:bg-red-700"
-                                        @click="openAnnulerModal"
-                                    >
-                                        Annuler
-                                    </button>
+                                        <p
+                                            v-if="
+                                                enAttentePharmacieToutIndisponible
+                                            "
+                                            class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium text-amber-900"
+                                        >
+                                            Aucun médicament disponible :
+                                            annulez la commande ou faites-la
+                                            renvoyer vers une autre pharmacie
+                                            (agent).
+                                        </p>
+                                        <p
+                                            v-else-if="
+                                                !detailCommande.montant_livraison
+                                            "
+                                            class="text-center text-[12px] font-medium text-amber-800"
+                                        >
+                                            Définissez le montant de la
+                                            livraison (section paiement
+                                            ci-dessus) avant de valider.
+                                        </p>
+                                        <p
+                                            v-else-if="
+                                                !detailCommande.mode_paiement
+                                            "
+                                            class="text-center text-[12px] font-medium text-amber-800"
+                                        >
+                                            Choisissez un mode de paiement
+                                            (section paiement ci-dessus) avant
+                                            de valider.
+                                        </p>
+                                    </div>
+                                    <div class="flex flex-col gap-3">
+                                        <button
+                                            v-if="
+                                                !enAttentePharmacieToutIndisponible
+                                            "
+                                            type="button"
+                                            :disabled="
+                                                !peutValiderCommandeEnAttente
+                                            "
+                                            class="flex h-12 w-full items-center justify-center rounded-full text-[15px] font-bold text-white transition-colors"
+                                            :class="
+                                                peutValiderCommandeEnAttente
+                                                    ? 'bg-[#0d6efd] hover:bg-blue-700'
+                                                    : 'cursor-not-allowed bg-gray-400'
+                                            "
+                                            @click="openValiderModal"
+                                        >
+                                            Valider
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="flex h-12 w-full flex-row items-center justify-center rounded-full bg-[#e7000b] text-[15px] font-bold text-white transition-colors hover:bg-red-700"
+                                            @click="openAnnulerModal"
+                                        >
+                                            Annuler
+                                        </button>
+                                    </div>
                                 </template>
 
                                 <template
@@ -1929,8 +1977,8 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                         detailCommande?.numero
                     }}</span>
                     ? Le statut passera à « Validée » et la pharmacie pourra
-                    préparer la commande. Les frais de livraison sont
-                    renseignés.
+                    préparer la commande. Les frais de livraison et le mode de
+                    paiement sont renseignés.
                 </p>
                 <DialogFooter
                     class="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
@@ -1946,7 +1994,10 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                     <Button
                         type="button"
                         class="rounded-[10px] bg-[#0d6efd] font-bold text-white hover:bg-blue-700"
-                        :disabled="!detailCommande?.montant_livraison"
+                        :disabled="
+                            !detailCommande?.montant_livraison ||
+                            !detailCommande?.mode_paiement
+                        "
                         @click="confirmValiderCommande"
                     >
                         Confirmer la validation
@@ -2117,6 +2168,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
             v-model:open="showEnregistrementModal"
             :zones="zones ?? []"
             :pharmacies="pharmacies ?? []"
+            :arrondissements="arrondissements ?? []"
             :api-errors="apiErrorsEnreg"
             @submit="submitEnregistrementFromModal"
         />
@@ -2128,6 +2180,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
             :commande="detailCommande ?? undefined"
             :zones="zones ?? []"
             :pharmacies="pharmacies ?? []"
+            :arrondissements="arrondissements ?? []"
             :api-errors="errorsRelancer"
             @submit="submitRelancerFromModal"
         />

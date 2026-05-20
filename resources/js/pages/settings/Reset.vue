@@ -25,12 +25,17 @@ const processingCommandes = ref(false);
 const processingClients = ref(false);
 const processingPharmacies = ref(false);
 const processingFull = ref(false);
+const processingDbMedicaments = ref(false);
 const processingApp = ref(false);
 
 const confirmationCommandes = ref('');
+const porteeSuppressionCommandes = ref<'commandes_seulement' | 'commandes_et_catalogue'>(
+    'commandes_seulement',
+);
 const confirmationClients = ref('');
 const confirmationPharmacies = ref('');
 const confirmationFull = ref('');
+const confirmationDbMedicaments = ref('');
 
 const allowPharmacyReset = computed(
     () =>
@@ -74,7 +79,10 @@ function postReset(
 function resetCommandes() {
     postReset(
         '/settings/reset/commandes',
-        { confirmation: confirmationCommandes.value },
+        {
+            confirmation: confirmationCommandes.value,
+            portee: porteeSuppressionCommandes.value,
+        },
         processingCommandes,
         () => {
             confirmationCommandes.value = '';
@@ -111,6 +119,17 @@ function resetFull() {
         processingFull,
         () => {
             confirmationFull.value = '';
+        },
+    );
+}
+
+function resetDbMedicaments() {
+    postReset(
+        '/settings/reset/db-medicaments',
+        { confirmation: confirmationDbMedicaments.value },
+        processingDbMedicaments,
+        () => {
+            confirmationDbMedicaments.value = '';
         },
     );
 }
@@ -164,7 +183,7 @@ function resetApp() {
                     <Heading
                         variant="small"
                         title="Supprimer toutes les commandes"
-                        description="Efface toutes les commandes et les ordonnances associées (y compris les fichiers joints). Les pharmacies, les clients et le catalogue ne sont pas modifiés."
+                        description="Efface toutes les commandes et les ordonnances associées (fichiers inclus). Vous pouvez en plus vider le catalogue des médicaments (table produits / stocks pharmacie) ou conserver le catalogue inchangé."
                     />
                     <p
                         v-if="!allowPharmacyReset"
@@ -173,6 +192,48 @@ function resetApp() {
                         Cette opération n’est pas activée sur cet environnement.
                     </p>
                     <div v-else class="space-y-3">
+                        <div
+                            class="space-y-2 rounded-lg border border-border bg-muted/20 p-3"
+                        >
+                            <p class="text-sm font-medium text-foreground">
+                                Portée de la suppression
+                            </p>
+                            <label
+                                class="flex cursor-pointer items-start gap-2 text-sm"
+                            >
+                                <input
+                                    v-model="porteeSuppressionCommandes"
+                                    type="radio"
+                                    class="mt-1"
+                                    value="commandes_seulement"
+                                />
+                                <span>
+                                    <span class="font-medium"
+                                        >Commandes et ordonnances uniquement</span
+                                    >
+                                    — le catalogue médicaments (produits) et les
+                                    fiches clients ne sont pas modifiés.
+                                </span>
+                            </label>
+                            <label
+                                class="flex cursor-pointer items-start gap-2 text-sm"
+                            >
+                                <input
+                                    v-model="porteeSuppressionCommandes"
+                                    type="radio"
+                                    class="mt-1"
+                                    value="commandes_et_catalogue"
+                                />
+                                <span>
+                                    <span class="font-medium"
+                                        >Commandes + catalogue médicaments</span
+                                    >
+                                    — supprime en plus l’ensemble des produits du
+                                    catalogue (liens pharmacie et groupes de doublons
+                                    produits inclus).
+                                </span>
+                            </label>
+                        </div>
                         <div class="space-y-2">
                             <Label for="confirm-commandes"
                                 >Tapez
@@ -209,8 +270,21 @@ function resetApp() {
                                         >Confirmer la suppression</AlertDialogTitle
                                     >
                                     <AlertDialogDescription>
-                                        Toutes les commandes et ordonnances seront
-                                        définitivement supprimées.
+                                        <template
+                                            v-if="
+                                                porteeSuppressionCommandes ===
+                                                'commandes_et_catalogue'
+                                            "
+                                        >
+                                            Toutes les commandes et ordonnances
+                                            seront supprimées, ainsi que tout le
+                                            catalogue des médicaments (produits).
+                                        </template>
+                                        <template v-else>
+                                            Toutes les commandes et ordonnances
+                                            seront supprimées. Le catalogue des
+                                            médicaments ne sera pas modifié.
+                                        </template>
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -218,6 +292,77 @@ function resetApp() {
                                     <AlertDialogAction
                                         class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                         @click="resetCommandes"
+                                    >
+                                        Confirmer
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                </div>
+
+                <!-- DB médicament (référentiel local) -->
+                <div
+                    class="rounded-lg border border-border bg-card p-4 space-y-4"
+                >
+                    <Heading
+                        variant="small"
+                        title="Vider la base locale « DB médicament »"
+                        description="Supprime toutes les fiches du référentiel DB médicament (onglet du même nom sous Médicaments). Indépendant du catalogue commandes et des commandes."
+                    />
+                    <p
+                        v-if="!allowPharmacyReset"
+                        class="text-sm text-muted-foreground"
+                    >
+                        Cette opération n’est pas activée sur cet environnement.
+                    </p>
+                    <div v-else class="space-y-3">
+                        <div class="space-y-2">
+                            <Label for="confirm-db-medicaments"
+                                >Tapez
+                                <span class="font-mono font-semibold"
+                                    >VIDER DB MEDICAMENTS</span
+                                >
+                                pour confirmer</Label
+                            >
+                            <Input
+                                id="confirm-db-medicaments"
+                                v-model="confirmationDbMedicaments"
+                                class="font-mono"
+                                placeholder="VIDER DB MEDICAMENTS"
+                                autocomplete="off"
+                            />
+                        </div>
+                        <AlertDialog>
+                            <AlertDialogTrigger as-child>
+                                <Button
+                                    variant="destructive"
+                                    :disabled="
+                                        processingDbMedicaments ||
+                                        confirmationDbMedicaments !==
+                                            'VIDER DB MEDICAMENTS'
+                                    "
+                                >
+                                    <Trash2 class="h-4 w-4" />
+                                    Vider la DB médicament
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle
+                                        >Confirmer la suppression</AlertDialogTitle
+                                    >
+                                    <AlertDialogDescription>
+                                        Toutes les entrées du référentiel DB
+                                        médicament seront définitivement
+                                        supprimées.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        @click="resetDbMedicaments"
                                     >
                                         Confirmer
                                     </AlertDialogAction>

@@ -31,6 +31,7 @@ export type FormEnregPayload = {
     client_prenom: string;
     client_tel: string;
     client_adresse: string;
+    client_arrondissement: string;
     /** M ou F — civilité affichée côté liste / détail */
     client_sexe: '' | 'M' | 'F';
     pharmacie_id: string;
@@ -38,6 +39,7 @@ export type FormEnregPayload = {
     produits: Array<{
         designation: string;
         dosage: string | null;
+        forme: string | null;
         quantite: number;
         prix_unitaire: number;
     }>;
@@ -58,6 +60,7 @@ export type CommandeRelance = {
         prenom?: string;
         tel?: string;
         adresse?: string;
+        arrondissement?: string;
         sexe?: string;
     };
     pharmacie?: { id?: number; zone_id?: number; zone?: { id: number } };
@@ -88,12 +91,15 @@ const props = withDefaults(
         zones?: Zone[];
         pharmacies?: Pharmacie[];
         apiErrors?: Record<string, string>;
+        /** Libellés arrondissements (ex. Brazzaville) */
+        arrondissements?: string[];
     }>(),
     {
         mode: 'nouvelle',
         zones: () => [],
         pharmacies: () => [],
         apiErrors: () => ({}),
+        arrondissements: () => [],
     },
 );
 
@@ -182,6 +188,7 @@ const form = ref({
     client_prenom: '',
     client_tel: '',
     client_adresse: '',
+    client_arrondissement: '',
     client_sexe: '' as '' | 'M' | 'F',
     pharmacie_id: '',
     beneficiaire: '',
@@ -266,6 +273,7 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
         client_prenom: cmd.client?.prenom ?? '',
         client_tel: cmd.client?.tel ?? '',
         client_adresse: cmd.client?.adresse ?? '',
+        client_arrondissement: cmd.client?.arrondissement ?? '',
         client_sexe: (cmd.client?.sexe === 'M' || cmd.client?.sexe === 'F'
             ? cmd.client.sexe
             : '') as '' | 'M' | 'F',
@@ -321,6 +329,7 @@ function resetForm() {
         client_prenom: '',
         client_tel: '',
         client_adresse: '',
+        client_arrondissement: '',
         client_sexe: '' as '' | 'M' | 'F',
         pharmacie_id: '',
         beneficiaire: '',
@@ -356,6 +365,8 @@ function onSubmit() {
         err.client_tel = 'Le téléphone est obligatoire.';
     if (!form.value.client_adresse?.trim())
         err.client_adresse = "L'adresse est obligatoire.";
+    if (!form.value.client_arrondissement?.trim())
+        err.client_arrondissement = "L'arrondissement est obligatoire.";
     if (!form.value.pharmacie_id)
         err.pharmacie_id = 'Veuillez sélectionner une pharmacie.';
     const produitsValides = form.value.produits
@@ -368,6 +379,7 @@ function onSubmit() {
         .map((p) => ({
             designation: p.designation.trim(),
             dosage: (p.dosage ?? '').trim() || null,
+            forme: (p.forme ?? '').trim() || null,
             quantite: p.quantite,
             prix_unitaire: Number(p.prix_unitaire),
         }));
@@ -395,6 +407,7 @@ function onSubmit() {
         client_prenom: form.value.client_prenom,
         client_tel: form.value.client_tel,
         client_adresse: form.value.client_adresse,
+        client_arrondissement: form.value.client_arrondissement,
         client_sexe: form.value.client_sexe,
         pharmacie_id: form.value.pharmacie_id,
         beneficiaire: form.value.beneficiaire || '',
@@ -562,7 +575,7 @@ watch(
                                 </p>
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div class="flex flex-col gap-1.5">
                                 <Label class="text-sm font-medium text-black"
                                     >Genre</Label
@@ -606,7 +619,11 @@ watch(
                                     />
                                 </div>
                             </div>
-                            <div class="flex flex-col gap-1.5 md:col-span-2">
+                        </div>
+                        <div
+                            class="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start"
+                        >
+                            <div class="flex min-w-0 flex-col gap-1.5">
                                 <Label class="text-sm font-medium text-black"
                                     >Adresse
                                     <span class="text-[#dc3545]">*</span></Label
@@ -615,7 +632,7 @@ watch(
                                     v-model="form.client_adresse"
                                     type="text"
                                     placeholder="Ex : 20 rue Loby Moungali"
-                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                    class="h-[42px] w-full min-w-0 rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
                                     :class="{
                                         'border-[#dc3545]':
                                             errors.client_adresse,
@@ -626,6 +643,42 @@ watch(
                                     class="text-xs text-[#dc3545]"
                                 >
                                     {{ errors.client_adresse }}
+                                </p>
+                            </div>
+                            <div class="flex min-w-0 flex-col gap-1.5">
+                                <Label class="text-sm font-medium text-black"
+                                    >Arrondissement
+                                    <span class="text-[#dc3545]">*</span></Label
+                                >
+                                <div class="relative">
+                                    <select
+                                        v-model="form.client_arrondissement"
+                                        class="h-[42px] w-full min-w-0 appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                        :class="{
+                                            'border-[#dc3545]':
+                                                errors.client_arrondissement,
+                                        }"
+                                    >
+                                        <option value="">
+                                            Choisir un arrondissement…
+                                        </option>
+                                        <option
+                                            v-for="a in arrondissements"
+                                            :key="a"
+                                            :value="a"
+                                        >
+                                            {{ a }}
+                                        </option>
+                                    </select>
+                                    <ChevronDown
+                                        class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]"
+                                    />
+                                </div>
+                                <p
+                                    v-if="errors.client_arrondissement"
+                                    class="text-xs text-[#dc3545]"
+                                >
+                                    {{ errors.client_arrondissement }}
                                 </p>
                             </div>
                         </div>
