@@ -2,8 +2,8 @@
 import { X, User, Building2, Pill, Banknote, Truck } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { formatDateFrLocal } from '@/lib/formatDateLocal';
 import { sousTotalCommandeProduits } from '@/lib/commandeTotals';
+import { formatDateFrLocal } from '@/lib/formatDateLocal';
 import type { CommandeDetail } from '@/types';
 
 const props = defineProps<{

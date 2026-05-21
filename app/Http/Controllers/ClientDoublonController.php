@@ -68,6 +68,7 @@ class ClientDoublonController extends Controller
                     'nom' => $c->nom,
                     'prenom' => $c->prenom,
                     'tel' => $c->tel,
+                    'tel_secondaire' => $c->tel_secondaire,
                     'adresse' => $c->adresse,
                     'zone' => $c->zone?->designation,
                     'nb_commandes' => $nbCommandes,
@@ -83,6 +84,8 @@ class ClientDoublonController extends Controller
 
             $criteresLabels = [
                 'nom_identique' => 'Nom identique',
+                'tel_identique' => 'Téléphone identique',
+                'nom_et_tel_identique' => 'Nom et téléphone identiques',
                 'adresse_identique' => 'Adresse identique',
                 'meme_zone' => 'Même zone',
             ];

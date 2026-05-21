@@ -161,7 +161,7 @@ const enAttentePharmacieToutIndisponible = computed(() => {
     );
 });
 
-/** Frais de livraison obligatoires avant validation admin (statut → validée). */
+/** Livraison + mode de paiement pour la commande ouverte ; idem pour chaque lien « autre pharmacie » en_attente avant validation groupe. */
 const peutValiderCommandeEnAttente = computed(() => {
     const c = detailCommande.value;
     if (!c || c.status !== 'en_attente') {
@@ -170,7 +170,32 @@ const peutValiderCommandeEnAttente = computed(() => {
     if (enAttentePharmacieToutIndisponible.value) {
         return false;
     }
-    return !!c.montant_livraison && !!c.mode_paiement;
+    if (!c.montant_livraison || !c.mode_paiement) {
+        return false;
+    }
+    const enfants = c.enfants ?? [];
+    for (const e of enfants) {
+        if (e.status !== 'en_attente') {
+            continue;
+        }
+        if (!e.montant_livraison || !e.mode_paiement) {
+            return false;
+        }
+    }
+    return true;
+});
+
+/** Il reste au moins un maillon enfant en attente sans livraison ou sans mode de paiement. */
+const enfantEnAttenteSansPaiementComplet = computed(() => {
+    const c = detailCommande.value;
+    if (!c?.enfants?.length || c.status !== 'en_attente') {
+        return false;
+    }
+    return c.enfants.some(
+        (e) =>
+            e.status === 'en_attente' &&
+            (!e.montant_livraison || !e.mode_paiement),
+    );
 });
 
 /** Même périmètre que la fiche commande : OCR / vérification ordonnance. */
@@ -300,7 +325,6 @@ function confirmBulkAnnuler() {
             onSuccess: () => {
                 showBulkAnnulerModal.value = false;
                 clearSelection();
-                router.reload();
             },
         },
     );
@@ -348,7 +372,10 @@ function filtrer(key: string, value: string) {
     if (raw.periode) params.periode = raw.periode;
     if (raw.date) params.date = raw.date;
 
-    router.get('/commandes', params, { preserveState: true });
+    router.get('/commandes', params, {
+        preserveState: true,
+        preserveScroll: true,
+    });
 }
 
 function getStatusLabel(s: string) {
@@ -453,19 +480,42 @@ function descriptionDecisionVerification(decision: string | undefined): string {
     return map[key] ?? 'Décision de vérification ordonnance (OCR + règles).';
 }
 
+/** Ignore les réponses périmées quand plusieurs fiches sont ouvertes vite d’affilée. */
+let detailFetchGeneration = 0;
+
 async function openDetail(id: number) {
+    const gen = ++detailFetchGeneration;
     loadingDetail.value = true;
     showDetailModal.value = true;
     try {
         const r = await fetch(`/commandes/${id}`, {
-            headers: { Accept: 'application/json' },
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
         });
+        if (gen !== detailFetchGeneration) {
+            return;
+        }
+        if (!r.ok) {
+            detailCommande.value = null;
+            return;
+        }
         const json = await r.json();
+        if (gen !== detailFetchGeneration) {
+            return;
+        }
         detailCommande.value = json.commande;
     } catch {
+        if (gen !== detailFetchGeneration) {
+            return;
+        }
         detailCommande.value = null;
     } finally {
-        loadingDetail.value = false;
+        if (gen === detailFetchGeneration) {
+            loadingDetail.value = false;
+        }
     }
 }
 
@@ -566,11 +616,7 @@ function openValiderModal() {
 }
 
 function confirmValiderCommande() {
-    if (
-        !detailCommande.value ||
-        !detailCommande.value.montant_livraison ||
-        !detailCommande.value.mode_paiement
-    ) {
+    if (!detailCommande.value || !peutValiderCommandeEnAttente.value) {
         return;
     }
     const id = detailCommande.value.id;
@@ -913,7 +959,8 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                     <!-- Tabs design React -->
                     <div class="mb-6 flex gap-8 border-b-2 border-transparent">
                         <button
-                            class="relative pb-3 text-[16px] font-bold transition-colors"
+                            type="button"
+                            class="relative rounded-md pb-3 text-[16px] font-bold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#0d6efd]/40 focus-visible:ring-offset-2"
                             :class="
                                 activeTab === 'gestion'
                                     ? 'text-[#0d6efd]'
@@ -928,7 +975,8 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                             />
                         </button>
                         <button
-                            class="relative pb-3 text-[16px] font-bold transition-colors"
+                            type="button"
+                            class="relative rounded-md pb-3 text-[16px] font-bold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#0d6efd]/40 focus-visible:ring-offset-2"
                             :class="
                                 activeTab === 'statistiques'
                                     ? 'text-[#0d6efd]'
@@ -1114,29 +1162,48 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
 
                 <div
                     v-if="loadingDetail"
-                    class="flex h-full items-center justify-center p-12 text-muted-foreground"
+                    class="animate-in fade-in-0 slide-in-from-right-2 space-y-4 p-6 duration-200"
+                    aria-busy="true"
+                    aria-label="Chargement du détail commande"
                 >
-                    <svg
-                        class="mr-3 size-5 animate-spin text-[#0d6efd]"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                    >
-                        <circle
-                            class="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            stroke-width="4"
-                        ></circle>
-                        <path
-                            class="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                    </svg>
-                    Chargement...
+                    <div class="flex items-center gap-3 text-sm text-muted-foreground">
+                        <svg
+                            class="size-5 shrink-0 animate-spin text-[#0d6efd]"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <circle
+                                class="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                stroke-width="4"
+                            />
+                            <path
+                                class="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                        </svg>
+                        <span>Chargement…</span>
+                    </div>
+                    <div
+                        class="h-16 rounded-2xl bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 animate-pulse"
+                    />
+                    <div class="space-y-3">
+                        <div
+                            class="h-36 rounded-2xl bg-muted/70 animate-pulse"
+                        />
+                        <div
+                            class="h-28 rounded-2xl bg-muted/60 animate-pulse"
+                        />
+                        <div
+                            class="h-24 rounded-2xl bg-muted/50 animate-pulse"
+                        />
+                    </div>
                 </div>
 
                 <div v-else-if="detailCommande">
@@ -1222,6 +1289,77 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 Adresse :
                                 {{ detailCommande.pharmacie?.adresse || '-' }}
                             </p>
+                        </div>
+
+                        <div
+                            v-if="
+                                detailCommande.enfants?.length &&
+                                detailCommande.status === 'en_attente'
+                            "
+                            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                        >
+                            <h3
+                                class="mb-2 text-[14px] font-bold text-[#b4b4b4]"
+                            >
+                                Commandes associées (autres pharmacies)
+                            </h3>
+                            <p class="mb-3 text-[12px] leading-relaxed text-gray-500">
+                                Avant validation globale, le montant de livraison
+                                et le mode de paiement doivent être choisis pour
+                                chaque maillon encore « en attente ».
+                            </p>
+                            <ul class="space-y-2">
+                                <li
+                                    v-for="e in detailCommande.enfants"
+                                    :key="e.id"
+                                    class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 px-3 py-2"
+                                >
+                                    <div class="min-w-0 flex-1">
+                                        <p
+                                            class="text-[13px] font-bold text-gray-900"
+                                        >
+                                            {{ e.numero }}
+                                            <span
+                                                class="ml-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold capitalize"
+                                                :class="
+                                                    e.status === 'en_attente'
+                                                        ? 'bg-amber-100 text-amber-900'
+                                                        : 'bg-gray-100 text-gray-600'
+                                                "
+                                            >
+                                                {{
+                                                    getStatusLabel(e.status)
+                                                }}</span
+                                            >
+                                        </p>
+                                        <p
+                                            class="truncate text-[12px] text-gray-600"
+                                        >
+                                            {{
+                                                e.pharmacie?.designation ?? '—'
+                                            }}
+                                            <span
+                                                v-if="
+                                                    e.status ===
+                                                        'en_attente' &&
+                                                    (!e.montant_livraison ||
+                                                        !e.mode_paiement)
+                                                "
+                                                class="ml-1 font-medium text-amber-700"
+                                            >
+                                                — livraison / paiement manquant
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="shrink-0 rounded-lg bg-[#0d6efd]/10 px-3 py-1.5 text-[12px] font-bold text-[#0d6efd] transition-colors hover:bg-[#0d6efd]/20"
+                                        @click="openDetail(e.id)"
+                                    >
+                                        Ouvrir
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
 
                         <!-- Médicaments -->
@@ -1837,7 +1975,8 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                             enAttentePharmacieToutIndisponible ||
                                             !detailCommande.montant_livraison ||
                                             (!!detailCommande.montant_livraison &&
-                                                !detailCommande.mode_paiement)
+                                                !detailCommande.mode_paiement) ||
+                                            enfantEnAttenteSansPaiementComplet
                                         "
                                         class="flex flex-col gap-2"
                                     >
@@ -1871,6 +2010,20 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                             Choisissez un mode de paiement
                                             (section paiement ci-dessus) avant
                                             de valider.
+                                        </p>
+                                        <p
+                                            v-else-if="
+                                                enfantEnAttenteSansPaiementComplet
+                                            "
+                                            class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-[12px] font-medium text-amber-900"
+                                        >
+                                            Une ou plusieurs commandes associées
+                                            (autre pharmacie) sont encore en
+                                            attente sans frais de livraison ou
+                                            sans mode de paiement. Ouvrez chaque
+                                            fiche associée (recherche par N°) et
+                                            complétez ces champs avant de
+                                            valider l’ensemble.
                                         </p>
                                     </div>
                                     <div class="flex flex-col gap-3">
@@ -1978,7 +2131,8 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                     }}</span>
                     ? Le statut passera à « Validée » et la pharmacie pourra
                     préparer la commande. Les frais de livraison et le mode de
-                    paiement sont renseignés.
+                    paiement doivent être renseignés sur cette commande et sur
+                    toute commande liée encore en attente.
                 </p>
                 <DialogFooter
                     class="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
@@ -1994,10 +2148,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                     <Button
                         type="button"
                         class="rounded-[10px] bg-[#0d6efd] font-bold text-white hover:bg-blue-700"
-                        :disabled="
-                            !detailCommande?.montant_livraison ||
-                            !detailCommande?.mode_paiement
-                        "
+                        :disabled="!peutValiderCommandeEnAttente"
                         @click="confirmValiderCommande"
                     >
                         Confirmer la validation

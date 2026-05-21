@@ -46,6 +46,10 @@ const props = defineProps<{
         niches_labels?: string[];
         canal_acquisition?: string | null;
         canal_acquisition_label?: string | null;
+        /** Date de première promotion client (workflow commande terminé côté admin) */
+        promu_client_le?: string | null;
+        /** Prospect tant que promu_client_le est absent */
+        est_prospect?: boolean;
     };
 }>();
 
@@ -87,6 +91,20 @@ const tabClassActive =
         <div
             class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
         >
+            <p
+                v-if="client.est_prospect"
+                class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100"
+                role="status"
+            >
+                <span class="font-semibold">Prospect</span>
+                — ce contact figure dans la liste Prospects jusqu’à ce qu’au moins une
+                commande atteigne le statut
+                <span class="font-medium">Validée</span>
+                ou
+                <span class="font-medium">Retirée (livraison terminée)</span>
+                côté administrateur ; la promotion en client définitif se fait alors
+                automatiquement.
+            </p>
             <!-- En-tête maquette -->
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="flex flex-wrap items-center gap-4">

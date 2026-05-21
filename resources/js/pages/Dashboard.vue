@@ -28,12 +28,17 @@ const props = defineProps<{
     kpis: {
         revenuTotal: number;
         nbPharmacies: number;
+        nbPharmaciesActives: number;
         nbCommandes: number;
         nbClients: number;
+        nbReussies: number;
+        nbAnnulees: number;
+        panierMoyen: number;
         evolutionRevenu: number;
-        evolutionPharmacies: number;
+        evolutionPharmaciesActives: number;
         evolutionCommandes: number;
         evolutionClients: number;
+        evolutionPanierMoyen: number;
     };
     volumeParPharmacie: Array<{
         pharmacie: { designation: string } | null;
@@ -41,13 +46,42 @@ const props = defineProps<{
     }>;
     volumeParZone: Array<{ zone_name: string; total: number }>;
     revenusParJour?: Array<{ jour: string; label: string; total: number }>;
+    annulationsParMotif?: Array<{ slug: string; label: string; total: number }>;
+    tauxCommandes?: {
+        reussies: number;
+        annulees: number;
+        autres: number;
+        taux_reussite: number | null;
+        taux_annulation: number | null;
+    };
+    canauxAcquisition?: Array<{ canal: string; label: string; total: number }>;
+    topMedicaments?: Array<{
+        designation: string;
+        dosage: string | null;
+        forme: string | null;
+        ventes: number;
+    }>;
+    delais?: {
+        reponse_pharmacie_heures: number | null;
+        livraison_heures: number | null;
+        nb_reponse_pharmacie: number;
+        nb_livraison: number;
+    };
 }>();
 
 const period = computed(() => props.period ?? 'month');
 
-const kpiEvolutionHint = computed(() =>
-    period.value === 'week' ? 'vs semaine précédente' : 'vs mois précédent',
-);
+const periodLabel = computed(() => {
+    if (period.value === 'day') return "Aujourd'hui";
+    if (period.value === 'week') return 'Cette semaine';
+    return 'Ce mois';
+});
+
+const kpiEvolutionHint = computed(() => {
+    if (period.value === 'day') return 'vs hier';
+    if (period.value === 'week') return 'vs semaine précédente';
+    return 'vs mois précédent';
+});
 
 function setPeriod(p: string) {
     periodDropdownOpen.value = false;
@@ -128,6 +162,38 @@ const barChartScaleLabels = computed(() => {
 });
 
 const revenusParJour = computed(() => props.revenusParJour ?? []);
+const annulationsParMotif = computed(() => props.annulationsParMotif ?? []);
+const canauxAcquisition = computed(() => props.canauxAcquisition ?? []);
+const topMedicaments = computed(() => props.topMedicaments ?? []);
+const tauxCommandes = computed(
+    () =>
+        props.tauxCommandes ?? {
+            reussies: 0,
+            annulees: 0,
+            autres: 0,
+            taux_reussite: null,
+            taux_annulation: null,
+        },
+);
+const delais = computed(
+    () =>
+        props.delais ?? {
+            reponse_pharmacie_heures: null,
+            livraison_heures: null,
+            nb_reponse_pharmacie: 0,
+            nb_livraison: 0,
+        },
+);
+
+const maxAnnulationMotif = computed(() =>
+    Math.max(...annulationsParMotif.value.map((a) => a.total), 1),
+);
+const maxCanal = computed(() =>
+    Math.max(...canauxAcquisition.value.map((c) => c.total), 1),
+);
+const maxTopMedicament = computed(() =>
+    Math.max(...topMedicaments.value.map((m) => m.ventes), 1),
+);
 const maxRevenuJour = computed(() =>
     Math.max(...revenusParJour.value.map((r) => r.total), 1),
 );
@@ -140,6 +206,20 @@ const revenusScaleLabels = computed(() => {
     );
     return labels.length > 0 ? labels : [max];
 });
+
+function formatDelai(heures: number | null): string {
+    if (heures === null) return '—';
+    if (heures < 1) return `${Math.round(heures * 60)} min`;
+    return `${heures.toLocaleString('fr-FR')} h`;
+}
+
+function medicamentLabel(m: {
+    designation: string;
+    dosage: string | null;
+    forme: string | null;
+}): string {
+    return [m.designation, m.dosage, m.forme].filter(Boolean).join(' · ');
+}
 
 function formatRevenuShort(val: number): string {
     if (val >= 1_000_000) return `${Math.round(val / 1_000_000)}M`;
@@ -242,13 +322,19 @@ function getPiePath(
                         class="flex items-center gap-2 rounded-[13px] border border-gray-300 bg-white px-4 py-2 text-[14px] font-semibold text-gray-800 shadow-sm hover:bg-gray-50"
                         @click="periodDropdownOpen = !periodDropdownOpen"
                     >
-                        {{ period === 'week' ? 'Cette semaine' : 'Ce mois' }}
+                        {{ periodLabel }}
                         <ChevronDown class="size-4" />
                     </button>
                     <div
                         v-show="periodDropdownOpen"
                         class="absolute right-0 top-full z-20 mt-1 min-w-[160px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
                     >
+                        <button
+                            class="w-full px-4 py-2 text-left text-[14px] hover:bg-gray-100"
+                            @click="setPeriod('day')"
+                        >
+                            Aujourd'hui
+                        </button>
                         <button
                             class="w-full px-4 py-2 text-left text-[14px] hover:bg-gray-100"
                             @click="setPeriod('week')"
@@ -312,14 +398,14 @@ function getPiePath(
                     class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] relative overflow-hidden group hover:shadow-lg transition-shadow"
                 >
                     <h3 class="mb-6 text-[14px] font-extrabold text-[#5c5959]">
-                        Pharmacies
+                        Pharmacies partenaires
                     </h3>
                     <div class="mb-4 flex items-baseline gap-2">
                         <span class="text-[32px] font-extrabold text-black">{{
                             kpis.nbPharmacies
                         }}</span>
                         <span class="text-[14px] font-bold text-black"
-                            >Pharmacies de Jour</span
+                            >dont {{ kpis.nbPharmaciesActives }} actives</span
                         >
                     </div>
                     <div
@@ -328,17 +414,17 @@ function getPiePath(
                         <span
                             class="flex items-center gap-1 rounded-full border border-black/20 px-2 py-1"
                             :class="
-                                kpis.evolutionPharmacies >= 0
+                                kpis.evolutionPharmaciesActives >= 0
                                     ? 'text-black'
                                     : 'text-red-600'
                             "
                         >
                             <ArrowUpRight
-                                v-if="kpis.evolutionPharmacies >= 0"
+                                v-if="kpis.evolutionPharmaciesActives >= 0"
                                 class="size-3"
                             />
                             <ArrowDownRight v-else class="size-3" />
-                            {{ Math.abs(kpis.evolutionPharmacies) }}%
+                            {{ Math.abs(kpis.evolutionPharmaciesActives) }}%
                         </span>
                         <span class="text-[#5c5959]">{{
                             kpiEvolutionHint
@@ -388,7 +474,7 @@ function getPiePath(
                     class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] relative overflow-hidden group hover:shadow-lg transition-shadow"
                 >
                     <h3 class="mb-6 text-[14px] font-extrabold text-[#5c5959]">
-                        Patientèles
+                        Patientèles uniques
                     </h3>
                     <div class="mb-4 flex items-baseline gap-2">
                         <span class="text-[32px] font-extrabold text-black">{{
@@ -417,6 +503,88 @@ function getPiePath(
                             kpiEvolutionHint
                         }}</span>
                     </div>
+                </div>
+            </div>
+
+            <!-- KPIs secondaires Admin -->
+            <div
+                v-if="!isPharma"
+                class="mb-6 grid gap-4 grid-cols-1 sm:grid-cols-3"
+            >
+                <div
+                    class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                >
+                    <h3 class="mb-4 text-[14px] font-extrabold text-[#5c5959]">
+                        Panier moyen
+                    </h3>
+                    <div class="mb-3 flex items-baseline gap-2">
+                        <span class="text-[28px] font-extrabold text-black">{{
+                            Number(kpis.panierMoyen).toLocaleString('fr-FR')
+                        }}</span>
+                        <span class="text-[14px] font-bold text-black">XAF</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-[11px] font-semibold">
+                        <span
+                            class="flex items-center gap-1 rounded-full border border-black/20 px-2 py-1"
+                            :class="
+                                kpis.evolutionPanierMoyen >= 0
+                                    ? 'text-black'
+                                    : 'text-red-600'
+                            "
+                        >
+                            <ArrowUpRight
+                                v-if="kpis.evolutionPanierMoyen >= 0"
+                                class="size-3"
+                            />
+                            <ArrowDownRight v-else class="size-3" />
+                            {{ Math.abs(kpis.evolutionPanierMoyen) }}%
+                        </span>
+                        <span class="text-[#5c5959]">{{ kpiEvolutionHint }}</span>
+                    </div>
+                </div>
+
+                <div
+                    class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                >
+                    <h3 class="mb-4 text-[14px] font-extrabold text-[#5c5959]">
+                        Commandes réussies
+                    </h3>
+                    <div class="mb-3 flex items-baseline gap-2">
+                        <span class="text-[28px] font-extrabold text-black">{{
+                            kpis.nbReussies
+                        }}</span>
+                        <span class="text-[14px] font-bold text-black">/ {{ kpis.nbCommandes }}</span>
+                    </div>
+                    <p class="text-[12px] text-[#5c5959]">
+                        Taux de réussite :
+                        <span class="font-bold text-black">{{
+                            tauxCommandes.taux_reussite !== null
+                                ? `${tauxCommandes.taux_reussite}%`
+                                : '—'
+                        }}</span>
+                    </p>
+                </div>
+
+                <div
+                    class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                >
+                    <h3 class="mb-4 text-[14px] font-extrabold text-[#5c5959]">
+                        Annulations
+                    </h3>
+                    <div class="mb-3 flex items-baseline gap-2">
+                        <span class="text-[28px] font-extrabold text-black">{{
+                            kpis.nbAnnulees
+                        }}</span>
+                        <span class="text-[14px] font-bold text-black">cmd</span>
+                    </div>
+                    <p class="text-[12px] text-[#5c5959]">
+                        Taux d'annulation :
+                        <span class="font-bold text-black">{{
+                            tauxCommandes.taux_annulation !== null
+                                ? `${tauxCommandes.taux_annulation}%`
+                                : '—'
+                        }}</span>
+                    </p>
                 </div>
             </div>
 
@@ -553,9 +721,7 @@ function getPiePath(
                         <span
                             class="rounded-[13px] border border-black/30 bg-gray-50 px-3 py-1 text-[14px] font-semibold text-gray-700"
                         >
-                            {{
-                                period === 'week' ? 'Cette semaine' : 'Ce mois'
-                            }}
+                            {{ periodLabel }}
                         </span>
                     </div>
                     <div
@@ -611,9 +777,7 @@ function getPiePath(
                         <span
                             class="rounded-[13px] border border-black/30 bg-gray-50 px-3 py-1 text-[14px] font-semibold text-gray-700"
                         >
-                            {{
-                                period === 'week' ? 'Cette semaine' : 'Ce mois'
-                            }}
+                            {{ periodLabel }}
                         </span>
                     </div>
 
@@ -700,6 +864,195 @@ function getPiePath(
                 </div>
             </div>
 
+            <!-- Analyses complémentaires Admin -->
+            <div
+                v-if="!isPharma"
+                class="mt-6 grid gap-6 lg:grid-cols-2"
+            >
+                <!-- Annulations par motif -->
+                <div
+                    class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                >
+                    <div class="mb-6 flex items-center justify-between">
+                        <h3 class="text-[20px] font-bold text-black">
+                            Annulations par motif
+                        </h3>
+                        <span
+                            class="rounded-[13px] border border-black/30 bg-gray-50 px-3 py-1 text-[14px] font-semibold text-gray-700"
+                        >
+                            {{ periodLabel }}
+                        </span>
+                    </div>
+                    <div
+                        v-if="annulationsParMotif.length === 0"
+                        class="py-8 text-center text-[14px] text-gray-500"
+                    >
+                        Aucune annulation sur la période
+                    </div>
+                    <div v-else class="flex flex-col gap-4">
+                        <div
+                            v-for="item in annulationsParMotif"
+                            :key="item.slug"
+                            class="flex items-center gap-3"
+                        >
+                            <span
+                                class="w-[40%] truncate text-[13px] font-semibold text-gray-800"
+                                :title="item.label"
+                            >{{ item.label }}</span>
+                            <div
+                                class="h-[8px] flex-1 overflow-hidden rounded-full bg-gray-200"
+                            >
+                                <div
+                                    class="h-full rounded-full bg-[#DC3545] transition-all"
+                                    :style="{
+                                        width: `${(item.total / maxAnnulationMotif) * 100}%`,
+                                    }"
+                                />
+                            </div>
+                            <span class="w-8 text-right text-[13px] font-bold text-gray-800">{{
+                                item.total
+                            }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Canaux d'acquisition -->
+                <div
+                    class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                >
+                    <div class="mb-6 flex items-center justify-between">
+                        <h3 class="text-[20px] font-bold text-black">
+                            Canaux d'acquisition
+                        </h3>
+                        <span
+                            class="rounded-[13px] border border-black/30 bg-gray-50 px-3 py-1 text-[14px] font-semibold text-gray-700"
+                        >
+                            {{ periodLabel }}
+                        </span>
+                    </div>
+                    <div
+                        v-if="canauxAcquisition.length === 0"
+                        class="py-8 text-center text-[14px] text-gray-500"
+                    >
+                        Aucun client sur la période
+                    </div>
+                    <div v-else class="flex flex-col gap-4">
+                        <div
+                            v-for="item in canauxAcquisition"
+                            :key="item.canal"
+                            class="flex items-center gap-3"
+                        >
+                            <span
+                                class="w-[40%] truncate text-[13px] font-semibold text-gray-800"
+                            >{{ item.label }}</span>
+                            <div
+                                class="h-[8px] flex-1 overflow-hidden rounded-full bg-gray-200"
+                            >
+                                <div
+                                    class="h-full rounded-full bg-[#3995D2] transition-all"
+                                    :style="{
+                                        width: `${(item.total / maxCanal) * 100}%`,
+                                    }"
+                                />
+                            </div>
+                            <span class="w-8 text-right text-[13px] font-bold text-gray-800">{{
+                                item.total
+                            }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Délais moyens -->
+                <div
+                    class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                >
+                    <div class="mb-6 flex items-center justify-between">
+                        <h3 class="text-[20px] font-bold text-black">
+                            Délais moyens
+                        </h3>
+                        <span
+                            class="rounded-[13px] border border-black/30 bg-gray-50 px-3 py-1 text-[14px] font-semibold text-gray-700"
+                        >
+                            {{ periodLabel }}
+                        </span>
+                    </div>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="rounded-[16px] bg-gray-50 p-4">
+                            <p class="mb-2 text-[13px] font-semibold text-gray-600">
+                                Réponse pharmacie
+                            </p>
+                            <p class="text-[28px] font-extrabold text-black">
+                                {{ formatDelai(delais.reponse_pharmacie_heures) }}
+                            </p>
+                            <p class="mt-1 text-[11px] text-gray-500">
+                                {{ delais.nb_reponse_pharmacie }} commande(s)
+                            </p>
+                        </div>
+                        <div class="rounded-[16px] bg-gray-50 p-4">
+                            <p class="mb-2 text-[13px] font-semibold text-gray-600">
+                                Livraison (validation → livrée)
+                            </p>
+                            <p class="text-[28px] font-extrabold text-black">
+                                {{ formatDelai(delais.livraison_heures) }}
+                            </p>
+                            <p class="mt-1 text-[11px] text-gray-500">
+                                {{ delais.nb_livraison }} commande(s)
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top médicaments -->
+                <div
+                    class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                >
+                    <div class="mb-6 flex items-center justify-between">
+                        <h3 class="text-[20px] font-bold text-black">
+                            Top médicaments
+                        </h3>
+                        <span
+                            class="rounded-[13px] border border-black/30 bg-gray-50 px-3 py-1 text-[14px] font-semibold text-gray-700"
+                        >
+                            {{ periodLabel }}
+                        </span>
+                    </div>
+                    <div
+                        v-if="topMedicaments.length === 0"
+                        class="py-8 text-center text-[14px] text-gray-500"
+                    >
+                        Aucune vente sur la période
+                    </div>
+                    <div v-else class="flex flex-col gap-3">
+                        <div
+                            v-for="(med, i) in topMedicaments"
+                            :key="i"
+                            class="flex items-center gap-3"
+                        >
+                            <span class="w-6 text-[13px] font-bold text-gray-500">{{
+                                i + 1
+                            }}</span>
+                            <span
+                                class="flex-1 truncate text-[13px] font-semibold text-gray-800"
+                                :title="medicamentLabel(med)"
+                            >{{ medicamentLabel(med) }}</span>
+                            <div
+                                class="hidden h-[6px] w-24 overflow-hidden rounded-full bg-gray-200 sm:block"
+                            >
+                                <div
+                                    class="h-full rounded-full bg-[#5bb66e]"
+                                    :style="{
+                                        width: `${(med.ventes / maxTopMedicament) * 100}%`,
+                                    }"
+                                />
+                            </div>
+                            <span class="w-10 text-right text-[13px] font-bold text-gray-800">{{
+                                med.ventes
+                            }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Charts Pharmacie -->
             <div v-if="isPharma">
                 <div
@@ -712,9 +1065,7 @@ function getPiePath(
                         <span
                             class="rounded-full border border-gray-400 bg-white/80 px-4 py-1.5 text-[13px] font-bold text-gray-900"
                         >
-                            {{
-                                period === 'week' ? 'Cette semaine' : 'Ce mois'
-                            }}
+                            {{ periodLabel }}
                         </span>
                     </div>
                     <!-- Chart barres revenues -->
@@ -755,6 +1106,75 @@ function getPiePath(
                                     >{{ item.label }}</span
                                 >
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Délais pharmacie -->
+                <div
+                    class="mt-6 rounded-[30px] bg-[#E1EFE8] backdrop-blur-sm p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.1)]"
+                >
+                    <div class="mb-6 flex items-center justify-between">
+                        <h3 class="text-[20px] font-extrabold text-gray-900">
+                            Délais moyens
+                        </h3>
+                        <span
+                            class="rounded-full border border-gray-400 bg-white/80 px-4 py-1.5 text-[13px] font-bold text-gray-900"
+                        >
+                            {{ periodLabel }}
+                        </span>
+                    </div>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="rounded-[16px] bg-white/80 p-4">
+                            <p class="mb-2 text-[13px] font-semibold text-gray-600">
+                                Réponse pharmacie
+                            </p>
+                            <p class="text-[28px] font-extrabold text-gray-900">
+                                {{ formatDelai(delais.reponse_pharmacie_heures) }}
+                            </p>
+                        </div>
+                        <div class="rounded-[16px] bg-white/80 p-4">
+                            <p class="mb-2 text-[13px] font-semibold text-gray-600">
+                                Livraison
+                            </p>
+                            <p class="text-[28px] font-extrabold text-gray-900">
+                                {{ formatDelai(delais.livraison_heures) }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top médicaments pharmacie -->
+                <div
+                    v-if="topMedicaments.length > 0"
+                    class="mt-6 rounded-[30px] bg-[#E1EFE8] backdrop-blur-sm p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.1)]"
+                >
+                    <div class="mb-6 flex items-center justify-between">
+                        <h3 class="text-[20px] font-extrabold text-gray-900">
+                            Top médicaments
+                        </h3>
+                        <span
+                            class="rounded-full border border-gray-400 bg-white/80 px-4 py-1.5 text-[13px] font-bold text-gray-900"
+                        >
+                            {{ periodLabel }}
+                        </span>
+                    </div>
+                    <div class="flex flex-col gap-3">
+                        <div
+                            v-for="(med, i) in topMedicaments"
+                            :key="i"
+                            class="flex items-center gap-3"
+                        >
+                            <span class="w-6 text-[13px] font-bold text-gray-500">{{
+                                i + 1
+                            }}</span>
+                            <span
+                                class="flex-1 truncate text-[13px] font-semibold text-gray-800"
+                                :title="medicamentLabel(med)"
+                            >{{ medicamentLabel(med) }}</span>
+                            <span class="text-[13px] font-bold text-gray-800">{{
+                                med.ventes
+                            }}</span>
                         </div>
                     </div>
                 </div>

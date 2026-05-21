@@ -47,11 +47,13 @@ class Client extends Model
 
     protected $fillable = [
         'nom', 'prenom', 'tel', 'tel_secondaire', 'adresse', 'arrondissement', 'sexe', 'email', 'zone_id', 'client_depuis',
+        'promu_client_le',
         'niches', 'canal_acquisition',
     ];
 
     protected $casts = [
         'client_depuis' => 'date',
+        'promu_client_le' => 'datetime',
         'niches' => 'array',
     ];
 

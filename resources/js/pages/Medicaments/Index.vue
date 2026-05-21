@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
-    Search,
-    Link2,
-    Package,
-    LayoutGrid,
-    List,
+    AlertTriangle,
     Database,
+    LayoutGrid,
+    Link2,
+    List,
+    Package,
     Pencil,
-    Trash2,
     Plus,
+    Search,
+    Trash2,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
@@ -68,6 +69,12 @@ type MedFormState = {
 };
 
 const TYPE_DB_OPTIONS = ['Vente libre', 'Sur ordonnance'] as const;
+
+/** Aligné avec `MedicamentCatalogueMaintenanceController::CLEAR_CONFIRMATION_PHRASE`. */
+const CATALOG_CLEAR_CONFIRMATION_PHRASE = 'VIDAGE CATALOGUE';
+
+/** Aligné avec `DbMedicamentController::PURGE_ALL_CONFIRMATION_PHRASE`. */
+const DB_PURGE_CONFIRMATION_PHRASE = 'VIDER BASE MEDICAMENT';
 
 function emptyMedForm(): MedFormState {
     return {
@@ -146,6 +153,17 @@ const medModalMode = ref<'create' | 'edit'>('create');
 const editingId = ref<number | null>(null);
 const medForm = ref<MedFormState>(emptyMedForm());
 const selectedDbMedicamentIds = ref<Set<number>>(new Set());
+const selectedProduitIds = ref<Set<number>>(new Set());
+
+const clearCatalogModalOpen = ref(false);
+const clearCatalogMode = ref<'produits_seulement' | 'commandes_et_produits'>(
+    'produits_seulement',
+);
+const purgeDbMedicamentsCheckbox = ref(false);
+const clearConfirmInput = ref('');
+
+const dbPurgeModalOpen = ref(false);
+const dbPurgeConfirmInput = ref('');
 
 watch(
     () => props.filters.search,
@@ -158,6 +176,18 @@ watch(
     () => props.onglet,
     (o) => {
         if (o === 'db_medicament') activeTab.value = 'db_medicament';
+    },
+);
+
+watch(
+    () => props.produits?.data ?? [],
+    (rows) => {
+        const pageIds = new Set(rows.map((r) => r.id));
+        const next = new Set<number>();
+        selectedProduitIds.value.forEach((id) => {
+            if (pageIds.has(id)) next.add(id);
+        });
+        selectedProduitIds.value = next;
     },
 );
 
@@ -188,6 +218,123 @@ function goCatalogueTab() {
             },
         );
     }
+}
+
+function maintenanceMedicamentsPayload(
+    extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+    const out: Record<string, unknown> = { ...extra };
+    if (props.filters.search && props.filters.search.trim() !== '')
+        out.search = props.filters.search.trim();
+    if (props.filters.type && props.filters.type.trim() !== '')
+        out.type = props.filters.type;
+    if (props.filters.pharmacie_id && props.filters.pharmacie_id.trim() !== '')
+        out.pharmacie_id = props.filters.pharmacie_id;
+    if (props.filters.tri && props.filters.tri.trim() !== '')
+        out.tri = props.filters.tri;
+    return out;
+}
+
+function toggleProduitRow(id: number) {
+    const next = new Set(selectedProduitIds.value);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selectedProduitIds.value = next;
+}
+
+function toggleAllProduitsPage() {
+    const rows = props.produits.data;
+    const allOnPage =
+        rows.length > 0 && rows.every((r) => selectedProduitIds.value.has(r.id));
+    const next = new Set(selectedProduitIds.value);
+    if (allOnPage) rows.forEach((r) => next.delete(r.id));
+    else rows.forEach((r) => next.add(r.id));
+    selectedProduitIds.value = next;
+}
+
+function destroySelectedProduits() {
+    const ids = [...selectedProduitIds.value];
+    if (!ids.length) return;
+    if (
+        !confirm(
+            `${ids.length} produit(s) seront définitivement retirés du catalogue. Les lignes pivot liées aux commandes seront supprimées en cascade.`,
+        )
+    )
+        return;
+    router.post(
+        '/medicaments/catalogue/produits/destroy-bulk',
+        maintenanceMedicamentsPayload({ ids }),
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                selectedProduitIds.value = new Set();
+            },
+        },
+    );
+}
+
+function openClearCatalogModal() {
+    clearCatalogMode.value = 'produits_seulement';
+    purgeDbMedicamentsCheckbox.value = false;
+    clearConfirmInput.value = '';
+    clearCatalogModalOpen.value = true;
+}
+
+function closeClearCatalogModal() {
+    clearCatalogModalOpen.value = false;
+}
+
+const peutSoumettreVidageCatalogue = computed(() => {
+    return clearConfirmInput.value.trim() === CATALOG_CLEAR_CONFIRMATION_PHRASE;
+});
+
+function submitClearCatalogue() {
+    if (!peutSoumettreVidageCatalogue.value) return;
+    router.post(
+        '/medicaments/catalogue/clear',
+        maintenanceMedicamentsPayload({
+            catalogue_mode: clearCatalogMode.value,
+            purge_db_medicaments: purgeDbMedicamentsCheckbox.value,
+            confirmation: clearConfirmInput.value.trim(),
+        }),
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                closeClearCatalogModal();
+                selectedProduitIds.value = new Set();
+                clearConfirmInput.value = '';
+            },
+        },
+    );
+}
+
+function openDbPurgeModal() {
+    dbPurgeConfirmInput.value = '';
+    dbPurgeModalOpen.value = true;
+}
+
+function closeDbPurgeModal() {
+    dbPurgeModalOpen.value = false;
+}
+
+const peutSoumettreDbPurge = computed(
+    () => dbPurgeConfirmInput.value.trim() === DB_PURGE_CONFIRMATION_PHRASE,
+);
+
+function submitDbPurgeAll() {
+    if (!peutSoumettreDbPurge.value) return;
+    router.post(
+        '/medicaments/db-medicaments/purge-all',
+        { confirmation: dbPurgeConfirmInput.value.trim() },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                selectedDbMedicamentIds.value = new Set();
+                closeDbPurgeModal();
+                dbPurgeConfirmInput.value = '';
+            },
+        },
+    );
 }
 
 function toggleDbMedicamentRow(id: number) {
@@ -526,6 +673,58 @@ const badgeTotal = computed(() =>
                     </div>
                 </form>
 
+                <div
+                    v-if="isAdmin"
+                    class="rounded-xl border border-destructive/30 bg-destructive/5 p-4 dark:border-destructive/40 dark:bg-destructive/10"
+                >
+                    <div
+                        class="flex flex-wrap items-start justify-between gap-3"
+                    >
+                        <div class="flex min-w-0 flex-1 gap-3">
+                            <AlertTriangle
+                                class="mt-0.5 size-5 shrink-0 text-destructive"
+                            />
+                            <div class="min-w-0 space-y-2 text-sm">
+                                <p
+                                    class="font-semibold leading-tight text-foreground"
+                                >
+                                    Zone critique — catalogue
+                                </p>
+                                <p class="text-muted-foreground">
+                                    Sélectionnez des fiches sur la page puis
+                                    supprimez tout ou partiellement, ou utilisez
+                                    le vidage global (avec choix conservant ou
+                                    supprimant aussi les commandes).
+                                </p>
+                            </div>
+                        </div>
+                        <div
+                            class="flex flex-shrink-0 flex-wrap items-center justify-end gap-2"
+                        >
+                            <Button
+                                v-if="selectedProduitIds.size > 0"
+                                variant="destructive"
+                                class="h-10 gap-2"
+                                type="button"
+                                @click="destroySelectedProduits"
+                            >
+                                <Trash2 class="size-4" />
+                                Supprimer la sélection ({{
+                                    selectedProduitIds.size
+                                }})
+                            </Button>
+                            <Button
+                                variant="outline"
+                                class="h-10 border-destructive/50 text-destructive hover:bg-destructive/10"
+                                type="button"
+                                @click="openClearCatalogModal"
+                            >
+                                Vidage catalogue…
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Vue cartes -->
                 <div
                     v-if="vueMode === 'cartes'"
@@ -536,20 +735,36 @@ const badgeTotal = computed(() =>
                         :key="p.id"
                         class="rounded-xl border border-white/80 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/95"
                     >
-                        <div class="mb-3 flex items-start justify-between">
-                            <div class="flex items-center gap-2">
-                                <Link2
-                                    class="size-4 shrink-0 text-muted-foreground"
+                        <div class="mb-3 flex items-start justify-between gap-3">
+                            <div class="flex min-w-0 flex-1 items-start gap-2">
+                                <input
+                                    v-if="isAdmin"
+                                    type="checkbox"
+                                    class="mt-1 size-4 shrink-0 rounded border-input"
+                                    :checked="selectedProduitIds.has(p.id)"
+                                    aria-label="Sélectionner ce produit catalogue"
+                                    @click.stop.prevent="toggleProduitRow(p.id)"
                                 />
-                                <div>
-                                    <h3 class="font-semibold text-foreground">
-                                        {{ designationComplete(p) }}
-                                    </h3>
-                                    <span
-                                        class="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800 dark:bg-blue-900/30"
-                                    >
-                                        {{ p.type || 'Vente libre' }}
-                                    </span>
+                                <div class="flex min-w-0 flex-1 items-start gap-2">
+                                    <Link2
+                                        class="mt-1 size-4 shrink-0 text-muted-foreground"
+                                    />
+                                    <div class="min-w-0">
+                                        <h3
+                                            class="font-semibold text-foreground"
+                                        >
+                                            {{
+                                                designationComplete(p)
+                                            }}
+                                        </h3>
+                                        <span
+                                            class="mt-1 inline-block rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800 dark:bg-blue-900/30"
+                                        >
+                                            {{
+                                                p.type || 'Vente libre'
+                                            }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                             <Button variant="secondary" size="sm" as-child>
@@ -644,6 +859,27 @@ const badgeTotal = computed(() =>
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b bg-muted/50">
+                                    <th
+                                        v-if="isAdmin"
+                                        class="w-10 px-2 py-3 text-left font-medium"
+                                    >
+                                    <input
+                                        type="checkbox"
+                                        class="size-4 rounded border-input"
+                                        :checked="
+                                            produits.data.length > 0 &&
+                                            produits.data.every((r) =>
+                                                selectedProduitIds.has(
+                                                    r.id,
+                                                ),
+                                            )
+                                        "
+                                        aria-label="Sélectionner tous les médicaments de la page"
+                                        @click.stop.prevent="
+                                            toggleAllProduitsPage()
+                                        "
+                                    />
+                                    </th>
                                     <th class="px-4 py-3 text-left font-medium">
                                         Médicament
                                     </th>
@@ -684,6 +920,19 @@ const badgeTotal = computed(() =>
                                     :key="p.id"
                                     class="border-b last:border-0 hover:bg-muted/30"
                                 >
+                                    <td v-if="isAdmin" class="px-2 py-3">
+                                        <input
+                                            type="checkbox"
+                                            class="size-4 rounded border-input"
+                                            :checked="
+                                                selectedProduitIds.has(p.id)
+                                            "
+                                            :aria-label="`Sélectionner ${designationComplete(p)}`"
+                                            @click.stop.prevent="
+                                                toggleProduitRow(p.id)
+                                            "
+                                        />
+                                    </td>
                                     <td class="px-4 py-3 font-medium">
                                         {{ designationComplete(p) }}
                                     </td>
@@ -750,6 +999,127 @@ const badgeTotal = computed(() =>
                         </table>
                     </div>
                 </div>
+
+                <Dialog
+                    :open="clearCatalogModalOpen"
+                    @update:open="
+                        (v: boolean) => (!v ? closeClearCatalogModal() : null)
+                    "
+                >
+                    <DialogContent
+                        class="flex max-h-[min(90vh,760px)] max-w-xl flex-col gap-0 overflow-hidden p-0"
+                    >
+                        <DialogHeader
+                            class="shrink-0 border-b px-6 py-4 text-left"
+                        >
+                            <DialogTitle class="text-lg text-destructive">
+                                Vidage du catalogue médicaments
+                            </DialogTitle>
+                            <p class="mt-2 text-sm text-muted-foreground">
+                                Ces opérations sont irréversibles. Choisissez le
+                                périmètre puis saisissez la phrase exacte de
+                                confirmation.
+                            </p>
+                        </DialogHeader>
+                        <div class="flex-1 space-y-5 overflow-y-auto px-6 py-4">
+                            <div class="space-y-3 text-sm">
+                                <label class="flex cursor-pointer gap-3">
+                                    <input
+                                        v-model="clearCatalogMode"
+                                        type="radio"
+                                        value="produits_seulement"
+                                        class="mt-1"
+                                    />
+                                    <span>
+                                        <strong
+                                            >Catalogue seul · conserver les
+                                            commandes</strong
+                                        >
+                                        <span
+                                            class="mt-1 block text-muted-foreground"
+                                        >
+                                            Supprime toutes les fiches catalogue.
+                                            Les lignes médicaments des commandes
+                                            sont retirées automatiquement (FK en
+                                            cascade). Les en-têtes de commandes
+                                            restent en base.
+                                        </span>
+                                    </span>
+                                </label>
+                                <label class="flex cursor-pointer gap-3">
+                                    <input
+                                        v-model="clearCatalogMode"
+                                        type="radio"
+                                        value="commandes_et_produits"
+                                        class="mt-1"
+                                    />
+                                    <span>
+                                        <strong>Commandes et catalogue</strong>
+                                        <span
+                                            class="mt-1 block text-muted-foreground"
+                                        >
+                                            Supprime <strong>toutes</strong>
+                                            les commandes, puis toutes les
+                                            ordonnances et leurs fichiers joints,
+                                            puis vide le catalogue produits.
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                            <label
+                                class="flex cursor-pointer items-start gap-2 rounded-lg border border-border bg-muted/20 p-3 text-sm"
+                            >
+                                <input
+                                    v-model="purgeDbMedicamentsCheckbox"
+                                    type="checkbox"
+                                    class="mt-0.5 size-4 rounded border-input"
+                                />
+                                <span>
+                                    Également vider la base références
+                                    <strong>DB médicament</strong> (onglet
+                                    séparé, module isolé).
+                                </span>
+                            </label>
+                            <div>
+                                <Label class="text-xs font-medium">
+                                    Tapez&nbsp;
+                                    <code
+                                        class="rounded bg-muted px-1 py-0.5 text-xs"
+                                        >{{ CATALOG_CLEAR_CONFIRMATION_PHRASE
+                                        }}</code
+                                    >&nbsp;pour confirmer
+                                </Label>
+                                <Input
+                                    v-model="clearConfirmInput"
+                                    class="mt-1.5"
+                                    autocomplete="off"
+                                    autocapitalize="characters"
+                                    :placeholder="
+                                        CATALOG_CLEAR_CONFIRMATION_PHRASE
+                                    "
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter
+                            class="shrink-0 gap-2 border-t bg-muted/30 px-6 py-4 sm:justify-between"
+                        >
+                            <Button
+                                type="button"
+                                variant="outline"
+                                @click="closeClearCatalogModal"
+                                >Annuler</Button
+                            >
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                :disabled="!peutSoumettreVidageCatalogue"
+                                @click="submitClearCatalogue"
+                            >
+                                Exécuter le vidage
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
                 <!-- Pagination -->
                 <div
@@ -843,12 +1213,23 @@ const badgeTotal = computed(() =>
                             "
                             variant="destructive"
                             class="h-10 gap-2"
+                            type="button"
                             @click="destroySelectedDbMedicaments"
                         >
                             <Trash2 class="size-4" />
                             Supprimer la sélection ({{
                                 selectedDbMedicamentIds.size
                             }})
+                        </Button>
+                        <Button
+                            v-if="isAdmin && dbMedicaments.total > 0"
+                            variant="outline"
+                            class="h-10 gap-2 border-destructive/50 text-destructive hover:bg-destructive/10"
+                            type="button"
+                            @click="openDbPurgeModal"
+                        >
+                            <Trash2 class="size-4" />
+                            Vider toute la base
                         </Button>
                         <Button
                             v-if="isAdmin"
@@ -1195,6 +1576,63 @@ const badgeTotal = computed(() =>
                                         ? 'Créer'
                                         : 'Enregistrer'
                                 }}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog
+                    :open="dbPurgeModalOpen"
+                    @update:open="
+                        (v: boolean) => (!v ? closeDbPurgeModal() : null)
+                    "
+                >
+                    <DialogContent class="flex max-w-md flex-col gap-0 overflow-hidden p-0">
+                        <DialogHeader class="border-b px-6 py-4 text-left">
+                            <DialogTitle class="text-lg text-destructive">
+                                Vider toute la base locale
+                            </DialogTitle>
+                            <p class="mt-2 text-sm text-muted-foreground">
+                                Supprime définitivement toutes les entrées de la
+                                base « DB médicament », quel que soit le numéro
+                                de page.
+                            </p>
+                        </DialogHeader>
+                        <div class="space-y-3 px-6 py-4">
+                            <div>
+                                <Label class="text-xs font-medium">
+                                    Tapez&nbsp;
+                                    <code
+                                        class="rounded bg-muted px-1 py-0.5 text-xs"
+                                        >{{ DB_PURGE_CONFIRMATION_PHRASE
+                                        }}</code
+                                    >&nbsp;pour confirmer
+                                </Label>
+                                <Input
+                                    v-model="dbPurgeConfirmInput"
+                                    class="mt-1.5"
+                                    autocomplete="off"
+                                    autocapitalize="characters"
+                                    :placeholder="DB_PURGE_CONFIRMATION_PHRASE"
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter
+                            class="gap-2 border-t bg-muted/30 px-6 py-4 sm:justify-between"
+                        >
+                            <Button
+                                type="button"
+                                variant="outline"
+                                @click="closeDbPurgeModal"
+                                >Annuler</Button
+                            >
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                :disabled="!peutSoumettreDbPurge"
+                                @click="submitDbPurgeAll"
+                            >
+                                Tout supprimer
                             </Button>
                         </DialogFooter>
                     </DialogContent>

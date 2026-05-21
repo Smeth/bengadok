@@ -9,11 +9,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Commande extends Model
 {
+    /** Statuts considérés comme commande livrée avec succès (stats dashboard). */
+    public const STATUTS_REUSSIS = ['retiree', 'livree'];
+
     protected $fillable = [
         'numero', 'client_id', 'pharmacie_id', 'parent_id', 'relance_de_commande_id', 'pharmacie_refusee_id', 'ordonnance_id',
         'mode_paiement_id', 'livreur_id', 'montant_livraison_id',
         'date', 'heurs', 'commentaire', 'commentaire_pharmacie', 'prix_total', 'prix_medicaments',
-        'beneficiaire', 'designation', 'status', 'status_pharmacie', 'acceptation_client', 'motif_annulation', 'note_annulation',
+        'beneficiaire', 'designation', 'status', 'status_pharmacie', 'dispo_pharmacie_at', 'validee_admin_at', 'livree_at',
+        'acceptation_client', 'motif_annulation', 'note_annulation',
     ];
 
     protected $casts = [
@@ -21,6 +25,9 @@ class Commande extends Model
         'prix_total' => 'decimal:2',
         'prix_medicaments' => 'decimal:2',
         'acceptation_client' => 'boolean',
+        'dispo_pharmacie_at' => 'datetime',
+        'validee_admin_at' => 'datetime',
+        'livree_at' => 'datetime',
     ];
 
     // Statuts côté administrateurs

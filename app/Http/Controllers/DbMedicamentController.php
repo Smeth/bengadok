@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\DbMedicament;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Gestion de la base locale DB médicament.
@@ -12,6 +13,9 @@ use Illuminate\Http\Request;
  */
 class DbMedicamentController extends Controller
 {
+    /** Phrase à saisir pour confirmer le vidage intégral de la base locale. */
+    public const PURGE_ALL_CONFIRMATION_PHRASE = 'VIDER BASE MEDICAMENT';
+
     public function store(Request $request): RedirectResponse
     {
         $this->authorizeAdmin($request);
@@ -80,6 +84,23 @@ class DbMedicamentController extends Controller
 
         return redirect()->route('medicaments.index', ['onglet' => 'db_medicament'])
             ->with('status', 'Référence supprimée.');
+    }
+
+    public function purgeAll(Request $request): RedirectResponse
+    {
+        $this->authorizeAdmin($request);
+
+        $request->validate([
+            'confirmation' => ['required', Rule::in([self::PURGE_ALL_CONFIRMATION_PHRASE])],
+        ]);
+
+        $count = DbMedicament::query()->count();
+        DbMedicament::query()->delete();
+
+        return redirect()->route('medicaments.index', ['onglet' => 'db_medicament'])
+            ->with('status', $count > 0
+                ? sprintf('Base locale médicaments vidée (%d entrée(s)).', $count)
+                : 'La base locale médicaments était déjà vide.');
     }
 
     private function authorizeAdmin(Request $request): void

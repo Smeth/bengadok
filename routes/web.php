@@ -7,6 +7,7 @@ use App\Http\Controllers\CommandeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DbMedicamentController;
 use App\Http\Controllers\DokPharmaController;
+use App\Http\Controllers\MedicamentCatalogueMaintenanceController;
 use App\Http\Controllers\MedicamentController;
 use App\Http\Controllers\MedicamentDoublonController;
 use App\Http\Controllers\PharmacieController;
@@ -43,7 +44,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('doublons/{groupe}/ignorer', [MedicamentDoublonController::class, 'ignorer'])->name('doublons.ignorer');
         Route::patch('doublons/{groupe}/verifier', [MedicamentDoublonController::class, 'verifier'])->name('doublons.verifier');
         Route::patch('doublons/{groupe}/fusionner', [MedicamentDoublonController::class, 'fusionner'])->name('doublons.fusionner');
+        Route::post('catalogue/produits/destroy-bulk', [MedicamentCatalogueMaintenanceController::class, 'destroyProduitBulk'])->name('catalogue.produits.destroy-bulk')->middleware('role:admin|super_admin');
+        Route::post('catalogue/clear', [MedicamentCatalogueMaintenanceController::class, 'clearCatalogue'])->name('catalogue.clear')->middleware('role:admin|super_admin');
         Route::post('db-medicaments/destroy-bulk', [DbMedicamentController::class, 'destroyBulk'])->name('db-medicaments.destroy-bulk')->middleware('role:admin|super_admin');
+        Route::post('db-medicaments/purge-all', [DbMedicamentController::class, 'purgeAll'])->name('db-medicaments.purge-all')->middleware('role:admin|super_admin');
         Route::post('db-medicaments', [DbMedicamentController::class, 'store'])->name('db-medicaments.store')->middleware('role:admin|super_admin');
         Route::patch('db-medicaments/{dbMedicament}', [DbMedicamentController::class, 'update'])->name('db-medicaments.update')->middleware('role:admin|super_admin');
         Route::delete('db-medicaments/{dbMedicament}', [DbMedicamentController::class, 'destroy'])->name('db-medicaments.destroy')->middleware('role:admin|super_admin');
@@ -51,6 +55,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::prefix('clients')->name('clients.')->group(function () {
         Route::get('/', [ClientController::class, 'index'])->name('index');
+        Route::get('prospects', [ClientController::class, 'prospects'])->name('prospects');
         Route::get('doublons', [ClientDoublonController::class, 'index'])->name('doublons');
         Route::patch('doublons/{groupe}/ignorer', [ClientDoublonController::class, 'ignorer'])->name('doublons.ignorer');
         Route::patch('doublons/{groupe}/verifier', [ClientDoublonController::class, 'verifier'])->name('doublons.verifier');

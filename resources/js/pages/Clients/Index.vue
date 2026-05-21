@@ -122,6 +122,12 @@ function nomComplet(c: Client) {
                         Liste des clients
                     </button>
                     <Link
+                        href="/clients/prospects"
+                        class="rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-white/80 text-muted-foreground hover:bg-white"
+                    >
+                        Prospects
+                    </Link>
+                    <Link
                         href="/clients/doublons"
                         class="rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-white/80 text-muted-foreground hover:bg-white"
                     >

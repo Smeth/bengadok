@@ -3,8 +3,6 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import { RotateCcw, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -17,6 +15,8 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 

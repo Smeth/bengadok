@@ -41,7 +41,7 @@ class ClientController extends Controller
         $query = Client::with([
             'zone',
             'commandes' => fn ($q) => $q->whereIn('status', $statutsKpi)->orderBy('date')->orderBy('created_at'),
-        ]);
+        ])->whereNotNull('promu_client_le');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -152,6 +152,47 @@ class ClientController extends Controller
                 'priorite' => $f->priorite,
             ])->values(),
             'filters' => $request->only(['search', 'zone_id', 'tri', 'frequence', 'frequence_id']),
+        ]);
+    }
+
+    /**
+     * Prospects : fiches où {@see Client::$promu_client_le} est encore null (aucune commande
+     * ayant encore déclenché la promotion suite à un statut admin validée ou retiree).
+     */
+    public function prospects(Request $request): Response
+    {
+        $search = $request->input('search', '');
+
+        $query = Client::query()->whereNull('promu_client_le')->withCount('commandes');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nom', 'like', "%{$search}%")
+                    ->orWhere('prenom', 'like', "%{$search}%")
+                    ->orWhere('tel', 'like', "%{$search}%")
+                    ->orWhere('tel_secondaire', 'like', "%{$search}%")
+                    ->orWhere('adresse', 'like', "%{$search}%")
+                    ->orWhere('arrondissement', 'like', "%{$search}%");
+            });
+        }
+
+        $prospects = $query->orderByDesc('updated_at')
+            ->get()
+            ->map(fn (Client $c) => [
+                'id' => $c->id,
+                'nom' => $c->nom,
+                'prenom' => $c->prenom,
+                'tel' => $c->tel,
+                'tel_secondaire' => $c->tel_secondaire,
+                'adresse' => $c->adresse ?? '',
+                'arrondissement' => $c->arrondissement,
+                'nb_commandes' => (int) $c->commandes_count,
+                'updated_at' => $c->updated_at?->format('d/m/Y H:i'),
+            ]);
+
+        return Inertia::render('Clients/Prospects', [
+            'prospects' => $prospects,
+            'filters' => $request->only(['search']),
         ]);
     }
 
@@ -276,6 +317,8 @@ class ClientController extends Controller
                 'niches_labels' => $nichesLabels,
                 'canal_acquisition' => $canal,
                 'canal_acquisition_label' => $canalLabel,
+                'promu_client_le' => $client->promu_client_le?->format('d/m/Y'),
+                'est_prospect' => $client->promu_client_le === null,
             ],
         ]);
     }

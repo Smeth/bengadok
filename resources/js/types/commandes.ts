@@ -64,6 +64,15 @@ export type CommandeDetail = {
         } | null;
     } | null;
     acceptation_client?: boolean;
+    /** Livraisons multiples : ce qui sera validé en bloc avec une commande parente. */
+    enfants?: Array<{
+        id: number;
+        numero: string;
+        status: string;
+        pharmacie?: { designation?: string };
+        mode_paiement?: { id?: number; designation: string };
+        montant_livraison?: { designation?: number };
+    }>;
 };
 
 export type CommandeListItem = {

@@ -35,6 +35,7 @@ type ClientInGroup = {
     nom: string | null;
     prenom: string | null;
     tel: string;
+    tel_secondaire?: string | null;
     adresse: string;
     zone?: string;
     nb_commandes: number;
@@ -421,9 +422,9 @@ const statutLabels: Record<string, string> = {
                                 </h4>
                                 <span
                                     v-if="c.is_principal"
-                                    class="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-600"
+                                    class="rounded-full bg-emerald-600/90 px-2 py-0.5 text-[10px] font-semibold text-white dark:bg-emerald-700"
                                 >
-                                    Principal suggéré
+                                    Fiche de référence conservée
                                 </span>
                             </div>
                             <p
@@ -561,85 +562,23 @@ const statutLabels: Record<string, string> = {
                             <p
                                 class="mt-0.5 text-amber-700 dark:text-amber-300"
                             >
-                                Cette opération fusionnera les deux profils en
-                                un seul. Toutes les commandes du profil dupliqué
-                                seront rattachées au profil principal.
+                                Les profils sources seront supprimés : leurs
+                                commandes seront rattachées au
+                                <strong>profil de référence</strong> (colonne
+                                de droite), future fiche cliente unique.
                             </p>
                         </div>
                     </div>
 
-                    <!-- Comparaison des profils -->
+                    <!-- Comparaison : sources (gauche) puis référence conservée (droite) -->
                     <div class="grid gap-2.5 sm:grid-cols-2">
-                        <div
-                            class="rounded-lg border-2 border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/20"
-                        >
-                            <span
-                                class="mb-2 inline-block rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-white sm:text-xs"
-                            >
-                                Profil principal (conservé)
-                            </span>
-                            <template v-if="principalPourModal">
-                                <p
-                                    class="text-sm font-semibold text-foreground"
-                                >
-                                    {{ nomComplet(principalPourModal) }}
-                                </p>
-                                <p
-                                    class="mt-1.5 flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm"
-                                >
-                                    <Phone class="size-4 shrink-0" />
-                                    <span class="font-medium"
-                                        >Téléphone principal :</span
-                                    >
-                                    {{ principalPourModal.tel }}
-                                </p>
-                                <p
-                                    class="flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm"
-                                >
-                                    <Phone class="size-4 shrink-0" />
-                                    <span class="font-medium"
-                                        >Téléphone secondaire :</span
-                                    >
-                                    {{
-                                        premierDuplique &&
-                                        optionNumeroSecondaire
-                                            ? premierDuplique.tel
-                                            : principalPourModal.tel || '—'
-                                    }}
-                                </p>
-                                <p
-                                    class="flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm"
-                                >
-                                    <MapPin class="size-4 shrink-0" />
-                                    {{ principalPourModal.adresse || '-'
-                                    }}{{
-                                        principalPourModal.zone
-                                            ? `, ${principalPourModal.zone}`
-                                            : ''
-                                    }}
-                                </p>
-                                <p
-                                    class="flex items-center gap-1.5 text-xs sm:text-sm"
-                                >
-                                    <ListOrdered class="size-4 shrink-0" />
-                                    {{ principalPourModal.nb_commandes }}
-                                    commandes .
-                                    {{
-                                        Number(
-                                            principalPourModal.total_depense,
-                                        ).toLocaleString('fr-FR')
-                                    }}
-                                    xaf
-                                </p>
-                            </template>
-                        </div>
                         <div
                             class="rounded-lg border-2 border-red-200 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-900/20"
                         >
                             <span
                                 class="mb-2 inline-block rounded bg-red-600 px-2 py-0.5 text-[10px] font-medium text-white sm:text-xs"
                             >
-                                Profil dupliqué (sera fusionné)
+                                Profils sources (absorbés · disparition)
                             </span>
                             <template v-if="premierDuplique">
                                 <p
@@ -652,7 +591,7 @@ const statutLabels: Record<string, string> = {
                                 >
                                     <Phone class="size-4 shrink-0" />
                                     <span class="font-medium"
-                                        >Téléphone principal :</span
+                                        >Téléphone :</span
                                     >
                                     {{ premierDuplique.tel }}
                                 </p>
@@ -672,7 +611,7 @@ const statutLabels: Record<string, string> = {
                                 >
                                     <ListOrdered class="size-4 shrink-0" />
                                     {{ premierDuplique.nb_commandes }} commandes
-                                    .
+                                    ·
                                     {{
                                         Number(
                                             premierDuplique.total_depense,
@@ -686,7 +625,99 @@ const statutLabels: Record<string, string> = {
                                     class="text-xs text-muted-foreground sm:text-sm"
                                 >
                                     {{ dupliquesPourModal.length }} profils
-                                    dupliqués seront fusionnés
+                                    sources seront fusionnés dans la fiche de
+                                    référence.
+                                </p>
+                            </template>
+                        </div>
+                        <div
+                            class="rounded-lg border-2 border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/20"
+                        >
+                            <span
+                                class="mb-2 inline-block rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-white sm:text-xs"
+                            >
+                                Profil de référence (à conserver · nouveau
+                                socle)
+                            </span>
+                            <template v-if="principalPourModal">
+                                <p
+                                    class="text-sm font-semibold text-foreground"
+                                >
+                                    {{ nomComplet(principalPourModal) }}
+                                </p>
+                                <p
+                                    class="mt-1.5 flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm"
+                                >
+                                    <Phone class="size-4 shrink-0" />
+                                    <span class="font-medium"
+                                        >Téléphone principal :</span
+                                    >
+                                    {{ principalPourModal.tel }}
+                                </p>
+                                <p
+                                    class="flex min-h-[1.25rem] items-start gap-1.5 text-xs text-muted-foreground sm:text-sm"
+                                >
+                                    <Phone class="size-4 shrink-0" />
+                                    <span class="font-medium"
+                                        >Téléphone secondaire :</span
+                                    >
+                                    <span class="inline-block min-w-[1ch]">
+                                        <Transition name="fuse-phone-fade"
+                                            mode="out-in"
+                                        >
+                                            <span
+                                                v-if="
+                                                    optionNumeroSecondaire &&
+                                                    premierDuplique
+                                                "
+                                                :key="'sec-dup'"
+                                                class="font-semibold text-foreground"
+                                            >
+                                                {{
+                                                    premierDuplique.tel ===
+                                                    principalPourModal.tel
+                                                        ? '—'
+                                                        : premierDuplique.tel
+                                                }}
+                                            </span>
+                                            <span
+                                                v-else
+                                                :key="'sec-existing'"
+                                                class="text-muted-foreground"
+                                            >
+                                                {{
+                                                    (
+                                                        principalPourModal.tel_secondaire ??
+                                                        ''
+                                                    ).trim() || '—'
+                                                }}
+                                            </span>
+                                        </Transition>
+                                    </span>
+                                </p>
+                                <p
+                                    class="flex items-start gap-1.5 text-xs text-muted-foreground sm:text-sm"
+                                >
+                                    <MapPin class="size-4 shrink-0" />
+                                    {{ principalPourModal.adresse || '-'
+                                    }}{{
+                                        principalPourModal.zone
+                                            ? `, ${principalPourModal.zone}`
+                                            : ''
+                                    }}
+                                </p>
+                                <p
+                                    class="flex items-center gap-1.5 text-xs sm:text-sm"
+                                >
+                                    <ListOrdered class="size-4 shrink-0" />
+                                    {{ principalPourModal.nb_commandes }}
+                                    commandes ·
+                                    {{
+                                        Number(
+                                            principalPourModal.total_depense,
+                                        ).toLocaleString('fr-FR')
+                                    }}
+                                    xaf
                                 </p>
                             </template>
                         </div>
@@ -745,15 +776,15 @@ const statutLabels: Record<string, string> = {
                                 <CheckCheck
                                     class="size-3.5 shrink-0 text-[#459cd1] sm:size-4"
                                 />
-                                Profil conservé :
+                                Profil de référence :
                                 {{ nomComplet(principalPourModal) }}
                             </li>
                             <li class="flex items-start gap-2">
                                 <CheckCheck
                                     class="size-3.5 shrink-0 text-[#459cd1] sm:size-4"
                                 />
-                                {{ commandesRattachees }} commande(s) seront
-                                rattachées au profil principal
+                                Ces commandes seront fusionnées sur la même
+                                fiche de référence
                             </li>
                             <li class="flex items-start gap-2">
                                 <CheckCheck
@@ -808,3 +839,18 @@ const statutLabels: Record<string, string> = {
         />
     </AppLayout>
 </template>
+
+<style scoped>
+.fuse-phone-fade-enter-active,
+.fuse-phone-fade-leave-active {
+    transition:
+        opacity 0.22s ease,
+        transform 0.18s ease;
+}
+.fuse-phone-fade-enter-from,
+.fuse-phone-fade-leave-to {
+    opacity: 0;
+    transform: translateY(-3px);
+}
+</style>
+

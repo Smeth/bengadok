@@ -8,6 +8,7 @@ use App\Models\MotifAnnulation;
 use App\Models\OrdonnanceVerificationSetting;
 use App\Services\PharmacyDataResetService;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -44,8 +45,13 @@ class HandleInertiaRequests extends Middleware
 
         return [
             ...parent::share($request),
-            /** Jeton CSRF à jour à chaque réponse Inertia (POST /logout, formulaires, etc.) */
-            'csrf_token' => fn () => csrf_token(),
+            /**
+             * Inclus même lors des rechargements partiels (`only`), sinon le méta-tag et Axios
+             * gardent un jeton périmé → erreurs 419 aléatoires.
+             *
+             * @see https://inertiajs.com/shared-data#merging-shared-data
+             */
+            'csrf_token' => Inertia::always(fn () => csrf_token()),
             'flash' => [
                 'status' => fn () => $request->session()->get('status'),
                 'success' => fn () => $request->session()->get('success'),

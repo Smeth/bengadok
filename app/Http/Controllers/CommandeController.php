@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\PromoteClientsFromSuccessfulOrdersAction;
 use App\Http\Requests\StoreCommandeRequest;
 use App\Models\Client;
 use App\Models\Commande;
@@ -114,7 +115,7 @@ class CommandeController extends Controller
         $this->authorize('view', $commande);
         $user = $request->user();
 
-        $relations = ['client', 'pharmacie', 'pharmacieRefusee', 'produits', 'modePaiement', 'livreur', 'montantLivraison', 'enfants.pharmacie', 'enfants.produits', 'parent'];
+        $relations = ['client', 'pharmacie', 'pharmacieRefusee', 'produits', 'modePaiement', 'livreur', 'montantLivraison', 'enfants.pharmacie', 'enfants.produits', 'enfants.modePaiement', 'enfants.montantLivraison', 'parent'];
         $relations[] = $this->backofficePeutVoirVerificationOrdonnance($user)
             ? 'ordonnance.verification'
             : 'ordonnance';
@@ -363,6 +364,21 @@ class CommandeController extends Controller
             if ($enfantsNonValides) {
                 return back()->with('error', 'La 2ème pharmacie n\'a pas encore validé les produits renvoyés.');
             }
+
+            // Même périmètre que la commande parente avant validation globale des maillons enfants « en_attente ».
+            $paiementManquantPourEnfant = $commande->enfants()
+                ->where('status', 'en_attente')
+                ->where(function ($q) {
+                    $q->whereNull('montant_livraison_id')
+                        ->orWhereNull('mode_paiement_id');
+                })
+                ->exists();
+            if ($paiementManquantPourEnfant) {
+                return back()->with(
+                    'error',
+                    'Définissez le montant de livraison et le mode de paiement sur chaque commande associée — autre pharmacie — encore en attente avant de valider cet ensemble.'
+                );
+            }
         }
 
         $statusPharmacie = match ($validated['status']) {
@@ -371,12 +387,22 @@ class CommandeController extends Controller
             default => $commande->status_pharmacie, // conserver l'état pharmacie actuel
         };
 
-        $commande->update([
+        $updatePayload = [
             'status' => $validated['status'],
             'status_pharmacie' => $statusPharmacie,
             'motif_annulation' => $validated['status'] === 'annulee' ? ($validated['motif_annulation'] ?? null) : null,
             'note_annulation' => $validated['status'] === 'annulee' ? ($validated['note_annulation'] ?? null) : null,
-        ]);
+        ];
+
+        if ($validated['status'] === 'validee' && $commande->validee_admin_at === null) {
+            $updatePayload['validee_admin_at'] = now();
+        }
+
+        if ($validated['status'] === 'retiree' && $commande->livree_at === null) {
+            $updatePayload['livree_at'] = now();
+        }
+
+        $commande->update($updatePayload);
 
         // Si validation de la commande parente, valider aussi les commandes enfants (déjà en_attente)
         if ($validated['status'] === 'validee' && $commande->parent_id === null) {
@@ -387,9 +413,12 @@ class CommandeController extends Controller
             $commande->enfants()->where('status', 'en_attente')->update([
                 'status' => 'validee',
                 'status_pharmacie' => 'valide_a_preparer',
+                'validee_admin_at' => now(),
             ]);
             BroadcastCommandeNotificationTargets::dispatchForPharmacieIds($pharmacieIdsEnfants);
         }
+
+        PromoteClientsFromSuccessfulOrdersAction::afterAdmin($commande, $validated['status']);
 
         $numero = $commande->numero;
         $nouveauStatut = $validated['status'];

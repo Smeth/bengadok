@@ -115,7 +115,11 @@ class DokPharmaController extends Controller
         }
 
         $statusRevenu = ['livre', 'valide_a_preparer', 'attente_confirmation'];
+        /** Commandes où la pharmacie a traité (hors nouveau flux entrant uniquement). */
+        $statusTraites = ['attente_confirmation', 'indisponible', 'valide_a_preparer', 'livre'];
         $statusCmd = ['livre', 'valide_a_preparer', 'attente_confirmation', 'nouvelle'];
+
+        $commissionPercent = max(0.0, min(100.0, (float) config('bengadok.pharmacy_commission_percent', 10)));
 
         $revenuActuel = (float) Commande::where('pharmacie_id', $pharmacieId)
             ->whereIn('status_pharmacie', $statusRevenu)
@@ -163,6 +167,24 @@ class DokPharmaController extends Controller
             ? round((($nbClientsActuelle - $nbClientsPrec) / $nbClientsPrec) * 100)
             : ($nbClientsActuelle > 0 ? 100 : 0);
 
+        $nbCommandesTraiteesActuelle = Commande::where('pharmacie_id', $pharmacieId)
+            ->whereIn('status_pharmacie', $statusTraites)
+            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
+            ->count();
+
+        $nbCommandesTraiteesPrec = Commande::where('pharmacie_id', $pharmacieId)
+            ->whereIn('status_pharmacie', $statusTraites)
+            ->whereBetween('created_at', [$prevStart, $prevEnd])
+            ->count();
+
+        $pctCommandesTraitees = $nbCommandesTraiteesPrec > 0
+            ? round((($nbCommandesTraiteesActuelle - $nbCommandesTraiteesPrec) / $nbCommandesTraiteesPrec) * 100)
+            : ($nbCommandesTraiteesActuelle > 0 ? 100 : 0);
+
+        $montantCommissions = (int) round($revenuActuel * $commissionPercent / 100);
+        /** Part nette théorique pharmacie après commission (% configurable), cumul jour par jour. */
+        $factorNetPharmacien = max(0.0, min(1.0, (100 - $commissionPercent) / 100));
+
         $revenusBruts = Commande::where('pharmacie_id', $pharmacieId)
             ->whereIn('status_pharmacie', $statusRevenu)
             ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
@@ -182,18 +204,27 @@ class DokPharmaController extends Controller
         $weekdayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
         $revenusParJour = [];
         $volumeParJour = [];
+        $creditsEvolutionParJour = [];
+        $cumulativeNetPostCommission = 0.0;
+
         for ($d = $rangeStart->copy(); $d->lte($rangeEndEffective); $d = $d->addDay()) {
             $key = $d->format('Y-m-d');
             $label = $period === 'week'
                 ? $weekdayLabels[$d->isoWeekday() - 1]
                 : $d->format('d');
+            $jourCa = (float) ($revenusBruts->get($key)?->total ?? 0);
             $revenusParJour[] = [
                 'label' => $label,
-                'valeur' => (float) ($revenusBruts->get($key)?->total ?? 0),
+                'valeur' => $jourCa,
             ];
             $volumeParJour[] = [
                 'label' => $label,
                 'valeur' => (int) ($volumeBruts->get($key)?->nb ?? 0),
+            ];
+            $cumulativeNetPostCommission += $jourCa * $factorNetPharmacien;
+            $creditsEvolutionParJour[] = [
+                'label' => $label,
+                'valeur' => round($cumulativeNetPostCommission),
             ];
         }
 
@@ -212,12 +243,40 @@ class DokPharmaController extends Controller
             )
             ->groupBy('produits.id', 'produits.designation')
             ->orderByDesc('ca')
-            ->limit(5)
+            ->limit(15)
             ->get()
             ->map(fn ($r) => [
                 'id' => $r->id,
                 'designation' => $r->designation,
                 'ca' => (float) $r->ca,
+                'quantite' => (float) $r->qte,
+            ])
+            ->values()
+            ->all();
+
+        $medicamentsIndisponibles = DB::table('commande_produit')
+            ->join('commandes', 'commande_produit.commande_id', '=', 'commandes.id')
+            ->join('produits', 'commande_produit.produit_id', '=', 'produits.id')
+            ->where('commandes.pharmacie_id', $pharmacieId)
+            ->where('commande_produit.status', 'indisponible')
+            ->whereBetween('commandes.created_at', [$rangeStart, $rangeEndEffective])
+            ->select(
+                'produits.id',
+                'produits.designation',
+                'produits.dosage',
+                DB::raw('SUM(commande_produit.quantite) as quantite_demandee'),
+                DB::raw('COUNT(DISTINCT commandes.id) as nb_commandes')
+            )
+            ->groupBy('produits.id', 'produits.designation', 'produits.dosage')
+            ->orderByDesc('quantite_demandee')
+            ->limit(50)
+            ->get()
+            ->map(fn ($r) => [
+                'id' => $r->id,
+                'designation' => $r->designation,
+                'dosage' => $r->dosage,
+                'quantite_demandee' => (int) $r->quantite_demandee,
+                'nb_commandes' => (int) $r->nb_commandes,
             ])
             ->values()
             ->all();
@@ -225,17 +284,23 @@ class DokPharmaController extends Controller
         return Inertia::render('DokPharma/Dashboard', [
             'period' => $period,
             'chart_offset' => $chartOffset,
+            'commission_percent' => $commissionPercent,
             'stats' => [
                 'revenu_total' => round($revenuActuel, 0),
                 'pct_revenu' => $pctRevenu,
                 'nb_commandes' => $nbCmdActuelle,
                 'pct_commandes' => $pctCmd,
+                'nb_commandes_traitees' => $nbCommandesTraiteesActuelle,
+                'pct_commandes_traitees' => $pctCommandesTraitees,
+                'montant_commissions' => $montantCommissions,
                 'nb_clients' => $nbClientsActuelle,
                 'pct_clients' => $pctClients,
             ],
             'revenusParJour' => $revenusParJour,
             'volumeParJour' => $volumeParJour,
+            'creditsEvolutionParJour' => $creditsEvolutionParJour,
             'meilleursVentes' => $meilleursVentes,
+            'medicamentsIndisponibles' => $medicamentsIndisponibles,
         ]);
     }
 
@@ -249,17 +314,23 @@ class DokPharmaController extends Controller
         return Inertia::render('DokPharma/Dashboard', [
             'period' => $period,
             'chart_offset' => $chartOffset,
+            'commission_percent' => max(0.0, min(100.0, (float) config('bengadok.pharmacy_commission_percent', 10))),
             'stats' => [
                 'revenu_total' => 0,
                 'pct_revenu' => 0,
                 'nb_commandes' => 0,
                 'pct_commandes' => 0,
+                'nb_commandes_traitees' => 0,
+                'pct_commandes_traitees' => 0,
+                'montant_commissions' => 0,
                 'nb_clients' => 0,
                 'pct_clients' => 0,
             ],
             'revenusParJour' => [],
             'volumeParJour' => [],
+            'creditsEvolutionParJour' => [],
             'meilleursVentes' => [],
+            'medicamentsIndisponibles' => [],
         ]);
     }
 
@@ -442,6 +513,7 @@ class DokPharmaController extends Controller
             'pharmacie_refusee_id' => $nbDispo === 0 ? $pharmacieId : null,
             'prix_medicaments' => $prixTotal,
             'prix_total' => $prixTotal + $liv,
+            'dispo_pharmacie_at' => now(),
             ...($commentairePharmacie !== '' ? ['commentaire_pharmacie' => $commentairePharmacie] : []),
         ]);
 
