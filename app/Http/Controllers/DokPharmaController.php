@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Commande;
 use App\Models\Produit;
+use App\Services\PharmacieDashboardService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -67,7 +67,7 @@ class DokPharmaController extends Controller
     /**
      * Dashboard pharmacie : stats, graphiques, meilleures ventes.
      */
-    public function dashboard(Request $request): Response
+    public function dashboard(Request $request, PharmacieDashboardService $dashboardService): Response
     {
         $user = $request->user();
         if ($user && $user->hasRole('vendeur') && ! $user->hasRole('gerant')) {
@@ -76,262 +76,26 @@ class DokPharmaController extends Controller
 
         $pharmacieId = $request->user()?->pharmacie_id;
         if (! $pharmacieId) {
-            return $this->emptyDashboard($request);
+            $period = in_array($request->query('period'), ['week', 'month'], true)
+                ? $request->query('period')
+                : 'month';
+            $chartOffset = min(0, max(-52, (int) $request->query('chart_offset', 0)));
+
+            return Inertia::render(
+                'DokPharma/Dashboard',
+                $dashboardService->emptyPayload($period, $chartOffset),
+            );
         }
 
         $period = in_array($request->query('period'), ['week', 'month'], true)
             ? $request->query('period')
             : 'month';
         $chartOffset = (int) $request->query('chart_offset', 0);
-        if ($chartOffset > 0) {
-            $chartOffset = 0;
-        }
-        if ($chartOffset < -52) {
-            $chartOffset = -52;
-        }
 
-        $now = now();
-        if ($period === 'week') {
-            $rangeStart = $now->copy()->addWeeks($chartOffset)->startOfWeek();
-            $rangeEnd = $now->copy()->addWeeks($chartOffset)->endOfWeek();
-        } else {
-            $rangeStart = $now->copy()->addMonths($chartOffset)->startOfMonth();
-            $rangeEnd = $now->copy()->addMonths($chartOffset)->endOfMonth();
-        }
-        $rangeEndEffective = $rangeEnd->gt($now) ? $now->copy()->endOfDay() : $rangeEnd->copy()->endOfDay();
-
-        if ($period === 'week') {
-            $nDays = (int) $rangeStart->diffInDays($rangeEndEffective);
-            $prevStart = $rangeStart->copy()->subWeek();
-            $prevEnd = $prevStart->copy()->addDays($nDays)->endOfDay();
-        } else {
-            $dayCount = (int) $rangeStart->diffInDays($rangeEndEffective) + 1;
-            $prevStart = $rangeStart->copy()->subMonth()->startOfMonth();
-            $prevEnd = $prevStart->copy()->addDays($dayCount - 1)->endOfDay();
-            $maxPrev = $rangeStart->copy()->subMonth()->endOfMonth();
-            if ($prevEnd->gt($maxPrev)) {
-                $prevEnd = $maxPrev;
-            }
-        }
-
-        $statusRevenu = ['livre', 'valide_a_preparer', 'attente_confirmation'];
-        /** Commandes où la pharmacie a traité (hors nouveau flux entrant uniquement). */
-        $statusTraites = ['attente_confirmation', 'indisponible', 'valide_a_preparer', 'livre'];
-        $statusCmd = ['livre', 'valide_a_preparer', 'attente_confirmation', 'nouvelle'];
-
-        $commissionPercent = max(0.0, min(100.0, (float) config('bengadok.pharmacy_commission_percent', 10)));
-
-        $revenuActuel = (float) Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', $statusRevenu)
-            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
-            ->sum('prix_medicaments');
-
-        $revenuPrec = (float) Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', $statusRevenu)
-            ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->sum('prix_medicaments');
-
-        $pctRevenu = $revenuPrec > 0
-            ? round((($revenuActuel - $revenuPrec) / $revenuPrec) * 100)
-            : ($revenuActuel > 0 ? 100 : 0);
-
-        $nbCmdActuelle = Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', $statusCmd)
-            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
-            ->count();
-
-        $nbCmdPrec = Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', $statusCmd)
-            ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->count();
-
-        $pctCmd = $nbCmdPrec > 0
-            ? round((($nbCmdActuelle - $nbCmdPrec) / $nbCmdPrec) * 100)
-            : ($nbCmdActuelle > 0 ? 100 : 0);
-
-        $nbClientsActuelle = (int) Commande::where('pharmacie_id', $pharmacieId)
-            ->whereNotNull('client_id')
-            ->whereIn('status_pharmacie', $statusCmd)
-            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
-            ->distinct('client_id')
-            ->count('client_id');
-
-        $nbClientsPrec = (int) Commande::where('pharmacie_id', $pharmacieId)
-            ->whereNotNull('client_id')
-            ->whereIn('status_pharmacie', $statusCmd)
-            ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->distinct('client_id')
-            ->count('client_id');
-
-        $pctClients = $nbClientsPrec > 0
-            ? round((($nbClientsActuelle - $nbClientsPrec) / $nbClientsPrec) * 100)
-            : ($nbClientsActuelle > 0 ? 100 : 0);
-
-        $nbCommandesTraiteesActuelle = Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', $statusTraites)
-            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
-            ->count();
-
-        $nbCommandesTraiteesPrec = Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', $statusTraites)
-            ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->count();
-
-        $pctCommandesTraitees = $nbCommandesTraiteesPrec > 0
-            ? round((($nbCommandesTraiteesActuelle - $nbCommandesTraiteesPrec) / $nbCommandesTraiteesPrec) * 100)
-            : ($nbCommandesTraiteesActuelle > 0 ? 100 : 0);
-
-        $montantCommissions = (int) round($revenuActuel * $commissionPercent / 100);
-        /** Part nette théorique pharmacie après commission (% configurable), cumul jour par jour. */
-        $factorNetPharmacien = max(0.0, min(1.0, (100 - $commissionPercent) / 100));
-
-        $revenusBruts = Commande::where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', $statusRevenu)
-            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
-            ->select(DB::raw('DATE(created_at) as jour'), DB::raw('SUM(prix_medicaments) as total'))
-            ->groupBy('jour')
-            ->orderBy('jour')
-            ->get()
-            ->keyBy('jour');
-
-        $volumeBruts = Commande::where('pharmacie_id', $pharmacieId)
-            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
-            ->select(DB::raw('DATE(created_at) as jour'), DB::raw('COUNT(*) as nb'))
-            ->groupBy('jour')
-            ->get()
-            ->keyBy('jour');
-
-        $weekdayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-        $revenusParJour = [];
-        $volumeParJour = [];
-        $creditsEvolutionParJour = [];
-        $cumulativeNetPostCommission = 0.0;
-
-        for ($d = $rangeStart->copy(); $d->lte($rangeEndEffective); $d = $d->addDay()) {
-            $key = $d->format('Y-m-d');
-            $label = $period === 'week'
-                ? $weekdayLabels[$d->isoWeekday() - 1]
-                : $d->format('d');
-            $jourCa = (float) ($revenusBruts->get($key)?->total ?? 0);
-            $revenusParJour[] = [
-                'label' => $label,
-                'valeur' => $jourCa,
-            ];
-            $volumeParJour[] = [
-                'label' => $label,
-                'valeur' => (int) ($volumeBruts->get($key)?->nb ?? 0),
-            ];
-            $cumulativeNetPostCommission += $jourCa * $factorNetPharmacien;
-            $creditsEvolutionParJour[] = [
-                'label' => $label,
-                'valeur' => round($cumulativeNetPostCommission),
-            ];
-        }
-
-        $meilleursVentes = DB::table('commande_produit')
-            ->join('commandes', 'commande_produit.commande_id', '=', 'commandes.id')
-            ->join('produits', 'commande_produit.produit_id', '=', 'produits.id')
-            ->where('commandes.pharmacie_id', $pharmacieId)
-            ->whereIn('commandes.status_pharmacie', ['livre', 'valide_a_preparer', 'attente_confirmation'])
-            ->whereBetween('commandes.created_at', [$rangeStart, $rangeEndEffective])
-            ->whereRaw("(commande_produit.status IS NULL OR commande_produit.status <> 'indisponible')")
-            ->select(
-                'produits.id',
-                'produits.designation',
-                DB::raw('SUM(COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite)) as qte'),
-                DB::raw('SUM(commande_produit.prix_unitaire * COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite)) as ca')
-            )
-            ->groupBy('produits.id', 'produits.designation')
-            ->orderByDesc('ca')
-            ->limit(15)
-            ->get()
-            ->map(fn ($r) => [
-                'id' => $r->id,
-                'designation' => $r->designation,
-                'ca' => (float) $r->ca,
-                'quantite' => (float) $r->qte,
-            ])
-            ->values()
-            ->all();
-
-        $medicamentsIndisponibles = DB::table('commande_produit')
-            ->join('commandes', 'commande_produit.commande_id', '=', 'commandes.id')
-            ->join('produits', 'commande_produit.produit_id', '=', 'produits.id')
-            ->where('commandes.pharmacie_id', $pharmacieId)
-            ->where('commande_produit.status', 'indisponible')
-            ->whereBetween('commandes.created_at', [$rangeStart, $rangeEndEffective])
-            ->select(
-                'produits.id',
-                'produits.designation',
-                'produits.dosage',
-                DB::raw('SUM(commande_produit.quantite) as quantite_demandee'),
-                DB::raw('COUNT(DISTINCT commandes.id) as nb_commandes')
-            )
-            ->groupBy('produits.id', 'produits.designation', 'produits.dosage')
-            ->orderByDesc('quantite_demandee')
-            ->limit(50)
-            ->get()
-            ->map(fn ($r) => [
-                'id' => $r->id,
-                'designation' => $r->designation,
-                'dosage' => $r->dosage,
-                'quantite_demandee' => (int) $r->quantite_demandee,
-                'nb_commandes' => (int) $r->nb_commandes,
-            ])
-            ->values()
-            ->all();
-
-        return Inertia::render('DokPharma/Dashboard', [
-            'period' => $period,
-            'chart_offset' => $chartOffset,
-            'commission_percent' => $commissionPercent,
-            'stats' => [
-                'revenu_total' => round($revenuActuel, 0),
-                'pct_revenu' => $pctRevenu,
-                'nb_commandes' => $nbCmdActuelle,
-                'pct_commandes' => $pctCmd,
-                'nb_commandes_traitees' => $nbCommandesTraiteesActuelle,
-                'pct_commandes_traitees' => $pctCommandesTraitees,
-                'montant_commissions' => $montantCommissions,
-                'nb_clients' => $nbClientsActuelle,
-                'pct_clients' => $pctClients,
-            ],
-            'revenusParJour' => $revenusParJour,
-            'volumeParJour' => $volumeParJour,
-            'creditsEvolutionParJour' => $creditsEvolutionParJour,
-            'meilleursVentes' => $meilleursVentes,
-            'medicamentsIndisponibles' => $medicamentsIndisponibles,
-        ]);
-    }
-
-    private function emptyDashboard(Request $request): Response
-    {
-        $period = in_array($request->query('period'), ['week', 'month'], true)
-            ? $request->query('period')
-            : 'month';
-        $chartOffset = min(0, max(-52, (int) $request->query('chart_offset', 0)));
-
-        return Inertia::render('DokPharma/Dashboard', [
-            'period' => $period,
-            'chart_offset' => $chartOffset,
-            'commission_percent' => max(0.0, min(100.0, (float) config('bengadok.pharmacy_commission_percent', 10))),
-            'stats' => [
-                'revenu_total' => 0,
-                'pct_revenu' => 0,
-                'nb_commandes' => 0,
-                'pct_commandes' => 0,
-                'nb_commandes_traitees' => 0,
-                'pct_commandes_traitees' => 0,
-                'montant_commissions' => 0,
-                'nb_clients' => 0,
-                'pct_clients' => 0,
-            ],
-            'revenusParJour' => [],
-            'volumeParJour' => [],
-            'creditsEvolutionParJour' => [],
-            'meilleursVentes' => [],
-            'medicamentsIndisponibles' => [],
-        ]);
+        return Inertia::render(
+            'DokPharma/Dashboard',
+            $dashboardService->build($pharmacieId, $period, $chartOffset),
+        );
     }
 
     public function index(Request $request): Response
@@ -491,19 +255,10 @@ class DokPharmaController extends Controller
             }
         }
 
-        // Recalcul prix total depuis le pivot mis à jour
-        $commande->load('produits'); // recharge pour avoir les nouvelles valeurs
-        $prixTotal = $commande->produits->sum(function ($p) {
-            if ($p->pivot->status === 'indisponible') {
-                return 0;
-            }
-            $qte = $p->pivot->quantite_confirmee ?? $p->pivot->quantite;
-
-            return $qte * (float) $p->pivot->prix_unitaire;
-        });
-
         $commentairePharmacie = trim($request->input('commentaire', ''));
 
+        $commande->load('produits');
+        $montants = Commande::computeMontantsFromProduits($commande->produits);
         $commande->load('montantLivraison');
         $liv = (float) ($commande->montantLivraison?->designation ?? 0);
 
@@ -511,8 +266,9 @@ class DokPharmaController extends Controller
             'status' => 'en_attente',
             'status_pharmacie' => $nbDispo === 0 ? 'indisponible' : 'attente_confirmation',
             'pharmacie_refusee_id' => $nbDispo === 0 ? $pharmacieId : null,
-            'prix_medicaments' => $prixTotal,
-            'prix_total' => $prixTotal + $liv,
+            'prix_medicaments' => $montants['prix_medicaments'],
+            'prix_parapharma' => $montants['prix_parapharma'],
+            'prix_total' => $montants['prix_lignes'] + $liv,
             'dispo_pharmacie_at' => now(),
             ...($commentairePharmacie !== '' ? ['commentaire_pharmacie' => $commentairePharmacie] : []),
         ]);

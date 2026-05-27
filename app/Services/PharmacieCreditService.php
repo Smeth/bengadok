@@ -234,6 +234,15 @@ class PharmacieCreditService
         ]);
     }
 
+    public function nbDeductionsPeriodeForPharmacie(
+        int $pharmacieId,
+        CarbonInterface $debut,
+        CarbonInterface $fin,
+        int $seuilMedicament,
+    ): int {
+        return $this->nbDeductionsPeriode($pharmacieId, $debut, $fin, $seuilMedicament);
+    }
+
     private function nbDeductionsPeriode(
         int $pharmacieId,
         CarbonInterface $debut,

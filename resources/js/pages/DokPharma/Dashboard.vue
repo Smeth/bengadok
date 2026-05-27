@@ -12,16 +12,27 @@ import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
 
 type StatCard = {
     revenu_total?: number;
+    ca_medicaments?: number;
+    ca_parapharma?: number;
     pct_revenu?: number;
     nb_commandes?: number;
     pct_commandes?: number;
     nb_commandes_traitees?: number;
     pct_commandes_traitees?: number;
     montant_commissions?: number;
+    ca_parapharma_periode_commission?: number;
     nb_clients?: number;
     pct_clients?: number;
+    credits_disponibles?: number;
+    credits_utilises_periode?: number;
+    cout_credits_periode?: number;
 };
-type PointChart = { label: string; valeur: number };
+type PointChart = {
+    label: string;
+    valeur: number;
+    medicaments?: number;
+    parapharma?: number;
+};
 type MeilleurVente = {
     id: number;
     designation: string;
@@ -38,12 +49,13 @@ type MedicamentIndispo = {
 
 const inertiaOnlyKeys = [
     'stats',
+    'config',
+    'commission_periode',
     'revenusParJour',
     'volumeParJour',
     'creditsEvolutionParJour',
     'meilleursVentes',
     'medicamentsIndisponibles',
-    'commission_percent',
     'period',
     'chart_offset',
 ] as const;
@@ -51,22 +63,48 @@ const inertiaOnlyKeys = [
 const props = withDefaults(
     defineProps<{
         stats: StatCard;
+        config?: {
+            commission_percent: number;
+            periode_jour_fin: number;
+            commission_jour_echeance: number;
+            credit_prix_unitaire_xaf: number;
+            credit_seuil_medicament_xaf: number;
+        };
+        commission_periode?: {
+            debut: string;
+            fin: string;
+            label: string;
+        };
         revenusParJour: PointChart[];
         volumeParJour: PointChart[];
         creditsEvolutionParJour: PointChart[];
         meilleursVentes: MeilleurVente[];
         medicamentsIndisponibles: MedicamentIndispo[];
-        commission_percent?: number;
         period?: 'week' | 'month';
         chart_offset?: number;
     }>(),
     {
         period: 'month',
         chart_offset: 0,
-        commission_percent: 10,
+        config: () => ({
+            commission_percent: 1,
+            periode_jour_fin: 25,
+            commission_jour_echeance: 25,
+            credit_prix_unitaire_xaf: 150,
+            credit_seuil_medicament_xaf: 5000,
+        }),
+        commission_periode: () => ({
+            debut: '',
+            fin: '',
+            label: '',
+        }),
         creditsEvolutionParJour: () => [],
         medicamentsIndisponibles: () => [],
     },
+);
+
+const commissionPercent = computed(
+    () => props.config?.commission_percent ?? 1,
 );
 
 const comparisonLabel = computed(() =>
@@ -211,7 +249,7 @@ function formatAxisK(n: number): string {
                 <div class="pharmacy-card p-5 sm:p-6">
                     <div class="mb-2 flex items-start justify-between">
                         <p class="text-sm font-black text-black sm:text-base">
-                            CA commandes (médicaments)
+                            CA commandes
                         </p>
                         <button
                             type="button"
@@ -229,6 +267,17 @@ function formatAxisK(n: number): string {
                             class="text-lg font-black text-black/80 sm:text-xl"
                             >XAF</span
                         >
+                    </p>
+                    <p class="mt-2 text-xs font-medium leading-snug text-black/55">
+                        Médicaments :
+                        {{
+                            (stats.ca_medicaments ?? 0).toLocaleString('fr-FR')
+                        }}
+                        XAF · Parapharmacie :
+                        {{
+                            (stats.ca_parapharma ?? 0).toLocaleString('fr-FR')
+                        }}
+                        XAF
                     </p>
                     <div class="mt-4 flex flex-wrap items-center gap-3">
                         <span
@@ -316,7 +365,7 @@ function formatAxisK(n: number): string {
                 <div class="pharmacy-card p-5 sm:p-6">
                     <div class="mb-2 flex items-start justify-between">
                         <p class="text-sm font-black text-black sm:text-base">
-                            Commissions (période)
+                            Commissions parapharmacie
                         </p>
                         <button
                             type="button"
@@ -340,17 +389,21 @@ function formatAxisK(n: number): string {
                         >
                     </p>
                     <p class="mt-2 text-xs font-medium leading-snug text-black/55">
-                        Estimation {{ commission_percent }}&nbsp;% du CA
-                        médicaments (réglable via
-                        <code class="rounded bg-black/5 px-1"
-                            >PHARMACY_COMMISSION_PERCENT</code
-                        >).
+                        Période commission
+                        {{ commission_periode?.label ?? '—' }} ·
+                        {{ commissionPercent }}&nbsp;% du CA parapharmacie
+                        ({{
+                            (
+                                stats.ca_parapharma_periode_commission ?? 0
+                            ).toLocaleString('fr-FR')
+                        }}
+                        XAF)
                     </p>
                 </div>
                 <div class="pharmacy-card p-5 sm:p-6">
                     <div class="mb-2 flex items-start justify-between">
                         <p class="text-sm font-black text-black sm:text-base">
-                            Clients
+                            Crédits BengaDok
                         </p>
                         <button
                             type="button"
@@ -363,28 +416,36 @@ function formatAxisK(n: number): string {
                     <p
                         class="text-[clamp(1.75rem,4vw,2.8rem)] font-black tabular-nums leading-none text-black"
                     >
-                        {{ stats.nb_clients ?? 0 }}
+                        {{ stats.credits_disponibles ?? 0 }}
                         <span
                             class="text-lg font-black text-black/80 sm:text-xl"
-                            >clients</span
+                            >crédits</span
                         >
                     </p>
-                    <div class="mt-4 flex flex-wrap items-center gap-3">
-                        <span
-                            class="inline-flex items-center gap-1 rounded-[13px] border border-black px-2.5 py-1 text-xs font-black text-black"
-                        >
-                            <TrendingUp
-                                v-if="(stats.pct_clients ?? 0) >= 0"
-                                class="size-3.5 shrink-0"
-                            />
-                            <TrendingDown v-else class="size-3.5 shrink-0" />
-                            {{ (stats.pct_clients ?? 0) >= 0 ? '+' : ''
-                            }}{{ stats.pct_clients ?? 0 }}%
-                        </span>
-                        <span class="text-[15px] font-black text-black">{{
-                            comparisonLabel
+                    <p class="mt-2 text-xs font-medium leading-snug text-black/55">
+                        Utilisés sur la période
+                        {{ commission_periode?.label ?? '—' }} :
+                        <span class="font-bold text-black">{{
+                            stats.credits_utilises_periode ?? 0
                         }}</span>
-                    </div>
+                        ({{
+                            (
+                                stats.cout_credits_periode ?? 0
+                            ).toLocaleString('fr-FR')
+                        }}
+                        XAF)
+                    </p>
+                    <p class="mt-3 text-xs text-black/60">
+                        Seuil éligibilité :
+                        {{
+                            (
+                                config?.credit_seuil_medicament_xaf ?? 5000
+                            ).toLocaleString('fr-FR')
+                        }}
+                        XAF médicaments ·
+                        {{ config?.credit_prix_unitaire_xaf ?? 150 }} XAF /
+                        crédit
+                    </p>
                 </div>
             </div>
 
@@ -475,7 +536,7 @@ function formatAxisK(n: number): string {
                         class="mb-5 flex flex-wrap items-center justify-between gap-2"
                     >
                         <h2 class="text-xl font-black text-black sm:text-2xl">
-                            Volume de commandes
+                            Volume de commandes traitées
                         </h2>
                         <select
                             v-model="periodSelectValue"
@@ -581,7 +642,7 @@ function formatAxisK(n: number): string {
                 </div>
             </div>
 
-            <!-- Évolution nette (après commission) -->
+            <!-- Évolution des crédits -->
             <div class="pharmacy-card mb-6 p-5 sm:p-6">
                 <div
                     class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
@@ -590,13 +651,11 @@ function formatAxisK(n: number): string {
                         <h2
                             class="text-xl font-black text-black sm:text-2xl"
                         >
-                            Évolution des « crédits » (cumul net)
+                            Évolution des crédits
                         </h2>
                         <p class="mt-1 max-w-3xl text-sm font-medium text-black/60">
-                            Cumul sur la période du CA médicaments journalier
-                            après retrait de {{ commission_percent }}&nbsp;% de
-                            commission (projection). À lier ultérieurement à un
-                            livre crédits / compta si besoin.
+                            Solde de crédits BengaDok après chaque opération
+                            (recharges et déductions) sur la période affichée.
                         </p>
                     </div>
                     <select
@@ -617,7 +676,7 @@ function formatAxisK(n: number): string {
                         <div
                             class="flex min-w-[32px] flex-1 flex-col items-center gap-2 sm:min-w-[40px]"
                             :title="
-                                `${point.label} : cumul net ${point.valeur.toLocaleString('fr-FR')} XAF`
+                                `${point.label} : ${point.valeur.toLocaleString('fr-FR')} crédit(s)`
                             "
                         >
                             <div
