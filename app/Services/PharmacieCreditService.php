@@ -98,8 +98,8 @@ class PharmacieCreditService
             $modePaiement,
             $note,
             $user,
-            $coutTotal,
-            $prixUnitaire
+            $coutTotal
+
         ) {
             $locked = Pharmacie::query()->whereKey($pharmacie->id)->lockForUpdate()->firstOrFail();
             $nouveauSolde = (int) $locked->credits_solde + $nombreCredits;
