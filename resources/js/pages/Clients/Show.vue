@@ -13,6 +13,7 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import ClientEnrichirProfilModal from '@/components/clients/ClientEnrichirProfilModal.vue';
+import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { clientNomComplet } from '@/lib/clientDisplayName';
@@ -77,11 +78,6 @@ function telAffiche(tel: string) {
     if (digits.length >= 9) return `+242 ${t}`;
     return t;
 }
-
-const tabClassInactive =
-    'rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/80 dark:hover:bg-white/10';
-const tabClassActive =
-    'rounded-lg px-4 py-2 text-sm font-medium bg-[#459cd1] text-white shadow-sm';
 </script>
 
 <template>
@@ -93,18 +89,14 @@ const tabClassActive =
         >
             <p
                 v-if="client.est_prospect"
-                class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100"
+                class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100"
                 role="status"
             >
-                <span class="font-semibold">Prospect</span>
-                — ce contact figure dans la liste Prospects jusqu’à ce qu’au moins une
-                commande atteigne le statut
-                <span class="font-medium">Validée</span>
-                ou
-                <span class="font-medium">Retirée (livraison terminée)</span>
-                côté administrateur ; la promotion en client définitif se fait alors
-                automatiquement.
+                Prospect
             </p>
+
+            <ClientsSectionNav />
+
             <!-- En-tête maquette -->
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="flex flex-wrap items-center gap-4">
@@ -135,19 +127,6 @@ const tabClassActive =
                     <Pencil class="mr-2 size-4" />
                     Enrichir le profil
                 </Button>
-            </div>
-
-            <!-- Onglets (Statistiques = contexte fiche détail, comme Figma) -->
-            <div
-                class="flex flex-wrap gap-2 border-b border-slate-200/80 pb-3 dark:border-white/10"
-            >
-                <Link href="/clients" :class="tabClassInactive"
-                    >Liste des clients</Link
-                >
-                <Link href="/clients/doublons" :class="tabClassInactive"
-                    >Gestion des doublons Clients</Link
-                >
-                <span :class="tabClassActive">Statistiques</span>
             </div>
 
             <!-- Grille 1/3 + 2/3 (maquette) -->

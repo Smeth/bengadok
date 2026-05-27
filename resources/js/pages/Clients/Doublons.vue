@@ -25,6 +25,7 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { clientNomComplet } from '@/lib/clientDisplayName';
 import { dashboard } from '@/routes';
@@ -72,7 +73,6 @@ const flashSuccess = computed(
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
     { title: 'Clients', href: '/clients' },
-    { title: 'Gestion des doublons', href: '/clients/doublons' },
 ];
 
 const searchQuery = ref(props.filters.search ?? '');
@@ -208,28 +208,7 @@ const statutLabels: Record<string, string> = {
                 {{ flashSuccess }}
             </div>
 
-            <!-- Tabs -->
-            <div class="flex flex-wrap items-center gap-4">
-                <div class="flex gap-2">
-                    <Link
-                        href="/clients"
-                        class="rounded-lg px-4 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/20 hover:text-white"
-                    >
-                        Liste des clients
-                    </Link>
-                    <button
-                        class="rounded-lg px-4 py-2 text-sm font-medium bg-white/25 text-white backdrop-blur-sm"
-                    >
-                        Gestion des doublons Clients
-                    </button>
-                    <Link
-                        href="/clients"
-                        class="rounded-lg px-4 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/20 hover:text-white"
-                    >
-                        Statistiques
-                    </Link>
-                </div>
-            </div>
+            <ClientsSectionNav active="doublons" />
 
             <!-- Search & Filters -->
             <form

@@ -4,6 +4,7 @@ import { Search, UserCircle } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { clientNomComplet } from '@/lib/clientDisplayName';
 import { dashboard } from '@/routes';
@@ -36,7 +37,6 @@ const flashStatus = computed(
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
     { title: 'Clients', href: '/clients' },
-    { title: 'Prospects', href: '/clients/prospects' },
 ];
 
 const searchQuery = ref(props.filters.search ?? '');
@@ -58,7 +58,7 @@ function filtrerSearch() {
 </script>
 
 <template>
-    <Head title="Prospects clients - BengaDok" />
+    <Head title="Prospects - BengaDok" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
@@ -71,71 +71,39 @@ function filtrerSearch() {
                 {{ flashStatus }}
             </p>
 
-            <div
-                class="flex flex-col gap-2 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between"
-            >
-                <div class="flex items-start gap-3">
-                    <div
-                        class="flex size-11 items-center justify-center rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
-                    >
-                        <UserCircle class="size-6" />
-                    </div>
-                    <div>
-                        <h1 class="text-xl font-semibold text-foreground">
-                            Prospects
-                        </h1>
-                        <p class="mt-1 max-w-2xl text-sm text-muted-foreground">
-                            Contacts encore au stade prospect : aucune promotion
-                            en « client » confirmée tant qu’aucune commande du
-                            contact n’a été passée au statut
-                            <span class="font-medium text-foreground"
-                                >Validée</span
-                            >
-                            ou
-                            <span class="font-medium text-foreground"
-                                >Retirée (livraison terminée)</span
-                            >
-                            côté back-office ; la fiche rejoint alors la liste des
-                            clients.
-                        </p>
-                    </div>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <Link
-                        href="/clients"
-                        class="rounded-lg px-4 py-2 text-sm font-medium bg-white/80 text-muted-foreground transition-colors hover:bg-white"
-                    >
-                        Liste des clients
-                    </Link>
-                    <Link
-                        href="/clients/doublons"
-                        class="rounded-lg px-4 py-2 text-sm font-medium bg-white/80 text-muted-foreground transition-colors hover:bg-white"
-                    >
-                        Gestion des doublons
-                    </Link>
-                </div>
-            </div>
+            <ClientsSectionNav active="prospects" />
 
             <form
-                class="flex flex-wrap gap-3"
+                class="flex flex-wrap items-center gap-4"
                 @submit.prevent="filtrerSearch"
             >
-                <div class="relative min-w-[240px] flex-1">
+                <div class="relative min-w-[200px] flex-1">
                     <Search
-                        class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                        class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
                     />
                     <Input
                         v-model="searchQuery"
                         placeholder="Rechercher (nom, tél., adresse, arrdt.)..."
-                        class="h-10 pl-9"
+                        class="h-10 rounded-full border-0 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-white/90"
                     />
                 </div>
-                <Button type="submit" class="bg-[#459cd1] text-white hover:bg-[#3a87b8]">
+                <Button
+                    type="submit"
+                    class="rounded-lg bg-[#459cd1] text-white hover:bg-[#3a87b8]"
+                >
                     Rechercher
                 </Button>
+                <div
+                    class="ml-auto flex items-center gap-2 rounded-lg bg-amber-500 px-3 py-1.5 text-white"
+                >
+                    <UserCircle class="size-4" />
+                    <span class="font-semibold">{{ prospects.length }}</span>
+                </div>
             </form>
 
-            <div class="overflow-x-auto rounded-xl border border-border bg-white shadow-sm dark:border-white/10 dark:bg-white/[0.96]">
+            <div
+                class="overflow-x-auto rounded-xl border border-border bg-white shadow-sm dark:border-white/10 dark:bg-white/[0.96]"
+            >
                 <table class="w-full min-w-[720px] text-sm">
                     <thead class="border-b bg-muted/50">
                         <tr>
@@ -152,7 +120,7 @@ function filtrerSearch() {
                                 Arrdt.
                             </th>
                             <th class="px-4 py-3 text-center font-medium">
-                                Cmd actives*
+                                Commandes
                             </th>
                             <th class="px-4 py-3 text-right font-medium"></th>
                         </tr>
@@ -169,11 +137,15 @@ function filtrerSearch() {
                             <td class="px-4 py-3 text-muted-foreground">
                                 <div>{{ p.tel }}</div>
                                 <div v-if="p.tel_secondaire" class="text-xs">
-                                    <span class="text-muted-foreground/80">2ᵉ&nbsp;:</span>
+                                    <span class="text-muted-foreground/80"
+                                        >2ᵉ&nbsp;:</span
+                                    >
                                     {{ p.tel_secondaire }}
                                 </div>
                             </td>
-                            <td class="max-w-[240px] px-4 py-3 text-muted-foreground">
+                            <td
+                                class="max-w-[240px] px-4 py-3 text-muted-foreground"
+                            >
                                 <span class="line-clamp-2" :title="p.adresse">
                                     {{ p.adresse || '—' }}
                                 </span>
@@ -203,11 +175,6 @@ function filtrerSearch() {
                 class="rounded-xl border border-dashed py-10 text-center text-sm text-muted-foreground"
             >
                 Aucun prospect avec les filtres actuels.
-            </p>
-            <p class="text-xs text-muted-foreground">
-                *Nombre de commandes encore liées au contact (historique inclus).
-                Promotion en « client » confirmée dès passage à Validée ou Retirée
-                (livraison terminée) sur au moins une commande.
             </p>
         </div>
     </AppLayout>

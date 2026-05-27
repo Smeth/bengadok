@@ -4,6 +4,8 @@ import { Search, Users, Phone } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
+import type { ClientsSectionTab } from '@/components/clients/ClientsSectionNav.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { clientNomComplet } from '@/lib/clientDisplayName';
 import { dashboard } from '@/routes';
@@ -63,8 +65,13 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const searchQuery = ref(props.filters.search ?? '');
-type TabId = 'liste' | 'doublons' | 'statistiques';
-const activeTab = ref<TabId>('liste');
+
+const activeSection = computed<ClientsSectionTab>(() => {
+    const query = page.url.split('?')[1] ?? '';
+    return new URLSearchParams(query).get('tab') === 'statistiques'
+        ? 'statistiques'
+        : 'liste';
+});
 
 watch(
     () => props.filters.search,
@@ -106,49 +113,9 @@ function nomComplet(c: Client) {
                 {{ flashStatus }}
             </p>
 
-            <!-- Tabs -->
-            <div class="flex flex-wrap items-center gap-4">
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        type="button"
-                        class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                        :class="
-                            activeTab === 'liste'
-                                ? 'bg-[#459cd1] text-white'
-                                : 'bg-white/80 text-muted-foreground hover:bg-white'
-                        "
-                        @click="activeTab = 'liste'"
-                    >
-                        Liste des clients
-                    </button>
-                    <Link
-                        href="/clients/prospects"
-                        class="rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-white/80 text-muted-foreground hover:bg-white"
-                    >
-                        Prospects
-                    </Link>
-                    <Link
-                        href="/clients/doublons"
-                        class="rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-white/80 text-muted-foreground hover:bg-white"
-                    >
-                        Gestion des doublons Clients
-                    </Link>
-                    <button
-                        type="button"
-                        class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                        :class="
-                            activeTab === 'statistiques'
-                                ? 'bg-[#459cd1] text-white'
-                                : 'bg-white/80 text-muted-foreground hover:bg-white'
-                        "
-                        @click="activeTab = 'statistiques'"
-                    >
-                        Statistiques
-                    </button>
-                </div>
-            </div>
+            <ClientsSectionNav :active="activeSection" />
 
-            <div v-if="activeTab === 'liste'" class="space-y-4">
+            <div v-if="activeSection === 'liste'" class="space-y-4">
                 <form
                     class="flex flex-wrap items-center gap-4"
                     @submit.prevent="filtrer('search', searchQuery)"
@@ -328,20 +295,6 @@ function nomComplet(c: Client) {
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <div
-                v-else-if="activeTab === 'doublons'"
-                class="rounded-xl border bg-white p-8 text-center dark:border-white/10 dark:bg-white/95"
-            >
-                <p class="mb-4 text-muted-foreground">
-                    La gestion des doublons s'effectue sur une page dédiée.
-                </p>
-                <Button as-child>
-                    <Link href="/clients/doublons"
-                        >Ouvrir la gestion des doublons</Link
-                    >
-                </Button>
             </div>
 
             <div
