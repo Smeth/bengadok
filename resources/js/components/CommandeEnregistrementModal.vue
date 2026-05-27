@@ -10,6 +10,7 @@ import {
     Phone,
     Pill,
     Search,
+    ShoppingBag,
     X,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
@@ -17,6 +18,7 @@ import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { isParapharmaType } from '@/lib/commandeTotals';
 
 export type ProduitEnreg = {
     designation: string;
@@ -25,6 +27,16 @@ export type ProduitEnreg = {
     quantite: number;
     prix_unitaire: number;
 };
+
+function ligneProduitVide(): ProduitEnreg {
+    return {
+        designation: '',
+        dosage: '',
+        forme: '',
+        quantite: 1,
+        prix_unitaire: 0,
+    };
+}
 
 export type FormEnregPayload = {
     client_nom: string;
@@ -42,6 +54,7 @@ export type FormEnregPayload = {
         forme: string | null;
         quantite: number;
         prix_unitaire: number;
+        type?: string | null;
     }>;
     ordonnance: File | null;
     commentaire: string;
@@ -67,6 +80,8 @@ export type CommandeRelance = {
     produits?: Array<{
         designation?: string;
         dosage?: string;
+        forme?: string | null;
+        type?: string | null;
         pivot: { quantite: number; prix_unitaire: number };
     }>;
     ordonnance?: { urlfile?: string } | null;
@@ -93,6 +108,8 @@ const props = withDefaults(
         apiErrors?: Record<string, string>;
         /** Libellés arrondissements (ex. Brazzaville) */
         arrondissements?: string[];
+        /** Types produit considérés comme parapharmacie (paramètres app). */
+        parapharmaProduitTypes?: string[];
     }>(),
     {
         mode: 'nouvelle',
@@ -100,6 +117,7 @@ const props = withDefaults(
         pharmacies: () => [],
         apiErrors: () => ({}),
         arrondissements: () => [],
+        parapharmaProduitTypes: () => ['Parapharmacie'],
     },
 );
 
@@ -107,6 +125,10 @@ const emit = defineEmits<{
     'update:open': [value: boolean];
     submit: [payload: FormEnregPayload];
 }>();
+
+const defaultParapharmaType = computed(
+    () => props.parapharmaProduitTypes?.[0] ?? 'Parapharmacie',
+);
 
 const page = usePage();
 const delaiRelanceHeures = computed(() =>
@@ -192,15 +214,8 @@ const form = ref({
     client_sexe: '' as '' | 'M' | 'F',
     pharmacie_id: '',
     beneficiaire: '',
-    produits: [
-        {
-            designation: '',
-            dosage: '',
-            forme: '',
-            quantite: 1,
-            prix_unitaire: 0,
-        },
-    ] as ProduitEnreg[],
+    produits: [ligneProduitVide()] as ProduitEnreg[],
+    produitsParapharma: [ligneProduitVide()] as ProduitEnreg[],
     ordonnance: null as File | null,
     commentaire: '',
 });
@@ -253,21 +268,45 @@ function getProduitError(index: number, field: string): string {
     return errors.value[`produits.${index}.${field}`] ?? '';
 }
 
+function getProduitParapharmaError(index: number, field: string): string {
+    return errors.value[`produits_parapharma.${index}.${field}`] ?? '';
+}
+
 function addProduit() {
-    form.value.produits.push({
-        designation: '',
-        dosage: '',
-        forme: '',
-        quantite: 1,
-        prix_unitaire: 0,
-    });
+    form.value.produits.push(ligneProduitVide());
 }
 
 function removeProduit(i: number) {
     form.value.produits.splice(i, 1);
 }
 
+function addProduitParapharma() {
+    form.value.produitsParapharma.push(ligneProduitVide());
+}
+
+function removeProduitParapharma(i: number) {
+    form.value.produitsParapharma.splice(i, 1);
+}
+
 function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
+    const medicaments: ProduitEnreg[] = [];
+    const parapharma: ProduitEnreg[] = [];
+
+    for (const p of cmd.produits ?? []) {
+        const base: ProduitEnreg = {
+            designation: p.designation ?? '',
+            dosage: p.dosage ?? '',
+            forme: p.forme ?? '',
+            quantite: p.pivot?.quantite ?? 1,
+            prix_unitaire: Number(p.pivot?.prix_unitaire) ?? 0,
+        };
+        if (isParapharmaType(p.type, props.parapharmaProduitTypes ?? [])) {
+            parapharma.push(base);
+        } else {
+            medicaments.push(base);
+        }
+    }
+
     form.value = {
         client_nom: cmd.client?.nom ?? '',
         client_prenom: cmd.client?.prenom ?? '',
@@ -279,23 +318,10 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
             : '') as '' | 'M' | 'F',
         pharmacie_id: '',
         beneficiaire: 'Soi-même',
-        produits: (cmd.produits?.length
-            ? cmd.produits.map((p) => ({
-                  designation: p.designation ?? '',
-                  dosage: p.dosage ?? '',
-                  forme: '',
-                  quantite: p.pivot?.quantite ?? 1,
-                  prix_unitaire: Number(p.pivot?.prix_unitaire) ?? 0,
-              }))
-            : [
-                  {
-                      designation: '',
-                      dosage: '',
-                      forme: '',
-                      quantite: 1,
-                      prix_unitaire: 0,
-                  },
-              ]) as ProduitEnreg[],
+        produits: medicaments.length ? medicaments : [ligneProduitVide()],
+        produitsParapharma: parapharma.length
+            ? parapharma
+            : [ligneProduitVide()],
         ordonnance: null,
         commentaire: '',
     };
@@ -333,15 +359,8 @@ function resetForm() {
         client_sexe: '' as '' | 'M' | 'F',
         pharmacie_id: '',
         beneficiaire: '',
-        produits: [
-            {
-                designation: '',
-                dosage: '',
-                forme: '',
-                quantite: 1,
-                prix_unitaire: 0,
-            },
-        ],
+        produits: [ligneProduitVide()],
+        produitsParapharma: [ligneProduitVide()],
         ordonnance: null,
         commentaire: '',
     };
@@ -369,7 +388,7 @@ function onSubmit() {
         err.client_arrondissement = "L'arrondissement est obligatoire.";
     if (!form.value.pharmacie_id)
         err.pharmacie_id = 'Veuillez sélectionner une pharmacie.';
-    const produitsValides = form.value.produits
+    const produitsMedicamentsValides = form.value.produits
         .filter(
             (p) =>
                 p.designation.trim() &&
@@ -382,12 +401,44 @@ function onSubmit() {
             forme: (p.forme ?? '').trim() || null,
             quantite: p.quantite,
             prix_unitaire: Number(p.prix_unitaire),
+            type: null,
         }));
+
+    const produitsParapharmaValides = form.value.produitsParapharma
+        .filter(
+            (p) =>
+                p.designation.trim() &&
+                p.quantite > 0 &&
+                Number(p.prix_unitaire) >= 0,
+        )
+        .map((p) => ({
+            designation: p.designation.trim(),
+            dosage: (p.dosage ?? '').trim() || null,
+            forme: (p.forme ?? '').trim() || null,
+            quantite: p.quantite,
+            prix_unitaire: Number(p.prix_unitaire),
+            type: defaultParapharmaType.value,
+        }));
+
+    const produitsValides = [
+        ...produitsMedicamentsValides,
+        ...produitsParapharmaValides,
+    ];
+
     if (!produitsValides.length) {
         err.produits =
-            'Ajoutez au moins un médicament avec désignation, quantité et prix unitaire.';
+            'Ajoutez au moins un médicament ou un produit parapharmacie avec désignation, quantité et prix unitaire.';
     }
     form.value.produits.forEach((p, i) => {
+        const hasContent =
+            p.designation?.trim() ||
+            p.dosage?.trim() ||
+            p.forme?.trim() ||
+            Number(p.prix_unitaire) > 0 ||
+            p.quantite !== 1;
+        if (!hasContent) {
+            return;
+        }
         if (!p.designation?.trim())
             err[`produits.${i}.designation`] =
                 'La désignation est obligatoire.';
@@ -395,6 +446,26 @@ function onSubmit() {
             err[`produits.${i}.quantite`] = 'La quantité doit être au moins 1.';
         if (Number(p.prix_unitaire) < 0)
             err[`produits.${i}.prix_unitaire`] =
+                'Le prix unitaire doit être ≥ 0.';
+    });
+    form.value.produitsParapharma.forEach((p, i) => {
+        const hasContent =
+            p.designation?.trim() ||
+            p.dosage?.trim() ||
+            p.forme?.trim() ||
+            Number(p.prix_unitaire) > 0 ||
+            p.quantite !== 1;
+        if (!hasContent) {
+            return;
+        }
+        if (!p.designation?.trim())
+            err[`produits_parapharma.${i}.designation`] =
+                'La désignation est obligatoire.';
+        if (!p.quantite || p.quantite < 1)
+            err[`produits_parapharma.${i}.quantite`] =
+                'La quantité doit être au moins 1.';
+        if (Number(p.prix_unitaire) < 0)
+            err[`produits_parapharma.${i}.prix_unitaire`] =
                 'Le prix unitaire doit être ≥ 0.';
     });
     if (Object.keys(err).length) {
@@ -1091,6 +1162,219 @@ watch(
                                     type="button"
                                     class="mt-1 shrink-0 self-start text-[rgba(92,89,89,0.4)] hover:text-[#dc3545]"
                                     @click="removeProduit(i)"
+                                >
+                                    <X class="size-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 4 — Parapharmacie : même grille que Médicaments -->
+                    <div class="rounded-[10px] border border-[#ccc5c5] p-5">
+                        <div
+                            class="mb-4 flex flex-wrap items-center justify-between gap-2"
+                        >
+                            <p
+                                class="text-[20px] font-black italic text-[rgba(92,89,89,0.4)]"
+                            >
+                                Parapharmacie
+                            </p>
+                            <button
+                                type="button"
+                                class="flex items-center gap-2 rounded-[10px] bg-[#0d6efd] px-3.5 py-2 text-sm font-black text-white hover:bg-blue-700"
+                                @click="addProduitParapharma"
+                            >
+                                <ShoppingBag class="size-5" />
+                                Ajouter un produit parapharmacie
+                            </button>
+                        </div>
+
+                        <div
+                            v-for="(p, i) in form.produitsParapharma"
+                            :key="`para-${i}`"
+                            class="mb-4 flex flex-col gap-3 rounded-[10px] border border-[#ccc5c5] bg-white p-4 last:mb-0"
+                        >
+                            <div class="flex items-start justify-between gap-3">
+                                <div
+                                    class="grid min-w-0 flex-1 grid-cols-1 gap-x-4 gap-y-4 pr-1 md:grid-cols-[minmax(9.5rem,1.35fr)_minmax(5.75rem,0.85fr)_minmax(6.5rem,0.95fr)_minmax(7.25rem,1.05fr)]"
+                                >
+                                    <div class="flex min-w-0 flex-col gap-1 pr-0.5">
+                                        <Label
+                                            class="whitespace-nowrap text-base font-light text-black"
+                                            >Nom produit
+                                            <span class="text-[#dc3545]">*</span></Label
+                                        >
+                                        <input
+                                            v-model="p.designation"
+                                            placeholder="Ex : 1000"
+                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none"
+                                            :class="{
+                                                'border-[#dc3545]':
+                                                    getProduitParapharmaError(
+                                                        i,
+                                                        'designation',
+                                                    ),
+                                            }"
+                                        />
+                                        <p
+                                            v-if="
+                                                getProduitParapharmaError(
+                                                    i,
+                                                    'designation',
+                                                )
+                                            "
+                                            class="text-xs text-[#dc3545]"
+                                        >
+                                            {{
+                                                getProduitParapharmaError(
+                                                    i,
+                                                    'designation',
+                                                )
+                                            }}
+                                        </p>
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1 pl-0.5">
+                                        <Label
+                                            class="whitespace-nowrap text-base font-light text-black"
+                                            >Dosage</Label
+                                        >
+                                        <input
+                                            v-model="p.dosage"
+                                            placeholder="Ex : 1000"
+                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none"
+                                        />
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Forme</Label
+                                        >
+                                        <select
+                                            v-model="p.forme"
+                                            class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                        >
+                                            <option value="">
+                                                Choisir la forme
+                                            </option>
+                                            <option
+                                                v-for="f in formesPharmaceutiques"
+                                                :key="f"
+                                                :value="f"
+                                            >
+                                                {{ f }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div
+                                        class="flex min-w-0 flex-col gap-1 md:min-w-[7.25rem]"
+                                    >
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Quantité
+                                            <span class="text-[#dc3545]">*</span></Label
+                                        >
+                                        <input
+                                            v-model.number="p.quantite"
+                                            type="number"
+                                            min="1"
+                                            class="box-border h-[42px] w-full min-w-0 max-w-full rounded-[10px] border border-[#ccc5c5] bg-white px-2 py-2 text-center text-base text-[#5c5959] focus:border-[#0d6efd] focus:outline-none md:max-w-[7.5rem]"
+                                            :class="{
+                                                'border-[#dc3545]':
+                                                    getProduitParapharmaError(
+                                                        i,
+                                                        'quantite',
+                                                    ),
+                                            }"
+                                        />
+                                        <p
+                                            v-if="
+                                                getProduitParapharmaError(
+                                                    i,
+                                                    'quantite',
+                                                )
+                                            "
+                                            class="text-xs text-[#dc3545]"
+                                        >
+                                            {{
+                                                getProduitParapharmaError(
+                                                    i,
+                                                    'quantite',
+                                                )
+                                            }}
+                                        </p>
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Prix unitaire
+                                            <span class="text-[#dc3545]">*</span></Label
+                                        >
+                                        <div
+                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white"
+                                        >
+                                            <input
+                                                v-model.number="p.prix_unitaire"
+                                                type="number"
+                                                min="0"
+                                                step="1"
+                                                placeholder="Ex : 1000"
+                                                class="min-w-0 flex-1 border-0 px-3 py-2 text-sm outline-none placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:ring-0"
+                                                :class="{
+                                                    'ring-1 ring-[#dc3545]':
+                                                        getProduitParapharmaError(
+                                                            i,
+                                                            'prix_unitaire',
+                                                        ),
+                                                }"
+                                            />
+                                            <span
+                                                class="pr-3 text-base font-medium text-black"
+                                                >xaf</span
+                                            >
+                                        </div>
+                                        <p
+                                            v-if="
+                                                getProduitParapharmaError(
+                                                    i,
+                                                    'prix_unitaire',
+                                                )
+                                            "
+                                            class="text-xs text-[#dc3545]"
+                                        >
+                                            {{
+                                                getProduitParapharmaError(
+                                                    i,
+                                                    'prix_unitaire',
+                                                )
+                                            }}
+                                        </p>
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Total</Label
+                                        >
+                                        <div
+                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-[#f8fafc] px-3 text-sm text-black"
+                                        >
+                                            <span class="min-w-0 flex-1 font-medium tabular-nums">{{
+                                                (
+                                                    (Number(p.prix_unitaire) ||
+                                                        0) *
+                                                    (p.quantite || 0)
+                                                ).toFixed(1)
+                                            }}</span>
+                                            <span
+                                                class="pl-1 text-base font-medium text-black"
+                                                >xaf</span
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="mt-1 shrink-0 self-start text-[rgba(92,89,89,0.4)] hover:text-[#dc3545]"
+                                    @click="removeProduitParapharma(i)"
                                 >
                                     <X class="size-4" />
                                 </button>

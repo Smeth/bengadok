@@ -57,20 +57,20 @@ function designationComplete() {
         <div
             class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
         >
-            <!-- Tabs (same as Index) -->
-            <div class="flex gap-2">
-                <button
-                    class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                    :class="'bg-white/80 text-muted-foreground'"
+            <!-- Navigation module (alignée sur Index) -->
+            <div class="flex flex-wrap gap-2">
+                <Link
+                    href="/medicaments"
+                    class="rounded-lg bg-[#459cd1] px-4 py-2 text-sm font-medium text-white"
                 >
                     Catalogue Médicaments
-                </button>
-                <button
-                    class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                    :class="'bg-white/80 text-muted-foreground'"
+                </Link>
+                <Link
+                    href="/medicaments"
+                    class="rounded-lg bg-white/80 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-white"
                 >
                     Statistiques
-                </button>
+                </Link>
             </div>
 
             <Button variant="ghost" size="sm" as-child>

@@ -38,6 +38,7 @@ class ParametresController extends Controller
             'clientFrequences',
             'relanceCommande',
             'ordonnanceVerification',
+            'parapharma',
         ];
         $onglet = $request->query('onglet');
         if (! is_string($onglet) || ! in_array($onglet, $allowedOnglets, true)) {
@@ -70,6 +71,7 @@ class ParametresController extends Controller
             'appSettings' => [
                 'delai_relance_meme_pharmacie_heures' => AppSetting::delaiRelanceMemePharmacieHeures(),
             ],
+            'parapharmaSettings' => AppSetting::parapharmaConfig(),
             'ordonnanceVerificationSettings' => $this->ordonnanceVerificationSettingsPayload(),
             'onglet' => $onglet,
         ]);
@@ -89,6 +91,46 @@ class ParametresController extends Controller
         }
 
         return back()->with('status', 'Délai de relance (même pharmacie) enregistré.');
+    }
+
+    public function updateParapharma(Request $request)
+    {
+        $validated = $request->validate([
+            'commission_percent' => 'required|numeric|min:0|max:100',
+            'commission_jour_echeance' => 'required|integer|min:1|max:31',
+            'periode_jour_fin' => 'required|integer|min:1|max:31',
+            'credit_seuil_medicament_xaf' => 'required|integer|min:0|max:999999999',
+            'credit_prix_unitaire_xaf' => 'required|integer|min:0|max:999999999',
+            'credit_minimum_achat' => 'required|integer|min:1|max:99999',
+            'produit_types' => 'required|array|min:1',
+            'produit_types.*' => 'required|string|max:100',
+            'credit_alerte_seuil' => 'required|integer|min:1|max:9999',
+            'credit_deduction_auto' => 'required|boolean',
+        ]);
+
+        $types = array_values(array_unique(array_filter(array_map(
+            static fn (string $t): string => trim($t),
+            $validated['produit_types']
+        ))));
+
+        if ($types === []) {
+            return back()->with('error', 'Indiquez au moins un type produit parapharmacie.');
+        }
+
+        $row = AppSetting::ensureRowExists();
+        $row->update([
+            'parapharma_commission_percent' => $validated['commission_percent'],
+            'parapharma_commission_jour_echeance' => $validated['commission_jour_echeance'],
+            'parapharma_periode_jour_fin' => $validated['periode_jour_fin'],
+            'parapharma_credit_seuil_medicament_xaf' => $validated['credit_seuil_medicament_xaf'],
+            'parapharma_credit_prix_unitaire_xaf' => $validated['credit_prix_unitaire_xaf'],
+            'parapharma_credit_minimum_achat' => $validated['credit_minimum_achat'],
+            'parapharma_produit_types' => $types,
+            'parapharma_credit_alerte_seuil' => $validated['credit_alerte_seuil'],
+            'parapharma_credit_deduction_auto' => $request->boolean('credit_deduction_auto'),
+        ]);
+
+        return back()->with('status', 'Paramètres parapharmacie et crédits enregistrés.');
     }
 
     // ── Zones ──────────────────────────────────────────────────────────────

@@ -22,6 +22,15 @@ export default defineConfig({
         }),
         wayfinder({
             formVariants: true,
+            // Wrapper Node : cwd projet + chemin PHP fiable sous Windows
+            command: 'node scripts/wayfinder-generate.mjs',
+            // Ne pas relancer à chaque .php (trop lent / timeout HMR) — utiliser npm run wayfinder:generate
+            patterns: [],
         }),
     ],
+    server: {
+        hmr: {
+            overlay: true,
+        },
+    },
 });

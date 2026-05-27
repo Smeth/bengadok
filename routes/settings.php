@@ -110,6 +110,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::patch('relance-delai', [ParametresController::class, 'updateRelanceDelai'])->name('relance-delai.update');
 
+            Route::patch('parapharma', [ParametresController::class, 'updateParapharma'])->name('parapharma.update');
+
             Route::patch(
                 'ordonnance-verification',
                 [ParametresController::class, 'updateOrdonnanceVerification'],

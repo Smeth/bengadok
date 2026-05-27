@@ -168,6 +168,7 @@ class StoreCommandeRequest extends FormRequest
             'produits.*.forme' => 'nullable|string|max:50',
             'produits.*.quantite' => 'required|integer|min:1',
             'produits.*.prix_unitaire' => 'required|numeric|min:0',
+            'produits.*.type' => 'nullable|string|max:100',
             'ordonnance' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
             'reutiliser_ordonnance_commande_id' => 'nullable|integer|exists:commandes,id',
             'mode_paiement_id' => 'nullable|exists:modes_paiement,id',

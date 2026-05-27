@@ -35,7 +35,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { sousTotalCommandeProduits } from '@/lib/commandeTotals';
+import { splitProduitsCommande } from '@/lib/commandeTotals';
 import { formatDateFrLocal } from '@/lib/formatDateLocal';
 import { normalizeInertiaErrors } from '@/lib/validationErrors';
 import { dashboard } from '@/routes';
@@ -115,6 +115,8 @@ const props = withDefaults(
         openDetailCommandeId?: number | null;
         /** Arrondissements (Brazzaville) pour les formulaires commande. */
         arrondissements?: string[];
+        /** Types produit parapharmacie (paramètres app). */
+        parapharma_produit_types?: string[];
     }>(),
     {
         commandes: () => ({ data: [], links: [] }),
@@ -128,6 +130,7 @@ const props = withDefaults(
         livreurs: () => [],
         openDetailCommandeId: null,
         arrondissements: () => [],
+        parapharma_produit_types: () => ['Parapharmacie'],
     },
 );
 
@@ -762,8 +765,14 @@ function openEnregistrementModal() {
     showEnregistrementModal.value = true;
 }
 
-const sousTotal = () =>
-    sousTotalCommandeProduits(detailCommande.value?.produits);
+const sousTotal = () => detailSplit.value.sousTotal;
+
+const detailSplit = computed(() =>
+    splitProduitsCommande(
+        detailCommande.value?.produits,
+        props.parapharma_produit_types ?? ['Parapharmacie'],
+    ),
+);
 
 const livraison = () =>
     Number(detailCommande.value?.montant_livraison?.designation ?? 0);
@@ -1364,6 +1373,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
 
                         <!-- Médicaments -->
                         <div
+                            v-if="detailSplit.medicaments.length"
                             class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
                         >
                             <h3
@@ -1373,7 +1383,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                             </h3>
                             <div class="space-y-4">
                                 <div
-                                    v-for="p in detailCommande.produits"
+                                    v-for="p in detailSplit.medicaments"
                                     :key="p.id"
                                     class="border-b border-dashed border-gray-200 pb-3 last:border-0 last:pb-0"
                                 >
@@ -1390,6 +1400,60 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                         <span class="font-medium text-gray-800">{{
                                             p.forme
                                         }}</span>
+                                    </p>
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <div class="text-[13px] text-gray-600">
+                                            <p>
+                                                Quantité :
+                                                {{ p.pivot.quantite }}
+                                            </p>
+                                            <p>
+                                                Prix unitaire :
+                                                {{
+                                                    Number(
+                                                        p.pivot.prix_unitaire,
+                                                    ).toLocaleString('fr-FR')
+                                                }}
+                                                FCFA
+                                            </p>
+                                        </div>
+                                        <span
+                                            class="rounded-full border px-3 py-0.5 text-[11px] font-bold"
+                                            :class="classesPivotStatusProduit(p.pivot.status)"
+                                        >
+                                            {{
+                                                libellePivotStatusProduit(
+                                                    p.pivot.status,
+                                                )
+                                            }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Parapharmacie -->
+                        <div
+                            v-if="detailSplit.parapharma.length"
+                            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                        >
+                            <h3
+                                class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
+                            >
+                                Parapharmacie
+                            </h3>
+                            <div class="space-y-4">
+                                <div
+                                    v-for="p in detailSplit.parapharma"
+                                    :key="`para-${p.id}`"
+                                    class="border-b border-dashed border-gray-200 pb-3 last:border-0 last:pb-0"
+                                >
+                                    <p
+                                        class="mb-1 text-[15px] font-bold text-gray-900"
+                                    >
+                                        {{ p.designation }}
                                     </p>
                                     <div
                                         class="flex items-center justify-between"
@@ -1813,9 +1877,41 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                             </div>
 
                             <div class="space-y-2 text-[14px]">
+                                <div
+                                    v-if="detailSplit.sousTotalMedicaments > 0"
+                                    class="flex items-center justify-between"
+                                >
+                                    <span class="text-gray-500"
+                                        >Sous-total médicaments</span
+                                    >
+                                    <span class="font-bold text-gray-900"
+                                        >{{
+                                            detailSplit.sousTotalMedicaments.toLocaleString(
+                                                'fr-FR',
+                                            )
+                                        }}
+                                        FCFA</span
+                                    >
+                                </div>
+                                <div
+                                    v-if="detailSplit.sousTotalParapharma > 0"
+                                    class="flex items-center justify-between"
+                                >
+                                    <span class="text-gray-500"
+                                        >Sous-total parapharmacie</span
+                                    >
+                                    <span class="font-bold text-gray-900"
+                                        >{{
+                                            detailSplit.sousTotalParapharma.toLocaleString(
+                                                'fr-FR',
+                                            )
+                                        }}
+                                        FCFA</span
+                                    >
+                                </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-gray-500"
-                                        >Sous-Total</span
+                                        >Sous-total</span
                                     >
                                     <span class="font-extrabold text-gray-900"
                                         >{{
@@ -2320,6 +2416,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
             :zones="zones ?? []"
             :pharmacies="pharmacies ?? []"
             :arrondissements="arrondissements ?? []"
+            :parapharma-produit-types="parapharma_produit_types ?? []"
             :api-errors="apiErrorsEnreg"
             @submit="submitEnregistrementFromModal"
         />
@@ -2332,6 +2429,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
             :zones="zones ?? []"
             :pharmacies="pharmacies ?? []"
             :arrondissements="arrondissements ?? []"
+            :parapharma-produit-types="parapharma_produit_types ?? []"
             :api-errors="errorsRelancer"
             @submit="submitRelancerFromModal"
         />

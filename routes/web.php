@@ -11,6 +11,7 @@ use App\Http\Controllers\MedicamentCatalogueMaintenanceController;
 use App\Http\Controllers\MedicamentController;
 use App\Http\Controllers\MedicamentDoublonController;
 use App\Http\Controllers\PharmacieController;
+use App\Http\Controllers\PharmacieCreditController;
 use App\Http\Controllers\PharmacieVendeurController;
 use App\Http\Controllers\PostLoginLoadingController;
 use App\Http\Controllers\UtilisateurBackofficeController;
@@ -25,7 +26,10 @@ Route::redirect('reglages', '/settings/profile')->name('reglages');
 Route::middleware(['auth'])->get('chargement', PostLoginLoadingController::class)->name('post-login.loading');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, '__invoke'])->name('dashboard');
+    Route::post('dashboard/commission/payee', [DashboardController::class, 'marquerCommissionPayee'])
+        ->name('dashboard.commission.payee')
+        ->middleware('role:admin|super_admin');
 
     Route::prefix('pharmacies')->name('pharmacies.')->group(function () {
         Route::get('/', [PharmacieController::class, 'index'])->name('index');
@@ -37,6 +41,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('{pharmacie}/users', [PharmacieController::class, 'storeUser'])->name('users.store')->middleware('role:admin|super_admin');
         Route::patch('{pharmacie}/users/{user}/reset-password', [PharmacieController::class, 'resetUserPassword'])->name('users.reset-password')->middleware('role:admin|super_admin');
         Route::delete('{pharmacie}/users/{user}', [PharmacieController::class, 'destroyUser'])->name('users.destroy')->middleware('role:admin|super_admin');
+
+        Route::middleware('role:admin|super_admin')->group(function () {
+            Route::post('{pharmacie}/credits/recharge', [PharmacieCreditController::class, 'recharge'])->name('credits.recharge');
+            Route::patch('{pharmacie}/credits/note', [PharmacieCreditController::class, 'updateNote'])->name('credits.note');
+            Route::patch('{pharmacie}/credits/alerte-seuil', [PharmacieCreditController::class, 'updateAlerteSeuil'])->name('credits.alerte');
+        });
     });
     Route::prefix('medicaments')->name('medicaments.')->group(function () {
         Route::get('/', [MedicamentController::class, 'index'])->name('index');

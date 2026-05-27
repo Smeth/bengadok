@@ -21,9 +21,11 @@ import {
     EyeOff,
     CheckCircle2,
     X,
+    Coins,
 } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
+import PharmacieGestionCredit from '@/components/PharmacieGestionCredit.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -77,7 +79,43 @@ const props = defineProps<{
     zones: Zone[];
     types: TypePharmacie[];
     nextUserId?: number;
+    onglet?: 'informations' | 'credits';
+    creditGestion?: {
+        resume: Record<string, unknown>;
+        config: Record<string, unknown>;
+        modes_paiement: Array<{ value: string; label: string }>;
+        historique: Array<Record<string, unknown>>;
+        note_interne: string | null;
+        note_modifie_le: string | null;
+    };
 }>();
+
+const ongletActif = ref<'informations' | 'credits'>(
+    props.onglet === 'credits' ? 'credits' : 'informations',
+);
+
+watch(
+    () => props.onglet,
+    (o) => {
+        if (o === 'credits' && isAdmin.value) {
+            ongletActif.value = 'credits';
+        } else if (o === 'informations' || o === 'credits') {
+            ongletActif.value = 'informations';
+        }
+    },
+);
+
+function setOnglet(id: 'informations' | 'credits') {
+    if (id === 'credits' && !isAdmin.value) {
+        return;
+    }
+    ongletActif.value = id;
+    router.get(
+        `/pharmacies/${props.pharmacie.id}`,
+        { onglet: id },
+        { preserveState: true, preserveScroll: true },
+    );
+}
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
@@ -139,6 +177,11 @@ const createdUsername = computed(
 const flashError = computed(
     () => (page.props.flash as { error?: string })?.error,
 );
+const isAdmin = computed(() => {
+    const roles =
+        (page.props.auth as { user?: { roles?: string[] } })?.user?.roles ?? [];
+    return roles.some((r) => ['admin', 'super_admin'].includes(r));
+});
 
 const typeJour = computed(() =>
     props.types.find((t) => t.designation?.toLowerCase().includes('jour')),
@@ -400,7 +443,62 @@ function creerUtilisateur() {
                 </p>
             </div>
 
+            <!-- Onglets fiche pharmacie (même style que Médicaments / Clients) -->
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+                        :class="
+                            ongletActif === 'informations'
+                                ? 'bg-[#459cd1] text-white'
+                                : 'bg-white/80 text-muted-foreground hover:bg-white'
+                        "
+                        @click="setOnglet('informations')"
+                    >
+                        <Building2 class="size-4 shrink-0" />
+                        Informations
+                    </button>
+                    <button
+                        v-if="isAdmin"
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+                        :class="
+                            ongletActif === 'credits'
+                                ? 'bg-[#459cd1] text-white'
+                                : 'bg-white/80 text-muted-foreground hover:bg-white'
+                        "
+                        @click="setOnglet('credits')"
+                    >
+                        <Coins class="size-4 shrink-0" />
+                        Gestion de crédit
+                    </button>
+                </div>
+            </div>
+
+            <PharmacieGestionCredit
+                v-if="isAdmin && ongletActif === 'credits' && creditGestion"
+                :pharmacie-id="pharmacie.id"
+                :pharmacie="{
+                    designation: pharmacie.designation,
+                    adresse: pharmacie.adresse,
+                    telephone: pharmacie.telephone,
+                    email: pharmacie.email,
+                    de_garde: pharmacie.de_garde,
+                }"
+                :credit-gestion="(creditGestion as any)"
+            />
+
             <div
+                v-else-if="isAdmin && ongletActif === 'credits'"
+                class="rounded-xl border border-amber-200 bg-amber-50 px-6 py-8 text-center text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100"
+            >
+                Impossible de charger la gestion des crédits pour cette
+                pharmacie. Rechargez la page ou contactez le support.
+            </div>
+
+            <div
+                v-show="ongletActif === 'informations'"
                 class="rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/95"
             >
                 <div class="mb-6 flex items-start justify-between">

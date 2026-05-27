@@ -15,7 +15,7 @@ class Commande extends Model
     protected $fillable = [
         'numero', 'client_id', 'pharmacie_id', 'parent_id', 'relance_de_commande_id', 'pharmacie_refusee_id', 'ordonnance_id',
         'mode_paiement_id', 'livreur_id', 'montant_livraison_id',
-        'date', 'heurs', 'commentaire', 'commentaire_pharmacie', 'prix_total', 'prix_medicaments',
+        'date', 'heurs', 'commentaire', 'commentaire_pharmacie', 'prix_total', 'prix_medicaments', 'prix_parapharma',
         'beneficiaire', 'designation', 'status', 'status_pharmacie', 'dispo_pharmacie_at', 'validee_admin_at', 'livree_at',
         'acceptation_client', 'motif_annulation', 'note_annulation',
     ];
@@ -24,6 +24,7 @@ class Commande extends Model
         'date' => 'date',
         'prix_total' => 'decimal:2',
         'prix_medicaments' => 'decimal:2',
+        'prix_parapharma' => 'decimal:2',
         'acceptation_client' => 'boolean',
         'dispo_pharmacie_at' => 'datetime',
         'validee_admin_at' => 'datetime',
@@ -138,20 +139,23 @@ class Commande extends Model
     }
 
     /**
-     * Montant des médicaments (hors livraison), calculé depuis les lignes pivot.
+     * Montant des lignes médicaments / parapharmacie (hors livraison).
+     *
+     * @return array{prix_medicaments: float, prix_parapharma: float, prix_lignes: float}
+     */
+    public static function computeMontantsFromProduits($produits, bool $excludeIndisponible = true): array
+    {
+        return \App\Services\CommandeMontantCalculator::fromProduitsRelation($produits, $excludeIndisponible);
+    }
+
+    /**
+     * @deprecated Utiliser computeMontantsFromProduits()
      */
     public function computePrixMedicamentsFromProduits(): float
     {
         $this->loadMissing('produits');
 
-        return (float) $this->produits->sum(function ($p) {
-            if (($p->pivot->status ?? '') === 'indisponible') {
-                return 0;
-            }
-            $qte = $p->pivot->quantite_confirmee ?? $p->pivot->quantite;
-
-            return $qte * (float) $p->pivot->prix_unitaire;
-        });
+        return self::computeMontantsFromProduits($this->produits)['prix_lignes'];
     }
 
     public function montantLivraisonClient(): float
@@ -166,6 +170,8 @@ class Commande extends Model
      */
     public function computePrixTotalClient(): float
     {
-        return $this->computePrixMedicamentsFromProduits() + $this->montantLivraisonClient();
+        $this->loadMissing('produits');
+
+        return self::computeMontantsFromProduits($this->produits)['prix_lignes'] + $this->montantLivraisonClient();
     }
 }

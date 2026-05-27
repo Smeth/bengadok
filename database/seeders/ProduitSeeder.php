@@ -11,6 +11,10 @@ class ProduitSeeder extends Seeder
     public function run(): void
     {
         $produits = [
+            ['designation' => 'Crème hydratante Nivea', 'forme' => 'Tube 200ml', 'pu' => 4500, 'type' => 'Parapharmacie'],
+            ['designation' => 'Gel douche Sanex', 'forme' => 'Flacon 500ml', 'pu' => 3200, 'type' => 'Parapharmacie'],
+            ['designation' => 'Complément Vitamine C', 'dosage' => '1000mg', 'forme' => 'Comprimé', 'pu' => 8500, 'type' => 'Parapharmacie'],
+            ['designation' => 'Pansements stériles', 'forme' => 'Boîte 20', 'pu' => 2800, 'type' => 'Parapharmacie'],
             ['designation' => 'Doliprane', 'dosage' => '1000 mg', 'forme' => 'Effervescent', 'pu' => 1300, 'type' => 'Vente libre'],
             ['designation' => 'Paracétamol', 'dosage' => '500mg', 'forme' => 'Comprimé', 'pu' => 500, 'type' => 'Vente libre'],
             ['designation' => 'Oméprazole', 'dosage' => '20mg', 'forme' => 'Gélule', 'pu' => 1500, 'type' => 'Vente libre'],

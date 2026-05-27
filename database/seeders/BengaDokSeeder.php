@@ -20,7 +20,9 @@ class BengaDokSeeder extends Seeder
             LivreurSeeder::class,
             ClientSeeder::class,
             CommandeSeeder::class,
+            ClientPromotionSeeder::class,
             UserSeeder::class,
+            PharmacieCreditSeeder::class,
         ]);
     }
 }

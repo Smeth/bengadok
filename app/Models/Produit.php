@@ -49,6 +49,9 @@ class Produit extends Model
         $forme = is_string($formeRaw) && trim($formeRaw) !== '' ? trim($formeRaw) : null;
         $pu = (float) ($line['prix_unitaire'] ?? 0);
 
+        $type = is_string($line['type'] ?? null) ? trim($line['type']) : '';
+        $defaultType = $type !== '' ? $type : 'Vente libre';
+
         $produit = static::firstOrCreate(
             [
                 'designation' => $designation,
@@ -57,12 +60,16 @@ class Produit extends Model
             [
                 'pu' => $pu,
                 'forme' => $forme,
-                'type' => 'Vente libre',
+                'type' => $defaultType,
             ],
         );
 
         if ($forme !== null && $forme !== '' && trim((string) ($produit->forme ?? '')) === '') {
             $produit->update(['forme' => $forme]);
+        }
+
+        if ($type !== '' && $produit->type !== $type) {
+            $produit->update(['type' => $type]);
         }
 
         return $produit;

@@ -8,17 +8,33 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Garantit les lignes attendues par l’app si les migrations n’ont pas inséré de données
- * ou en cas de base partiellement migrée.
+ * Garantit les lignes attendues par l’app (app_settings, ordonnance) avec les champs parapharma / crédits.
  */
 class ApplicationDefaultsSeeder extends Seeder
 {
     public function run(): void
     {
-        if (Schema::hasTable('app_settings') && ! AppSetting::query()->exists()) {
-            AppSetting::query()->create([
+        if (Schema::hasTable('app_settings')) {
+            $parapharma = AppSetting::parapharmaDefaultsFromConfigFile();
+            $payload = [
                 'delai_relance_meme_pharmacie_heures' => 24,
-            ]);
+                'parapharma_commission_percent' => $parapharma['commission_percent'],
+                'parapharma_commission_jour_echeance' => $parapharma['commission_jour_echeance'],
+                'parapharma_periode_jour_fin' => $parapharma['periode_jour_fin'],
+                'parapharma_credit_seuil_medicament_xaf' => $parapharma['credit_seuil_medicament_xaf'],
+                'parapharma_credit_prix_unitaire_xaf' => $parapharma['credit_prix_unitaire_xaf'],
+                'parapharma_credit_minimum_achat' => $parapharma['credit_minimum_achat'],
+                'parapharma_produit_types' => $parapharma['produit_types'],
+                'parapharma_credit_alerte_seuil' => 5,
+                'parapharma_credit_deduction_auto' => true,
+            ];
+
+            $row = AppSetting::query()->first();
+            if ($row) {
+                $row->update($payload);
+            } else {
+                AppSetting::query()->create($payload);
+            }
         }
 
         if (Schema::hasTable('ordonnance_verification_settings')

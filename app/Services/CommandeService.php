@@ -7,6 +7,7 @@ use App\Models\Commande;
 use App\Models\MontantLivraison;
 use App\Models\Ordonnance;
 use App\Models\Produit;
+use App\Services\CommandeMontantCalculator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
@@ -42,14 +43,15 @@ class CommandeService
                 'status_pharmacie' => 'nouvelle',
             ]);
 
-            $prixMedicaments = $this->attachProduits($commande, $data['produits']);
+            $montants = $this->attachProduits($commande, $data['produits']);
             $liv = 0.0;
             if (! empty($data['montant_livraison_id'])) {
                 $liv = (float) (MontantLivraison::query()->find((int) $data['montant_livraison_id'])?->designation ?? 0);
             }
             $commande->update([
-                'prix_medicaments' => $prixMedicaments,
-                'prix_total' => $prixMedicaments + $liv,
+                'prix_medicaments' => $montants['prix_medicaments'],
+                'prix_parapharma' => $montants['prix_parapharma'],
+                'prix_total' => $montants['prix_lignes'] + $liv,
             ]);
 
             return $commande;
@@ -125,17 +127,18 @@ class CommandeService
     }
 
     /**
-     * @param  array<int, array{designation: string, dosage?: string, forme?: string, quantite: int, prix_unitaire: float}>  $produits
+     * @param  array<int, array{designation: string, dosage?: string|null, forme?: string|null, quantite: int, prix_unitaire: float, type?: string|null}>  $produits
+     * @return array{prix_medicaments: float, prix_parapharma: float, prix_lignes: float}
      */
-    private function attachProduits(Commande $commande, array $produits): float
+    private function attachProduits(Commande $commande, array $produits): array
     {
-        $prixTotal = 0;
         foreach ($produits as $p) {
             $produit = Produit::fromCommandeLine([
                 'designation' => $p['designation'],
                 'dosage' => $p['dosage'] ?? null,
                 'forme' => $p['forme'] ?? null,
                 'prix_unitaire' => $p['prix_unitaire'] ?? 0,
+                'type' => $p['type'] ?? null,
             ]);
             $quantite = (int) $p['quantite'];
             $prixUnitaire = (float) ($p['prix_unitaire'] ?? 0);
@@ -144,9 +147,8 @@ class CommandeService
                 'prix_unitaire' => $prixUnitaire,
                 'status' => 'disponible',
             ]);
-            $prixTotal += $prixUnitaire * $quantite;
         }
 
-        return $prixTotal;
+        return CommandeMontantCalculator::fromInputLines($produits);
     }
 }

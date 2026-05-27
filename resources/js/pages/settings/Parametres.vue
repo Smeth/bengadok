@@ -16,6 +16,7 @@ import {
     CalendarClock,
     Timer,
     FileCheck,
+    Percent,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
@@ -95,6 +96,18 @@ interface AppSettingsProps {
     delai_relance_meme_pharmacie_heures: number;
 }
 
+interface ParapharmaSettingsProps {
+    commission_percent: number;
+    commission_jour_echeance: number;
+    periode_jour_fin: number;
+    credit_seuil_medicament_xaf: number;
+    credit_prix_unitaire_xaf: number;
+    credit_minimum_achat: number;
+    produit_types: string[];
+    credit_alerte_seuil: number;
+    credit_deduction_auto: boolean;
+}
+
 interface OrdonnanceVerificationSettings {
     enabled: boolean;
     max_prescription_age_days: number;
@@ -121,6 +134,7 @@ const props = withDefaults(
         motifsAnnulation: MotifAnnulationRow[];
         clientFrequences: ClientFrequenceRow[];
         appSettings: AppSettingsProps;
+        parapharmaSettings: ParapharmaSettingsProps;
         ordonnanceVerificationSettings: OrdonnanceVerificationSettings;
         onglet: string | null;
     }>(),
@@ -128,6 +142,17 @@ const props = withDefaults(
         motifsAnnulation: () => [],
         clientFrequences: () => [],
         appSettings: () => ({ delai_relance_meme_pharmacie_heures: 24 }),
+        parapharmaSettings: () => ({
+            commission_percent: 1,
+            commission_jour_echeance: 25,
+            periode_jour_fin: 25,
+            credit_seuil_medicament_xaf: 5000,
+            credit_prix_unitaire_xaf: 150,
+            credit_minimum_achat: 10,
+            produit_types: ['Parapharmacie'],
+            credit_alerte_seuil: 5,
+            credit_deduction_auto: true,
+        }),
         ordonnanceVerificationSettings: () => ({
             enabled: true,
             execution_mode: 'queue' as const,
@@ -172,6 +197,11 @@ const onglets = [
         icon: CalendarClock,
     },
     { id: 'relanceCommande', label: 'Relance commandes', icon: Timer },
+    {
+        id: 'parapharma',
+        label: 'Parapharmacie & crédits',
+        icon: Percent,
+    },
     {
         id: 'ordonnanceVerification',
         label: 'Ordonnances (OCR)',
@@ -578,6 +608,112 @@ function sauverRelanceDelai() {
     submit(
         '/settings/parametres/relance-delai',
         { delai_relance_meme_pharmacie_heures: n },
+        'patch',
+    );
+}
+
+const parapharmaForm = ref({
+    commission_percent: '1',
+    commission_jour_echeance: '25',
+    periode_jour_fin: '25',
+    credit_seuil_medicament_xaf: '5000',
+    credit_prix_unitaire_xaf: '150',
+    credit_minimum_achat: '10',
+    produit_types_text: 'Parapharmacie',
+    credit_alerte_seuil: '5',
+    credit_deduction_auto: true,
+});
+
+watch(
+    () => props.parapharmaSettings,
+    (s) => {
+        if (!s) return;
+        parapharmaForm.value.commission_percent = String(s.commission_percent);
+        parapharmaForm.value.commission_jour_echeance = String(
+            s.commission_jour_echeance,
+        );
+        parapharmaForm.value.periode_jour_fin = String(s.periode_jour_fin);
+        parapharmaForm.value.credit_seuil_medicament_xaf = String(
+            s.credit_seuil_medicament_xaf,
+        );
+        parapharmaForm.value.credit_prix_unitaire_xaf = String(
+            s.credit_prix_unitaire_xaf,
+        );
+        parapharmaForm.value.credit_minimum_achat = String(
+            s.credit_minimum_achat,
+        );
+        parapharmaForm.value.produit_types_text = (s.produit_types || []).join(
+            '\n',
+        );
+        parapharmaForm.value.credit_alerte_seuil = String(s.credit_alerte_seuil);
+        parapharmaForm.value.credit_deduction_auto = s.credit_deduction_auto;
+    },
+    { immediate: true, deep: true },
+);
+
+function parseProduitTypesText(raw: string): string[] {
+    return [
+        ...new Set(
+            raw
+                .split(/[\n,;]+/)
+                .map((t) => t.trim())
+                .filter(Boolean),
+        ),
+    ];
+}
+
+function sauverParapharma() {
+    const types = parseProduitTypesText(parapharmaForm.value.produit_types_text);
+    if (types.length === 0) return;
+
+    const commissionPercent = parseFloat(
+        parapharmaForm.value.commission_percent.replace(',', '.'),
+    );
+    const commissionJour = parseInt(
+        parapharmaForm.value.commission_jour_echeance,
+        10,
+    );
+    const periodeJourFin = parseInt(parapharmaForm.value.periode_jour_fin, 10);
+    const seuil = parseInt(
+        parapharmaForm.value.credit_seuil_medicament_xaf,
+        10,
+    );
+    const prixUnitaire = parseInt(
+        parapharmaForm.value.credit_prix_unitaire_xaf,
+        10,
+    );
+    const minimumAchat = parseInt(
+        parapharmaForm.value.credit_minimum_achat,
+        10,
+    );
+
+    if (
+        !Number.isFinite(commissionPercent) ||
+        !Number.isFinite(commissionJour) ||
+        !Number.isFinite(periodeJourFin) ||
+        !Number.isFinite(seuil) ||
+        !Number.isFinite(prixUnitaire) ||
+        !Number.isFinite(minimumAchat)
+    ) {
+        return;
+    }
+
+    submit(
+        '/settings/parametres/parapharma',
+        {
+            commission_percent: commissionPercent,
+            commission_jour_echeance: commissionJour,
+            periode_jour_fin: periodeJourFin,
+            credit_seuil_medicament_xaf: seuil,
+            credit_prix_unitaire_xaf: prixUnitaire,
+            credit_minimum_achat: minimumAchat,
+            produit_types: types,
+            credit_alerte_seuil: parseInt(
+                parapharmaForm.value.credit_alerte_seuil,
+                10,
+            ),
+            credit_deduction_auto: parapharmaForm.value.credit_deduction_auto,
+        },
         'patch',
     );
 }
@@ -1928,6 +2064,231 @@ function sauverOrdonnanceVerification() {
                     >
                         <Check class="h-4 w-4" /> Enregistrer
                     </button>
+                </form>
+            </section>
+
+            <!-- ══════════════════ PARAPHARMACIE & CRÉDITS ══════════════════ -->
+            <section
+                v-if="ongletActif === 'parapharma'"
+                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+            >
+                <div class="border-b bg-gray-50 px-5 py-3">
+                    <h2
+                        class="font-semibold text-gray-700 flex items-center gap-2"
+                    >
+                        <Percent class="h-4 w-4 text-emerald-600" />
+                        Parapharmacie, commissions & crédits
+                    </h2>
+                </div>
+                <div
+                    class="space-y-2 border-b border-emerald-100 bg-emerald-50/40 px-5 py-4"
+                >
+                    <p class="text-sm leading-relaxed text-gray-600">
+                        Ces réglages alimentent le
+                        <span class="font-semibold">tableau de bord admin</span>,
+                        l’onglet <span class="font-semibold">Gestion de crédit</span>
+                        et les déductions automatiques à la livraison. Tous les
+                        champs ci-dessous sont modifiables sans toucher au fichier
+                        <code class="rounded bg-white px-1 text-xs">.env</code>.
+                    </p>
+                </div>
+                <form class="space-y-8 px-5 py-6" @submit.prevent="sauverParapharma">
+                    <div>
+                        <h3
+                            class="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500"
+                        >
+                            Commissions parapharmacie
+                        </h3>
+                        <div
+                            class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                        >
+                            <div>
+                                <label
+                                    class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                                >
+                                    Taux de commission (%)
+                                </label>
+                                <input
+                                    v-model="parapharmaForm.commission_percent"
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="0.01"
+                                    required
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                                >
+                                    Fin de période (jour du mois)
+                                </label>
+                                <input
+                                    v-model="parapharmaForm.periode_jour_fin"
+                                    type="number"
+                                    min="1"
+                                    max="31"
+                                    required
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                />
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Agrégation commission, CA parapharma et
+                                    crédits consommés du 1er à ce jour (mois en
+                                    cours plafonné à aujourd’hui).
+                                </p>
+                            </div>
+                            <div>
+                                <label
+                                    class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                                >
+                                    Échéance paiement (jour du mois)
+                                </label>
+                                <input
+                                    v-model="
+                                        parapharmaForm.commission_jour_echeance
+                                    "
+                                    type="number"
+                                    min="1"
+                                    max="31"
+                                    required
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3
+                            class="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500"
+                        >
+                            Crédits (commandes médicaments)
+                        </h3>
+                        <div
+                            class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                        >
+                            <div>
+                                <label
+                                    class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                                >
+                                    Seuil commande médicaments (XAF)
+                                </label>
+                                <input
+                                    v-model="
+                                        parapharmaForm.credit_seuil_medicament_xaf
+                                    "
+                                    type="number"
+                                    min="0"
+                                    required
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                />
+                                <p class="mt-1 text-xs text-gray-500">
+                                    1 crédit consommé par commande ≥
+                                    ce montant (médicaments).
+                                </p>
+                            </div>
+                            <div>
+                                <label
+                                    class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                                >
+                                    Prix unitaire crédit (XAF)
+                                </label>
+                                <input
+                                    v-model="
+                                        parapharmaForm.credit_prix_unitaire_xaf
+                                    "
+                                    type="number"
+                                    min="0"
+                                    required
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                                >
+                                    Achat minimum (crédits)
+                                </label>
+                                <input
+                                    v-model="parapharmaForm.credit_minimum_achat"
+                                    type="number"
+                                    min="1"
+                                    required
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3
+                            class="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500"
+                        >
+                            Alertes & déduction automatique
+                        </h3>
+                        <div
+                            class="mb-6 grid gap-4 sm:grid-cols-2"
+                        >
+                            <div>
+                                <label
+                                    class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                                >
+                                    Seuil alerte crédits faibles
+                                </label>
+                                <input
+                                    v-model="parapharmaForm.credit_alerte_seuil"
+                                    type="number"
+                                    min="1"
+                                    required
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                />
+                            </div>
+                            <div class="flex items-end">
+                                <label
+                                    class="flex cursor-pointer items-center gap-2 text-sm text-gray-800"
+                                >
+                                    <input
+                                        v-model="parapharmaForm.credit_deduction_auto"
+                                        type="checkbox"
+                                        class="size-4 rounded border-gray-300"
+                                    />
+                                    Déduction automatique à chaque commande
+                                    médicaments éligible livrée
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label
+                            class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
+                        >
+                            Types produit « parapharmacie »
+                        </label>
+                        <textarea
+                            v-model="parapharmaForm.produit_types_text"
+                            rows="4"
+                            required
+                            placeholder="Parapharmacie&#10;Hygiène"
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        />
+                        <p class="mt-1 text-xs text-gray-500">
+                            Un type par ligne (valeur exacte de la colonne
+                            <code class="text-xs">produits.type</code>). Si la
+                            liste est vide côté code, repli sur les types
+                            contenant « parapharm ».
+                        </p>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button
+                            type="submit"
+                            :disabled="enCours"
+                            class="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+                        >
+                            <Check class="h-4 w-4" /> Enregistrer
+                        </button>
+                    </div>
                 </form>
             </section>
 

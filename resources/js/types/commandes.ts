@@ -7,6 +7,8 @@ export type CommandeDetail = {
     /** État côté pharmacie (ex. indisponible = aucune ligne disponible après retour pharmacie). */
     status_pharmacie?: string;
     prix_total: number;
+    prix_medicaments?: number;
+    prix_parapharma?: number;
     commentaire?: string;
     /** Note saisie par la pharmacie lors de la validation de disponibilité. */
     commentaire_pharmacie?: string | null;
@@ -38,6 +40,7 @@ export type CommandeDetail = {
         designation: string;
         dosage?: string;
         forme?: string | null;
+        type?: string | null;
         pivot: {
             quantite: number;
             quantite_confirmee?: number | null;

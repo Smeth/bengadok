@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import type { LayerGroup, Map as LeafletMap } from 'leaflet';
 import type LeafletDefault from 'leaflet';
 import {
@@ -18,9 +18,12 @@ import {
     Sun,
     Moon,
     Users,
+    Coins,
+    ArrowLeft,
 } from 'lucide-vue-next';
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
+import PharmacieGestionCredit from '@/components/PharmacieGestionCredit.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -51,6 +54,7 @@ type Pharmacie = {
     type_pharmacie: { designation: string } | null;
     heurs: { ouverture: string; fermeture: string } | null;
     users_count: number;
+    credits_solde: number;
 };
 
 type PaginatedData<T> = {
@@ -73,23 +77,118 @@ type PharmacieMap = {
     type_pharmacie: { designation: string } | null;
 };
 
-const props = defineProps<{
-    pharmacies: PaginatedData<Pharmacie>;
-    pharmaciesForMap: PharmacieMap[];
-    filters: { search?: string };
-    stats: { de_garde: number; total: number };
-    zones: Array<{ id: number; designation: string }>;
-    types: Array<{
-        id: number;
-        designation: string;
-        heurs?: { ouverture: string; fermeture: string };
-    }>;
-}>();
+type CreditsPharmacieRow = {
+    id: number;
+    designation: string;
+    zone: string | null;
+    adresse: string;
+    credits_solde: number;
+    credits_utilises_mois: number;
+    cout_mois_xaf: number;
+    statut: string;
+    statut_label: string;
+};
+
+const props = withDefaults(
+    defineProps<{
+        pharmacies: PaginatedData<Pharmacie>;
+        pharmaciesForMap: PharmacieMap[];
+        filters: { search?: string };
+        stats: { de_garde: number; total: number };
+        zones: Array<{ id: number; designation: string }>;
+        types: Array<{
+            id: number;
+            designation: string;
+            heurs?: { ouverture: string; fermeture: string };
+        }>;
+        onglet?: 'liste' | 'credits';
+        creditsPharmacies?: CreditsPharmacieRow[];
+        creditsConfig?: {
+            prix_unitaire_xaf: number;
+            seuil_medicament_xaf: number;
+            minimum_achat: number;
+        };
+        creditGestion?: Record<string, unknown> | null;
+        pharmacieCreditsSelection?: {
+            id: number;
+            designation: string;
+            adresse: string;
+            telephone: string;
+            email: string | null;
+            de_garde: boolean;
+        } | null;
+    }>(),
+    {
+        onglet: 'liste',
+        creditsPharmacies: () => [],
+    },
+);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
     { title: 'Pharmacies', href: '/pharmacies' },
 ];
+
+const page = usePage();
+const isAdmin = computed(() => {
+    const roles =
+        (page.props.auth as { user?: { roles?: string[] } })?.user?.roles ?? [];
+    return roles.some((r) => ['admin', 'super_admin'].includes(r));
+});
+
+type ModuleTabId = 'liste' | 'credits';
+const activeModuleTab = ref<ModuleTabId>(
+    props.onglet === 'credits' ? 'credits' : 'liste',
+);
+
+watch(
+    () => props.onglet,
+    (o) => {
+        activeModuleTab.value = o === 'credits' ? 'credits' : 'liste';
+    },
+);
+
+function setModuleTab(tab: ModuleTabId) {
+    if (tab === 'credits' && !isAdmin.value) {
+        return;
+    }
+    activeModuleTab.value = tab;
+    router.get(
+        '/pharmacies',
+        {
+            onglet: tab,
+            search: props.filters.search || undefined,
+        },
+        { preserveState: true, preserveScroll: true },
+    );
+}
+
+function ouvrirGestionCredits(pharmacieId: number) {
+    router.get(
+        '/pharmacies',
+        {
+            onglet: 'credits',
+            pharmacie_id: pharmacieId,
+            search: props.filters.search || undefined,
+        },
+        { preserveState: true, preserveScroll: true },
+    );
+}
+
+function retourListeCredits() {
+    router.get(
+        '/pharmacies',
+        {
+            onglet: 'credits',
+            search: props.filters.search || undefined,
+        },
+        { preserveState: true, preserveScroll: true },
+    );
+}
+
+function formatXaf(n: number): string {
+    return Number(n).toLocaleString('fr-FR');
+}
 
 const searchQuery = ref(props.filters.search ?? '');
 const showModal = ref(false);
@@ -198,7 +297,15 @@ function normalizeInertiaErrors(e: unknown): Record<string, string> {
 function search() {
     router.get(
         '/pharmacies',
-        { search: searchQuery.value || undefined },
+        {
+            onglet: activeModuleTab.value,
+            pharmacie_id:
+                activeModuleTab.value === 'credits' &&
+                props.pharmacieCreditsSelection?.id
+                    ? props.pharmacieCreditsSelection.id
+                    : undefined,
+            search: searchQuery.value || undefined,
+        },
         { preserveState: true },
     );
 }
@@ -393,21 +500,55 @@ onUnmounted(destroyMap);
 </script>
 
 <template>
-    <Head title="Gestion des pharmacies - BengaDok" />
+    <Head
+        :title="
+            activeModuleTab === 'credits'
+                ? 'Gestion de crédit - Pharmacies - BengaDok'
+                : 'Gestion des pharmacies - BengaDok'
+        "
+    />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
         >
-            <!-- Header & Actions -->
+            <!-- Onglets module (comme Médicaments / Clients) -->
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+                        :class="
+                            activeModuleTab === 'liste'
+                                ? 'bg-[#459cd1] text-white'
+                                : 'bg-white/80 text-muted-foreground hover:bg-white'
+                        "
+                        @click="setModuleTab('liste')"
+                    >
+                        <Building2 class="size-4 shrink-0" />
+                        Gestion des pharmacies
+                    </button>
+                    <button
+                        v-if="isAdmin"
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+                        :class="
+                            activeModuleTab === 'credits'
+                                ? 'bg-[#459cd1] text-white'
+                                : 'bg-white/80 text-muted-foreground hover:bg-white'
+                        "
+                        @click="setModuleTab('credits')"
+                    >
+                        <Coins class="size-4 shrink-0" />
+                        Gestion de crédit
+                    </button>
+                </div>
+            </div>
+
+            <!-- Onglet : liste des pharmacies -->
+            <template v-if="activeModuleTab === 'liste'">
             <div class="flex flex-col gap-5 mb-2">
-                <!-- Ligne Haut : Titre + Bouton Créer -->
                 <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div class="rounded-lg bg-[#0d6efd] px-4 py-2 shadow-sm">
-                        <h2 class="font-bold text-white text-[15px]">
-                            Gestion des pharmacies
-                        </h2>
-                    </div>
                     <Button
                         class="bg-[#0d6efd] text-white hover:bg-blue-600 rounded-lg px-4 h-10 shadow-sm"
                         @click="openModal"
@@ -693,6 +834,20 @@ onUnmounted(destroyMap);
                                             >
                                         </Button>
                                         <Button
+                                            v-if="isAdmin"
+                                            variant="outline"
+                                            size="sm"
+                                            class="gap-1 border-[#459cd1]/40 text-[#459cd1]"
+                                            as-child
+                                        >
+                                            <Link
+                                                :href="`/pharmacies/${pharmacie.id}?onglet=credits`"
+                                            >
+                                                <Coins class="size-3.5" />
+                                                Crédits
+                                            </Link>
+                                        </Button>
+                                        <Button
                                             :variant="
                                                 pharmacie.de_garde
                                                     ? 'destructive'
@@ -852,6 +1007,19 @@ onUnmounted(destroyMap);
                             }}</span>
                         </div>
 
+                        <div
+                            v-if="isAdmin"
+                            class="mb-3 flex items-center justify-between rounded-lg border border-[#459cd1]/20 bg-[#459cd1]/5 px-3 py-2 text-sm"
+                        >
+                            <span class="flex items-center gap-1.5 text-[#459cd1]">
+                                <Coins class="size-4" />
+                                Crédits disponibles
+                            </span>
+                            <span class="font-bold text-[#459cd1]">{{
+                                pharmacie.credits_solde ?? 0
+                            }}</span>
+                        </div>
+
                         <div class="flex items-center gap-2">
                             <Button
                                 variant="secondary"
@@ -861,6 +1029,18 @@ onUnmounted(destroyMap);
                                 <Link :href="`/pharmacies/${pharmacie.id}`"
                                     >Détails</Link
                                 >
+                            </Button>
+                            <Button
+                                v-if="isAdmin"
+                                variant="outline"
+                                class="h-10 shrink-0 gap-1 rounded-[10px] border-[#459cd1]/40 px-3 font-bold text-[#459cd1] shadow-sm"
+                                as-child
+                            >
+                                <Link
+                                    :href="`/pharmacies/${pharmacie.id}?onglet=credits`"
+                                >
+                                    <Coins class="size-4" />
+                                </Link>
                             </Button>
                             <Button
                                 v-if="pharmacie.de_garde"
@@ -986,6 +1166,165 @@ onUnmounted(destroyMap);
                     </template>
                 </nav>
             </div>
+            </template>
+
+            <!-- Onglet : gestion de crédit (module) -->
+            <template v-else-if="activeModuleTab === 'credits' && isAdmin">
+                <Button
+                    v-if="creditGestion && pharmacieCreditsSelection"
+                    variant="outline"
+                    class="mb-2 w-fit gap-2"
+                    @click="retourListeCredits"
+                >
+                    <ArrowLeft class="size-4" />
+                    Retour à la liste des pharmacies
+                </Button>
+
+                <PharmacieGestionCredit
+                    v-if="creditGestion && pharmacieCreditsSelection"
+                    :pharmacie-id="pharmacieCreditsSelection.id"
+                    :pharmacie="pharmacieCreditsSelection"
+                    :credit-gestion="(creditGestion as any)"
+                />
+
+                <div
+                    v-else
+                    class="space-y-5 rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/95"
+                >
+                    <div
+                        class="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-start sm:justify-between"
+                    >
+                        <div class="min-w-0 space-y-1">
+                            <div class="flex items-center gap-2">
+                                <div
+                                    class="flex size-10 items-center justify-center rounded-xl bg-[#459cd1]/15 text-[#459cd1]"
+                                >
+                                    <Coins class="size-5" />
+                                </div>
+                                <h2
+                                    class="text-xl font-semibold tracking-tight text-foreground"
+                                >
+                                    Gestion de crédit
+                                </h2>
+                            </div>
+                            <p
+                                class="max-w-2xl text-sm leading-relaxed text-muted-foreground"
+                            >
+                                Recharge, historique et seuils d’alerte par
+                                pharmacie. Sélectionnez une pharmacie pour
+                                gérer ses crédits.
+                            </p>
+                            <p
+                                v-if="creditsConfig"
+                                class="text-xs text-muted-foreground"
+                            >
+                                Tarif :
+                                {{ formatXaf(creditsConfig.prix_unitaire_xaf) }}
+                                XAF / crédit · Seuil commande médicaments :
+                                {{ formatXaf(creditsConfig.seuil_medicament_xaf) }}
+                                XAF · Achat minimum :
+                                {{ creditsConfig.minimum_achat }} crédits
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border">
+                        <table class="w-full min-w-[720px] text-sm">
+                            <thead class="bg-muted/50">
+                                <tr>
+                                    <th
+                                        class="px-4 py-3 text-left font-medium"
+                                    >
+                                        Pharmacie
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 text-left font-medium"
+                                    >
+                                        Zone
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 text-right font-medium"
+                                    >
+                                        Crédits dispo.
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 text-right font-medium"
+                                    >
+                                        Utilisés (période)
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 text-left font-medium"
+                                    >
+                                        Statut
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 text-right font-medium"
+                                    >
+                                        Action
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="row in creditsPharmacies"
+                                    :key="row.id"
+                                    class="border-t hover:bg-muted/20"
+                                >
+                                    <td class="px-4 py-3 font-medium">
+                                        {{ row.designation }}
+                                    </td>
+                                    <td
+                                        class="px-4 py-3 text-muted-foreground"
+                                    >
+                                        {{ row.zone ?? '—' }}
+                                    </td>
+                                    <td
+                                        class="px-4 py-3 text-right font-semibold tabular-nums text-[#459cd1]"
+                                    >
+                                        {{ row.credits_solde }}
+                                    </td>
+                                    <td
+                                        class="px-4 py-3 text-right tabular-nums"
+                                    >
+                                        {{ row.credits_utilises_mois }}
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span
+                                            class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                            :class="
+                                                row.statut === 'faible'
+                                                    ? 'bg-amber-100 text-amber-900'
+                                                    : 'bg-emerald-100 text-emerald-800'
+                                            "
+                                        >
+                                            {{ row.statut_label }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-right">
+                                        <Button
+                                            size="sm"
+                                            class="bg-[#459cd1] text-white hover:bg-[#3a87b8]"
+                                            @click="
+                                                ouvrirGestionCredits(row.id)
+                                            "
+                                        >
+                                            Gérer
+                                        </Button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p
+                        v-if="!creditsPharmacies.length"
+                        class="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground"
+                    >
+                        Aucune pharmacie enregistrée.
+                    </p>
+                </div>
+
+            </template>
         </div>
 
         <!-- Modal création -->

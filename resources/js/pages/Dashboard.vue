@@ -8,6 +8,7 @@ import {
     Pill,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import AdminParapharmaDashboard from '@/components/AdminParapharmaDashboard.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -23,28 +24,100 @@ const isPharma = computed(
 
 const periodDropdownOpen = ref(false);
 
-const props = defineProps<{
-    period?: string;
-    kpis: {
-        revenuTotal: number;
-        nbPharmacies: number;
-        nbPharmaciesActives: number;
-        nbCommandes: number;
-        nbClients: number;
-        nbReussies: number;
-        nbAnnulees: number;
-        panierMoyen: number;
-        evolutionRevenu: number;
-        evolutionPharmaciesActives: number;
-        evolutionCommandes: number;
-        evolutionClients: number;
-        evolutionPanierMoyen: number;
+type ParapharmaAdminProps = {
+    mode: 'parapharma_admin';
+    mois: string;
+    mois_label: string;
+    mois_options: Array<{ value: string; label: string }>;
+    config: {
+        commission_percent: number;
+        credit_seuil_xaf: number;
+        credit_cout_xaf: number;
+        credit_quota_mensuel: number;
+        periode_jour_fin: number;
     };
-    volumeParPharmacie: Array<{
+    kpis: {
+        nb_commandes: number;
+        ca_total: number;
+        credits_disponibles: number;
+        credits_utilises: number;
+        cout_credits: number;
+        commandes_eligibles: number;
+        montant_commission: number;
+    };
+    commission_courante: {
+        periode_label: string;
+        echeance_label: string;
+        montant: number;
+        statut: string;
+        statut_label: string;
+        paye_le: string | null;
+    };
+    ventes: Array<{
+        date: string;
+        produit: string;
+        categorie: string;
+        montant: number;
+        eligible_credit: boolean;
+        credit_utilise: number;
+    }>;
+    historique_commissions: Array<{
+        mois: string;
+        periode: string;
+        montant: number;
+        statut: string;
+        statut_label: string;
+    }>;
+    commandes_recentes: Array<{
+        numero: string;
+        client: string;
+        montant: number;
+        statut: string;
+        statut_slug: string;
+        credit_utilise: boolean;
+    }>;
+};
+
+const props = defineProps<{
+    mode?: string;
+    active_tab?: 'parapharma' | 'operations';
+    period?: string;
+    mois?: string;
+    mois_label?: string;
+    mois_options?: ParapharmaAdminProps['mois_options'];
+    config?: ParapharmaAdminProps['config'];
+    commission_courante?: ParapharmaAdminProps['commission_courante'];
+    ventes?: ParapharmaAdminProps['ventes'];
+    historique_commissions?: ParapharmaAdminProps['historique_commissions'];
+    commandes_recentes?: ParapharmaAdminProps['commandes_recentes'];
+    parapharma_kpis?: ParapharmaAdminProps['kpis'];
+    kpis?: ParapharmaAdminProps['kpis'] & {
+        revenuTotal?: number;
+        nbPharmacies?: number;
+        nbPharmaciesActives?: number;
+        nbCommandes?: number;
+        nbClients?: number;
+        nbReussies?: number;
+        nbAnnulees?: number;
+        panierMoyen?: number;
+        evolutionRevenu?: number;
+        evolutionPharmaciesActives?: number;
+        evolutionCommandes?: number;
+        evolutionClients?: number;
+        evolutionPanierMoyen?: number;
+        nb_commandes?: number;
+        ca_total?: number;
+        credits_disponibles?: number;
+        credits_utilises?: number;
+        cout_credits?: number;
+        commandes_eligibles?: number;
+        montant_commission?: number;
+    };
+    volumeParPharmacie?: Array<{
         pharmacie: { designation: string } | null;
         total: number;
     }>;
-    volumeParZone: Array<{ zone_name: string; total: number }>;
+    volumeParZone?: Array<{ zone_name: string; total: number }>;
     revenusParJour?: Array<{ jour: string; label: string; total: number }>;
     annulationsParMotif?: Array<{ slug: string; label: string; total: number }>;
     tauxCommandes?: {
@@ -69,6 +142,17 @@ const props = defineProps<{
     };
 }>();
 
+const isAdminDashboard = computed(() => props.mode === 'parapharma_admin');
+const activeTab = computed(() => props.active_tab ?? 'parapharma');
+const showParapharmaPanel = computed(
+    () => isAdminDashboard.value && activeTab.value === 'parapharma',
+);
+const showLegacyAdmin = computed(
+    () =>
+        (!isPharma.value && !isAdminDashboard.value) ||
+        (isAdminDashboard.value && activeTab.value === 'operations'),
+);
+
 const period = computed(() => props.period ?? 'month');
 
 const periodLabel = computed(() => {
@@ -83,9 +167,24 @@ const kpiEvolutionHint = computed(() => {
     return 'vs mois précédent';
 });
 
+function setAdminTab(tab: 'parapharma' | 'operations') {
+    const params: Record<string, string> = { tab };
+    if (tab === 'parapharma' && props.mois) {
+        params.mois = props.mois;
+    }
+    if (tab === 'operations') {
+        params.period = period.value;
+    }
+    router.get(dashboard(), params, { preserveState: true });
+}
+
 function setPeriod(p: string) {
     periodDropdownOpen.value = false;
-    router.get(dashboard(), { period: p }, { preserveState: true });
+    const params: Record<string, string> = { period: p };
+    if (isAdminDashboard.value) {
+        params.tab = 'operations';
+    }
+    router.get(dashboard(), params, { preserveState: true });
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -130,9 +229,10 @@ const heroIcons = [
 ];
 
 const volumeParZoneWithPercent = computed(() => {
-    const total = props.volumeParZone.reduce((a, z) => a + z.total, 0) || 1;
+    const zones = props.volumeParZone ?? [];
+    const total = zones.reduce((a, z) => a + z.total, 0) || 1;
     let currentAngle = 0;
-    return props.volumeParZone.map((z, i) => {
+    return zones.map((z, i) => {
         const percent = Math.round((z.total / total) * 100);
         const angle = (percent / 100) * 360;
         const startAngle = currentAngle;
@@ -148,7 +248,7 @@ const volumeParZoneWithPercent = computed(() => {
 });
 
 const maxVolume = computed(() =>
-    Math.max(...props.volumeParPharmacie.map((v) => v.total), 1),
+    Math.max(...(props.volumeParPharmacie ?? []).map((v) => v.total), 1),
 );
 
 const barChartScaleLabels = computed(() => {
@@ -260,13 +360,64 @@ function getPiePath(
 </script>
 
 <template>
-    <Head title="Tableau de bord - BengaDok" />
+    <Head
+        :title="
+            showParapharmaPanel
+                ? 'Pharmacie - BengaDok'
+                : 'Tableau de bord - BengaDok'
+        "
+    />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="relative min-h-full overflow-x-auto rounded-xl p-6 md:p-8">
-            <!-- Hero section Admin - style Figma -->
+            <!-- Onglets admin : Pharmacie / Opérations -->
             <div
-                v-if="!isPharma"
+                v-if="isAdminDashboard"
+                class="mb-6 flex w-fit gap-1 rounded-[13px] border border-gray-200 bg-white p-1 shadow-sm"
+            >
+                <button
+                    type="button"
+                    class="rounded-[10px] px-4 py-2 text-[14px] font-semibold transition-colors"
+                    :class="
+                        activeTab === 'parapharma'
+                            ? 'bg-[#0d6efd] text-white'
+                            : 'text-gray-700 hover:bg-gray-50'
+                    "
+                    @click="setAdminTab('parapharma')"
+                >
+                    Pharmacie
+                </button>
+                <button
+                    type="button"
+                    class="rounded-[10px] px-4 py-2 text-[14px] font-semibold transition-colors"
+                    :class="
+                        activeTab === 'operations'
+                            ? 'bg-[#0d6efd] text-white'
+                            : 'text-gray-700 hover:bg-gray-50'
+                    "
+                    @click="setAdminTab('operations')"
+                >
+                    Opérations
+                </button>
+            </div>
+
+            <!-- Dashboard admin parapharmacie -->
+            <AdminParapharmaDashboard
+                v-if="showParapharmaPanel"
+                :mois="mois!"
+                :mois_label="mois_label!"
+                :mois_options="mois_options!"
+                :config="config!"
+                :kpis="(parapharma_kpis ?? kpis) as ParapharmaAdminProps['kpis']"
+                :commission_courante="commission_courante!"
+                :ventes="ventes!"
+                :historique_commissions="historique_commissions!"
+                :commandes_recentes="commandes_recentes!"
+            />
+
+            <!-- Hero section Admin - style Figma (legacy) -->
+            <div
+                v-if="showLegacyAdmin"
                 class="relative mb-6 overflow-hidden rounded-[30px] bg-white shadow-[0px_4px_10px_rgba(0,0,0,0.25)] min-h-[257px] flex items-center px-8 md:px-10 py-8"
             >
                 <h1
@@ -315,8 +466,11 @@ function getPiePath(
                 </div>
             </div>
 
-            <!-- Sélecteur de période global -->
-            <div class="mb-4 flex justify-end">
+            <!-- Sélecteur de période global (legacy) -->
+            <div
+                v-if="showLegacyAdmin || isPharma"
+                class="mb-4 flex justify-end"
+            >
                 <div class="relative">
                     <button
                         class="flex items-center gap-2 rounded-[13px] border border-gray-300 bg-white px-4 py-2 text-[14px] font-semibold text-gray-800 shadow-sm hover:bg-gray-50"
@@ -351,9 +505,9 @@ function getPiePath(
                 </div>
             </div>
 
-            <!-- Stats cards Admin - style Figma -->
+            <!-- Stats cards Admin - style Figma (legacy) -->
             <div
-                v-if="!isPharma"
+                v-if="showLegacyAdmin"
                 class="mb-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
             >
                 <div
@@ -506,9 +660,9 @@ function getPiePath(
                 </div>
             </div>
 
-            <!-- KPIs secondaires Admin -->
+            <!-- KPIs secondaires Admin (legacy) -->
             <div
-                v-if="!isPharma"
+                v-if="showLegacyAdmin"
                 class="mb-6 grid gap-4 grid-cols-1 sm:grid-cols-3"
             >
                 <div
@@ -708,8 +862,11 @@ function getPiePath(
                 </div>
             </div>
 
-            <!-- Charts Admin - style Figma -->
-            <div v-if="!isPharma" class="grid gap-6 lg:grid-cols-2">
+            <!-- Charts Admin - style Figma (legacy) -->
+            <div
+                v-if="showLegacyAdmin"
+                class="grid gap-6 lg:grid-cols-2"
+            >
                 <!-- Volume commandes par pharmacies (bar chart) -->
                 <div
                     class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
@@ -864,9 +1021,9 @@ function getPiePath(
                 </div>
             </div>
 
-            <!-- Analyses complémentaires Admin -->
+            <!-- Analyses complémentaires Admin (legacy) -->
             <div
-                v-if="!isPharma"
+                v-if="showLegacyAdmin"
                 class="mt-6 grid gap-6 lg:grid-cols-2"
             >
                 <!-- Annulations par motif -->

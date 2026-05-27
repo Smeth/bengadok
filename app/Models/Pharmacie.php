@@ -13,11 +13,21 @@ class Pharmacie extends Model
         'zone_id', 'type_pharmacie_id', 'heurs_id',
         'designation', 'telephone', 'adresse', 'latitude', 'longitude', 'email',
         'de_garde', 'proprio_nom', 'proprio_tel', 'proprio_email',
+        'credits_solde',
+        'note_interne',
+        'credits_alerte_seuil',
     ];
 
     protected $casts = [
         'de_garde' => 'boolean',
+        'credits_solde' => 'integer',
+        'credits_alerte_seuil' => 'integer',
     ];
+
+    public function creditOperations(): HasMany
+    {
+        return $this->hasMany(PharmacieCreditOperation::class);
+    }
 
     public function zone(): BelongsTo
     {

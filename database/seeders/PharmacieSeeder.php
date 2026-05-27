@@ -24,7 +24,7 @@ class PharmacieSeeder extends Seeder
             return;
         }
 
-        Pharmacie::firstOrCreate(
+        $clairon = Pharmacie::firstOrCreate(
             ['designation' => 'Pharmacie Clairon'],
             [
                 'zone_id' => $zone1->id,
@@ -39,8 +39,13 @@ class PharmacieSeeder extends Seeder
                 'proprio_nom' => 'Dr. Jean Paul Moukolo',
                 'proprio_tel' => '+242 06 854 2121',
                 'proprio_email' => 'info@clairon.com',
+                'credits_solde' => 0,
+                'credits_alerte_seuil' => 5,
             ]
         );
+        $clairon->update([
+            'note_interne' => "Client régulier, préfère être contacté le matin.\nPharmacie pilote démo BengaDok.",
+        ]);
 
         $idx = 0;
         foreach (Zone::all() as $zone) {

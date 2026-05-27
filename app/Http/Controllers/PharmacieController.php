@@ -7,6 +7,7 @@ use App\Models\Pharmacie;
 use App\Models\TypePharmacie;
 use App\Models\User;
 use App\Models\Zone;
+use App\Services\PharmacieCreditService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,8 +20,13 @@ use Inertia\Response;
 
 class PharmacieController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, PharmacieCreditService $creditService): Response
     {
+        $user = $request->user();
+        $peutGererCredits = $user?->hasAnyRole(['admin', 'super_admin']) ?? false;
+        $onglet = $request->query('onglet', 'liste');
+        $ongletActif = ($onglet === 'credits' && $peutGererCredits) ? 'credits' : 'liste';
+
         $search = $request->query('search', '');
         $query = Pharmacie::with(['zone', 'typePharmacie', 'heurs', 'users'])
             ->when($search, fn ($q) => $q->where('designation', 'like', "%{$search}%")
@@ -47,6 +53,7 @@ class PharmacieController extends Controller
                 'type_pharmacie' => $p->typePharmacie,
                 'heurs' => $p->heurs,
                 'users_count' => $p->users()->count(),
+                'credits_solde' => (int) $p->credits_solde,
             ];
         });
 
@@ -74,7 +81,39 @@ class PharmacieController extends Controller
                 ];
             });
 
+        $creditGestion = null;
+        $pharmacieCreditsSelection = null;
+        $creditsPharmacies = [];
+        $creditsConfig = null;
+
+        if ($peutGererCredits) {
+            $creditsPharmacies = $creditService->buildIndexCreditsOverview();
+            $cfg = \App\Models\AppSetting::parapharmaConfig();
+            $creditsConfig = [
+                'prix_unitaire_xaf' => $cfg['credit_prix_unitaire_xaf'],
+                'seuil_medicament_xaf' => $cfg['credit_seuil_medicament_xaf'],
+                'minimum_achat' => $cfg['credit_minimum_achat'],
+            ];
+
+            $pharmacieCreditsId = (int) $request->query('pharmacie_id', 0);
+            if ($ongletActif === 'credits' && $pharmacieCreditsId > 0) {
+                $pharmacieCredits = Pharmacie::query()->find($pharmacieCreditsId);
+                if ($pharmacieCredits) {
+                    $creditGestion = $creditService->buildGestionPayload($pharmacieCredits);
+                    $pharmacieCreditsSelection = [
+                        'id' => $pharmacieCredits->id,
+                        'designation' => $pharmacieCredits->designation,
+                        'adresse' => $pharmacieCredits->adresse,
+                        'telephone' => $pharmacieCredits->telephone,
+                        'email' => $pharmacieCredits->email,
+                        'de_garde' => $pharmacieCredits->de_garde,
+                    ];
+                }
+            }
+        }
+
         return Inertia::render('Pharmacies/Index', [
+            'onglet' => $ongletActif,
             'pharmacies' => $pharmacies,
             'pharmaciesForMap' => $pharmaciesForMap,
             'filters' => ['search' => $search],
@@ -84,16 +123,28 @@ class PharmacieController extends Controller
             ],
             'zones' => Zone::orderBy('designation')->get(),
             'types' => TypePharmacie::with('heurs')->get(),
+            'creditsPharmacies' => $creditsPharmacies,
+            'creditsConfig' => $creditsConfig,
+            'creditGestion' => $creditGestion,
+            'pharmacieCreditsSelection' => $pharmacieCreditsSelection,
         ]);
     }
 
-    public function show(Pharmacie $pharmacie): Response
+    public function show(Request $request, Pharmacie $pharmacie, PharmacieCreditService $creditService): Response
     {
         $pharmacie->load(['zone', 'typePharmacie', 'heurs', 'users.roles']);
 
         $nextUserId = (User::max('id') ?? 0) + 1;
+        $user = $request->user();
+        $peutGererCredits = $user?->hasAnyRole(['admin', 'super_admin']) ?? false;
+        $onglet = request()->query('onglet');
+        $ongletActif = ($onglet === 'credits' && $peutGererCredits) ? 'credits' : 'informations';
 
         return Inertia::render('Pharmacies/Show', [
+            'onglet' => $ongletActif,
+            'creditGestion' => $peutGererCredits
+                ? $creditService->buildGestionPayload($pharmacie)
+                : null,
             'nextUserId' => $nextUserId,
             'pharmacie' => [
                 'id' => $pharmacie->id,
@@ -112,6 +163,7 @@ class PharmacieController extends Controller
                 'heurs' => $pharmacie->heurs,
                 'heure_ouverture' => $pharmacie->heurs?->ouverture ?? '08:00',
                 'heure_fermeture' => $pharmacie->heurs?->fermeture ?? '19:00',
+                'credits_solde' => (int) $pharmacie->credits_solde,
                 'users' => $pharmacie->users->map(fn ($u) => [
                     'id' => $u->id,
                     'name' => $u->name,

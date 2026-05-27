@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\PromoteClientsFromSuccessfulOrdersAction;
 use App\Http\Requests\StoreCommandeRequest;
+use App\Models\AppSetting;
 use App\Models\Client;
 use App\Models\Commande;
 use App\Models\Livreur;
@@ -15,6 +16,8 @@ use App\Models\Produit;
 use App\Models\User;
 use App\Models\Zone;
 use App\Services\BroadcastCommandeNotificationTargets;
+use App\Services\CommandeMontantCalculator;
+use App\Services\PharmacieCreditService;
 use App\Services\CommandeService;
 use App\Services\PharmacieProximiteService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -106,6 +109,7 @@ class CommandeController extends Controller
             'modesPaiement' => ModePaiement::query()->orderBy('designation')->get(),
             'livreurs' => $livreurs,
             'arrondissements' => Client::ARRONDISSEMENTS,
+            'parapharma_produit_types' => AppSetting::parapharmaConfig()['produit_types'],
             'openDetailCommandeId' => $request->filled('detail') ? $request->integer('detail') : null,
         ]);
     }
@@ -218,6 +222,7 @@ class CommandeController extends Controller
             'produits.*.forme' => 'nullable|string|max:50',
             'produits.*.quantite' => 'required|integer|min:1',
             'produits.*.prix_unitaire' => 'required|numeric|min:0',
+            'produits.*.type' => 'nullable|string|max:100',
             'ordonnance' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
             'mode_paiement_id' => 'nullable|exists:modes_paiement,id',
             'montant_livraison_id' => 'nullable|exists:montants_livraison,id',
@@ -264,13 +269,13 @@ class CommandeController extends Controller
         ]);
 
         $commande->produits()->detach();
-        $prixTotal = 0;
         foreach ($validated['produits'] as $p) {
             $produit = Produit::fromCommandeLine([
                 'designation' => $p['designation'],
                 'dosage' => $p['dosage'] ?? null,
                 'forme' => $p['forme'] ?? null,
                 'prix_unitaire' => $p['prix_unitaire'],
+                'type' => $p['type'] ?? null,
             ]);
             $quantite = (int) $p['quantite'];
             $prixUnitaire = (float) $p['prix_unitaire'];
@@ -279,13 +284,14 @@ class CommandeController extends Controller
                 'prix_unitaire' => $prixUnitaire,
                 'status' => 'disponible',
             ]);
-            $prixTotal += $prixUnitaire * $quantite;
         }
 
+        $montants = CommandeMontantCalculator::fromInputLines($validated['produits']);
         $montantLivraison = $validated['montant_livraison_id'] ? (MontantLivraison::find($validated['montant_livraison_id'])?->designation ?? 0) : 0;
         $commande->update([
-            'prix_medicaments' => $prixTotal,
-            'prix_total' => $prixTotal + (float) $montantLivraison,
+            'prix_medicaments' => $montants['prix_medicaments'],
+            'prix_parapharma' => $montants['prix_parapharma'],
+            'prix_total' => $montants['prix_lignes'] + (float) $montantLivraison,
         ]);
 
         return redirect()->route('commandes.index', ['detail' => $commande->id])
@@ -403,6 +409,11 @@ class CommandeController extends Controller
         }
 
         $commande->update($updatePayload);
+        $commande->refresh();
+
+        if (in_array($validated['status'], Commande::STATUTS_REUSSIS, true)) {
+            app(PharmacieCreditService::class)->deduirePourCommande($commande);
+        }
 
         // Si validation de la commande parente, valider aussi les commandes enfants (déjà en_attente)
         if ($validated['status'] === 'validee' && $commande->parent_id === null) {
@@ -480,20 +491,13 @@ class CommandeController extends Controller
         ]);
 
         $montant = MontantLivraison::findOrFail($validated['montant_livraison_id']);
-        $sousTotal = $commande->produits->sum(function ($p) {
-            if ($p->pivot->status === 'indisponible') {
-                return 0;
-            }
-            $qte = $p->pivot->quantite_confirmee ?? $p->pivot->quantite;
-
-            return $qte * (float) $p->pivot->prix_unitaire;
-        });
-        $nouveauTotal = $sousTotal + (float) $montant->designation;
+        $montants = CommandeMontantCalculator::fromProduitsRelation($commande->produits);
 
         $commande->update([
             'montant_livraison_id' => $validated['montant_livraison_id'],
-            'prix_medicaments' => $sousTotal,
-            'prix_total' => $nouveauTotal,
+            'prix_medicaments' => $montants['prix_medicaments'],
+            'prix_parapharma' => $montants['prix_parapharma'],
+            'prix_total' => $montants['prix_lignes'] + (float) $montant->designation,
         ]);
 
         return back();
