@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { ArrowLeft } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
+import MedicamentsSectionNav from '@/components/medicaments/MedicamentsSectionNav.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -57,21 +58,7 @@ function designationComplete() {
         <div
             class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
         >
-            <!-- Navigation module (alignée sur Index) -->
-            <div class="flex flex-wrap gap-2">
-                <Link
-                    href="/medicaments"
-                    class="rounded-lg bg-[#459cd1] px-4 py-2 text-sm font-medium text-white"
-                >
-                    Catalogue Médicaments
-                </Link>
-                <Link
-                    href="/medicaments"
-                    class="rounded-lg bg-white/80 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-white"
-                >
-                    Statistiques
-                </Link>
-            </div>
+            <MedicamentsSectionNav />
 
             <Button variant="ghost" size="sm" as-child>
                 <Link href="/medicaments" class="flex items-center gap-1">

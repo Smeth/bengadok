@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import type { LayerGroup, Map as LeafletMap } from 'leaflet';
-import type LeafletDefault from 'leaflet';
 import {
     Building2,
     Clock,
@@ -21,8 +19,9 @@ import {
     Coins,
     ArrowLeft,
 } from 'lucide-vue-next';
-import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { computed, ref, watch } from 'vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
+import GoogleMyMapsEmbed from '@/components/maps/GoogleMyMapsEmbed.vue';
 import PharmacieGestionCredit from '@/components/PharmacieGestionCredit.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -67,16 +66,6 @@ type PaginatedData<T> = {
     total: number;
 };
 
-type PharmacieMap = {
-    id: number;
-    designation: string;
-    adresse: string;
-    latitude: number;
-    longitude: number;
-    de_garde: boolean;
-    type_pharmacie: { designation: string } | null;
-};
-
 type CreditsPharmacieRow = {
     id: number;
     designation: string;
@@ -92,7 +81,8 @@ type CreditsPharmacieRow = {
 const props = withDefaults(
     defineProps<{
         pharmacies: PaginatedData<Pharmacie>;
-        pharmaciesForMap: PharmacieMap[];
+        googleMyMapsEmbedUrl: string;
+        googleMyMapsViewerUrl?: string;
         filters: { search?: string };
         stats: { de_garde: number; total: number };
         zones: Array<{ id: number; designation: string }>;
@@ -386,117 +376,6 @@ watch(
         }
     },
 );
-
-// Carte Leaflet (onglet Maps)
-const mapContainerRef = ref<HTMLElement | null>(null);
-let mapInstance: LeafletMap | null = null;
-let markersLayer: LayerGroup | null = null;
-let leafletModule: { default: typeof LeafletDefault } | null = null;
-
-function getMarkerColor(p: PharmacieMap): string {
-    if (p.de_garde) return '#ef4444';
-    const type = p.type_pharmacie?.designation?.toLowerCase() ?? '';
-    if (type.includes('nuit')) return '#8b5cf6';
-    if (type.includes('24') || type.includes('24h')) return '#22c55e';
-    return '#3b82f6';
-}
-
-function createCustomMarker(p: PharmacieMap, L: any) {
-    const color = getMarkerColor(p);
-    const html = `
-        <div class="relative flex items-center justify-center w-8 h-8 rounded-full shadow-md transition-transform hover:scale-110" style="background-color: ${color}; border: 2.5px solid white;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
-            <div class="absolute -bottom-[5px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent" style="border-top-color: ${color};"></div>
-            <div class="absolute -bottom-[7px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[7px] border-l-transparent border-r-transparent -z-10" style="border-top-color: white;"></div>
-        </div>
-    `;
-    const icon = L.divIcon({
-        html,
-        className: 'custom-leaflet-marker',
-        iconSize: [32, 40],
-        iconAnchor: [16, 40],
-        popupAnchor: [0, -40],
-    });
-    return L.marker([p.latitude, p.longitude], { icon });
-}
-
-async function initMap() {
-    if (!mapContainerRef.value || typeof window === 'undefined') return;
-    leafletModule = await import('leaflet');
-    const L = leafletModule.default;
-    await import('leaflet/dist/leaflet.css');
-    if (mapInstance) {
-        mapInstance.remove();
-        mapInstance = null;
-    }
-    mapInstance = L.map(mapContainerRef.value).setView([-4.2694, 15.2712], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-    }).addTo(mapInstance);
-    markersLayer = L.layerGroup().addTo(mapInstance);
-    props.pharmaciesForMap.forEach((p) => {
-        if (p.latitude == null || p.longitude == null) return;
-        const marker = createCustomMarker(p, L);
-        marker.bindPopup(
-            `<div class="p-1">
-                <b class="text-[#0d6efd] text-sm">${p.designation}</b><br/>
-                <span class="text-xs text-gray-500">${p.adresse}</span><br/>
-                <a href="/pharmacies/${p.id}" class="inline-block mt-2 text-xs font-semibold underline text-[#3995D2]">Voir détails</a>
-            </div>`,
-        );
-        markersLayer?.addLayer(marker);
-    });
-}
-
-function destroyMap() {
-    if (mapInstance) {
-        mapInstance.remove();
-        mapInstance = null;
-    }
-}
-
-onMounted(() => {
-    if (viewMode.value === 'carte') nextTick(() => initMap());
-});
-
-watch(viewMode, async (mode) => {
-    if (mode === 'carte') {
-        await nextTick();
-        initMap();
-    } else {
-        destroyMap();
-    }
-});
-
-watch(
-    () => props.pharmaciesForMap,
-    () => {
-        if (
-            viewMode.value === 'carte' &&
-            mapInstance &&
-            markersLayer &&
-            leafletModule
-        ) {
-            const L = leafletModule.default;
-            markersLayer.clearLayers();
-            props.pharmaciesForMap.forEach((p) => {
-                if (p.latitude == null || p.longitude == null) return;
-                const marker = createCustomMarker(p, L);
-                marker.bindPopup(
-                    `<div class="p-1">
-                    <b class="text-[#0d6efd] text-sm">${p.designation}</b><br/>
-                    <span class="text-xs text-gray-500">${p.adresse}</span><br/>
-                    <a href="/pharmacies/${p.id}" class="inline-block mt-2 text-xs font-semibold underline text-[#3995D2]">Voir détails</a>
-                </div>`,
-                );
-                markersLayer?.addLayer(marker);
-            });
-        }
-    },
-    { deep: true },
-);
-
-onUnmounted(destroyMap);
 </script>
 
 <template>
@@ -1072,49 +951,13 @@ onUnmounted(destroyMap);
                 </div>
             </div>
 
-            <!-- Vue Carte (Maps) -->
-            <div
+            <!-- Vue Carte (Google My Maps) -->
+            <GoogleMyMapsEmbed
                 v-else-if="viewMode === 'carte'"
-                class="relative rounded-[20px] border-[6px] border-white/40 overflow-hidden shadow-md"
-                style="min-height: 550px"
-            >
-                <div ref="mapContainerRef" class="h-[550px] w-full" />
-                <div
-                    class="absolute left-6 top-6 z-[1000] rounded-xl border border-gray-100 bg-white/95 p-4 shadow-lg backdrop-blur-md min-w-[200px]"
-                >
-                    <p class="mb-3 text-[14px] font-extrabold text-gray-900">
-                        Légende
-                    </p>
-                    <div
-                        class="space-y-3 text-[13px] font-semibold text-gray-600"
-                    >
-                        <div class="flex items-center gap-3">
-                            <span
-                                class="inline-block size-4 rounded-full bg-[#3b82f6] border-2 border-white shadow-sm"
-                            />
-                            Pharmacie de jour
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span
-                                class="inline-block size-4 rounded-full bg-[#8b5cf6] border-2 border-white shadow-sm"
-                            />
-                            Pharmacie de nuit
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span
-                                class="inline-block size-4 rounded-full bg-[#22c55e] border-2 border-white shadow-sm"
-                            />
-                            Pharmacie 24h/24
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span
-                                class="inline-block size-4 rounded-full bg-[#ef4444] border-2 border-white shadow-sm"
-                            />
-                            De garde
-                        </div>
-                    </div>
-                </div>
-            </div>
+                :embed-url="googleMyMapsEmbedUrl"
+                :viewer-url="googleMyMapsViewerUrl"
+                title="Carte des pharmacies BengaDok"
+            />
 
             <!-- Pagination (Liste et Card) — carte lisible sur dégradé, style BengaDok -->
             <div

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import {
     Search,
     Filter,
@@ -23,6 +23,7 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import MedicamentsSectionNav from '@/components/medicaments/MedicamentsSectionNav.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -94,7 +95,6 @@ const flashError = computed(
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
     { title: 'Médicaments', href: '/medicaments' },
-    { title: 'Gestion des doublons', href: '/medicaments/doublons' },
 ];
 
 const searchQuery = ref(props.filters.search ?? '');
@@ -231,44 +231,28 @@ const statutLabels: Record<string, string> = {
         >
             <div
                 v-if="flashSuccess"
-                class="rounded-lg bg-emerald-100 py-3 px-4 text-sm font-medium text-emerald-800 dark:bg-emerald-900/50"
+                class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800"
             >
                 {{ flashSuccess }}
             </div>
             <div
                 v-if="flashError"
-                class="rounded-lg bg-red-100 py-3 px-4 text-sm font-medium text-red-800 dark:bg-red-900/50"
+                class="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800"
             >
                 {{ flashError }}
             </div>
 
-            <!-- Tabs -->
-            <div class="flex flex-wrap items-center gap-4">
-                <div class="flex gap-2">
-                    <Link
-                        href="/medicaments"
-                        class="rounded-lg px-4 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/20 hover:text-white"
-                    >
-                        Catalogue médicaments
-                    </Link>
-                    <Link
-                        :href="`/medicaments?onglet=db_medicament`"
-                        class="rounded-lg px-4 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/20 hover:text-white"
-                    >
-                        DB médicament
-                    </Link>
-                    <button
-                        class="rounded-lg px-4 py-2 text-sm font-medium bg-white/25 text-white backdrop-blur-sm"
-                    >
-                        Gestion des doublons
-                    </button>
-                    <Link
-                        href="/medicaments"
-                        class="rounded-lg px-4 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/20 hover:text-white"
-                    >
-                        Statistiques
-                    </Link>
+            <div class="flex flex-wrap items-center gap-3">
+                <div
+                    class="flex size-9 items-center justify-center gap-1 rounded-full bg-emerald-500 text-white"
+                    title="Groupes en attente"
+                >
+                    <Package class="size-4" />
+                    <span class="text-sm font-bold">{{
+                        stats.en_attente
+                    }}</span>
                 </div>
+                <MedicamentsSectionNav active="doublons" />
             </div>
 
             <p
@@ -312,44 +296,48 @@ const statutLabels: Record<string, string> = {
                 </div>
             </div>
 
-            <!-- Search & Filters -->
-            <form
-                class="flex flex-wrap items-center gap-4"
-                @submit.prevent="filtrer('search', searchQuery)"
+            <!-- Recherche & filtres -->
+            <div
+                class="rounded-xl border border-white/80 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/95 sm:p-5"
             >
-                <div class="relative flex-1 min-w-[200px]">
-                    <Search
-                        class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                    />
-                    <Input
-                        v-model="searchQuery"
-                        placeholder="Rechercher par désignation, dosage, forme..."
-                        class="pl-9"
-                    />
-                </div>
-                <div class="flex items-center gap-2">
-                    <Filter class="size-4 text-muted-foreground" />
-                    <select
-                        :value="filters.tri"
-                        class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-                        @change="
-                            (e: Event) =>
-                                filtrer(
-                                    'tri',
-                                    (e.target as HTMLSelectElement).value,
-                                )
-                        "
-                    >
-                        <option value="">Trier par</option>
-                        <option value="recent">Récent</option>
-                        <option value="ventes">Ventes</option>
-                        <option value="ca">CA</option>
-                    </select>
-                </div>
-                <div class="flex items-center gap-2">
+                <form
+                    class="flex flex-wrap items-center gap-3 sm:gap-4"
+                    @submit.prevent="filtrer('search', searchQuery)"
+                >
+                    <div class="relative min-w-[220px] flex-1">
+                        <Search
+                            class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
+                        />
+                        <Input
+                            v-model="searchQuery"
+                            type="search"
+                            placeholder="Rechercher par désignation, dosage, forme..."
+                            class="h-10 w-full rounded-full border-0 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm ring-1 ring-black/10 placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-[#459cd1]/40"
+                            autocomplete="off"
+                        />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <Filter class="size-4 shrink-0 text-slate-500" />
+                        <select
+                            :value="filters.tri"
+                            class="flex h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm"
+                            @change="
+                                (e: Event) =>
+                                    filtrer(
+                                        'tri',
+                                        (e.target as HTMLSelectElement).value,
+                                    )
+                            "
+                        >
+                            <option value="">Trier par</option>
+                            <option value="recent">Récent</option>
+                            <option value="ventes">Ventes</option>
+                            <option value="ca">CA</option>
+                        </select>
+                    </div>
                     <select
                         :value="filters.critere"
-                        class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        class="flex h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -367,29 +355,34 @@ const statutLabels: Record<string, string> = {
                             {{ label }}
                         </option>
                     </select>
-                </div>
-                <div class="flex items-center gap-2">
-                    <Check class="size-4 text-muted-foreground" />
-                    <select
-                        :value="filters.statut"
-                        class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-                        @change="
-                            (e: Event) =>
-                                filtrer(
-                                    'statut',
-                                    (e.target as HTMLSelectElement).value,
-                                )
-                        "
+                    <div class="flex items-center gap-2">
+                        <Check class="size-4 shrink-0 text-slate-500" />
+                        <select
+                            :value="filters.statut"
+                            class="flex h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm"
+                            @change="
+                                (e: Event) =>
+                                    filtrer(
+                                        'statut',
+                                        (e.target as HTMLSelectElement).value,
+                                    )
+                            "
+                        >
+                            <option value="">Tous les statuts</option>
+                            <option value="en_attente">En Attente</option>
+                            <option value="verifie">Vérifiés</option>
+                            <option value="fusionne">Fusionnés</option>
+                            <option value="ignore">Ignorés</option>
+                        </select>
+                    </div>
+                    <Button
+                        type="submit"
+                        class="rounded-lg bg-[#459cd1] px-5 text-white hover:bg-[#3a87b8]"
                     >
-                        <option value="">Tous les statuts</option>
-                        <option value="en_attente">En Attente</option>
-                        <option value="verifie">Vérifiés</option>
-                        <option value="fusionne">Fusionnés</option>
-                        <option value="ignore">Ignorés</option>
-                    </select>
-                </div>
-                <Button type="submit">Rechercher</Button>
-            </form>
+                        Rechercher
+                    </Button>
+                </form>
+            </div>
 
             <!-- Stats cards -->
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">

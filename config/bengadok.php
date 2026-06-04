@@ -29,4 +29,14 @@ return [
             explode(',', (string) env('PARAPHARMA_PRODUIT_TYPES', 'Parapharmacie'))
         ))),
     ],
+
+    /*
+    | Google My Maps — carte personnalisée (vue Carte /pharmacies).
+    | mid : identifiant de la carte (paramètre mid= dans l’URL d’édition).
+    */
+    'google_mymaps' => [
+        'mid' => env('GOOGLE_MYMAPS_MID', '1y8kYWMaj4ylTGcqUYeEm5WeBi0KNkVE'),
+        'embed_ll' => env('GOOGLE_MYMAPS_EMBED_LL', '-4.235579039961612,15.264345391882372'),
+        'embed_z' => (int) env('GOOGLE_MYMAPS_EMBED_Z', 13),
+    ],
 ];

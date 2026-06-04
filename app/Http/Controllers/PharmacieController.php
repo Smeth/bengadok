@@ -60,26 +60,17 @@ class PharmacieController extends Controller
         $nbDeGarde = Pharmacie::where('de_garde', true)->count();
         $nbTotal = Pharmacie::count();
 
-        $pharmaciesForMap = Pharmacie::with(['typePharmacie', 'zone'])
-            ->when($search, fn ($q) => $q->where('designation', 'like', "%{$search}%")
-                ->orWhere('adresse', 'like', "%{$search}%")
-                ->orWhere('telephone', 'like', "%{$search}%"))
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(function ($p) {
-                $lat = $p->latitude ?? ($p->zone?->latitude ? (float) $p->zone->latitude + ($p->id * 0.001) : -4.2694 + ($p->id % 6) * 0.01);
-                $lng = $p->longitude ?? ($p->zone?->longitude ? (float) $p->zone->longitude + ($p->id * 0.0005) : 15.2712 + ($p->id % 6) * 0.01);
-
-                return [
-                    'id' => $p->id,
-                    'designation' => $p->designation,
-                    'adresse' => $p->adresse,
-                    'latitude' => $lat,
-                    'longitude' => $lng,
-                    'de_garde' => $p->de_garde,
-                    'type_pharmacie' => $p->typePharmacie,
-                ];
-            });
+        $myMaps = config('bengadok.google_mymaps');
+        $googleMyMapsEmbedUrl = sprintf(
+            'https://www.google.com/maps/d/embed?mid=%s&ll=%s&z=%d',
+            rawurlencode((string) $myMaps['mid']),
+            rawurlencode((string) $myMaps['embed_ll']),
+            (int) $myMaps['embed_z'],
+        );
+        $googleMyMapsViewerUrl = sprintf(
+            'https://www.google.com/maps/d/viewer?mid=%s',
+            rawurlencode((string) $myMaps['mid']),
+        );
 
         $creditGestion = null;
         $pharmacieCreditsSelection = null;
@@ -115,7 +106,8 @@ class PharmacieController extends Controller
         return Inertia::render('Pharmacies/Index', [
             'onglet' => $ongletActif,
             'pharmacies' => $pharmacies,
-            'pharmaciesForMap' => $pharmaciesForMap,
+            'googleMyMapsEmbedUrl' => $googleMyMapsEmbedUrl,
+            'googleMyMapsViewerUrl' => $googleMyMapsViewerUrl,
             'filters' => ['search' => $search],
             'stats' => [
                 'de_garde' => $nbDeGarde,

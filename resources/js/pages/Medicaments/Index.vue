@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import MedicamentsSectionNav from '@/components/medicaments/MedicamentsSectionNav.vue';
+import type { MedicamentsSectionTab } from '@/components/medicaments/MedicamentsSectionNav.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -139,10 +141,18 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const searchQuery = ref(props.filters.search ?? '');
-type TabId = 'catalogue' | 'statistiques' | 'db_medicament';
-const activeTab = ref<TabId>(
-    props.onglet === 'db_medicament' ? 'db_medicament' : 'catalogue',
-);
+
+const activeSection = computed<MedicamentsSectionTab>(() => {
+    const o = props.onglet ?? 'catalogue';
+    if (o === 'db_medicament') {
+        return 'db_medicament';
+    }
+    if (o === 'statistiques') {
+        return 'statistiques';
+    }
+    return 'catalogue';
+});
+
 const vueMode = ref<'cartes' | 'liste'>('cartes');
 
 const medModalOpen = ref(false);
@@ -162,13 +172,6 @@ watch(
 );
 
 watch(
-    () => props.onglet,
-    (o) => {
-        if (o === 'db_medicament') activeTab.value = 'db_medicament';
-    },
-);
-
-watch(
     () => props.dbMedicaments?.data ?? [],
     (rows) => {
         const pageIds = new Set(rows.map((r) => r.id));
@@ -179,23 +182,6 @@ watch(
         selectedDbMedicamentIds.value = next;
     },
 );
-
-function goCatalogueTab() {
-    if (activeTab.value === 'catalogue') return;
-    const wasDb = activeTab.value === 'db_medicament';
-    activeTab.value = 'catalogue';
-    if (wasDb) {
-        router.get(
-            '/medicaments',
-            { ...props.filters, onglet: 'catalogue' },
-            {
-                preserveState: true,
-                preserveScroll: true,
-                only: ['produits', 'onglet', 'filters'],
-            },
-        );
-    }
-}
 
 function openDbPurgeModal() {
     dbPurgeConfirmInput.value = '';
@@ -266,22 +252,7 @@ function destroySelectedDbMedicaments() {
     );
 }
 
-function goDbMedicamentTab() {
-    if (activeTab.value === 'db_medicament') return;
-    activeTab.value = 'db_medicament';
-    router.get(
-        '/medicaments',
-        { ...props.filters, onglet: 'db_medicament' },
-        {
-            preserveState: true,
-            preserveScroll: true,
-            only: ['dbMedicaments', 'onglet'],
-        },
-    );
-}
-
 function filtrer(key: string, value: string) {
-    activeTab.value = 'catalogue';
     router.get(
         '/medicaments',
         { ...props.filters, [key]: value || undefined, onglet: 'catalogue' },
@@ -384,7 +355,7 @@ function destroyRow(id: number) {
 }
 
 const badgeTotal = computed(() =>
-    activeTab.value === 'db_medicament'
+    activeSection.value === 'db_medicament'
         ? props.dbMedicaments.total
         : props.produits.total,
 );
@@ -404,67 +375,21 @@ const badgeTotal = computed(() =>
                 {{ flashStatus }}
             </p>
 
-            <!-- Badge + tabs -->
+            <!-- Badge + onglets -->
             <div
-                class="relative z-10 flex shrink-0 flex-wrap items-center justify-between gap-4"
+                class="relative z-10 flex shrink-0 flex-wrap items-center gap-3"
             >
-                <div class="flex flex-wrap items-center gap-3">
-                    <div
-                        class="flex size-9 items-center justify-center gap-1 rounded-full bg-emerald-500 text-white"
-                    >
-                        <Package class="size-4" />
-                        <span class="text-sm font-bold">{{ badgeTotal }}</span>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                            :class="
-                                activeTab === 'catalogue'
-                                    ? 'bg-[#459cd1] text-white'
-                                    : 'bg-white/80 text-muted-foreground hover:bg-white'
-                            "
-                            @click="goCatalogueTab"
-                        >
-                            Catalogue Médicaments
-                        </button>
-                        <button
-                            type="button"
-                            class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                            :class="
-                                activeTab === 'statistiques'
-                                    ? 'bg-[#459cd1] text-white'
-                                    : 'bg-white/80 text-muted-foreground hover:bg-white'
-                            "
-                            @click="activeTab = 'statistiques'"
-                        >
-                            Statistiques
-                        </button>
-                        <button
-                            type="button"
-                            class="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                            :class="
-                                activeTab === 'db_medicament'
-                                    ? 'bg-[#459cd1] text-white'
-                                    : 'bg-white/80 text-muted-foreground hover:bg-white'
-                            "
-                            @click="goDbMedicamentTab"
-                        >
-                            <Database class="size-4 shrink-0" />
-                            DB médicament
-                        </button>
-                        <Link
-                            href="/medicaments/doublons"
-                            class="inline-flex rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-white/80 text-muted-foreground hover:bg-white hover:text-foreground cursor-pointer"
-                        >
-                            Gestion des doublons
-                        </Link>
-                    </div>
+                <div
+                    class="flex size-9 items-center justify-center gap-1 rounded-full bg-emerald-500 text-white"
+                >
+                    <Package class="size-4" />
+                    <span class="text-sm font-bold">{{ badgeTotal }}</span>
                 </div>
+                <MedicamentsSectionNav :active="activeSection" />
             </div>
 
             <div
-                v-if="activeTab === 'catalogue'"
+                v-if="activeSection === 'catalogue'"
                 class="space-y-5 rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/95"
             >
                 <div
@@ -495,17 +420,19 @@ const badgeTotal = computed(() =>
                 >
                     <div class="relative min-w-[200px] flex-1">
                         <Search
-                            class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                            class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
                         />
                         <Input
                             v-model="searchQuery"
+                            type="search"
                             placeholder="Rechercher un médicament..."
-                            class="pl-9"
+                            class="h-10 w-full rounded-full border-0 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm ring-1 ring-black/10 placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-[#459cd1]/40"
+                            autocomplete="off"
                         />
                     </div>
                     <select
                         :value="filters.tri"
-                        class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        class="flex h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -862,7 +789,7 @@ const badgeTotal = computed(() =>
             </div>
 
             <div
-                v-else-if="activeTab === 'db_medicament'"
+                v-else-if="activeSection === 'db_medicament'"
                 class="space-y-5 rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/95"
             >
                 <div
@@ -1333,7 +1260,7 @@ const badgeTotal = computed(() =>
             </div>
 
             <div
-                v-else-if="activeTab === 'statistiques'"
+                v-else-if="activeSection === 'statistiques'"
                 class="space-y-5 rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/95"
             >
                 <div

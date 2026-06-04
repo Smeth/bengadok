@@ -12,10 +12,6 @@ use Illuminate\Support\Facades\DB;
 
 class PharmacieDashboardService
 {
-    public function __construct(
-        private PharmacieCreditService $creditService,
-    ) {}
-
     /**
      * @return array<string, mixed>
      */
@@ -27,15 +23,12 @@ class PharmacieDashboardService
         $bounds = $this->resolveRangeBounds($period, $chartOffset);
         $rangeStart = $bounds['rangeStart'];
         $rangeEndEffective = $bounds['rangeEndEffective'];
-        $prevStart = $bounds['prevStart'];
-        $prevEnd = $bounds['prevEnd'];
 
         $cfg = AppSetting::parapharmaConfig();
         [$debutPeriodeCommission, $finPeriodeCommission] = AppSetting::parapharmaPeriodeBounds();
 
         $statusRevenu = ['livre', 'valide_a_preparer', 'attente_confirmation'];
         $statusTraites = ['attente_confirmation', 'indisponible', 'valide_a_preparer', 'livre'];
-        $statusCmd = ['livre', 'valide_a_preparer', 'attente_confirmation', 'nouvelle'];
 
         $baseRevenu = fn () => Commande::query()
             ->where('pharmacie_id', $pharmacieId)
@@ -46,18 +39,6 @@ class PharmacieDashboardService
         $caParapharma = (float) (clone $baseRevenu())->sum('prix_parapharma');
         $caTotal = $caMedicaments + $caParapharma;
 
-        $caMedicamentsPrec = (float) Commande::query()
-            ->where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', $statusRevenu)
-            ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->sum('prix_medicaments');
-        $caParapharmaPrec = (float) Commande::query()
-            ->where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', $statusRevenu)
-            ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->sum('prix_parapharma');
-        $caTotalPrec = $caMedicamentsPrec + $caParapharmaPrec;
-
         $commissionParapharmaPeriode = (int) round(
             $this->sommeCaParapharmaLignes($pharmacieId, $debutPeriodeCommission, $finPeriodeCommission)
             * $cfg['commission_percent'] / 100
@@ -66,67 +47,13 @@ class PharmacieDashboardService
             $this->sommeCaParapharmaLignes($pharmacieId, $debutPeriodeCommission, $finPeriodeCommission)
         );
 
-        $nbCmdActuelle = Commande::query()
-            ->where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', $statusCmd)
-            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
-            ->count();
-
-        $nbCmdPrec = Commande::query()
-            ->where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', $statusCmd)
-            ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->count();
-
-        $nbClientsActuelle = (int) Commande::query()
-            ->where('pharmacie_id', $pharmacieId)
-            ->whereNotNull('client_id')
-            ->whereIn('status_pharmacie', $statusCmd)
-            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
-            ->distinct('client_id')
-            ->count('client_id');
-
-        $nbClientsPrec = (int) Commande::query()
-            ->where('pharmacie_id', $pharmacieId)
-            ->whereNotNull('client_id')
-            ->whereIn('status_pharmacie', $statusCmd)
-            ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->distinct('client_id')
-            ->count('client_id');
-
-        $nbCommandesTraiteesActuelle = Commande::query()
+        $nbCommandesTraitees = Commande::query()
             ->where('pharmacie_id', $pharmacieId)
             ->whereIn('status_pharmacie', $statusTraites)
             ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
             ->count();
 
-        $nbCommandesTraiteesPrec = Commande::query()
-            ->where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', $statusTraites)
-            ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->count();
-
-        $pharmacie = Pharmacie::query()->findOrFail($pharmacieId);
-        $creditsDisponibles = (int) $pharmacie->credits_solde;
-        $creditsUtilisesPeriode = $this->creditService->nbDeductionsPeriodeForPharmacie(
-            $pharmacieId,
-            $debutPeriodeCommission,
-            $finPeriodeCommission,
-            $cfg['credit_seuil_medicament_xaf'],
-        );
-        $coutCreditsPeriode = $creditsUtilisesPeriode * $cfg['credit_prix_unitaire_xaf'];
-
-        $revenusBruts = Commande::query()
-            ->where('pharmacie_id', $pharmacieId)
-            ->whereIn('status_pharmacie', $statusRevenu)
-            ->whereBetween('created_at', [$rangeStart, $rangeEndEffective])
-            ->selectRaw('DATE(created_at) as jour')
-            ->selectRaw('SUM(prix_medicaments) as med')
-            ->selectRaw('SUM(prix_parapharma) as para')
-            ->groupBy('jour')
-            ->orderBy('jour')
-            ->get()
-            ->keyBy('jour');
+        $creditsDisponibles = (int) Pharmacie::query()->findOrFail($pharmacieId)->credits_solde;
 
         $volumeTraites = Commande::query()
             ->where('pharmacie_id', $pharmacieId)
@@ -138,7 +65,6 @@ class PharmacieDashboardService
             ->keyBy('jour');
 
         $weekdayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-        $revenusParJour = [];
         $volumeParJour = [];
         $creditsEvolutionParJour = [];
 
@@ -150,17 +76,6 @@ class PharmacieDashboardService
             $label = $period === 'week'
                 ? $weekdayLabels[$d->isoWeekday() - 1]
                 : $d->format('d');
-
-            $row = $revenusBruts->get($key);
-            $jourMed = (float) ($row->med ?? 0);
-            $jourPara = (float) ($row->para ?? 0);
-
-            $revenusParJour[] = [
-                'label' => $label,
-                'valeur' => $jourMed + $jourPara,
-                'medicaments' => $jourMed,
-                'parapharma' => $jourPara,
-            ];
 
             $volumeParJour[] = [
                 'label' => $label,
@@ -181,14 +96,8 @@ class PharmacieDashboardService
             'chart_offset' => $chartOffset,
             'config' => [
                 'commission_percent' => $cfg['commission_percent'],
-                'periode_jour_fin' => $cfg['periode_jour_fin'],
-                'commission_jour_echeance' => $cfg['commission_jour_echeance'],
-                'credit_prix_unitaire_xaf' => $cfg['credit_prix_unitaire_xaf'],
-                'credit_seuil_medicament_xaf' => $cfg['credit_seuil_medicament_xaf'],
             ],
             'commission_periode' => [
-                'debut' => $debutPeriodeCommission->format('Y-m-d'),
-                'fin' => $finPeriodeCommission->format('Y-m-d'),
                 'label' => sprintf(
                     '01 → %02d %s',
                     min($cfg['periode_jour_fin'], $debutPeriodeCommission->daysInMonth),
@@ -199,20 +108,11 @@ class PharmacieDashboardService
                 'revenu_total' => round($caTotal, 0),
                 'ca_medicaments' => round($caMedicaments, 0),
                 'ca_parapharma' => round($caParapharma, 0),
-                'pct_revenu' => $this->evolutionPct($caTotal, $caTotalPrec),
-                'nb_commandes' => $nbCmdActuelle,
-                'pct_commandes' => $this->evolutionPct($nbCmdActuelle, $nbCmdPrec),
-                'nb_commandes_traitees' => $nbCommandesTraiteesActuelle,
-                'pct_commandes_traitees' => $this->evolutionPct($nbCommandesTraiteesActuelle, $nbCommandesTraiteesPrec),
+                'nb_commandes_traitees' => $nbCommandesTraitees,
                 'montant_commissions' => $commissionParapharmaPeriode,
                 'ca_parapharma_periode_commission' => $caParapharmaPeriodeCommission,
-                'nb_clients' => $nbClientsActuelle,
-                'pct_clients' => $this->evolutionPct($nbClientsActuelle, $nbClientsPrec),
                 'credits_disponibles' => $creditsDisponibles,
-                'credits_utilises_periode' => $creditsUtilisesPeriode,
-                'cout_credits_periode' => $coutCreditsPeriode,
             ],
-            'revenusParJour' => $revenusParJour,
             'volumeParJour' => $volumeParJour,
             'creditsEvolutionParJour' => $creditsEvolutionParJour,
             'meilleursVentes' => $this->meilleursVentesMedicaments($pharmacieId, $rangeStart, $rangeEndEffective, $statusRevenu),
@@ -233,14 +133,8 @@ class PharmacieDashboardService
             'chart_offset' => min(0, max(-52, $chartOffset)),
             'config' => [
                 'commission_percent' => $cfg['commission_percent'],
-                'periode_jour_fin' => $cfg['periode_jour_fin'],
-                'commission_jour_echeance' => $cfg['commission_jour_echeance'],
-                'credit_prix_unitaire_xaf' => $cfg['credit_prix_unitaire_xaf'],
-                'credit_seuil_medicament_xaf' => $cfg['credit_seuil_medicament_xaf'],
             ],
             'commission_periode' => [
-                'debut' => $debut->format('Y-m-d'),
-                'fin' => $fin->format('Y-m-d'),
                 'label' => sprintf(
                     '01 → %02d %s',
                     min($cfg['periode_jour_fin'], $debut->daysInMonth),
@@ -251,20 +145,11 @@ class PharmacieDashboardService
                 'revenu_total' => 0,
                 'ca_medicaments' => 0,
                 'ca_parapharma' => 0,
-                'pct_revenu' => 0,
-                'nb_commandes' => 0,
-                'pct_commandes' => 0,
                 'nb_commandes_traitees' => 0,
-                'pct_commandes_traitees' => 0,
                 'montant_commissions' => 0,
                 'ca_parapharma_periode_commission' => 0,
-                'nb_clients' => 0,
-                'pct_clients' => 0,
                 'credits_disponibles' => 0,
-                'credits_utilises_periode' => 0,
-                'cout_credits_periode' => 0,
             ],
-            'revenusParJour' => [],
             'volumeParJour' => [],
             'creditsEvolutionParJour' => [],
             'meilleursVentes' => [],
@@ -487,15 +372,6 @@ class PharmacieDashboardService
         }
 
         return collect($byDay);
-    }
-
-    private function evolutionPct(float|int $current, float|int $previous): int
-    {
-        if ($previous > 0) {
-            return (int) round((($current - $previous) / $previous) * 100);
-        }
-
-        return $current > 0 ? 100 : 0;
     }
 
     private function formatMoisFrancais(CarbonInterface $date, bool $avecAnnee = true): string
