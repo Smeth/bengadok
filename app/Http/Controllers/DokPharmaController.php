@@ -165,6 +165,7 @@ class DokPharmaController extends Controller
                             'prix_unitaire' => (float) ($p->pivot->prix_unitaire ?? 0),
                             'status' => $p->pivot->status ?? 'disponible',
                             'quantite_confirmee' => $p->pivot->quantite_confirmee ?? null,
+                            'vente_libre' => (bool) ($p->pivot->vente_libre ?? false),
                         ],
                     ])->values(),
                     'ordonnance_id' => $c->ordonnance_id,
@@ -240,7 +241,13 @@ class DokPharmaController extends Controller
                 ? $qteConfirmee
                 : null;
 
-            $pivotData = ['status' => $status, 'quantite_confirmee' => $qteStockee];
+            $venteLibre = filter_var($ligne['vente_libre'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+            $pivotData = [
+                'status' => $status,
+                'quantite_confirmee' => $qteStockee,
+                'vente_libre' => $venteLibre,
+            ];
             if ($prixUnitaire !== null) {
                 $pivotData['prix_unitaire'] = $prixUnitaire;
             }

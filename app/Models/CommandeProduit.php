@@ -9,10 +9,11 @@ class CommandeProduit extends Model
 {
     protected $table = 'commande_produit';
 
-    protected $fillable = ['commande_id', 'produit_id', 'quantite', 'quantite_confirmee', 'prix_unitaire', 'status'];
+    protected $fillable = ['commande_id', 'produit_id', 'quantite', 'quantite_confirmee', 'prix_unitaire', 'status', 'vente_libre'];
 
     protected $casts = [
         'prix_unitaire' => 'decimal:2',
+        'vente_libre' => 'boolean',
     ];
 
     public function commande(): BelongsTo

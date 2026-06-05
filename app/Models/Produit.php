@@ -23,7 +23,7 @@ class Produit extends Model
     public function commandes(): BelongsToMany
     {
         return $this->belongsToMany(Commande::class, 'commande_produit')
-            ->withPivot('quantite', 'prix_unitaire', 'status')
+            ->withPivot('quantite', 'prix_unitaire', 'status', 'vente_libre')
             ->withTimestamps();
     }
 

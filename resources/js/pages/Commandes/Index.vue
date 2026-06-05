@@ -452,6 +452,10 @@ function classesPivotStatusProduit(status: string | undefined | null): string {
     return 'border-[#016630] bg-[#e1f3e7] text-[#016630]';
 }
 
+function estVenteLibrePivot(venteLibre: boolean | undefined | null): boolean {
+    return Boolean(venteLibre);
+}
+
 /** Libellés FR pour la décision (l’API stocke pass, review, fail, etc.). */
 function libelleDecisionVerification(decision: string | undefined): string {
     const map: Record<string, string> = {
@@ -1402,7 +1406,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                         }}</span>
                                     </p>
                                     <div
-                                        class="flex items-center justify-between"
+                                        class="flex items-center justify-between gap-4"
                                     >
                                         <div class="text-[13px] text-gray-600">
                                             <p>
@@ -1419,16 +1423,50 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                                 FCFA
                                             </p>
                                         </div>
-                                        <span
-                                            class="rounded-full border px-3 py-0.5 text-[11px] font-bold"
-                                            :class="classesPivotStatusProduit(p.pivot.status)"
+                                        <div
+                                            class="flex flex-col items-end gap-2"
                                         >
-                                            {{
-                                                libellePivotStatusProduit(
-                                                    p.pivot.status,
-                                                )
-                                            }}
-                                        </span>
+                                            <span
+                                                class="rounded-full border px-3 py-0.5 text-[11px] font-bold"
+                                                :class="classesPivotStatusProduit(p.pivot.status)"
+                                            >
+                                                {{
+                                                    libellePivotStatusProduit(
+                                                        p.pivot.status,
+                                                    )
+                                                }}
+                                            </span>
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <span
+                                                    class="text-[11px] font-medium text-gray-500"
+                                                    >En vente libre</span
+                                                >
+                                                <span
+                                                    class="relative inline-flex h-5 w-9 items-center rounded-full"
+                                                    :class="
+                                                        estVenteLibrePivot(
+                                                            p.pivot.vente_libre,
+                                                        )
+                                                            ? 'bg-[#22C55E]'
+                                                            : 'bg-gray-200'
+                                                    "
+                                                >
+                                                    <span
+                                                        class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow"
+                                                        :class="
+                                                            estVenteLibrePivot(
+                                                                p.pivot
+                                                                    .vente_libre,
+                                                            )
+                                                                ? 'translate-x-4'
+                                                                : 'translate-x-0.5'
+                                                        "
+                                                    />
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

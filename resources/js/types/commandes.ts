@@ -46,6 +46,7 @@ export type CommandeDetail = {
             quantite_confirmee?: number | null;
             prix_unitaire: number;
             status: string;
+            vente_libre?: boolean;
         };
     }>;
     mode_paiement?: { id?: number; designation: string };

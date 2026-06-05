@@ -27,6 +27,7 @@ type Pivot = {
     prix_unitaire: number;
     status: string;
     quantite_confirmee: number | null;
+    vente_libre?: boolean;
 };
 type Produit = { id: number; designation: string; pivot: Pivot };
 
@@ -36,6 +37,10 @@ function qteDisponibleNombre(p: Produit): number {
     const c = p.pivot.quantite_confirmee;
     if (c !== null && c !== undefined) return c;
     return p.pivot.quantite;
+}
+
+function estVenteLibre(p: Produit): boolean {
+    return Boolean(p.pivot.vente_libre);
 }
 
 /** Affichage colonne « disponible » en lecture seule. */
@@ -145,7 +150,12 @@ function toggleCard(cmd: Commande) {
 }
 
 /* ─── Formulaire prix / disponibilité (onglet Nouvelles) ─────── */
-type LigneForm = { prix: string; quantite: string; dispo: boolean };
+type LigneForm = {
+    prix: string;
+    quantite: string;
+    dispo: boolean;
+    venteLibre: boolean;
+};
 const formLignes = ref<Record<number, Record<number, LigneForm>>>({});
 const formCommentaires = ref<Record<number, string>>({});
 
@@ -199,6 +209,7 @@ function initForm(cmd: Commande) {
                 p.pivot.quantite_confirmee ?? p.pivot.quantite ?? qDem,
             ),
             dispo: p.pivot.status !== 'indisponible',
+            venteLibre: estVenteLibre(p),
         };
     });
     if (formCommentaires.value[cmd.id] === undefined) {
@@ -288,6 +299,7 @@ function envoyer(cmd: Commande) {
             status: ligne?.dispo ? 'disponible' : 'indisponible',
             prix_unitaire: prixUnitaire,
             quantite_confirmee: Number.isFinite(qte) ? qte : p.pivot.quantite,
+            vente_libre: ligne?.venteLibre ?? false,
         };
     });
     router.post(
@@ -632,7 +644,7 @@ function resetZoom() {
                                     class="overflow-x-auto rounded-xl border border-gray-100"
                                 >
                                     <table
-                                        class="w-full min-w-[720px] text-[13px]"
+                                        class="w-full min-w-[820px] text-[13px]"
                                     >
                                         <thead class="bg-gray-50">
                                             <tr>
@@ -665,6 +677,11 @@ function resetZoom() {
                                                     class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500"
                                                 >
                                                     Disponibilité
+                                                </th>
+                                                <th
+                                                    class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500"
+                                                >
+                                                    En vente libre
                                                 </th>
                                             </tr>
                                         </thead>
@@ -842,6 +859,41 @@ function resetZoom() {
                                                                 formLignes[
                                                                     cmd.id
                                                                 ][p.id].dispo
+                                                                    ? 'translate-x-4'
+                                                                    : 'translate-x-0.5'
+                                                            "
+                                                        />
+                                                    </button>
+                                                </td>
+                                                <!-- Toggle vente libre -->
+                                                <td class="px-3 py-2.5">
+                                                    <button
+                                                        type="button"
+                                                        class="relative inline-flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors focus:outline-none"
+                                                        :class="
+                                                            formLignes[cmd.id][
+                                                                p.id
+                                                            ].venteLibre
+                                                                ? 'bg-[#22C55E]'
+                                                                : 'bg-gray-200'
+                                                        "
+                                                        @click="
+                                                            formLignes[cmd.id][
+                                                                p.id
+                                                            ].venteLibre =
+                                                                !formLignes[
+                                                                    cmd.id
+                                                                ][p.id]
+                                                                    .venteLibre
+                                                        "
+                                                    >
+                                                        <span
+                                                            class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                                                            :class="
+                                                                formLignes[
+                                                                    cmd.id
+                                                                ][p.id]
+                                                                    .venteLibre
                                                                     ? 'translate-x-4'
                                                                     : 'translate-x-0.5'
                                                             "
@@ -1112,7 +1164,7 @@ function resetZoom() {
                                     class="overflow-x-auto rounded-xl border border-gray-100"
                                 >
                                     <table
-                                        class="w-full min-w-[720px] text-[13px]"
+                                        class="w-full min-w-[820px] text-[13px]"
                                     >
                                         <thead class="bg-gray-50">
                                             <tr>
@@ -1145,6 +1197,11 @@ function resetZoom() {
                                                     class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500"
                                                 >
                                                     Disponibilité
+                                                </th>
+                                                <th
+                                                    class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500"
+                                                >
+                                                    En vente libre
                                                 </th>
                                             </tr>
                                         </thead>
@@ -1239,6 +1296,25 @@ function resetZoom() {
                                                                 p.pivot
                                                                     .status !==
                                                                 'indisponible'
+                                                                    ? 'translate-x-4'
+                                                                    : 'translate-x-0.5'
+                                                            "
+                                                        />
+                                                    </span>
+                                                </td>
+                                                <td class="px-3 py-2.5">
+                                                    <span
+                                                        class="relative inline-flex h-5 w-9 items-center rounded-full"
+                                                        :class="
+                                                            estVenteLibre(p)
+                                                                ? 'bg-[#22C55E]'
+                                                                : 'bg-gray-200'
+                                                        "
+                                                    >
+                                                        <span
+                                                            class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                                                            :class="
+                                                                estVenteLibre(p)
                                                                     ? 'translate-x-4'
                                                                     : 'translate-x-0.5'
                                                             "
@@ -1413,7 +1489,7 @@ function resetZoom() {
                                     class="overflow-x-auto rounded-xl border border-gray-100"
                                 >
                                     <table
-                                        class="w-full min-w-[720px] text-[13px]"
+                                        class="w-full min-w-[820px] text-[13px]"
                                     >
                                         <thead class="bg-gray-50">
                                             <tr>
@@ -1446,6 +1522,11 @@ function resetZoom() {
                                                     class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500"
                                                 >
                                                     Disponibilité
+                                                </th>
+                                                <th
+                                                    class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500"
+                                                >
+                                                    En vente libre
                                                 </th>
                                             </tr>
                                         </thead>
@@ -1535,6 +1616,25 @@ function resetZoom() {
                                                                 p.pivot
                                                                     .status !==
                                                                 'indisponible'
+                                                                    ? 'translate-x-4'
+                                                                    : 'translate-x-0.5'
+                                                            "
+                                                        />
+                                                    </span>
+                                                </td>
+                                                <td class="px-3 py-2.5">
+                                                    <span
+                                                        class="relative inline-flex h-5 w-9 items-center rounded-full"
+                                                        :class="
+                                                            estVenteLibre(p)
+                                                                ? 'bg-[#22C55E]'
+                                                                : 'bg-gray-200'
+                                                        "
+                                                    >
+                                                        <span
+                                                            class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow"
+                                                            :class="
+                                                                estVenteLibre(p)
                                                                     ? 'translate-x-4'
                                                                     : 'translate-x-0.5'
                                                             "
@@ -1731,7 +1831,7 @@ function resetZoom() {
                                     class="overflow-x-auto rounded-xl border border-gray-100"
                                 >
                                     <table
-                                        class="w-full min-w-[720px] text-[13px]"
+                                        class="w-full min-w-[820px] text-[13px]"
                                     >
                                         <thead class="bg-gray-50">
                                             <tr>
@@ -1764,6 +1864,11 @@ function resetZoom() {
                                                     class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500"
                                                 >
                                                     Disponibilité
+                                                </th>
+                                                <th
+                                                    class="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500"
+                                                >
+                                                    En vente libre
                                                 </th>
                                             </tr>
                                         </thead>
@@ -1858,6 +1963,25 @@ function resetZoom() {
                                                                 p.pivot
                                                                     .status !==
                                                                 'indisponible'
+                                                                    ? 'translate-x-4'
+                                                                    : 'translate-x-0.5'
+                                                            "
+                                                        />
+                                                    </span>
+                                                </td>
+                                                <td class="px-3 py-2.5">
+                                                    <span
+                                                        class="relative inline-flex h-5 w-9 items-center rounded-full"
+                                                        :class="
+                                                            estVenteLibre(p)
+                                                                ? 'bg-[#22C55E]'
+                                                                : 'bg-gray-200'
+                                                        "
+                                                    >
+                                                        <span
+                                                            class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow"
+                                                            :class="
+                                                                estVenteLibre(p)
                                                                     ? 'translate-x-4'
                                                                     : 'translate-x-0.5'
                                                             "
