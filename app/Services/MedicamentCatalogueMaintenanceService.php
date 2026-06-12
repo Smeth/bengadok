@@ -8,7 +8,6 @@ use App\Models\GroupeDoublonsProduit;
 use App\Models\Ordonnance;
 use App\Models\Produit;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 final class MedicamentCatalogueMaintenanceService
 {
