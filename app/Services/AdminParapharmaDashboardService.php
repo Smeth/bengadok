@@ -53,6 +53,10 @@ class AdminParapharmaDashboardService
 
         $historique = $this->historiqueCommissions($ref, $cfg);
 
+        $commissionsParPharmacie = $this->pharmacieId === null
+            ? $this->commissionsParPharmacie($debut, $finPeriode, $inStatutsVentes, $cfg, $ref)
+            : [];
+
         $commandesRecentes = $this->commandesRecentes(
             $debut,
             $finPeriode,
@@ -111,6 +115,7 @@ class AdminParapharmaDashboardService
             ],
             'ventes' => $ventesLignes,
             'historique_commissions' => $historique,
+            'commissions_par_pharmacie' => $commissionsParPharmacie,
             'commandes_recentes' => $commandesRecentes,
         ];
     }
@@ -148,6 +153,29 @@ class AdminParapharmaDashboardService
     public function config(): array
     {
         return AppSetting::parapharmaConfig();
+    }
+
+    /**
+     * @return array{ca: float, montant: int}
+     */
+    public function caParapharmaEtCommissionPourMois(int $annee, int $mois, ?int $pharmacieId = null): array
+    {
+        $pharmacieIdCourant = $this->pharmacieId;
+        $this->pharmacieId = $pharmacieId;
+
+        $ref = Carbon::createFromDate($annee, $mois, 1)->startOfMonth();
+        $cfg = $this->config();
+        [$debut, $fin] = AppSetting::parapharmaPeriodeBounds($ref);
+        $inStatutsVentes = $this->inListSql(Commande::STATUTS_STATS_VENTES);
+        $ca = $this->sommeCaParapharma($debut, $fin, $inStatutsVentes);
+        $montant = (int) round($ca * $cfg['commission_percent'] / 100);
+
+        $this->pharmacieId = $pharmacieIdCourant;
+
+        return [
+            'ca' => $ca,
+            'montant' => $montant,
+        ];
     }
 
     /**
@@ -218,15 +246,36 @@ class AdminParapharmaDashboardService
 
         $depuisOps = (int) $opsQuery->sum(DB::raw('ABS(credits_delta)'));
 
-        if ($depuisOps > 0) {
-            return $depuisOps;
+        return $depuisOps;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function commandeIdsAvecDeductionPeriode(
+        CarbonInterface $debut,
+        CarbonInterface $fin,
+    ): array {
+        $query = PharmacieCreditOperation::query()
+            ->where('type', PharmacieCreditOperation::TYPE_DEDUCTION)
+            ->whereNotNull('commande_id')
+            ->whereHas('commande', function ($q) use ($debut, $fin) {
+                $q->whereBetween('date', [$debut, $fin]);
+                if ($this->pharmacieId !== null) {
+                    $q->where('pharmacie_id', $this->pharmacieId);
+                }
+            });
+
+        if ($this->pharmacieId !== null) {
+            $query->where('pharmacie_id', $this->pharmacieId);
         }
 
-        return $this->nbCommandesEligiblesCredit(
-            $debut,
-            $fin,
-            $this->config()['credit_seuil_medicament_xaf']
-        );
+        return $query->pluck('commande_id')->unique()->values()->all();
+    }
+
+    private function commandeCreditDeduit(int $commandeId, array $commandeIdsAvecDeduction): bool
+    {
+        return in_array($commandeId, $commandeIdsAvecDeduction, true);
     }
 
     private function sommeCaParapharma(
@@ -301,7 +350,7 @@ class AdminParapharmaDashboardService
     }
 
     /**
-     * @return array<int, array{date: string, produit: string, categorie: string, montant: float, eligible_credit: bool, credit_utilise: int}>
+     * @return array<int, array{date: string, produit: string, categorie: string, montant: float, commande_eligible_credit: bool, credit_utilise: int}>
      */
     private function ventesParapharmaParLigne(
         CarbonInterface $debut,
@@ -309,6 +358,8 @@ class AdminParapharmaDashboardService
         string $inStatuts,
         int $seuilCredit,
     ): array {
+        $commandeIdsAvecDeduction = $this->commandeIdsAvecDeductionPeriode($debut, $fin);
+
         $query = DB::table('commande_produit')
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
             ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
@@ -327,6 +378,7 @@ class AdminParapharmaDashboardService
 
         $rows = $query
             ->select(
+                'commandes.id as commande_id',
                 'commandes.date',
                 'commandes.prix_medicaments as commande_montant_medicaments',
                 'produits.designation',
@@ -339,28 +391,32 @@ class AdminParapharmaDashboardService
             ->limit(50)
             ->get();
 
-        return $rows->map(function ($r) use ($seuilCredit) {
+        return $rows->map(function ($r) use ($seuilCredit, $commandeIdsAvecDeduction) {
             $produit = trim($r->designation.' '.($r->dosage ?? '').' '.($r->forme ?? ''));
-            $commandeUtiliseCredit = (float) $r->commande_montant_medicaments >= $seuilCredit;
+            $commandeEligibleCredit = (float) $r->commande_montant_medicaments >= $seuilCredit;
+            $creditDeduit = $this->commandeCreditDeduit((int) $r->commande_id, $commandeIdsAvecDeduction);
 
             return [
                 'date' => Carbon::parse($r->date)->format('d/m/Y'),
                 'produit' => $produit,
                 'categorie' => $r->categorie ?: '—',
                 'montant' => (float) $r->ligne_montant,
-                'commande_utilise_credit' => $commandeUtiliseCredit,
+                'commande_eligible_credit' => $commandeEligibleCredit,
+                'credit_utilise' => $creditDeduit ? 1 : 0,
             ];
         })->values()->all();
     }
 
     /**
-     * @return array<int, array{numero: string, client: string, montant: float, statut: string, statut_slug: string, credit_utilise: bool}>
+     * @return array<int, array{numero: string, client: string, montant: float, statut: string, statut_slug: string, commande_eligible_credit: bool, credit_utilise: bool}>
      */
     private function commandesRecentes(
         CarbonInterface $debut,
         CarbonInterface $fin,
         int $seuilCredit,
     ): array {
+        $commandeIdsAvecDeduction = $this->commandeIdsAvecDeductionPeriode($debut, $fin);
+
         $query = Commande::query()
             ->whereBetween('date', [$debut, $fin])
             ->with(['client:id,nom,prenom']);
@@ -373,7 +429,7 @@ class AdminParapharmaDashboardService
             ->orderByDesc('created_at')
             ->limit(5)
             ->get()
-            ->map(function (Commande $c) use ($seuilCredit) {
+            ->map(function (Commande $c) use ($seuilCredit, $commandeIdsAvecDeduction) {
                 $montantParapharma = $this->montantParapharmaCommande((int) $c->id);
 
                 return [
@@ -382,7 +438,8 @@ class AdminParapharmaDashboardService
                     'montant' => $montantParapharma > 0 ? $montantParapharma : (float) $c->prix_medicaments,
                     'statut' => $this->statutLabel($c->status),
                     'statut_slug' => $c->status,
-                    'credit_utilise' => $this->commandeEligibleCredit($c, $seuilCredit),
+                    'commande_eligible_credit' => $this->commandeEligibleCredit($c, $seuilCredit),
+                    'credit_utilise' => $this->commandeCreditDeduit((int) $c->id, $commandeIdsAvecDeduction),
                 ];
             })
             ->values()
@@ -412,28 +469,21 @@ class AdminParapharmaDashboardService
      */
     private function historiqueCommissions(CarbonInterface $refCourante, array $cfg): array
     {
-        $inStatutsVentes = $this->inListSql(Commande::STATUTS_STATS_VENTES);
+        /** @var CommissionHistoriqueService $historiqueService */
+        $historiqueService = app(CommissionHistoriqueService::class);
         $items = [];
 
         for ($i = 1; $i <= 6; $i++) {
             $m = $refCourante->copy()->subMonths($i);
-            $debut = $m->copy()->startOfMonth();
-            $fin = $m->copy()->day(min($cfg['periode_jour_fin'], $m->daysInMonth))->endOfDay();
 
-            $ca = $this->sommeCaParapharma($debut, $fin, $inStatutsVentes);
-            $montantCalcule = (int) round($ca * $cfg['commission_percent'] / 100);
-
-            $periode = $this->findCommissionPeriode($m->year, $m->month, $this->pharmacieId);
+            $periode = $historiqueService->synchroniserPeriode(
+                $m->year,
+                $m->month,
+                $this->pharmacieId,
+            );
 
             if (! $periode) {
-                $periode = CommissionPeriode::query()->create([
-                    'pharmacie_id' => $this->pharmacieId,
-                    'annee' => $m->year,
-                    'mois' => $m->month,
-                    'montant' => $montantCalcule,
-                    'statut' => CommissionPeriode::STATUT_PAYE,
-                    'paye_le' => $fin->copy()->addDays(2),
-                ]);
+                continue;
             }
 
             $items[] = [
@@ -446,6 +496,49 @@ class AdminParapharmaDashboardService
                 'mois_num' => $m->month,
             ];
         }
+
+        return $items;
+    }
+
+    /**
+     * @return array<int, array{
+     *     pharmacie_id: int,
+     *     pharmacie: string,
+     *     ca_parapharma: float,
+     *     montant_commission: int,
+     *     statut: string,
+     *     statut_label: string
+     * }>
+     */
+    private function commissionsParPharmacie(
+        CarbonInterface $debut,
+        CarbonInterface $fin,
+        string $inStatutsVentes,
+        array $cfg,
+        CarbonInterface $ref,
+    ): array {
+        $pharmacieIdCourant = $this->pharmacieId;
+        $items = [];
+
+        foreach (Pharmacie::query()->orderBy('designation')->get(['id', 'designation']) as $pharmacie) {
+            $this->pharmacieId = (int) $pharmacie->id;
+
+            $ca = $this->sommeCaParapharma($debut, $fin, $inStatutsVentes);
+            $montant = (int) round($ca * $cfg['commission_percent'] / 100);
+            $periode = $this->findCommissionPeriode($ref->year, $ref->month, (int) $pharmacie->id);
+            $statut = $periode?->statut ?? CommissionPeriode::STATUT_EN_COURS;
+
+            $items[] = [
+                'pharmacie_id' => (int) $pharmacie->id,
+                'pharmacie' => $pharmacie->designation,
+                'ca_parapharma' => $ca,
+                'montant_commission' => $montant,
+                'statut' => $statut,
+                'statut_label' => $statut === CommissionPeriode::STATUT_PAYE ? 'Payé' : 'En cours',
+            ];
+        }
+
+        $this->pharmacieId = $pharmacieIdCourant;
 
         return $items;
     }

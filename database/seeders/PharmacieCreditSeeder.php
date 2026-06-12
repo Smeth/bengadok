@@ -119,15 +119,64 @@ class PharmacieCreditSeeder extends Seeder
             $montant = (int) round($ca * $commissionPercent / 100);
 
             CommissionPeriode::query()->updateOrCreate(
-                ['annee' => $m->year, 'mois' => $m->month],
+                [
+                    'annee' => $m->year,
+                    'mois' => $m->month,
+                    'pharmacie_id' => null,
+                ],
                 [
                     'montant' => $montant,
-                    'statut' => $i === 0
-                        ? CommissionPeriode::STATUT_EN_COURS
-                        : CommissionPeriode::STATUT_PAYE,
-                    'paye_le' => $i === 0 ? null : $fin->copy()->addDays(2),
-                ]
+                    'statut' => CommissionPeriode::STATUT_EN_COURS,
+                    'paye_le' => null,
+                ],
             );
+        }
+
+        foreach (Pharmacie::query()->orderBy('id')->pluck('id') as $pharmacieId) {
+            for ($i = 0; $i <= 6; $i++) {
+                $m = now()->copy()->subMonths($i);
+                [$debut, $fin] = AppSetting::parapharmaPeriodeBounds($m);
+
+                $caQuery = DB::table('commande_produit')
+                    ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
+                    ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
+                    ->where('commandes.pharmacie_id', $pharmacieId)
+                    ->whereBetween('commandes.date', [$debut, $fin])
+                    ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+                    ->where(function ($q) {
+                        $q->whereNull('commande_produit.status')
+                            ->orWhere('commande_produit.status', '<>', 'indisponible');
+                    });
+
+                if ($types !== []) {
+                    $caQuery->whereIn('produits.type', $types);
+                } else {
+                    $caQuery->whereRaw("LOWER(produits.type) LIKE '%parapharm%'");
+                }
+
+                $ca = (float) $caQuery
+                    ->selectRaw('COALESCE(SUM(commande_produit.prix_unitaire * COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite)), 0) as total')
+                    ->value('total');
+
+                if ($ca <= 0) {
+                    continue;
+                }
+
+                $montant = (int) round($ca * $commissionPercent / 100);
+
+                CommissionPeriode::query()->updateOrCreate(
+                    [
+                        'annee' => $m->year,
+                        'mois' => $m->month,
+                        'pharmacie_id' => $pharmacieId,
+                    ],
+                    [
+                        'montant' => $montant,
+                        'statut' => CommissionPeriode::STATUT_EN_COURS,
+                        'paye_le' => null,
+                    ],
+                );
+            }
         }
     }
 }

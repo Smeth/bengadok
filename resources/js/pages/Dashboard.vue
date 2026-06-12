@@ -90,6 +90,14 @@ const props = defineProps<{
     ventes?: ParapharmaAdminProps['ventes'];
     historique_commissions?: ParapharmaAdminProps['historique_commissions'];
     commandes_recentes?: ParapharmaAdminProps['commandes_recentes'];
+    commissions_par_pharmacie?: Array<{
+        pharmacie_id: number;
+        pharmacie: string;
+        ca_parapharma: number;
+        montant_commission: number;
+        statut: string;
+        statut_label: string;
+    }>;
     parapharma_kpis?: ParapharmaAdminProps['kpis'];
     kpis?: ParapharmaAdminProps['kpis'] & {
         revenuTotal?: number;
@@ -386,6 +394,7 @@ function getPiePath(
                 :ventes="ventes!"
                 :historique_commissions="historique_commissions!"
                 :commandes_recentes="commandes_recentes!"
+                :commissions_par_pharmacie="commissions_par_pharmacie ?? []"
             />
 
             <!-- Hero section Pharma -->

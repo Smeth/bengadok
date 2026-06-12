@@ -23,7 +23,8 @@ type VenteLigne = {
     produit: string;
     categorie: string;
     montant: number;
-    commande_utilise_credit: boolean;
+    commande_eligible_credit: boolean;
+    credit_utilise: number;
 };
 type HistoriqueItem = {
     mois: string;
@@ -38,7 +39,16 @@ type CommandeRecente = {
     montant: number;
     statut: string;
     statut_slug: string;
+    commande_eligible_credit: boolean;
     credit_utilise: boolean;
+};
+type CommissionParPharmacie = {
+    pharmacie_id: number;
+    pharmacie: string;
+    ca_parapharma: number;
+    montant_commission: number;
+    statut: string;
+    statut_label: string;
 };
 
 const props = withDefaults(
@@ -85,11 +95,13 @@ const props = withDefaults(
     ventes: VenteLigne[];
     historique_commissions: HistoriqueItem[];
     commandes_recentes: CommandeRecente[];
+    commissions_par_pharmacie?: CommissionParPharmacie[];
 }>(),
     {
         context: 'admin',
         pharmacie_id: null,
         pharmacie: null,
+        commissions_par_pharmacie: () => [],
     },
 );
 
@@ -97,6 +109,7 @@ const moisDropdownOpen = ref(false);
 const rechargeModalOpen = ref(false);
 
 const isPharmacie = computed(() => props.context === 'pharmacie');
+const isAdmin = computed(() => props.context === 'admin');
 
 const commandesHref = computed(() =>
     isPharmacie.value ? '/dok-pharma/commandes' : '/commandes',
@@ -479,20 +492,20 @@ function statutBadgeClass(statut: string): string {
                                     <span
                                         class="inline-flex rounded-full px-2 py-0.5 text-xs font-bold"
                                         :class="
-                                            v.commande_utilise_credit
+                                            v.commande_eligible_credit
                                                 ? 'bg-[#198754] text-white'
                                                 : 'bg-gray-200 text-gray-600'
                                         "
                                     >
                                         {{
-                                            v.commande_utilise_credit
+                                            v.commande_eligible_credit
                                                 ? 'Oui'
                                                 : 'Non'
                                         }}
                                     </span>
                                 </td>
                                 <td class="py-3 text-center text-sm font-semibold text-gray-800">
-                                    {{ v.commande_utilise_credit ? '1' : '—' }}
+                                    {{ v.credit_utilise ? '1' : '—' }}
                                 </td>
                             </tr>
                         </tbody>
@@ -562,6 +575,76 @@ function statutBadgeClass(statut: string): string {
                         {{ formatXaf(config.credit_prix_unitaire_xaf) }} XAF.
                     </p>
                 </div>
+            </div>
+        </div>
+
+        <!-- Commissions par pharmacie (admin) -->
+        <div
+            v-if="isAdmin && commissions_par_pharmacie.length > 0"
+            class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+        >
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">
+                        Commissions par pharmacie
+                    </h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        Détail par officine pour {{ mois_label }}. Le bandeau
+                        ci-dessus reste le total agrégé plateforme.
+                    </p>
+                </div>
+                <Link
+                    href="/pharmacies"
+                    class="text-sm font-semibold text-[#198754] hover:underline"
+                >
+                    Gérer crédits par pharmacie
+                </Link>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[720px] text-left text-sm">
+                    <thead>
+                        <tr class="border-b text-xs font-bold text-gray-500">
+                            <th class="pb-3 pr-4">Pharmacie</th>
+                            <th class="pb-3 pr-4 text-right">CA parapharma</th>
+                            <th class="pb-3 pr-4 text-right">Commission</th>
+                            <th class="pb-3 pr-4">Statut</th>
+                            <th class="pb-3 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="row in commissions_par_pharmacie"
+                            :key="row.pharmacie_id"
+                            class="border-b border-gray-50"
+                        >
+                            <td class="py-3 pr-4 font-medium text-gray-900">
+                                {{ row.pharmacie }}
+                            </td>
+                            <td class="py-3 pr-4 text-right tabular-nums">
+                                {{ formatXaf(row.ca_parapharma) }} XAF
+                            </td>
+                            <td class="py-3 pr-4 text-right font-semibold tabular-nums">
+                                {{ formatXaf(row.montant_commission) }} XAF
+                            </td>
+                            <td class="py-3 pr-4">
+                                <span
+                                    class="inline-flex rounded-full px-2 py-0.5 text-xs font-bold"
+                                    :class="statutBadgeClass(row.statut_label)"
+                                >
+                                    {{ row.statut_label }}
+                                </span>
+                            </td>
+                            <td class="py-3 text-right">
+                                <Link
+                                    :href="`/pharmacies/${row.pharmacie_id}`"
+                                    class="text-[13px] font-semibold text-[#459cd1] hover:underline"
+                                >
+                                    Fiche
+                                </Link>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 

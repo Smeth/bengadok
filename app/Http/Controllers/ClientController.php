@@ -162,8 +162,28 @@ class ClientController extends Controller
     public function prospects(Request $request): Response
     {
         $search = $request->input('search', '');
+        $zoneId = $request->input('zone_id', '');
+        $arrondissement = $request->input('arrondissement', '');
+        $tri = $request->input('tri', 'recent');
 
-        $query = Client::query()->whereNull('promu_client_le')->withCount('commandes');
+        $baseQuery = Client::query()->whereNull('promu_client_le');
+
+        $stats = [
+            'total' => (clone $baseQuery)->count(),
+            'avec_commandes' => (clone $baseQuery)->has('commandes')->count(),
+            'sans_commande' => (clone $baseQuery)->doesntHave('commandes')->count(),
+            'eligibles_promotion' => (clone $baseQuery)
+                ->whereHas('commandes', fn ($q) => $q->whereIn('status', ['validee', 'retiree']))
+                ->count(),
+        ];
+
+        $query = (clone $baseQuery)
+            ->with(['zone'])
+            ->withCount([
+                'commandes',
+                'commandes as commandes_reussies_count' => fn ($q) => $q->whereIn('status', ['validee', 'retiree']),
+            ])
+            ->withMax('commandes as derniere_commande_at', 'date');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -176,9 +196,24 @@ class ClientController extends Controller
             });
         }
 
-        $prospects = $query->orderByDesc('updated_at')
-            ->get()
-            ->map(fn (Client $c) => [
+        if ($zoneId !== '') {
+            $query->where('zone_id', (int) $zoneId);
+        }
+
+        if ($arrondissement !== '') {
+            $query->where('arrondissement', $arrondissement);
+        }
+
+        match ($tri) {
+            'nom' => $query->orderBy('prenom')->orderBy('nom'),
+            'commandes' => $query->orderByDesc('commandes_count')->orderByDesc('updated_at'),
+            default => $query->orderByDesc('updated_at'),
+        };
+
+        $prospects = $query
+            ->paginate(15)
+            ->withQueryString()
+            ->through(fn (Client $c) => [
                 'id' => $c->id,
                 'nom' => $c->nom,
                 'prenom' => $c->prenom,
@@ -186,14 +221,53 @@ class ClientController extends Controller
                 'tel_secondaire' => $c->tel_secondaire,
                 'adresse' => $c->adresse ?? '',
                 'arrondissement' => $c->arrondissement,
+                'zone' => $c->zone?->designation,
+                'zone_id' => $c->zone_id,
                 'nb_commandes' => (int) $c->commandes_count,
+                'nb_commandes_reussies' => (int) $c->commandes_reussies_count,
+                'derniere_commande' => $c->derniere_commande_at
+                    ? \Carbon\Carbon::parse($c->derniere_commande_at)->format('d/m/Y')
+                    : null,
                 'updated_at' => $c->updated_at?->format('d/m/Y H:i'),
+                'statut' => $this->prospectStatut((int) $c->commandes_count, (int) $c->commandes_reussies_count),
             ]);
+
+        $zones = Zone::orderBy('designation')->get(['id', 'designation']);
 
         return Inertia::render('Clients/Prospects', [
             'prospects' => $prospects,
-            'filters' => $request->only(['search']),
+            'zones' => $zones,
+            'arrondissements' => Client::ARRONDISSEMENTS,
+            'stats' => $stats,
+            'filters' => $request->only(['search', 'zone_id', 'arrondissement', 'tri']),
         ]);
+    }
+
+    public function promouvoirClient(Client $client): RedirectResponse
+    {
+        if ($client->promu_client_le !== null) {
+            return back()->with('error', 'Ce contact est déjà un client définitif.');
+        }
+
+        $client->update(['promu_client_le' => now()]);
+
+        return back()->with(
+            'status',
+            sprintf('%s est maintenant un client.', trim("{$client->prenom} {$client->nom}") ?: "Fiche #{$client->id}"),
+        );
+    }
+
+    private function prospectStatut(int $nbCommandes, int $nbReussies): string
+    {
+        if ($nbCommandes === 0) {
+            return 'sans_commande';
+        }
+
+        if ($nbReussies > 0) {
+            return 'eligible_promotion';
+        }
+
+        return 'en_cours';
     }
 
     /**

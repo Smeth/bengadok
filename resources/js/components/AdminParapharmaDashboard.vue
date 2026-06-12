@@ -7,7 +7,8 @@ type VenteLigne = {
     produit: string;
     categorie: string;
     montant: number;
-    commande_utilise_credit: boolean;
+    commande_eligible_credit: boolean;
+    credit_utilise: number;
 };
 type HistoriqueItem = {
     mois: string;
@@ -22,7 +23,16 @@ type CommandeRecente = {
     montant: number;
     statut: string;
     statut_slug: string;
+    commande_eligible_credit: boolean;
     credit_utilise: boolean;
+};
+type CommissionParPharmacie = {
+    pharmacie_id: number;
+    pharmacie: string;
+    ca_parapharma: number;
+    montant_commission: number;
+    statut: string;
+    statut_label: string;
 };
 
 defineProps<{
@@ -60,6 +70,7 @@ defineProps<{
     ventes: VenteLigne[];
     historique_commissions: HistoriqueItem[];
     commandes_recentes: CommandeRecente[];
+    commissions_par_pharmacie?: CommissionParPharmacie[];
 }>();
 </script>
 

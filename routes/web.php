@@ -67,6 +67,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('clients')->name('clients.')->group(function () {
         Route::get('/', [ClientController::class, 'index'])->name('index');
         Route::get('prospects', [ClientController::class, 'prospects'])->name('prospects');
+        Route::patch('{client}/promouvoir-client', [ClientController::class, 'promouvoirClient'])
+            ->name('promouvoir')
+            ->middleware('role:admin|super_admin|agent_call_center');
         Route::get('doublons', [ClientDoublonController::class, 'index'])->name('doublons');
         Route::patch('doublons/{groupe}/ignorer', [ClientDoublonController::class, 'ignorer'])->name('doublons.ignorer');
         Route::patch('doublons/{groupe}/verifier', [ClientDoublonController::class, 'verifier'])->name('doublons.verifier');

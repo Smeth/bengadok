@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     User,
@@ -10,6 +10,7 @@ import {
     TrendingUp,
     RefreshCw,
     Pencil,
+    UserPlus,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import ClientEnrichirProfilModal from '@/components/clients/ClientEnrichirProfilModal.vue';
@@ -55,6 +56,40 @@ const props = defineProps<{
 }>();
 
 const enrichModalOpen = ref(false);
+const promoting = ref(false);
+
+const page = usePage();
+const canPromouvoir = computed(() => {
+    const roles =
+        (page.props.auth as { user?: { roles?: string[] } })?.user?.roles ??
+        [];
+    return (
+        props.client.est_prospect &&
+        ['admin', 'super_admin', 'agent_call_center'].some((r) =>
+            roles.includes(r),
+        )
+    );
+});
+
+function promouvoirClient() {
+    if (
+        !confirm(
+            `Promouvoir ${clientNomComplet(props.client)} en client définitif ?`,
+        )
+    ) {
+        return;
+    }
+    promoting.value = true;
+    router.patch(
+        `/clients/${props.client.id}/promouvoir-client`,
+        {},
+        {
+            onFinish: () => {
+                promoting.value = false;
+            },
+        },
+    );
+}
 
 const breadcrumbs = computed<BreadcrumbItem[]>(() => [
     { title: 'Tableau de bord', href: dashboard() },
@@ -106,11 +141,19 @@ function telAffiche(tel: string) {
                         as-child
                     >
                         <Link
-                            href="/clients"
+                            :href="
+                                client.est_prospect
+                                    ? '/clients/prospects'
+                                    : '/clients'
+                            "
                             class="flex items-center gap-2 text-[#459cd1] hover:underline"
                         >
                             <ArrowLeft class="size-4 shrink-0" />
-                            Retour à la liste
+                            {{
+                                client.est_prospect
+                                    ? 'Retour aux prospects'
+                                    : 'Retour à la liste'
+                            }}
                         </Link>
                     </Button>
                     <h1
@@ -119,14 +162,27 @@ function telAffiche(tel: string) {
                         Profil Client
                     </h1>
                 </div>
-                <Button
-                    type="button"
-                    class="rounded-lg bg-[#459cd1] px-5 text-white shadow-sm hover:bg-[#3a87b8]"
-                    @click="enrichModalOpen = true"
-                >
-                    <Pencil class="mr-2 size-4" />
-                    Enrichir le profil
-                </Button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <Button
+                        v-if="canPromouvoir"
+                        type="button"
+                        variant="outline"
+                        class="rounded-lg border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                        :disabled="promoting"
+                        @click="promouvoirClient"
+                    >
+                        <UserPlus class="mr-2 size-4" />
+                        Promouvoir en client
+                    </Button>
+                    <Button
+                        type="button"
+                        class="rounded-lg bg-[#459cd1] px-5 text-white shadow-sm hover:bg-[#3a87b8]"
+                        @click="enrichModalOpen = true"
+                    >
+                        <Pencil class="mr-2 size-4" />
+                        Enrichir le profil
+                    </Button>
+                </div>
             </div>
 
             <!-- Grille 1/3 + 2/3 (maquette) -->

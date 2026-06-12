@@ -377,23 +377,6 @@ function logout() {
                     </Link>
                 </div>
 
-                <!-- Illustration : proportions réduites (largeur ~ admin 16rem) -->
-                <div
-                    v-if="!sidebarCollapsed"
-                    class="mt-6 hidden shrink-0 sm:block"
-                >
-                    <div class="relative mx-auto h-[372px] w-[208px] shrink-0">
-                        <div
-                            class="absolute inset-x-0 bottom-0 z-0 h-[182px] rounded-[24px] bg-gradient-to-b from-[#4aa8df] to-[#3995d2] shadow-[0_4px_4px_rgba(0,0,0,0.25)]"
-                        />
-                        <img
-                            src="/images/pharmacy/sidebar-pharmacienne.png"
-                            alt=""
-                            class="pointer-events-none absolute bottom-[32px] left-1/2 z-10 h-[284px] w-auto max-w-[248px] -translate-x-1/2 object-contain object-bottom drop-shadow-[0_4px_4px_rgba(0,0,0,0.25)]"
-                        />
-                    </div>
-                </div>
-
                 <!-- Déconnexion : pied de page admin (AppSidebar) -->
                 <div
                     class="mt-4 w-full px-2 pb-2"

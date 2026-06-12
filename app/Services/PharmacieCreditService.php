@@ -255,16 +255,7 @@ class PharmacieCreditService
             ->whereHas('commande', fn ($q) => $q->whereBetween('date', [$debut, $fin]))
             ->sum(DB::raw('ABS(credits_delta)'));
 
-        if ($depuisOps > 0) {
-            return $depuisOps;
-        }
-
-        return (int) Commande::query()
-            ->where('pharmacie_id', $pharmacieId)
-            ->whereBetween('date', [$debut, $fin])
-            ->whereIn('status', Commande::STATUTS_REUSSIS)
-            ->where('prix_medicaments', '>=', $seuilMedicament)
-            ->count();
+        return $depuisOps;
     }
 
     /**

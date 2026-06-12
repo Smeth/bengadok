@@ -200,37 +200,6 @@ function logout() {
                     </span>
                 </Link>
             </div>
-
-            <!-- Illustration : hauteur fixe sous Réglages -->
-            <div
-                v-if="!isAgentCallCenterOnly"
-                class="pointer-events-none group-data-[collapsible=icon]:hidden relative mt-3 flex shrink-0 justify-center overflow-visible pt-1"
-            >
-                <div
-                    class="relative mx-auto h-[min(240px,32vh)] min-h-[200px] w-full max-w-[220px] shrink-0"
-                >
-                    <!-- Blob bleu organique -->
-                    <div
-                        class="absolute left-1/2 top-1/2 flex h-[100px] w-[130px] -translate-x-1/2 -translate-y-1/2 items-center justify-center"
-                    >
-                        <div
-                            class="absolute h-[85px] w-[110px] rounded-[22px] bg-[#3995d2] shadow-[0_2px_4px_rgba(0,0,0,0.2)] -rotate-[13deg]"
-                        />
-                        <div
-                            class="absolute h-[92px] w-[118px] rounded-[22px] bg-[#3995d2] shadow-[0_2px_4px_rgba(0,0,0,0.2)] rotate-[25deg]"
-                        />
-                    </div>
-                    <!-- 3D Doctor -->
-                    <img
-                        src="/images/figma-assets/sidebar-doctor-main.png"
-                        alt=""
-                        class="absolute left-1/2 bottom-0 h-[80%] w-auto max-w-[130px] -translate-x-1/2 object-contain object-bottom pointer-events-none"
-                        style="
-                            filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
-                        "
-                    />
-                </div>
-            </div>
         </SidebarContent>
 
         <SidebarFooter

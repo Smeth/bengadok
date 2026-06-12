@@ -9,7 +9,8 @@ type VenteLigne = {
     produit: string;
     categorie: string;
     montant: number;
-    commande_utilise_credit: boolean;
+    commande_eligible_credit: boolean;
+    credit_utilise: number;
 };
 type HistoriqueItem = {
     mois: string;
@@ -24,6 +25,7 @@ type CommandeRecente = {
     montant: number;
     statut: string;
     statut_slug: string;
+    commande_eligible_credit: boolean;
     credit_utilise: boolean;
 };
 
