@@ -17,7 +17,7 @@ Déploiement VPS via SSH
      ├── npm ci + npm run build
      ├── php artisan migrate
      ├── config/route/view cache
-     ├── queue:restart
+     ├── queue:restart + supervisorctl restart (workers + Reverb)
      └── php artisan up        (fin maintenance)
 ```
 
@@ -30,13 +30,12 @@ Aller dans : **GitHub repo → Settings → Secrets and variables → Actions**
 | Secret | Exemple | Description |
 |--------|---------|-------------|
 | `VPS_HOST` | `192.168.1.10` ou `bengadok.com` | IP ou domaine du VPS |
-| `VPS_USERNAME` | `deployer` | Utilisateur SSH |
-| `VPS_SSH_KEY` | `-----BEGIN OPENSSH...` | Clé privée SSH complète |
+| `VPS_USERNAME` | `root` | Utilisateur SSH (compte root sur le VPS) |
+| `VPS_PASSWORD` | `***` | Mot de passe SSH root |
 | `VPS_PORT` | `22` | Port SSH (optionnel, 22 par défaut) |
-| `DEPLOY_PATH` | `/var/www/bengadok` | Chemin absolu de l'app sur le VPS |
+| `DEPLOY_PATH` | `/var/www/bengadok/bengadok` | Chemin absolu de l'app sur le VPS |
 
-> **Note** : `VPS_SSH_KEY` = contenu complet de `~/.ssh/id_rsa` (ou ed25519).
-> La clé publique correspondante doit être dans `~/.ssh/authorized_keys` sur le VPS.
+> **Note** : le déploiement GitHub Actions se connecte en **root** via mot de passe (`VPS_PASSWORD`).
 
 ---
 
@@ -62,37 +61,25 @@ sudo apt install mysql-server
 sudo apt install nginx
 ```
 
-### Créer l'utilisateur deployer
+### Cloner le dépôt sur le VPS (en root)
+
 ```bash
-sudo adduser deployer
-sudo usermod -aG www-data deployer
-
-# Autoriser deployer à redémarrer php-fpm et nginx sans mot de passe
-sudo visudo
-# Ajouter : deployer ALL=(ALL) NOPASSWD: /bin/systemctl restart php8.3-fpm, /bin/systemctl reload nginx
-```
-
-### Cloner le dépôt sur le VPS
-```bash
-sudo mkdir -p /var/www/bengadok
-sudo chown deployer:www-data /var/www/bengadok
-sudo chmod 775 /var/www/bengadok
-
-# En tant que deployer
-su - deployer
-git clone git@github.com:TON_USER/bengadok.git /var/www/bengadok
+mkdir -p /var/www/bengadok
 cd /var/www/bengadok
+git clone git@github.com:TON_USER/bengadok.git bengadok
+cd /var/www/bengadok/bengadok
 
 # Configurer le .env (UNE SEULE FOIS — ne jamais commiter)
 cp .env.example .env
 nano .env
 php artisan key:generate
 php artisan storage:link
-php artisan migrate --seed  # premier déploiement seulement
+php artisan db:seed --class=RolePermissionSeeder --force
+php artisan db:seed --class=UserSeeder --force   # premier déploiement seulement
 
 # Permissions storage
 chmod -R 775 storage bootstrap/cache
-chown -R deployer:www-data storage bootstrap/cache
+chown -R root:www-data storage bootstrap/cache
 ```
 
 ### Configuration MySQL
@@ -142,7 +129,7 @@ server {
     listen 443 ssl http2;
     server_name bengadok.com www.bengadok.com;
 
-    root /var/www/bengadok/public;
+    root /var/www/bengadok/bengadok/public;
     index index.php;
 
     ssl_certificate     /etc/letsencrypt/live/bengadok.com/fullchain.pem;
@@ -191,47 +178,67 @@ sudo certbot --nginx -d bengadok.com -d www.bengadok.com
 
 ---
 
-## 4. Worker de queue (Supervisor)
+## 4. Workers queue + Reverb (Supervisor)
 
 ```bash
-sudo apt install supervisor
+apt install supervisor
 ```
 
 ```ini
 # /etc/supervisor/conf.d/bengadok-worker.conf
 [program:bengadok-worker]
 process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/bengadok/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+command=php /var/www/bengadok/bengadok/artisan queue:work --sleep=3 --tries=3 --max-time=3600
 autostart=true
 autorestart=true
 stopasgroup=true
 killasgroup=true
-user=deployer
+user=root
 numprocs=2
 redirect_stderr=true
 stdout_logfile=/var/log/supervisor/bengadok-worker.log
 stopwaitsecs=3600
 ```
 
-```bash
-sudo supervisorctl reread
-sudo supervisorctl update
-sudo supervisorctl start bengadok-worker:*
+```ini
+# /etc/supervisor/conf.d/bengadok-reverb.conf
+[program:bengadok-reverb]
+command=php /var/www/bengadok/bengadok/artisan reverb:start
+autostart=true
+autorestart=true
+user=root
+redirect_stderr=true
+stdout_logfile=/var/log/supervisor/bengadok-reverb.log
 ```
+
+```bash
+supervisorctl reread
+supervisorctl update
+supervisorctl start bengadok-worker:* bengadok-reverb
+supervisorctl status
+```
+
+> **Obligatoire pour le déploiement** : Supervisor doit être installé et les programmes `bengadok-worker` / `bengadok-reverb` actifs. Le workflow CI échoue si `supervisorctl` est absent ou si le redémarrage des workers échoue.
 
 ---
 
-## 5. Générer la clé SSH pour le déploiement
+## 5. Accès SSH pour le déploiement GitHub Actions
+
+Le workflow CI se connecte en **root** avec le mot de passe défini dans le secret `VPS_PASSWORD`.
+
+Sur le VPS, vérifier que la connexion root par SSH est autorisée (à n'autoriser que depuis des IP de confiance si possible) :
 
 ```bash
-# Sur ta machine locale (ou sur le VPS en tant que deployer)
-ssh-keygen -t ed25519 -C "github-deploy-bengadok" -f ~/.ssh/bengadok_deploy
+# /etc/ssh/sshd_config — si besoin
+PermitRootLogin yes
 
-# Copier la clé publique sur le VPS
-ssh-copy-id -i ~/.ssh/bengadok_deploy.pub deployer@TON_VPS
+systemctl reload sshd
+```
 
-# Contenu de la clé PRIVÉE à mettre dans le secret VPS_SSH_KEY
-cat ~/.ssh/bengadok_deploy
+Test depuis votre machine :
+
+```bash
+ssh root@TON_VPS
 ```
 
 ---

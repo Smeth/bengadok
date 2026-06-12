@@ -201,33 +201,6 @@ const zoneColors = [
     '#8a38f5', // Violet - Mfilou (Figma)
 ];
 
-const heroIcons = [
-    {
-        src: '/images/figma-assets/hero-icon-1.png',
-        class: 'absolute right-[15%] -top-12 w-[140px] h-[140px] object-contain rotate-[4deg]',
-    },
-    {
-        src: '/images/figma-assets/hero-icon-2.png',
-        class: 'absolute right-[5%] top-2 w-[120px] h-[120px] object-contain -rotate-[17deg]',
-    },
-    {
-        src: '/images/figma-assets/hero-icon-3.png',
-        class: 'absolute right-[25%] top-4 w-[100px] h-[100px] object-contain rotate-[27deg]',
-    },
-    {
-        src: '/images/figma-assets/hero-icon-4.png',
-        class: 'absolute right-[12%] top-16 w-[130px] h-[130px] object-contain rotate-[12deg]',
-    },
-    {
-        src: '/images/figma-assets/hero-icon-5.png',
-        class: 'absolute right-[35%] -top-8 w-[180px] h-[180px] object-contain -rotate-[9deg]',
-    },
-    {
-        src: '/images/figma-assets/hero-icon-6.png',
-        class: 'absolute right-[20%] top-20 w-[150px] h-[150px] object-contain rotate-[10deg]',
-    },
-];
-
 const volumeParZoneWithPercent = computed(() => {
     const zones = props.volumeParZone ?? [];
     const total = zones.reduce((a, z) => a + z.total, 0) || 1;
@@ -414,30 +387,6 @@ function getPiePath(
                 :historique_commissions="historique_commissions!"
                 :commandes_recentes="commandes_recentes!"
             />
-
-            <!-- Hero section Admin - style Figma (legacy) -->
-            <div
-                v-if="showLegacyAdmin"
-                class="relative mb-6 overflow-hidden rounded-[30px] bg-white shadow-[0px_4px_10px_rgba(0,0,0,0.25)] min-h-[257px] flex items-center px-8 md:px-10 py-8"
-            >
-                <h1
-                    class="relative z-20 max-w-[473px] text-[40px] md:text-[55px] font-extrabold leading-tight text-[#5c5959] drop-shadow-[4px_4px_20px_rgba(0,0,0,0.25)]"
-                >
-                    Toutes les données au même endroit
-                </h1>
-                <!-- Icônes 3D flottantes Figma -->
-                <div
-                    class="absolute inset-0 pointer-events-none hidden lg:block"
-                >
-                    <img
-                        v-for="(icon, i) in heroIcons"
-                        :key="i"
-                        :src="icon.src"
-                        :class="icon.class"
-                        alt=""
-                    />
-                </div>
-            </div>
 
             <!-- Hero section Pharma -->
             <div

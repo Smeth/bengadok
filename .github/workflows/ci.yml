@@ -168,8 +168,12 @@ jobs:
 
             echo "=== [8/9] Redémarrage des workers ==="
             php artisan queue:restart
-            sudo supervisorctl restart bengadok-worker:*
-            sudo supervisorctl restart bengadok-reverb
+            command -v supervisorctl >/dev/null 2>&1 || {
+              echo "ERREUR: supervisorctl introuvable — installer Supervisor (voir .github/DEPLOY.md §4)"
+              exit 1
+            }
+            supervisorctl restart bengadok-worker:*
+            supervisorctl restart bengadok-reverb
 
             echo "=== [9/9] Désactivation mode maintenance ==="
             php artisan up
