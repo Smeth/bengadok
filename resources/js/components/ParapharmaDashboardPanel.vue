@@ -437,18 +437,22 @@ function statutBadgeClass(statut: string): string {
                         </div>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
+                <div
+                    class="max-h-[min(380px,50vh)] overflow-auto rounded-lg border border-gray-100"
+                >
                     <table class="w-full min-w-[640px] text-left text-sm">
-                        <thead>
+                        <thead class="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgb(229,231,235)]">
                             <tr class="border-b text-xs font-bold text-gray-500">
-                                <th class="pb-3 pr-4">Date</th>
-                                <th class="pb-3 pr-4">Produit</th>
-                                <th class="pb-3 pr-4">Catégorie</th>
-                                <th class="pb-3 pr-4 text-right">Montant (XAF)</th>
-                                <th class="pb-3 text-center">
+                                <th class="pb-3 pr-4 pt-1">Date</th>
+                                <th class="pb-3 pr-4 pt-1">Produit</th>
+                                <th class="pb-3 pr-4 pt-1">Catégorie</th>
+                                <th class="pb-3 pr-4 pt-1 text-right">
+                                    Montant (XAF)
+                                </th>
+                                <th class="pb-3 pt-1 text-center">
                                     Éligible crédit
                                 </th>
-                                <th class="pb-3 text-center">
+                                <th class="pb-3 pt-1 text-center">
                                     Crédit utilisé
                                 </th>
                             </tr>
@@ -503,25 +507,19 @@ function statutBadgeClass(statut: string): string {
                                 </td>
                             </tr>
                         </tbody>
-                        <tfoot v-if="ventes.length > 0">
-                            <tr>
-                                <td
-                                    colspan="3"
-                                    class="pt-4 text-right text-sm font-bold text-gray-700"
-                                >
-                                    TOTAL COMMISSION ({{
-                                        config.commission_percent
-                                    }}&nbsp;% du CA parapharma)
-                                </td>
-                                <td
-                                    colspan="3"
-                                    class="pt-4 text-right text-lg font-extrabold text-[#198754]"
-                                >
-                                    {{ formatXaf(kpis.montant_commission) }} XAF
-                                </td>
-                            </tr>
-                        </tfoot>
                     </table>
+                </div>
+                <div
+                    v-if="ventes.length > 0"
+                    class="mt-3 flex flex-wrap items-center justify-end gap-x-4 gap-y-1 border-t border-gray-100 pt-3"
+                >
+                    <p class="text-sm font-bold text-gray-700">
+                        TOTAL COMMISSION ({{ config.commission_percent }}&nbsp;%
+                        du CA parapharma)
+                    </p>
+                    <p class="text-lg font-extrabold text-[#198754]">
+                        {{ formatXaf(kpis.montant_commission) }} XAF
+                    </p>
                 </div>
             </div>
 
