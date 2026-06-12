@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Link, router, useForm } from '@inertiajs/vue3';
 import {
-    AlertTriangle,
     BarChart3,
     Check,
     ChevronDown,
@@ -9,7 +8,6 @@ import {
     Eye,
     Info,
     Percent,
-    Phone,
     Plus,
     ShoppingBag,
     X,
@@ -113,10 +111,6 @@ const isAdmin = computed(() => props.context === 'admin');
 
 const commandesHref = computed(() =>
     isPharmacie.value ? '/dok-pharma/commandes' : '/commandes',
-);
-
-const contactTel = computed(
-    () => props.pharmacie?.telephone?.trim() || '+242000000000',
 );
 
 const creditProgressPct = computed(() => {
@@ -771,28 +765,6 @@ function statutBadgeClass(statut: string): string {
                     Voir toutes les commandes
                 </Link>
             </div>
-        </div>
-
-        <!-- Rappel + contact -->
-        <div
-            class="flex flex-col gap-4 rounded-2xl border border-[#FED7AA] bg-[#FFF7ED] p-4 sm:flex-row sm:items-center sm:justify-between"
-        >
-            <div class="flex items-start gap-3">
-                <AlertTriangle class="mt-0.5 size-5 shrink-0 text-[#EA580C]" />
-                <p class="text-sm text-gray-800">
-                    <strong>Rappel important :</strong>
-                    Les commissions parapharmacie (période du 1er au
-                    {{ config.periode_jour_fin }}) doivent être réglées avant le
-                    {{ config.commission_jour_echeance }} du mois en cours.
-                </p>
-            </div>
-            <a
-                :href="`tel:${contactTel.replace(/\s/g, '')}`"
-                class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#198754] px-5 py-3 text-sm font-bold text-white hover:bg-[#157347]"
-            >
-                <Phone class="size-4" />
-                Nous contacter
-            </a>
         </div>
 
         <!-- Modal recharge crédits (pharmacie) -->
