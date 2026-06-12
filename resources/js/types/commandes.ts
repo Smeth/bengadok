@@ -53,7 +53,8 @@ export type CommandeDetail = {
     montant_livraison?: { designation: number };
     livreur?: { id: number; nom: string; prenom: string; tel: string };
     ordonnance?: {
-        urlfile?: string;
+        file_url?: string;
+        is_pdf?: boolean;
         verification?: {
             decision: string;
             score: number | null;

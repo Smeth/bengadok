@@ -5,19 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const props = defineProps<{
-    urlfile: string;
+    fileUrl: string;
+    isPdf?: boolean;
     /** Hauteur max de l'aperçu (images) ou de l'iframe (PDF) */
     maxHeight?: string;
 }>();
 
 const maxHeight = computed(() => props.maxHeight ?? '12rem');
-
-function isPdf(url: string): boolean {
-    return url?.toLowerCase().endsWith('.pdf') ?? false;
-}
-
-const fullUrl = computed(() => `/storage/${props.urlfile}`);
-const isPdfFile = computed(() => isPdf(props.urlfile));
+const isPdfFile = computed(() => props.isPdf ?? false);
 
 const lightboxOpen = ref(false);
 const zoomLevel = ref(1);
@@ -41,7 +36,7 @@ function zoomOut() {
 }
 
 function openInNewTab() {
-    window.open(fullUrl.value, '_blank', 'noopener');
+    window.open(props.fileUrl, '_blank', 'noopener');
 }
 
 function handleWheel(e: WheelEvent) {
@@ -61,7 +56,7 @@ function handleWheel(e: WheelEvent) {
                 @click="openLightbox"
             >
                 <img
-                    :src="fullUrl"
+                    :src="fileUrl"
                     alt="Ordonnance"
                     class="max-h-full w-auto object-contain transition-opacity hover:opacity-90"
                 />
@@ -85,7 +80,7 @@ function handleWheel(e: WheelEvent) {
                 :style="{ maxHeight }"
             >
                 <iframe
-                    :src="`${fullUrl}#toolbar=1`"
+                    :src="`${fileUrl}#toolbar=1`"
                     class="h-full w-full border-0"
                     title="Ordonnance PDF"
                 />
@@ -152,7 +147,7 @@ function handleWheel(e: WheelEvent) {
                         @wheel.prevent="handleWheel"
                     >
                         <img
-                            :src="fullUrl"
+                            :src="fileUrl"
                             alt="Ordonnance"
                             class="max-w-full object-contain transition-transform"
                             :style="{ transform: `scale(${zoomLevel})` }"

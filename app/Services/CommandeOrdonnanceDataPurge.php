@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Commande;
 use App\Models\Ordonnance;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Supprime toutes les commandes et les ordonnances (fichiers + lignes) qui y étaient liées.
@@ -39,9 +38,7 @@ class CommandeOrdonnanceDataPurge
         $ordonnancesCount = 0;
         if ($ordonnanceIds !== []) {
             foreach (Ordonnance::query()->whereIn('id', $ordonnanceIds)->get() as $ordonnance) {
-                if ($ordonnance->urlfile) {
-                    Storage::disk('public')->delete($ordonnance->urlfile);
-                }
+                $ordonnance->deleteStoredFile();
             }
             $ordonnancesCount = Ordonnance::query()->whereIn('id', $ordonnanceIds)->delete();
         }

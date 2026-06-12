@@ -27,8 +27,45 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 const SIDEBAR_W = 256;
 const SIDEBAR_W_ICON = 80;
 
+const props = withDefaults(
+    defineProps<{
+        pageTitle?: string;
+        variant?: 'gradient' | 'plain';
+        pharmaciesDisponibles?: Array<{ id: number; designation: string }>;
+        pharmacieId?: number;
+        pharmacieDesignation?: string;
+    }>(),
+    {
+        pageTitle: '',
+        variant: 'gradient',
+        pharmaciesDisponibles: () => [],
+        pharmacieId: undefined,
+        pharmacieDesignation: '',
+    },
+);
+
 const page = usePage();
 const { isCurrentUrl } = useCurrentUrl();
+
+const pharmacieSelectorOpen = ref(false);
+
+const activePharmacieLabel = computed(() => {
+    if (props.pharmacieDesignation) {
+        return props.pharmacieDesignation;
+    }
+    const match = props.pharmaciesDisponibles.find(
+        (p) => p.id === props.pharmacieId,
+    );
+    return match?.designation ?? pharmacie.value?.designation ?? 'Pharmacie';
+});
+
+function selectPharmacie(id: number) {
+    pharmacieSelectorOpen.value = false;
+    if (id === props.pharmacieId) {
+        return;
+    }
+    router.get('/dok-pharma', { pharmacie_id: id }, { preserveScroll: true });
+}
 
 const sidebarCollapsed = ref(false);
 const asideWidthPx = computed(() =>
@@ -56,7 +93,7 @@ const roleLabel = computed(() => {
         page.props.auth?.user as { roles?: string[] } | undefined
     )?.roles;
     const r = roles?.[0];
-    if (r === 'gerant') return 'Gérant';
+    if (r === 'gerant') return 'Gestionnaire';
     if (r === 'vendeur') return 'Vendeur';
     return r ? r.charAt(0).toUpperCase() + r.slice(1) : '';
 });
@@ -179,11 +216,10 @@ function logout() {
                     </div>
                 </div>
                 <p
-                    v-if="!sidebarCollapsed && pharmacie?.designation"
+                    v-if="!sidebarCollapsed"
                     class="mt-3 max-w-full truncate px-2 text-center text-[11px] font-bold leading-tight text-[#5c5959]"
-                    :title="pharmacie.designation"
                 >
-                    {{ pharmacie.designation }}
+                    BengaDok Pharmacie
                 </p>
             </div>
 
@@ -397,15 +433,60 @@ function logout() {
         <main
             :class="[
                 'flex min-h-0 flex-1 flex-col overflow-x-clip overflow-y-auto transition-[margin] duration-200 ease-out sm:overflow-x-visible',
-                isSettingsRoute
-                    ? 'relative isolate bg-background'
+                isSettingsRoute || variant === 'plain'
+                    ? 'relative isolate bg-[#f8fafc]'
                     : 'pharmacy-main-gradient',
             ]"
             :style="{ marginLeft: `${asideWidthPx}px` }"
         >
             <header
-                class="sticky top-0 z-30 flex min-h-[68px] shrink-0 items-center justify-end gap-4 border-0 bg-transparent px-5 py-3 sm:px-8"
+                class="sticky top-0 z-30 flex min-h-[68px] shrink-0 items-center justify-between gap-4 border-b border-gray-100 bg-white/95 px-5 py-3 backdrop-blur-sm sm:px-8"
             >
+                <div class="flex min-w-0 items-center gap-4">
+                    <h1
+                        v-if="pageTitle"
+                        class="truncate text-lg font-bold text-gray-900 sm:text-xl"
+                    >
+                        {{ pageTitle }}
+                    </h1>
+                    <div
+                        v-if="pharmaciesDisponibles.length"
+                        class="relative"
+                    >
+                        <button
+                            type="button"
+                            class="flex max-w-[220px] items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                            @click="
+                                pharmacieSelectorOpen = !pharmacieSelectorOpen
+                            "
+                        >
+                            <span class="truncate">{{
+                                activePharmacieLabel
+                            }}</span>
+                            <ChevronDown class="size-4 shrink-0" />
+                        </button>
+                        <div
+                            v-show="pharmacieSelectorOpen"
+                            class="absolute left-0 top-full z-40 mt-1 min-w-[220px] rounded-lg border bg-white py-1 shadow-lg"
+                        >
+                            <button
+                                v-for="p in pharmaciesDisponibles"
+                                :key="p.id"
+                                type="button"
+                                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+                                :class="
+                                    p.id === pharmacieId
+                                        ? 'bg-[#F0FDF4] font-bold text-[#198754]'
+                                        : ''
+                                "
+                                @click="selectPharmacie(p.id)"
+                            >
+                                {{ p.designation }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex shrink-0 items-center gap-4">
                 <DropdownMenu>
                     <DropdownMenuTrigger as-child>
                         <button
@@ -526,6 +607,7 @@ function logout() {
                         <UserMenuContent :user="user" />
                     </DropdownMenuContent>
                 </DropdownMenu>
+                </div>
             </header>
 
             <div class="pharmacy-main-body flex min-h-0 flex-1 flex-col">

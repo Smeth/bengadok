@@ -1,0 +1,27 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('commission_periodes', function (Blueprint $table) {
+            $table->foreignId('pharmacie_id')->nullable()->after('id')->constrained('pharmacies')->nullOnDelete();
+            $table->dropUnique(['annee', 'mois']);
+            $table->unique(['annee', 'mois', 'pharmacie_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('commission_periodes', function (Blueprint $table) {
+            $table->dropForeign(['pharmacie_id']);
+            $table->dropUnique(['annee', 'mois', 'pharmacie_id']);
+            $table->dropColumn('pharmacie_id');
+            $table->unique(['annee', 'mois']);
+        });
+    }
+};

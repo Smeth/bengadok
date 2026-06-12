@@ -64,12 +64,7 @@ final class MedicamentCatalogueMaintenanceService
 
     private function deleteOrdonnanceFile(Ordonnance $ordonnance): void
     {
-        $path = $ordonnance->urlfile ?? null;
-        if (! is_string($path) || $path === '') {
-            return;
-        }
-
-        Storage::disk('public')->delete($path);
+        $ordonnance->deleteStoredFile();
     }
 
     private function pruneEmptyGroupeDoublons(): void

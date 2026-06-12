@@ -6,7 +6,6 @@ use App\Models\Ordonnance;
 use App\Models\OrdonnanceVerification;
 use App\Models\OrdonnanceVerificationSetting;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Storage;
 
 class OrdonnanceVerificationProcessor
 {
@@ -64,7 +63,10 @@ class OrdonnanceVerificationProcessor
         }
 
         try {
-            $absolute = Storage::disk('public')->path($ordonnance->urlfile);
+            $absolute = $ordonnance->absolutePath();
+            if ($absolute === null || ! is_readable($absolute)) {
+                throw new \RuntimeException('Fichier ordonnance introuvable ou illisible.');
+            }
             $ocrText = $this->ocrExtractor->extractText($absolute, $settings->tesseract_binary);
             $lower = mb_strtolower($ocrText);
 

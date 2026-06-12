@@ -10,6 +10,7 @@ use App\Http\Controllers\DokPharmaController;
 use App\Http\Controllers\MedicamentCatalogueMaintenanceController;
 use App\Http\Controllers\MedicamentController;
 use App\Http\Controllers\MedicamentDoublonController;
+use App\Http\Controllers\OrdonnanceController;
 use App\Http\Controllers\PharmacieController;
 use App\Http\Controllers\PharmacieCreditController;
 use App\Http\Controllers\PharmacieVendeurController;
@@ -87,6 +88,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('vendeurs', [PharmacieVendeurController::class, 'store'])->name('vendeurs.store');
     });
 
+    Route::get('ordonnances/{ordonnance}/fichier', [OrdonnanceController::class, 'fichier'])
+        ->name('ordonnances.fichier');
+
     // Commande
     Route::prefix('commandes')->name('commandes.')->group(function () {
         Route::get('/', [CommandeController::class, 'index'])->name('index');
@@ -106,6 +110,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('dok-pharma')->name('dok-pharma.')->middleware('role:vendeur|gerant')->group(function () {
         Route::get('/', [DokPharmaController::class, 'dashboard'])->name('dashboard');
+        Route::post('/commission/payee', [DokPharmaController::class, 'marquerCommissionPayee'])->name('commission.payee');
+        Route::post('/credits/recharge', [DokPharmaController::class, 'rechargerCredits'])->name('credits.recharge');
         Route::get('/commandes', [DokPharmaController::class, 'index'])->name('commandes');
         Route::post('{commande}/valider', [DokPharmaController::class, 'validerDisponibilite'])->name('valider');
         Route::post('{commande}/valider-retrait', [DokPharmaController::class, 'validerRetrait'])->name('valider-retrait');

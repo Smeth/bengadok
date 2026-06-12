@@ -1536,11 +1536,12 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 Ordonnance
                             </h3>
                             <div
-                                v-if="detailCommande.ordonnance?.urlfile"
+                                v-if="detailCommande.ordonnance?.file_url"
                                 class="flex justify-center"
                             >
                                 <OrdonnanceViewer
-                                    :urlfile="detailCommande.ordonnance.urlfile"
+                                    :file-url="detailCommande.ordonnance.file_url"
+                                    :is-pdf="detailCommande.ordonnance.is_pdf"
                                     max-height="15rem"
                                 />
                             </div>
@@ -1552,7 +1553,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                             </div>
                             <div
                                 v-if="
-                                    isAgent && detailCommande.ordonnance?.urlfile
+                                    isAgent && detailCommande.ordonnance?.file_url
                                 "
                                 class="mt-4 rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-left text-sm"
                             >

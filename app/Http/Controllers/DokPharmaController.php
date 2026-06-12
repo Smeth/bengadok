@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Commande;
+use App\Models\Pharmacie;
 use App\Models\Produit;
-use App\Services\PharmacieDashboardService;
+use App\Services\AdminParapharmaDashboardService;
+use App\Services\PharmacieCreditService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -65,37 +68,158 @@ class DokPharmaController extends Controller
     }
 
     /**
-     * Dashboard pharmacie : stats, graphiques, meilleures ventes.
+     * Dashboard pharmacie : parapharmacie, commissions, crédits (maquette Figma).
      */
-    public function dashboard(Request $request, PharmacieDashboardService $dashboardService): Response
-    {
+    public function dashboard(
+        Request $request,
+        AdminParapharmaDashboardService $parapharmaService,
+    ): Response {
         $user = $request->user();
         if ($user && $user->hasRole('vendeur') && ! $user->hasRole('gerant')) {
             return redirect('/dok-pharma/commandes');
         }
 
-        $pharmacieId = $request->user()?->pharmacie_id;
-        if (! $pharmacieId) {
-            $period = in_array($request->query('period'), ['week', 'month'], true)
-                ? $request->query('period')
-                : 'month';
-            $chartOffset = min(0, max(-52, (int) $request->query('chart_offset', 0)));
+        $context = $this->resolvePharmacieDashboardContext($request);
+        $mois = $request->get('mois');
 
-            return Inertia::render(
-                'DokPharma/Dashboard',
-                $dashboardService->emptyPayload($period, $chartOffset),
-            );
+        if ($context['pharmacie_id'] === null) {
+            return Inertia::render('DokPharma/Dashboard', [
+                'mode' => 'parapharma_pharmacie',
+                'pharmacie_id' => null,
+                'pharmacie' => null,
+                'pharmacies_disponibles' => [],
+                'mois' => now()->format('Y-m'),
+                'mois_label' => '',
+                'mois_options' => [],
+                'config' => $parapharmaService->config(),
+                'kpis' => [
+                    'nb_commandes' => 0,
+                    'ca_parapharma' => 0,
+                    'credits_disponibles' => 0,
+                    'credits_utilises' => 0,
+                    'credits_prepayes_total' => 0,
+                    'credits_consommes_total' => 0,
+                    'cout_credits_consommes' => 0,
+                    'commandes_eligibles_credit' => 0,
+                    'montant_commission' => 0,
+                ],
+                'commission_courante' => [
+                    'periode_label' => '—',
+                    'echeance_label' => '—',
+                    'montant' => 0,
+                    'statut' => 'en_cours',
+                    'statut_label' => 'En cours',
+                    'paye_le' => null,
+                ],
+                'ventes' => [],
+                'historique_commissions' => [],
+                'commandes_recentes' => [],
+            ]);
         }
 
-        $period = in_array($request->query('period'), ['week', 'month'], true)
-            ? $request->query('period')
-            : 'month';
-        $chartOffset = (int) $request->query('chart_offset', 0);
-
-        return Inertia::render(
-            'DokPharma/Dashboard',
-            $dashboardService->build($pharmacieId, $period, $chartOffset),
+        $payload = $parapharmaService->build(
+            is_string($mois) ? $mois : null,
+            $context['pharmacie_id'],
         );
+
+        return Inertia::render('DokPharma/Dashboard', array_merge($payload, [
+            'pharmacies_disponibles' => $context['pharmacies_disponibles'],
+        ]));
+    }
+
+    public function marquerCommissionPayee(
+        Request $request,
+        AdminParapharmaDashboardService $parapharmaService,
+    ): RedirectResponse {
+        $context = $this->resolvePharmacieDashboardContext($request);
+        abort_unless($context['pharmacie_id'] !== null, 403);
+
+        $validated = $request->validate([
+            'mois' => ['required', 'regex:/^\d{4}-\d{2}$/'],
+        ]);
+
+        [$annee, $mois] = array_map('intval', explode('-', $validated['mois']));
+        $parapharmaService->marquerCommissionPayee($annee, $mois, $context['pharmacie_id']);
+
+        return redirect()
+            ->route('dok-pharma.dashboard', [
+                'mois' => $validated['mois'],
+                'pharmacie_id' => $context['pharmacie_id'],
+            ])
+            ->with('success', 'Commission marquée comme payée.');
+    }
+
+    public function rechargerCredits(
+        Request $request,
+        PharmacieCreditService $creditService,
+    ): RedirectResponse {
+        $context = $this->resolvePharmacieDashboardContext($request);
+        abort_unless($context['pharmacie_id'] !== null, 403);
+
+        $pharmacie = Pharmacie::query()->findOrFail($context['pharmacie_id']);
+
+        $validated = $request->validate([
+            'nombre_credits' => 'required|integer|min:1|max:99999',
+            'mode_paiement' => 'required|string|max:80',
+            'note' => 'nullable|string|max:2000',
+        ]);
+
+        try {
+            $creditService->recharger(
+                $pharmacie,
+                (int) $validated['nombre_credits'],
+                $validated['mode_paiement'],
+                $validated['note'] ?? null,
+                $request->user(),
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()
+            ->route('dok-pharma.dashboard', ['pharmacie_id' => $context['pharmacie_id']])
+            ->with('success', 'Demande de recharge enregistrée.');
+    }
+
+    /**
+     * @return array{
+     *     pharmacie_id: int|null,
+     *     pharmacies_disponibles: array<int, array{id: int, designation: string}>
+     * }
+     */
+    private function resolvePharmacieDashboardContext(Request $request): array
+    {
+        $user = $request->user();
+        $userPharmacieId = $user?->pharmacie_id;
+
+        if (! $userPharmacieId) {
+            return ['pharmacie_id' => null, 'pharmacies_disponibles' => []];
+        }
+
+        $userPharmacie = Pharmacie::query()->find($userPharmacieId);
+
+        $disponibles = Pharmacie::query()
+            ->where(function ($q) use ($userPharmacie, $userPharmacieId) {
+                $q->where('id', $userPharmacieId);
+                if ($userPharmacie?->proprio_email) {
+                    $q->orWhere('proprio_email', $userPharmacie->proprio_email);
+                }
+            })
+            ->orderBy('designation')
+            ->get(['id', 'designation']);
+
+        $requestedId = $request->integer('pharmacie_id');
+        $activeId = $disponibles->contains('id', $requestedId)
+            ? $requestedId
+            : $userPharmacieId;
+
+        return [
+            'pharmacie_id' => $activeId,
+            'pharmacies_disponibles' => $disponibles
+                ->map(fn (Pharmacie $p) => ['id' => $p->id, 'designation' => $p->designation])
+                ->values()
+                ->all(),
+        ];
     }
 
     public function index(Request $request): Response
@@ -169,9 +293,8 @@ class DokPharmaController extends Controller
                         ],
                     ])->values(),
                     'ordonnance_id' => $c->ordonnance_id,
-                    'ordonnance_url' => $c->ordonnance?->urlfile
-                        ? asset('storage/'.ltrim($c->ordonnance->urlfile, '/'))
-                        : null,
+                    'ordonnance_url' => $c->ordonnance?->file_url,
+                    'ordonnance_is_pdf' => (bool) ($c->ordonnance?->is_pdf ?? false),
                     'commentaire' => $c->commentaire,
                     'commentaire_pharmacie' => $c->commentaire_pharmacie,
                     'prix_medicaments' => (float) ($c->prix_medicaments ?? 0),

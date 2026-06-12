@@ -11,6 +11,7 @@ class CommissionPeriode extends Model
     public const STATUT_PAYE = 'paye';
 
     protected $fillable = [
+        'pharmacie_id',
         'annee',
         'mois',
         'montant',

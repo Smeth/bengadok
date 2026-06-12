@@ -61,6 +61,7 @@ type Commande = {
     produits: Produit[];
     ordonnance_id?: number | null;
     ordonnance_url?: string | null;
+    ordonnance_is_pdf?: boolean;
     commentaire?: string | null;
     commentaire_pharmacie?: string | null;
     /** Montant médicaments (hors livraison) — seul total visible côté pharmacie */
@@ -348,7 +349,7 @@ function confirmerAchat() {
 }
 
 /* ─── Modal ordonnance ───────────────────────────────────────── */
-const ordModal = ref({ open: false, url: '', numero: '' });
+const ordModal = ref({ open: false, url: '', isPdf: false, numero: '' });
 const zoom = ref(100);
 
 const dispoSuccessToast = ref({ show: false, message: '' });
@@ -357,6 +358,7 @@ function openOrdonnance(cmd: Commande) {
     ordModal.value = {
         open: true,
         url: cmd.ordonnance_url ?? '',
+        isPdf: cmd.ordonnance_is_pdf ?? false,
         numero: cmd.numero,
     };
     zoom.value = 100;
@@ -2238,8 +2240,14 @@ function resetZoom() {
                     <div
                         class="flex-1 overflow-auto bg-gray-100 flex items-start justify-center min-h-[250px] p-4"
                     >
+                        <iframe
+                            v-if="ordModal.url && ordModal.isPdf"
+                            :src="`${ordModal.url}#toolbar=1`"
+                            class="h-[min(70vh,520px)] w-full rounded-lg border-0 bg-white shadow"
+                            title="Ordonnance PDF"
+                        />
                         <img
-                            v-if="ordModal.url"
+                            v-else-if="ordModal.url"
                             :src="ordModal.url"
                             alt="Ordonnance"
                             class="rounded-lg shadow"

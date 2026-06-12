@@ -84,7 +84,7 @@ export type CommandeRelance = {
         type?: string | null;
         pivot: { quantite: number; prix_unitaire: number };
     }>;
-    ordonnance?: { urlfile?: string } | null;
+    ordonnance?: { file_url?: string } | null;
 };
 
 type Zone = { id: number; designation: string; pharmacies_count: number };
@@ -325,7 +325,7 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
         ordonnance: null,
         commentaire: '',
     };
-    ordonnanceUrlExistante.value = cmd.ordonnance?.urlfile?.trim() || null;
+    ordonnanceUrlExistante.value = cmd.ordonnance?.file_url?.trim() || null;
     const ph = cmd.pharmacie;
     if (ph?.id && props.pharmacies?.length) {
         let zoneId = ph.zone_id ?? ph.zone?.id;
@@ -1393,7 +1393,7 @@ watch(
                             >
                                 Ordonnance déjà enregistrée —
                                 <a
-                                    :href="`/storage/${ordonnanceUrlExistante}`"
+                                    :href="ordonnanceUrlExistante"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     class="font-medium text-amber-950 underline underline-offset-2 hover:text-amber-800"

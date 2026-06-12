@@ -13,7 +13,20 @@ use Illuminate\Support\Facades\Storage;
 
 class Ordonnance extends Model
 {
+    public const STORAGE_DISK = 'local';
+
+    public const LEGACY_DISK = 'public';
+
     protected $fillable = ['urlfile', 'file_hash_sha256'];
+
+    protected $hidden = [
+        'urlfile',
+    ];
+
+    protected $appends = [
+        'file_url',
+        'is_pdf',
+    ];
 
     public function commandes(): HasMany
     {
@@ -25,6 +38,72 @@ class Ordonnance extends Model
         return $this->hasOne(OrdonnanceVerification::class);
     }
 
+    public function getFileUrlAttribute(): ?string
+    {
+        if (! is_string($this->urlfile) || $this->urlfile === '') {
+            return null;
+        }
+
+        return route('ordonnances.fichier', $this);
+    }
+
+    public function getIsPdfAttribute(): bool
+    {
+        if (! is_string($this->urlfile) || $this->urlfile === '') {
+            return false;
+        }
+
+        return str_ends_with(strtolower($this->urlfile), '.pdf');
+    }
+
+    public static function storageDiskForPath(?string $path): string
+    {
+        if (! is_string($path) || $path === '') {
+            return self::STORAGE_DISK;
+        }
+
+        if (Storage::disk(self::STORAGE_DISK)->exists($path)) {
+            return self::STORAGE_DISK;
+        }
+
+        if (Storage::disk(self::LEGACY_DISK)->exists($path)) {
+            return self::LEGACY_DISK;
+        }
+
+        return self::STORAGE_DISK;
+    }
+
+    public function resolveStorageDisk(): string
+    {
+        return self::storageDiskForPath($this->urlfile);
+    }
+
+    public function absolutePath(): ?string
+    {
+        if (! is_string($this->urlfile) || $this->urlfile === '') {
+            return null;
+        }
+
+        return Storage::disk($this->resolveStorageDisk())->path($this->urlfile);
+    }
+
+    public function deleteStoredFile(): void
+    {
+        if (! is_string($this->urlfile) || $this->urlfile === '') {
+            return;
+        }
+
+        $path = $this->urlfile;
+
+        if (Storage::disk(self::STORAGE_DISK)->exists($path)) {
+            Storage::disk(self::STORAGE_DISK)->delete($path);
+        }
+
+        if (Storage::disk(self::LEGACY_DISK)->exists($path)) {
+            Storage::disk(self::LEGACY_DISK)->delete($path);
+        }
+    }
+
     /**
      * Stocke le fichier, calcule l’empreinte SHA-256 et lance l’analyse OCR + règles après commit
      * (uniquement si l’upload est effectué par un compte back-office : admin, super_admin, agent) :
@@ -34,8 +113,12 @@ class Ordonnance extends Model
     public static function registerNewUpload(UploadedFile $file): self
     {
         $ext = $file->getClientOriginalExtension();
-        $path = $file->storeAs('ordonnances/'.now()->format('Y-m'), uniqid().'.'.$ext, 'public');
-        $absolute = Storage::disk('public')->path($path);
+        $path = $file->storeAs(
+            'ordonnances/'.now()->format('Y-m'),
+            uniqid().'.'.$ext,
+            self::STORAGE_DISK,
+        );
+        $absolute = Storage::disk(self::STORAGE_DISK)->path($path);
         $hash = is_readable($absolute) ? hash_file('sha256', $absolute) : null;
 
         $ordonnance = self::create([
