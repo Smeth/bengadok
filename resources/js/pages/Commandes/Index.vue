@@ -97,12 +97,6 @@ const props = withDefaults(
             designation: string;
             pharmacies_count: number;
         }>;
-        produits?: Array<{
-            id: number;
-            designation: string;
-            dosage?: string;
-            pu: number;
-        }>;
         montantsLivraison?: Array<{ id: number; designation: number }>;
         modesPaiement?: Array<{ id: number; designation: string }>;
         livreurs?: Array<{
@@ -124,7 +118,6 @@ const props = withDefaults(
         filters: () => ({}),
         pharmacies: () => [],
         zones: () => [],
-        produits: () => [],
         montantsLivraison: () => [],
         modesPaiement: () => [],
         livreurs: () => [],

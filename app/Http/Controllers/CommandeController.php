@@ -94,7 +94,6 @@ class CommandeController extends Controller
 
         $pharmacies = Pharmacie::with(['zone', 'typePharmacie', 'heurs'])->get();
         $zones = Zone::withCount('pharmacies')->get();
-        $produits = Produit::all();
         $montantsLivraison = MontantLivraison::all();
         $livreurs = Livreur::orderBy('nom')->orderBy('prenom')->get();
 
@@ -104,7 +103,6 @@ class CommandeController extends Controller
             'filters' => $request->only(['search', 'status', 'periode', 'date']),
             'pharmacies' => $pharmacies,
             'zones' => $zones,
-            'produits' => $produits,
             'montantsLivraison' => $montantsLivraison,
             'modesPaiement' => ModePaiement::query()->orderBy('designation')->get(),
             'livreurs' => $livreurs,
