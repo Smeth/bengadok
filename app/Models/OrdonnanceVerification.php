@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrdonnanceVerification extends Model
 {
+    /** Jamais exposé au frontend (peut faire des dizaines de Ko par ordonnance). */
+    protected $hidden = [
+        'ocr_text',
+    ];
+
     protected $fillable = [
         'ordonnance_id',
         'status',

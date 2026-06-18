@@ -55,12 +55,10 @@ class CommandeController extends Controller
         }
         $this->authorize('viewAny', Commande::class);
 
-        $with = ['client', 'pharmacie', 'produits', 'livreur', 'modePaiement', 'montantLivraison'];
-        $with[] = $this->backofficePeutVoirVerificationOrdonnance($user)
-            ? 'ordonnance.verification'
-            : 'ordonnance';
-
-        $query = $this->commandesIndexBaseQuery($request)->with($with);
+        // Liste : pas d’ordonnance/OCR (détail chargé via GET /commandes/{id} en JSON).
+        $query = $this->commandesIndexBaseQuery($request)->with([
+            'client', 'pharmacie', 'produits', 'livreur', 'modePaiement', 'montantLivraison',
+        ]);
 
         $this->applyCommandeIndexSearch($query, $request->input('search'));
 
@@ -84,32 +82,42 @@ class CommandeController extends Controller
         $this->applyCommandeIndexSearch($statsBase, $request->input('search'));
         $this->applyCommandeIndexTemporalFilters($statsBase, $request);
 
+        $statsRow = (clone $statsBase)->selectRaw("
+            SUM(CASE WHEN status = 'nouvelle' THEN 1 ELSE 0 END) as nouvelles,
+            SUM(CASE WHEN status = 'en_attente' THEN 1 ELSE 0 END) as en_attente,
+            SUM(CASE WHEN status IN ('validee', 'a_preparer') THEN 1 ELSE 0 END) as validees,
+            SUM(CASE WHEN status = 'retiree' THEN 1 ELSE 0 END) as livrees,
+            SUM(CASE WHEN status = 'annulee' THEN 1 ELSE 0 END) as annulees
+        ")->first();
+
         $stats = [
-            'nouvelles' => (clone $statsBase)->where('status', 'nouvelle')->count(),
-            'en_attente' => (clone $statsBase)->where('status', 'en_attente')->count(),
-            'validees' => (clone $statsBase)->whereIn('status', ['validee', 'a_preparer'])->count(),
-            'livrees' => (clone $statsBase)->where('status', 'retiree')->count(),
-            'annulees' => (clone $statsBase)->where('status', 'annulee')->count(),
+            'nouvelles' => (int) ($statsRow->nouvelles ?? 0),
+            'en_attente' => (int) ($statsRow->en_attente ?? 0),
+            'validees' => (int) ($statsRow->validees ?? 0),
+            'livrees' => (int) ($statsRow->livrees ?? 0),
+            'annulees' => (int) ($statsRow->annulees ?? 0),
         ];
 
-        $pharmacies = Pharmacie::with(['zone', 'typePharmacie', 'heurs'])->get();
-        $zones = Zone::withCount('pharmacies')->get();
-        $montantsLivraison = MontantLivraison::all();
-        $livreurs = Livreur::orderBy('nom')->orderBy('prenom')->get();
+        $canManageCommandes = $user->hasAnyRole(['admin', 'super_admin', 'agent_call_center']);
 
-        return Inertia::render('Commandes/Index', [
+        $payload = [
             'commandes' => $commandes,
             'stats' => $stats,
             'filters' => $request->only(['search', 'status', 'periode', 'date']),
-            'pharmacies' => $pharmacies,
-            'zones' => $zones,
-            'montantsLivraison' => $montantsLivraison,
-            'modesPaiement' => ModePaiement::query()->orderBy('designation')->get(),
-            'livreurs' => $livreurs,
-            'arrondissements' => Client::ARRONDISSEMENTS,
-            'parapharma_produit_types' => AppSetting::parapharmaConfig()['produit_types'],
             'openDetailCommandeId' => $request->filled('detail') ? $request->integer('detail') : null,
-        ]);
+        ];
+
+        if ($canManageCommandes) {
+            $payload['pharmacies'] = Pharmacie::with(['zone', 'typePharmacie', 'heurs'])->get();
+            $payload['zones'] = Zone::withCount('pharmacies')->get();
+            $payload['montantsLivraison'] = MontantLivraison::all();
+            $payload['modesPaiement'] = ModePaiement::query()->orderBy('designation')->get();
+            $payload['livreurs'] = Livreur::orderBy('nom')->orderBy('prenom')->get();
+            $payload['arrondissements'] = Client::ARRONDISSEMENTS;
+            $payload['parapharma_produit_types'] = AppSetting::parapharmaConfig()['produit_types'];
+        }
+
+        return Inertia::render('Commandes/Index', $payload);
     }
 
     public function show(Request $request, Commande $commande)
