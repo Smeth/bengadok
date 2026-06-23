@@ -106,7 +106,7 @@ class AgentController extends Controller
 
         foreach ($commande->produits as $p) {
             $commande->produits()->updateExistingPivot($p->id, [
-                'status' => 'disponible',
+                'status' => 'en_attente',
                 'quantite_confirmee' => null,
             ]);
         }
@@ -203,7 +203,7 @@ class AgentController extends Controller
             $commandeEnfant->produits()->attach($p['produit_id'], [
                 'quantite' => $p['quantite'],
                 'prix_unitaire' => $p['prix_unitaire'],
-                'status' => 'disponible',
+                'status' => 'en_attente',
             ]);
             $prixTotalEnfant += $p['quantite'] * $p['prix_unitaire'];
         }

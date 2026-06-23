@@ -16,6 +16,7 @@ use App\Models\Produit;
 use App\Models\User;
 use App\Models\Zone;
 use App\Services\BroadcastCommandeNotificationTargets;
+use App\Services\CommandeDateFormatter;
 use App\Services\CommandeMontantCalculator;
 use App\Services\CommandeService;
 use App\Services\PharmacieCreditService;
@@ -147,7 +148,7 @@ class CommandeController extends Controller
         return redirect()->route('commandes.index', ['detail' => $commande->id]);
     }
 
-    public function recu(Request $request, Commande $commande)
+    public function recu(Request $request, Commande $commande, CommandeDateFormatter $dateFormatter)
     {
         $this->authorize('view', $commande);
         if ($commande->status !== 'retiree') {
@@ -157,15 +158,27 @@ class CommandeController extends Controller
 
         $commande->load(['client', 'pharmacie', 'produits', 'modePaiement', 'montantLivraison']);
 
+        $produitsRecu = $commande->produits->filter(
+            fn ($p) => CommandeMontantCalculator::pivotIncluseDansRecu($p->pivot->status ?? null)
+        );
+        $montants = CommandeMontantCalculator::fromProduitsRelation($produitsRecu);
+
+        $viewData = [
+            'commande' => $commande,
+            'produitsRecu' => $produitsRecu,
+            'dateAffichage' => $dateFormatter->formatDateHeure($commande),
+            'sousTotal' => $montants['prix_lignes'],
+        ];
+
         // Téléchargement PDF
         if ($request->boolean('download')) {
-            $pdf = Pdf::loadView('recu', ['commande' => $commande, 'hideActions' => true]);
+            $pdf = Pdf::loadView('recu', [...$viewData, 'hideActions' => true]);
             $filename = 'recu-commande-'.$commande->numero.'.pdf';
 
             return $pdf->download($filename);
         }
 
-        return view('recu', ['commande' => $commande]);
+        return view('recu', $viewData);
     }
 
     public function edit(Request $request, Commande $commande): Response
@@ -288,7 +301,7 @@ class CommandeController extends Controller
             $commande->produits()->attach($produit->id, [
                 'quantite' => $quantite,
                 'prix_unitaire' => $prixUnitaire,
-                'status' => 'disponible',
+                'status' => 'en_attente',
             ]);
         }
 

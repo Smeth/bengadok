@@ -24,6 +24,8 @@ import {
     Coins,
 } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
+import { previewPharmacieUsername } from '@/lib/laravelSlug';
+import AppToast from '@/components/AppToast.vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import PharmacieGestionCredit from '@/components/PharmacieGestionCredit.vue';
 import { Button } from '@/components/ui/button';
@@ -167,6 +169,11 @@ const userActionErrorToast = ref<{ show: boolean; message: string }>({
     message: '',
 });
 
+const lastCreatedCredentials = ref<{
+    username: string;
+    password: string;
+} | null>(null);
+
 const page = usePage();
 const flashStatus = computed(
     () => (page.props.flash as { status?: string })?.status,
@@ -287,15 +294,6 @@ function confirmRemoveUser() {
     );
 }
 
-function slugify(text: string): string {
-    return text
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '_')
-        .replace(/(^_|_$)/g, '');
-}
-
 function generatePassword(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
     let pwd = '';
@@ -305,14 +303,14 @@ function generatePassword(): string {
     return pwd;
 }
 
-const identifiantPreview = computed(() => {
-    if (!formUser.value.name.trim()) return 'pharmacie_role_nom_?';
-    const slugPharma = slugify(props.pharmacie.designation);
-    const slugNom = slugify(formUser.value.name);
-    const role = formUser.value.role;
-    const nextId = props.nextUserId ?? 0;
-    return `${slugPharma}_${role}_${slugNom}_${nextId}`;
-});
+const identifiantPreview = computed(() =>
+    previewPharmacieUsername(
+        props.pharmacie.designation,
+        formUser.value.role,
+        formUser.value.name,
+        props.nextUserId ?? 0,
+    ),
+);
 
 function regeneratePassword() {
     formUser.value.password = generatePassword();
@@ -335,9 +333,22 @@ function ouvrirCreateUser() {
     modalCreateUser.value = true;
 }
 
-function copyCredentials() {
-    const text = `Identifiant : ${identifiantPreview.value}\nMot de passe : ${formUser.value.password}`;
+function copyCredentials(usePreview = true) {
+    const username = usePreview
+        ? identifiantPreview.value
+        : (lastCreatedCredentials.value?.username ?? identifiantPreview.value);
+    const password =
+        lastCreatedCredentials.value?.password ?? formUser.value.password;
+    const text = `Identifiant : ${username}\nMot de passe : ${password}`;
     navigator.clipboard.writeText(text);
+}
+
+function copyCreatedCredentials() {
+    if (!lastCreatedCredentials.value) return;
+    const { username, password } = lastCreatedCredentials.value;
+    navigator.clipboard.writeText(
+        `Identifiant : ${username}\nMot de passe : ${password}`,
+    );
 }
 
 function normalizeErrors(e: unknown): Record<string, string> {
@@ -381,7 +392,6 @@ function creerUtilisateur() {
             preserveScroll: true,
             onSuccess: (page) => {
                 modalCreateUser.value = false;
-                resetFormUser();
                 const flash = (
                     page.props as {
                         flash?: {
@@ -390,13 +400,20 @@ function creerUtilisateur() {
                         };
                     }
                 ).flash;
+                const username = flash?.createdUsername ?? identifiantPreview.value;
+                lastCreatedCredentials.value = {
+                    username,
+                    password: formUser.value.password,
+                };
+                resetFormUser();
                 const title =
                     flash?.status?.trim() ||
                     'Utilisateur créé. Les identifiants ont été enregistrés.';
-                const subtitle = flash?.createdUsername
-                    ? `Identifiant : ${flash.createdUsername}`
-                    : undefined;
-                userCreateToast.value = { show: true, title, subtitle };
+                userCreateToast.value = {
+                    show: true,
+                    title,
+                    subtitle: `Identifiant : ${username}`,
+                };
                 window.setTimeout(() => {
                     userCreateToast.value.show = false;
                 }, 10000);
@@ -1026,11 +1043,11 @@ function creerUtilisateur() {
                                 :value="identifiantPreview"
                                 class="flex h-9 w-full min-w-0 rounded-md border border-input bg-muted px-3 py-1 font-mono text-sm shadow-xs outline-none md:text-sm"
                             />
-                            <p class="text-xs text-[#459cd1]">
-                                L'aperçu affiche l'identifiant estimé (basé sur
-                                le prochain ID). L'identifiant final sera
-                                confirmé dans le message de succès après la
-                                création.
+                            <p class="text-xs text-muted-foreground">
+                                Aperçu indicatif (même format que le serveur).
+                                L’identifiant exact est affiché dans la
+                                notification après création — utilisez celui-ci
+                                pour la connexion.
                             </p>
                         </div>
                         <div class="space-y-3">
@@ -1215,68 +1232,17 @@ function creerUtilisateur() {
             @confirm="confirmRemoveUser"
         />
 
-        <Teleport to="body">
-            <Transition
-                enter-active-class="transition duration-200 ease-out"
-                enter-from-class="translate-y-2 opacity-0"
-                enter-to-class="translate-y-0 opacity-100"
-                leave-active-class="transition duration-150 ease-in"
-                leave-from-class="opacity-100"
-                leave-to-class="opacity-0"
-            >
-                <div
-                    v-if="userCreateToast.show"
-                    class="fixed bottom-6 right-6 z-[200] flex max-w-md flex-col gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-lg dark:border-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-100"
-                    role="status"
-                >
-                    <div class="flex items-start gap-3">
-                        <CheckCircle2
-                            class="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400"
-                        />
-                        <div class="min-w-0 flex-1">
-                            <p class="font-semibold">{{ userCreateToast.title }}</p>
-                            <p
-                                v-if="userCreateToast.subtitle"
-                                class="mt-1 font-mono text-xs text-emerald-800 dark:text-emerald-200"
-                            >
-                                {{ userCreateToast.subtitle }}
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            class="rounded p-1 text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900"
-                            aria-label="Fermer"
-                            @click="userCreateToast.show = false"
-                        >
-                            <X class="size-4" />
-                        </button>
-                    </div>
-                </div>
-            </Transition>
-            <Transition
-                enter-active-class="transition duration-200 ease-out"
-                enter-from-class="translate-y-2 opacity-0"
-                enter-to-class="translate-y-0 opacity-100"
-                leave-active-class="transition duration-150 ease-in"
-                leave-from-class="opacity-100"
-                leave-to-class="opacity-0"
-            >
-                <div
-                    v-if="userActionErrorToast.show"
-                    class="fixed bottom-6 right-6 z-[200] flex max-w-md items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 shadow-lg dark:border-red-800 dark:bg-red-950/90 dark:text-red-100"
-                    role="alert"
-                >
-                    <p class="flex-1">{{ userActionErrorToast.message }}</p>
-                    <button
-                        type="button"
-                        class="rounded p-1 hover:bg-red-100 dark:hover:bg-red-900"
-                        aria-label="Fermer"
-                        @click="userActionErrorToast.show = false"
-                    >
-                        <X class="size-4" />
-                    </button>
-                </div>
-            </Transition>
-        </Teleport>
+        <AppToast
+            v-model:show="userCreateToast.show"
+            :title="userCreateToast.title"
+            :description="userCreateToast.subtitle"
+        />
+        <AppToast
+            v-model:show="userActionErrorToast.show"
+            variant="error"
+            title="Action impossible"
+            :description="userActionErrorToast.message"
+            :duration-ms="8000"
+        />
     </AppLayout>
 </template>

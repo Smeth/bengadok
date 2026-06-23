@@ -29,7 +29,7 @@ final class CommandeMontantCalculator
 
         foreach ($produits as $produit) {
             $pivot = $produit->pivot;
-            if ($excludeIndisponible && ($pivot->status ?? '') === 'indisponible') {
+            if ($excludeIndisponible && in_array($pivot->status ?? 'en_attente', ['indisponible', 'en_attente'], true)) {
                 continue;
             }
 
@@ -75,5 +75,11 @@ final class CommandeMontantCalculator
             'prix_parapharma' => $para,
             'prix_lignes' => $med + $para,
         ];
+    }
+
+    /** Ligne incluse sur le reçu client (hors indisponible / non confirmée). */
+    public static function pivotIncluseDansRecu(?string $status): bool
+    {
+        return ! in_array($status ?? 'en_attente', ['indisponible', 'en_attente'], true);
     }
 }

@@ -106,6 +106,8 @@ DB_USERNAME=bengadok
 DB_PASSWORD=MOT_DE_PASSE_FORT
 
 SESSION_DRIVER=database
+# Ne pas utiliser « cookie » en prod : la session grossit (flash, erreurs de formulaire)
+# et provoque 502 nginx « upstream sent too big header » au refresh.
 QUEUE_CONNECTION=database
 CACHE_STORE=database
 
@@ -147,11 +149,15 @@ server {
     }
 
     location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_pass unix:/var/run/php/php8.4-fpm.sock;
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         include fastcgi_params;
         fastcgi_read_timeout 120;
+        # Laravel (cookies session/XSRF + Inertia) : évite 502 « upstream sent too big header »
+        fastcgi_buffer_size 128k;
+        fastcgi_buffers 4 256k;
+        fastcgi_busy_buffers_size 256k;
     }
 
     location ~ /\.(?!well-known).* {

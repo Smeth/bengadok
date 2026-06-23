@@ -2,8 +2,13 @@
 import { X, User, Building2, Pill, Banknote, Truck } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { sousTotalCommandeProduits } from '@/lib/commandeTotals';
-import { formatDateFrLocal } from '@/lib/formatDateLocal';
+import {
+    produitsPourRecu,
+    sousTotalCommandeProduits,
+} from '@/lib/commandeTotals';
+import {
+    formatCommandeDateHeure,
+} from '@/lib/formatDateLocal';
 import type { CommandeDetail } from '@/types';
 
 const props = defineProps<{
@@ -16,17 +21,30 @@ const emit = defineEmits<{
 }>();
 
 const sousTotal = computed(() =>
-    sousTotalCommandeProduits(props.commande?.produits),
+    sousTotalCommandeProduits(produitsRecu.value),
 );
+
+const produitsRecu = computed(() =>
+    produitsPourRecu(props.commande?.produits),
+);
+
+const dateAffichage = computed(() => {
+    const c = props.commande;
+    if (!c) return '-';
+    return formatCommandeDateHeure(c.date, c.heurs, c.created_at ?? c.updated_at);
+});
+
+function qteLigneRecu(pivot: {
+    quantite: number;
+    quantite_confirmee?: number | null;
+}): number {
+    return pivot.quantite_confirmee ?? pivot.quantite;
+}
 
 const livraison = computed(() =>
     Number(props.commande?.montant_livraison?.designation ?? 0),
 );
 const totalPaye = computed(() => sousTotal.value + livraison.value);
-
-function formatDate(d: string) {
-    return formatDateFrLocal(d);
-}
 
 function getClientName() {
     const c = props.commande?.client;
@@ -146,9 +164,7 @@ function fermer() {
                             </p>
                             <p class="mt-1 text-[13px] text-[rgba(0,0,0,0.74)]">
                                 Date :
-                                <span class="font-bold">{{
-                                    formatDate(commande.date)
-                                }}</span>
+                                <span class="font-bold">{{ dateAffichage }}</span>
                             </p>
                         </div>
                         <div
@@ -261,7 +277,7 @@ function fermer() {
                                 </thead>
                                 <tbody>
                                     <tr
-                                        v-for="p in commande.produits ?? []"
+                                        v-for="p in produitsRecu"
                                         :key="p.id"
                                         class="border-b border-gray-100"
                                     >
@@ -270,7 +286,7 @@ function fermer() {
                                             {{ p.dosage ?? '' }}
                                         </td>
                                         <td class="py-1 font-light">
-                                            {{ p.pivot.quantite }}
+                                            {{ qteLigneRecu(p.pivot) }}
                                         </td>
                                         <td class="py-1 font-light">
                                             {{
@@ -283,7 +299,7 @@ function fermer() {
                                         <td class="py-1 text-right font-light">
                                             {{
                                                 (
-                                                    p.pivot.quantite *
+                                                    qteLigneRecu(p.pivot) *
                                                     Number(
                                                         p.pivot.prix_unitaire,
                                                     )

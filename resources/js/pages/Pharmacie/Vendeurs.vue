@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AppToast from '@/components/AppToast.vue';
+import { previewPharmacieUsername } from '@/lib/laravelSlug';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -47,6 +49,7 @@ const formErrors = ref<Record<string, string>>({});
 const createSuccessToast = ref<{
     show: boolean;
     title: string;
+    description?: string;
 }>({ show: false, title: '' });
 const form = ref({
     name: '',
@@ -56,14 +59,14 @@ const form = ref({
     password: '',
 });
 
-function slugify(text: string): string {
-    return text
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '_')
-        .replace(/(^_|_$)/g, '');
-}
+const identifiantPreview = computed(() =>
+    previewPharmacieUsername(
+        props.pharmacie.designation,
+        form.value.role,
+        form.value.name,
+        props.nextUserId ?? 0,
+    ),
+);
 
 function generatePassword(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -73,15 +76,6 @@ function generatePassword(): string {
     }
     return pwd;
 }
-
-const identifiantPreview = computed(() => {
-    if (!form.value.name.trim()) return 'pharmacie_role_nom_?';
-    const slugPharma = slugify(props.pharmacie.designation);
-    const slugNom = slugify(form.value.name);
-    const role = form.value.role;
-    const nextId = props.nextUserId ?? 0;
-    return `${slugPharma}_${role}_${slugNom}_${nextId}`;
-});
 
 function regeneratePassword() {
     form.value.password = generatePassword();
@@ -122,19 +116,23 @@ function creerVendeur() {
         {
             onSuccess: (page) => {
                 modalCreate.value = false;
-                resetCreateForm();
                 const flash = (
-                    page.props as { flash?: { status?: string } }
+                    page.props as {
+                        flash?: {
+                            status?: string;
+                            createdUsername?: string;
+                        };
+                    }
                 ).flash;
+                const username = flash?.createdUsername ?? identifiantPreview.value;
+                resetCreateForm();
                 createSuccessToast.value = {
                     show: true,
                     title:
                         flash?.status?.trim() ||
                         'Utilisateur créé. Transmettez les identifiants au collaborateur.',
+                    description: `Identifiant : ${username}`,
                 };
-                window.setTimeout(() => {
-                    createSuccessToast.value.show = false;
-                }, 10000);
             },
             onError: (e) => {
                 formErrors.value = e as Record<string, string>;
@@ -323,9 +321,10 @@ function creerVendeur() {
                                 :value="identifiantPreview"
                                 class="flex h-9 w-full min-w-0 rounded-md border border-input bg-muted px-3 py-1 font-mono text-sm shadow-xs outline-none md:text-sm"
                             />
-                            <p class="text-xs text-[#459cd1]">
-                                L'identifiant sera généré automatiquement à
-                                partir du nom
+                            <p class="text-xs text-muted-foreground">
+                                Aperçu indicatif (même format que le serveur).
+                                L’identifiant exact apparaît dans la
+                                notification après création.
                             </p>
                         </div>
                         <div class="space-y-2">
@@ -402,36 +401,11 @@ function creerVendeur() {
             </DialogContent>
         </Dialog>
 
-        <Teleport to="body">
-            <Transition
-                enter-active-class="transition duration-200 ease-out"
-                enter-from-class="translate-y-2 opacity-0"
-                enter-to-class="translate-y-0 opacity-100"
-                leave-active-class="transition duration-150 ease-in"
-                leave-from-class="opacity-100"
-                leave-to-class="opacity-0"
-            >
-                <div
-                    v-if="createSuccessToast.show"
-                    class="fixed bottom-6 right-6 z-[200] flex max-w-md items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-lg dark:border-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-100"
-                    role="status"
-                >
-                    <CheckCircle2
-                        class="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400"
-                    />
-                    <p class="min-w-0 flex-1 font-semibold">
-                        {{ createSuccessToast.title }}
-                    </p>
-                    <button
-                        type="button"
-                        class="rounded p-1 text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900"
-                        aria-label="Fermer"
-                        @click="createSuccessToast.show = false"
-                    >
-                        <X class="size-4" />
-                    </button>
-                </div>
-            </Transition>
-        </Teleport>
+        <AppToast
+            v-model:show="createSuccessToast.show"
+            :title="createSuccessToast.title"
+            :description="createSuccessToast.description"
+            :duration-ms="10000"
+        />
     </AppLayout>
 </template>

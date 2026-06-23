@@ -21,7 +21,11 @@ export function isParapharmaType(
 }
 
 export function montantLigneCommande(pivot: PivotPourSousTotal): number {
-    if (pivot.status === 'indisponible') {
+    if (
+        pivot.status === 'indisponible' ||
+        pivot.status === 'en_attente' ||
+        pivot.status == null
+    ) {
         return 0;
     }
     const pu = Number(pivot.prix_unitaire ?? 0);
@@ -43,6 +47,20 @@ export function sousTotalCommandeProduits<
         return 0;
     }
     return produits.reduce((s, p) => s + montantLigneCommande(p.pivot), 0);
+}
+
+/** Lignes affichées sur le reçu client (hors indisponible). */
+export function pivotIncluseDansRecu(status: string | null | undefined): boolean {
+    return status !== 'indisponible' && status !== 'en_attente';
+}
+
+export function produitsPourRecu<T extends { pivot: PivotPourSousTotal }>(
+    produits: T[] | undefined,
+): T[] {
+    if (!produits?.length) {
+        return [];
+    }
+    return produits.filter((p) => pivotIncluseDansRecu(p.pivot.status));
 }
 
 export type ProduitAvecPivotEtType = {

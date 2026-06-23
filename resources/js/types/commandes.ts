@@ -18,6 +18,7 @@ export type CommandeDetail = {
     deja_relancee?: boolean;
     /** Pour le délai de relance (même pharmacie), aligné sur le modèle Laravel */
     updated_at?: string;
+    created_at?: string;
     client: {
         id?: number;
         nom: string;

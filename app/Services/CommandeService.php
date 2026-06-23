@@ -144,7 +144,7 @@ class CommandeService
             $commande->produits()->attach($produit->id, [
                 'quantite' => $quantite,
                 'prix_unitaire' => $prixUnitaire,
-                'status' => 'disponible',
+                'status' => 'en_attente',
             ]);
         }
 

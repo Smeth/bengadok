@@ -18,8 +18,15 @@ import {
     Search,
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
+import AppToast from '@/components/AppToast.vue';
 import { Input } from '@/components/ui/input';
 import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
+import { sousTotalCommandeProduits } from '@/lib/commandeTotals';
+import {
+    classesStatutDisponibiliteLigne,
+    libelleStatutDisponibiliteLigne,
+    normaliserStatutDisponibiliteLigne,
+} from '@/lib/commandeProduitStatus';
 import { clientNomAvecCivilite } from '@/lib/clientDisplayName';
 
 type Pivot = {
@@ -154,7 +161,8 @@ function toggleCard(cmd: Commande) {
 type LigneForm = {
     prix: string;
     quantite: string;
-    dispo: boolean;
+    /** null = en attente de confirmation pharmacie */
+    dispo: boolean | null;
     venteLibre: boolean;
 };
 const formLignes = ref<Record<number, Record<number, LigneForm>>>({});
@@ -203,13 +211,19 @@ function initForm(cmd: Commande) {
     cmd.produits.forEach((p) => {
         if (map[p.id]) return;
         const qDem = Number(p.pivot.quantite) || 1;
+        const st = normaliserStatutDisponibiliteLigne(p.pivot.status);
         map[p.id] = {
             prix:
                 p.pivot.prix_unitaire > 0 ? String(p.pivot.prix_unitaire) : '',
             quantite: String(
                 p.pivot.quantite_confirmee ?? p.pivot.quantite ?? qDem,
             ),
-            dispo: p.pivot.status !== 'indisponible',
+            dispo:
+                st === 'disponible' || st === 'partiel'
+                    ? true
+                    : st === 'indisponible'
+                      ? false
+                      : null,
             venteLibre: estVenteLibre(p),
         };
     });
@@ -235,7 +249,7 @@ function totalCmd(cmd: Commande): number {
     if (!lignes) return 0;
     return cmd.produits.reduce((sum, p) => {
         const l = lignes[p.id];
-        if (!l?.dispo) return sum;
+        if (l?.dispo !== true) return sum;
         const prix = parseNombreFr(l.prix);
         const qte = qteConfirmeeParsee(l);
         if (!Number.isFinite(prix) || !Number.isFinite(qte)) return sum;
@@ -243,9 +257,14 @@ function totalCmd(cmd: Commande): number {
     }, 0);
 }
 
+/** Total validé (médicaments + parapharmacie) à partir des prix en base. */
+function totalCommandeValidee(cmd: Commande): number {
+    return sousTotalCommandeProduits(cmd.produits);
+}
+
 function totalLigne(cmdId: number, produit: Produit): string {
     const ligne = formLignes.value[cmdId]?.[produit.id];
-    if (!ligne?.dispo) return '';
+    if (ligne?.dispo !== true) return '';
     const prix = parseNombreFr(ligne.prix);
     const qte = qteConfirmeeParsee(ligne);
     if (
@@ -261,7 +280,7 @@ function totalLigne(cmdId: number, produit: Produit): string {
 /** Retourne true si la quantité confirmée dépasse la quantité demandée */
 function qteInvalide(cmdId: number, produit: Produit): boolean {
     const ligne = formLignes.value[cmdId]?.[produit.id];
-    if (!ligne?.dispo) return false;
+    if (ligne?.dispo !== true) return false;
     const qte = qteConfirmeeParsee(ligne);
     if (!Number.isFinite(qte)) return true;
     return qte > produit.pivot.quantite || qte < 1;
@@ -276,16 +295,48 @@ function hasQteError(cmd: Commande): boolean {
 function hasPrixError(cmd: Commande): boolean {
     return cmd.produits.some((p) => {
         const ligne = formLignes.value[cmd.id]?.[p.id];
-        if (!ligne?.dispo) return false;
+        if (ligne?.dispo !== true) return false;
         const px = parseNombreFr(ligne.prix);
         return !Number.isFinite(px) || px <= 0;
     });
 }
 
+/** Au moins une ligne sans choix disponibilité / indisponibilité. */
+function hasUnresolvedDispo(cmd: Commande): boolean {
+    return cmd.produits.some(
+        (p) => formLignes.value[cmd.id]?.[p.id]?.dispo === null,
+    );
+}
+
+function toggleDispo(cmdId: number, produitId: number): void {
+    const ligne = formLignes.value[cmdId]?.[produitId];
+    if (!ligne) return;
+    if (ligne.dispo === null) {
+        ligne.dispo = true;
+    } else if (ligne.dispo === true) {
+        ligne.dispo = false;
+    } else {
+        ligne.dispo = true;
+    }
+}
+
+function statutDispoForm(
+    cmdId: number,
+    produitId: number,
+): 'en_attente' | 'disponible' | 'indisponible' {
+    const d = formLignes.value[cmdId]?.[produitId]?.dispo;
+    if (d === null || d === undefined) return 'en_attente';
+    return d ? 'disponible' : 'indisponible';
+}
+
 /** État du bouton Envoyer (même logique que l’action, avec dépendance explicite à la révision). */
 function peutEnvoyerDisponibilite(cmd: Commande): boolean {
     void formLignesRevision.value;
-    return !hasQteError(cmd) && !hasPrixError(cmd);
+    return (
+        !hasQteError(cmd) &&
+        !hasPrixError(cmd) &&
+        !hasUnresolvedDispo(cmd)
+    );
 }
 
 function envoyer(cmd: Commande) {
@@ -293,11 +344,11 @@ function envoyer(cmd: Commande) {
     const lignes = cmd.produits.map((p) => {
         const ligne = formLignes.value[cmd.id]?.[p.id];
         const qte = qteConfirmeeParsee(ligne);
-        const pxBrut = ligne?.dispo ? parseNombreFr(ligne.prix) : 0;
+        const pxBrut = ligne?.dispo === true ? parseNombreFr(ligne.prix) : 0;
         const prixUnitaire = Number.isFinite(pxBrut) ? pxBrut : 0;
         return {
             produit_id: p.id,
-            status: ligne?.dispo ? 'disponible' : 'indisponible',
+            status: ligne?.dispo === true ? 'disponible' : 'indisponible',
             prix_unitaire: prixUnitaire,
             quantite_confirmee: Number.isFinite(qte) ? qte : p.pivot.quantite,
             vente_libre: ligne?.venteLibre ?? false,
@@ -312,14 +363,11 @@ function envoyer(cmd: Commande) {
                 const next = new Set(expandedCards.value);
                 next.delete(cmd.id);
                 expandedCards.value = next;
-                dispoSuccessToast.value = {
-                    show: true,
-                    message:
-                        'Disponibilité et prix envoyés au back-office. La commande est en attente de validation.',
-                };
-                window.setTimeout(() => {
-                    dispoSuccessToast.value.show = false;
-                }, 6500);
+                showToast(
+                    dispoSuccessToast,
+                    'Envoyé au back-office',
+                    'Disponibilité et prix transmis. La commande est en attente de validation.',
+                );
             },
         },
     );
@@ -344,7 +392,16 @@ function confirmerAchat() {
     router.post(
         `/dok-pharma/${id}/valider-retrait`,
         {},
-        { preserveScroll: true },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showToast(
+                    retraitSuccessToast,
+                    'Retrait validé',
+                    'La commande a bien été retirée par le livreur en pharmacie.',
+                );
+            },
+        },
     );
 }
 
@@ -352,7 +409,16 @@ function confirmerAchat() {
 const ordModal = ref({ open: false, url: '', isPdf: false, numero: '' });
 const zoom = ref(100);
 
-const dispoSuccessToast = ref({ show: false, message: '' });
+const dispoSuccessToast = ref({ show: false, title: '', description: '' });
+const retraitSuccessToast = ref({ show: false, title: '', description: '' });
+
+function showToast(
+    target: typeof dispoSuccessToast,
+    title: string,
+    description?: string,
+) {
+    target.value = { show: true, title, description: description ?? '' };
+}
 
 function openOrdonnance(cmd: Commande) {
     ordModal.value = {
@@ -381,13 +447,16 @@ function resetZoom() {
     <Head title="Commandes - BengaDok" />
 
     <PharmacyLayout>
-        <div
-            v-if="dispoSuccessToast.show"
-            class="pointer-events-none fixed bottom-6 left-1/2 z-[100] w-[min(92vw,28rem)] -translate-x-1/2 rounded-xl border border-emerald-200/90 bg-emerald-50/95 px-4 py-3 text-center text-[13px] font-semibold leading-snug text-emerald-900 shadow-lg backdrop-blur-sm"
-            role="status"
-        >
-            {{ dispoSuccessToast.message }}
-        </div>
+        <AppToast
+            v-model:show="dispoSuccessToast.show"
+            :title="dispoSuccessToast.title"
+            :description="dispoSuccessToast.description"
+        />
+        <AppToast
+            v-model:show="retraitSuccessToast.show"
+            :title="retraitSuccessToast.title"
+            :description="retraitSuccessToast.description"
+        />
         <!-- Même fond et grille que le tableau de bord pharmacie -->
         <div class="pharmacy-content-shell flex min-h-full flex-1 flex-col">
             <div class="pharmacy-card mb-4 flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
@@ -694,9 +763,9 @@ function resetZoom() {
                                                 class="transition-opacity"
                                                 :class="
                                                     formLignes[cmd.id]?.[p.id]
-                                                        ?.dispo
-                                                        ? 'opacity-100'
-                                                        : 'opacity-40'
+                                                        ?.dispo === false
+                                                        ? 'opacity-40'
+                                                        : 'opacity-100'
                                                 "
                                             >
                                                 <!-- Nom -->
@@ -729,15 +798,19 @@ function resetZoom() {
                                                                 p.pivot.quantite
                                                             "
                                                             :disabled="
-                                                                !formLignes[
+                                                                formLignes[
                                                                     cmd.id
-                                                                ]?.[p.id]?.dispo
+                                                                ]?.[p.id]
+                                                                    ?.dispo !==
+                                                                true
                                                             "
                                                             class="w-full rounded-md border px-2 py-1 text-center text-[13px] transition-colors"
                                                             :class="
-                                                                !formLignes[
+                                                                formLignes[
                                                                     cmd.id
-                                                                ]?.[p.id]?.dispo
+                                                                ]?.[p.id]
+                                                                    ?.dispo !==
+                                                                true
                                                                     ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
                                                                     : qteInvalide(
                                                                             cmd.id,
@@ -752,7 +825,9 @@ function resetZoom() {
                                                             v-if="
                                                                 formLignes[
                                                                     cmd.id
-                                                                ]?.[p.id]?.dispo
+                                                                ]?.[p.id]
+                                                                    ?.dispo ===
+                                                                true
                                                             "
                                                             class="w-full text-center text-[10px] leading-none"
                                                             :class="
@@ -786,15 +861,19 @@ function resetZoom() {
                                                             min="0"
                                                             placeholder="Ex : 1000"
                                                             :disabled="
-                                                                !formLignes[
+                                                                formLignes[
                                                                     cmd.id
-                                                                ]?.[p.id]?.dispo
+                                                                ]?.[p.id]
+                                                                    ?.dispo !==
+                                                                true
                                                             "
                                                             class="w-24 rounded-md border px-2 py-1 text-[13px] transition-colors"
                                                             :class="
                                                                 formLignes[
                                                                     cmd.id
-                                                                ]?.[p.id]?.dispo
+                                                                ]?.[p.id]
+                                                                    ?.dispo ===
+                                                                true
                                                                     ? 'border-[#2563eb]/70 bg-[#eff6ff] text-[#1e3a8a] focus:border-[#1d4ed8] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/40'
                                                                     : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
                                                             "
@@ -834,38 +913,52 @@ function resetZoom() {
                                                         >
                                                     </div>
                                                 </td>
-                                                <!-- Toggle disponibilité -->
+                                                <!-- Disponibilité -->
                                                 <td class="px-3 py-2.5">
-                                                    <button
-                                                        type="button"
-                                                        class="relative inline-flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors focus:outline-none"
-                                                        :class="
-                                                            formLignes[cmd.id][
-                                                                p.id
-                                                            ].dispo
-                                                                ? 'bg-[#22C55E]'
-                                                                : 'bg-gray-200'
-                                                        "
-                                                        @click="
-                                                            formLignes[cmd.id][
-                                                                p.id
-                                                            ].dispo =
-                                                                !formLignes[
-                                                                    cmd.id
-                                                                ][p.id].dispo
-                                                        "
+                                                    <div
+                                                        class="flex flex-col gap-1.5"
                                                     >
                                                         <span
-                                                            class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                                                            class="inline-flex w-fit rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
                                                             :class="
+                                                                classesStatutDisponibiliteLigne(
+                                                                    statutDispoForm(
+                                                                        cmd.id,
+                                                                        p.id,
+                                                                    ),
+                                                                )
+                                                            "
+                                                        >
+                                                            {{
+                                                                libelleStatutDisponibiliteLigne(
+                                                                    statutDispoForm(
+                                                                        cmd.id,
+                                                                        p.id,
+                                                                    ),
+                                                                )
+                                                            }}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            class="w-fit text-[11px] font-medium text-[#2563eb] hover:underline"
+                                                            @click="
+                                                                toggleDispo(
+                                                                    cmd.id,
+                                                                    p.id,
+                                                                )
+                                                            "
+                                                        >
+                                                            {{
                                                                 formLignes[
                                                                     cmd.id
-                                                                ][p.id].dispo
-                                                                    ? 'translate-x-4'
-                                                                    : 'translate-x-0.5'
-                                                            "
-                                                        />
-                                                    </button>
+                                                                ]?.[p.id]
+                                                                    ?.dispo ===
+                                                                null
+                                                                    ? 'Indiquer disponibilité'
+                                                                    : 'Modifier'
+                                                            }}
+                                                        </button>
+                                                    </div>
                                                 </td>
                                                 <!-- Toggle vente libre -->
                                                 <td class="px-3 py-2.5">
@@ -977,7 +1070,15 @@ function resetZoom() {
                                 <div v-else class="flex-1" />
                                 <div class="flex flex-col items-end gap-1">
                                     <p
-                                        v-if="hasPrixError(cmd)"
+                                        v-if="hasUnresolvedDispo(cmd)"
+                                        class="text-[11px] font-medium text-amber-700"
+                                    >
+                                        Indiquez la disponibilité de chaque
+                                        médicament (y compris parapharmacie)
+                                        avant envoi.
+                                    </p>
+                                    <p
+                                        v-else-if="hasPrixError(cmd)"
                                         class="text-[11px] font-medium text-red-500"
                                     >
                                         Saisissez le prix de tous les
@@ -1284,24 +1385,18 @@ function resetZoom() {
                                                 </td>
                                                 <td class="px-3 py-2.5">
                                                     <span
-                                                        class="relative inline-flex h-5 w-9 items-center rounded-full"
+                                                        class="inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
                                                         :class="
-                                                            p.pivot.status !==
-                                                            'indisponible'
-                                                                ? 'bg-[#22C55E]'
-                                                                : 'bg-gray-200'
+                                                            classesStatutDisponibiliteLigne(
+                                                                p.pivot.status,
+                                                            )
                                                         "
                                                     >
-                                                        <span
-                                                            class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
-                                                            :class="
-                                                                p.pivot
-                                                                    .status !==
-                                                                'indisponible'
-                                                                    ? 'translate-x-4'
-                                                                    : 'translate-x-0.5'
-                                                            "
-                                                        />
+                                                        {{
+                                                            libelleStatutDisponibiliteLigne(
+                                                                p.pivot.status,
+                                                            )
+                                                        }}
                                                     </span>
                                                 </td>
                                                 <td class="px-3 py-2.5">
@@ -1604,24 +1699,18 @@ function resetZoom() {
                                                 </td>
                                                 <td class="px-3 py-2.5">
                                                     <span
-                                                        class="relative inline-flex h-5 w-9 items-center rounded-full"
+                                                        class="inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
                                                         :class="
-                                                            p.pivot.status !==
-                                                            'indisponible'
-                                                                ? 'bg-[#22C55E]'
-                                                                : 'bg-gray-200'
+                                                            classesStatutDisponibiliteLigne(
+                                                                p.pivot.status,
+                                                            )
                                                         "
                                                     >
-                                                        <span
-                                                            class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow"
-                                                            :class="
-                                                                p.pivot
-                                                                    .status !==
-                                                                'indisponible'
-                                                                    ? 'translate-x-4'
-                                                                    : 'translate-x-0.5'
-                                                            "
-                                                        />
+                                                        {{
+                                                            libelleStatutDisponibiliteLigne(
+                                                                p.pivot.status,
+                                                            )
+                                                        }}
                                                     </span>
                                                 </td>
                                                 <td class="px-3 py-2.5">
@@ -1658,8 +1747,7 @@ function resetZoom() {
                                 <span
                                     class="text-2xl font-bold text-gray-900"
                                     >{{
-                                        Number(cmd.prix_medicaments || 0).toFixed(1)
-                                    }}</span
+                                    >{{ totalCommandeValidee(cmd).toFixed(1) }}</span
                                 >
                                 <span class="text-[12px] text-gray-500"
                                     >xaf</span
@@ -1951,24 +2039,18 @@ function resetZoom() {
                                                 </td>
                                                 <td class="px-3 py-2.5">
                                                     <span
-                                                        class="relative inline-flex h-5 w-9 items-center rounded-full"
+                                                        class="inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
                                                         :class="
-                                                            p.pivot.status !==
-                                                            'indisponible'
-                                                                ? 'bg-[#22C55E]'
-                                                                : 'bg-gray-200'
+                                                            classesStatutDisponibiliteLigne(
+                                                                p.pivot.status,
+                                                            )
                                                         "
                                                     >
-                                                        <span
-                                                            class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow"
-                                                            :class="
-                                                                p.pivot
-                                                                    .status !==
-                                                                'indisponible'
-                                                                    ? 'translate-x-4'
-                                                                    : 'translate-x-0.5'
-                                                            "
-                                                        />
+                                                        {{
+                                                            libelleStatutDisponibiliteLigne(
+                                                                p.pivot.status,
+                                                            )
+                                                        }}
                                                     </span>
                                                 </td>
                                                 <td class="px-3 py-2.5">
@@ -2005,8 +2087,7 @@ function resetZoom() {
                                 <span
                                     class="text-2xl font-bold text-gray-900"
                                     >{{
-                                        Number(cmd.prix_medicaments || 0).toFixed(1)
-                                    }}</span
+                                    >{{ totalCommandeValidee(cmd).toFixed(1) }}</span
                                 >
                                 <span class="text-[12px] text-gray-500"
                                     >xaf</span
@@ -2134,7 +2215,7 @@ function resetZoom() {
                         </div>
                         <div>
                             <p class="text-[15px] font-extrabold text-gray-900">
-                                Confirmer la remise au livreur
+                                Confirmer le retrait de la commande
                             </p>
                             <p class="text-[12px] text-gray-500">
                                 Commande {{ confirmModal.cmd?.numero }}
@@ -2144,9 +2225,8 @@ function resetZoom() {
                     <!-- Corps -->
                     <div class="px-6 py-5">
                         <p class="text-[14px] text-gray-700">
-                            Vous confirmez que l’achat est validé et que la
-                            commande a bien été remise au livreur en pharmacie
-                            (et non au patient final).
+                            Vous confirmez que la commande a bien été retirée
+                            par le livreur en pharmacie.
                         </p>
                         <p
                             class="mt-2 text-[13px] font-semibold text-[#92400E] bg-[#FFFBEB] rounded-lg px-3 py-2 border border-[#FCD34D]"
@@ -2170,7 +2250,7 @@ function resetZoom() {
                             @click="confirmerAchat"
                         >
                             <ShoppingCart class="size-4" />
-                            Confirmer la remise au livreur
+                            Confirmer le retrait
                         </button>
                     </div>
                 </div>

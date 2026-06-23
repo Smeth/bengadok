@@ -75,6 +75,8 @@ class PharmacieVendeurController extends Controller
         $username = "{$slugPharma}_vendeur_{$slugNom}_{$newUser->id}";
         $newUser->update(['username' => $username]);
 
-        return back()->with('status', "Vendeur {$newUser->name} créé. Identifiant : {$username}");
+        return back()
+            ->with('status', "Vendeur {$newUser->name} créé.")
+            ->with('createdUsername', $username);
     }
 }

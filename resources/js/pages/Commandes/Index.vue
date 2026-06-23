@@ -35,8 +35,15 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import AppLayout from '@/layouts/AppLayout.vue';
+import {
+    classesStatutDisponibiliteLigne,
+    libelleStatutDisponibiliteLigne,
+} from '@/lib/commandeProduitStatus';
 import { splitProduitsCommande } from '@/lib/commandeTotals';
-import { formatDateFrLocal } from '@/lib/formatDateLocal';
+import {
+    formatCommandeDateHeure,
+    formatDateFrLocal,
+} from '@/lib/formatDateLocal';
 import { normalizeInertiaErrors } from '@/lib/validationErrors';
 import { dashboard } from '@/routes';
 import { STATUTS_COMMANDE } from '@/types';
@@ -428,21 +435,17 @@ function formatDate(d: string) {
     return formatDateFrLocal(d);
 }
 
+function formatDateHeureCommande(c: CommandeDetail): string {
+    return formatCommandeDateHeure(c.date, c.heurs, c.created_at ?? c.updated_at);
+}
+
 /** Libellé ligne médicament (pivot commande_produit). */
 function libellePivotStatusProduit(status: string | undefined | null): string {
-    const v = (status ?? 'disponible').toLowerCase();
-    if (v === 'indisponible') return 'Indisponible';
-    if (v === 'partiel') return 'Partiel';
-    if (v === 'disponible') return 'Disponible';
-    return status?.trim() || 'Disponible';
+    return libelleStatutDisponibiliteLigne(status);
 }
 
 function classesPivotStatusProduit(status: string | undefined | null): string {
-    const v = (status ?? 'disponible').toLowerCase();
-    if (v === 'indisponible') {
-        return 'border-red-400 bg-red-50 text-red-700';
-    }
-    return 'border-[#016630] bg-[#e1f3e7] text-[#016630]';
+    return classesStatutDisponibiliteLigne(status);
 }
 
 function estVenteLibrePivot(venteLibre: boolean | undefined | null): boolean {
@@ -1222,7 +1225,8 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 {{ detailCommande.numero }}
                             </p>
                             <p class="text-[13px] font-medium text-gray-500">
-                                Date : {{ formatDate(detailCommande.date) }}
+                                Date :
+                                {{ formatDateHeureCommande(detailCommande) }}
                             </p>
                         </div>
                         <span
