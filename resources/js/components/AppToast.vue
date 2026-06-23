@@ -54,34 +54,32 @@ watch(
         >
             <div
                 v-if="show"
-                class="pointer-events-auto fixed bottom-6 right-6 z-[200] w-[min(92vw,24rem)] overflow-hidden rounded-lg shadow-lg ring-1 ring-black/5"
+                class="pointer-events-auto fixed bottom-6 right-6 z-[200] w-[min(92vw,24rem)] overflow-hidden rounded-xl border shadow-sm"
                 :class="
                     variant === 'error'
-                        ? 'bg-red-50 ring-red-200'
-                        : 'bg-gray-900'
+                        ? 'border-red-200 bg-red-50'
+                        : 'border-emerald-200 bg-emerald-50'
                 "
                 role="status"
             >
-                <div class="flex p-4">
-                    <div class="shrink-0">
-                        <CheckCircle2
-                            v-if="variant === 'success'"
-                            class="size-5 text-emerald-400"
-                            aria-hidden="true"
-                        />
-                        <AlertCircle
-                            v-else
-                            class="size-5 text-red-500"
-                            aria-hidden="true"
-                        />
-                    </div>
-                    <div class="ml-3 w-0 flex-1 pt-0.5">
+                <div class="flex items-start gap-3 p-4">
+                    <CheckCircle2
+                        v-if="variant === 'success'"
+                        class="size-5 shrink-0 text-emerald-600"
+                        aria-hidden="true"
+                    />
+                    <AlertCircle
+                        v-else
+                        class="size-5 shrink-0 text-red-600"
+                        aria-hidden="true"
+                    />
+                    <div class="min-w-0 flex-1 pt-0.5">
                         <p
                             class="text-sm font-medium"
                             :class="
                                 variant === 'error'
                                     ? 'text-red-900'
-                                    : 'text-white'
+                                    : 'text-emerald-900'
                             "
                         >
                             {{ title }}
@@ -92,27 +90,25 @@ watch(
                             :class="
                                 variant === 'error'
                                     ? 'text-red-700'
-                                    : 'text-gray-300'
+                                    : 'text-emerald-800'
                             "
                         >
                             {{ description }}
                         </p>
                     </div>
-                    <div class="ml-4 flex shrink-0">
-                        <button
-                            type="button"
-                            class="inline-flex rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2"
-                            :class="
-                                variant === 'error'
-                                    ? 'text-red-500 hover:text-red-700 focus:ring-red-400 focus:ring-offset-red-50'
-                                    : 'text-gray-400 hover:text-gray-200 focus:ring-emerald-400 focus:ring-offset-gray-900'
-                            "
-                            aria-label="Fermer la notification"
-                            @click="close"
-                        >
-                            <X class="size-5" aria-hidden="true" />
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        class="inline-flex shrink-0 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2"
+                        :class="
+                            variant === 'error'
+                                ? 'text-red-500 hover:text-red-700 focus:ring-red-400 focus:ring-offset-red-50'
+                                : 'text-emerald-600 hover:text-emerald-800 focus:ring-emerald-400 focus:ring-offset-emerald-50'
+                        "
+                        aria-label="Fermer la notification"
+                        @click="close"
+                    >
+                        <X class="size-5" aria-hidden="true" />
+                    </button>
                 </div>
             </div>
         </Transition>

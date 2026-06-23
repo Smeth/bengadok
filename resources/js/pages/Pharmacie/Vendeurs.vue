@@ -20,6 +20,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppToast from '@/components/AppToast.vue';
+import FlashToastHost from '@/components/FlashToastHost.vue';
 import IdentifiantsCreesDialog from '@/components/IdentifiantsCreesDialog.vue';
 import { previewPharmacieUsername } from '@/lib/laravelSlug';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -410,5 +411,7 @@ function creerVendeur() {
             :description="createSuccessToast.description"
             :duration-ms="10000"
         />
+
+        <FlashToastHost />
     </AppLayout>
 </template>

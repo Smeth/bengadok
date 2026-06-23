@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import {
     Search,
     Filter,
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import MedicamentsSectionNav from '@/components/medicaments/MedicamentsSectionNav.vue';
+import FlashToastHost from '@/components/FlashToastHost.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -85,13 +86,6 @@ const props = withDefaults(
     },
 );
 
-const page = usePage();
-const flashSuccess = computed(
-    () => (page.props.flash as { success?: string } | undefined)?.success,
-);
-const flashError = computed(
-    () => (page.props.flash as { error?: string } | undefined)?.error,
-);
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
     { title: 'Médicaments', href: '/medicaments' },
@@ -229,19 +223,6 @@ const statutLabels: Record<string, string> = {
         <div
             class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
         >
-            <div
-                v-if="flashSuccess"
-                class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800"
-            >
-                {{ flashSuccess }}
-            </div>
-            <div
-                v-if="flashError"
-                class="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800"
-            >
-                {{ flashError }}
-            </div>
-
             <div class="flex flex-wrap items-center gap-3">
                 <div
                     class="flex size-9 items-center justify-center gap-1 rounded-full bg-emerald-500 text-white"
@@ -749,5 +730,7 @@ const statutLabels: Record<string, string> = {
             @update:open="showIgnorerModal = $event"
             @confirm="confirmIgnorer"
         />
+
+        <FlashToastHost />
     </AppLayout>
 </template>

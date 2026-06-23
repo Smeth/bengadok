@@ -3,6 +3,7 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import { RotateCcw, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
+import FlashToastHost from '@/components/FlashToastHost.vue';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -49,13 +50,6 @@ const allowLocalAppReset = computed(
         Boolean(
             (page.props as { allowLocalAppReset?: boolean }).allowLocalAppReset,
         ),
-);
-
-const flashError = computed(
-    () => (page.props.flash as { error?: string })?.error,
-);
-const flashStatus = computed(
-    () => (page.props.flash as { status?: string })?.status,
 );
 
 function postReset(
@@ -162,19 +156,6 @@ function resetApp() {
                     title="Réinitialisation des données"
                     description="Actions réservées aux super administrateurs. Chaque opération est définitive."
                 />
-
-                <div
-                    v-if="flashError"
-                    class="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive"
-                >
-                    {{ flashError }}
-                </div>
-                <div
-                    v-else-if="flashStatus"
-                    class="rounded-lg border border-green-500/50 bg-green-500/10 p-4 text-sm text-green-700 dark:text-green-400"
-                >
-                    {{ flashStatus }}
-                </div>
 
                 <!-- Commandes -->
                 <div
@@ -637,5 +618,7 @@ function resetApp() {
                 </div>
             </div>
         </SettingsLayout>
+
+        <FlashToastHost />
     </AppLayout>
 </template>

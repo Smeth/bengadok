@@ -20,6 +20,7 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import FlashToastHost from '@/components/FlashToastHost.vue';
 import SettingsPageShell from '@/components/settings/SettingsPageShell.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -171,9 +172,6 @@ const props = withDefaults(
 );
 
 const page = usePage();
-const flashStatus = computed(
-    () => (page.props.flash as { status?: string })?.status,
-);
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
@@ -826,13 +824,6 @@ function sauverOrdonnanceVerification() {
                     title="Configuration"
                     description="Configurez les données de référence utilisées dans l'application."
                 />
-
-            <p
-                v-if="flashStatus"
-                class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800"
-            >
-                {{ flashStatus }}
-            </p>
 
             <!-- Onglets -->
             <div class="flex flex-wrap gap-1 rounded-xl bg-gray-100 p-1">
@@ -2779,5 +2770,7 @@ function sauverOrdonnanceVerification() {
             </section>
             </div>
         </SettingsLayout>
+
+        <FlashToastHost />
     </SettingsPageShell>
 </template>

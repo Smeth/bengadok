@@ -12,6 +12,7 @@ import { computed, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
+import FlashToastHost from '@/components/FlashToastHost.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { clientNomComplet } from '@/lib/clientDisplayName';
 import { dashboard } from '@/routes';
@@ -62,11 +63,6 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
-const flashStatus = computed(
-    () =>
-        (page.props.flash as { status?: string; error?: string })?.status ||
-        (page.props.flash as { error?: string })?.error,
-);
 
 const canPromouvoir = computed(() => {
     const roles =
@@ -157,18 +153,6 @@ function promouvoir(prospect: ProspectRow) {
         <div
             class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
         >
-            <p
-                v-if="flashStatus"
-                class="rounded-lg border px-4 py-2 text-sm"
-                :class="
-                    (page.props.flash as { error?: string })?.error
-                        ? 'border-red-200 bg-red-50 text-red-800'
-                        : 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                "
-            >
-                {{ flashStatus }}
-            </p>
-
             <ClientsSectionNav active="prospects" />
 
             <p class="max-w-3xl text-sm text-muted-foreground">
@@ -481,5 +465,7 @@ function promouvoir(prospect: ProspectRow) {
                 </div>
             </div>
         </div>
+
+        <FlashToastHost />
     </AppLayout>
 </template>

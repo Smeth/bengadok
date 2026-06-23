@@ -5,6 +5,7 @@ import { computed, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
+import FlashToastHost from '@/components/FlashToastHost.vue';
 import type { ClientsSectionTab } from '@/components/clients/ClientsSectionNav.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { clientNomComplet } from '@/lib/clientDisplayName';
@@ -55,9 +56,6 @@ const props = withDefaults(
 );
 
 const page = usePage();
-const flashStatus = computed(
-    () => (page.props.flash as { status?: string })?.status,
-);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
@@ -106,13 +104,6 @@ function nomComplet(c: Client) {
         <div
             class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
         >
-            <p
-                v-if="flashStatus"
-                class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800"
-            >
-                {{ flashStatus }}
-            </p>
-
             <ClientsSectionNav :active="activeSection" />
 
             <div v-if="activeSection === 'liste'" class="space-y-4">
@@ -304,5 +295,7 @@ function nomComplet(c: Client) {
                 <p class="text-muted-foreground">Statistiques – à venir</p>
             </div>
         </div>
+
+        <FlashToastHost />
     </AppLayout>
 </template>

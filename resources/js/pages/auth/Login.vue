@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Form, Head, usePage } from '@inertiajs/vue3';
+import { Form, Head } from '@inertiajs/vue3';
 import { Eye, EyeOff, Smartphone } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import CsrfHiddenInput from '@/components/CsrfHiddenInput.vue';
+import FlashToastHost from '@/components/FlashToastHost.vue';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
@@ -19,11 +20,6 @@ defineProps<{
     canRegister: boolean;
 }>();
 
-const page = usePage();
-const flashError = computed(
-    () => (page.props.flash as { error?: string } | undefined)?.error,
-);
-
 const showPassword = ref(false);
 </script>
 
@@ -36,13 +32,6 @@ const showPassword = ref(false);
             class="mb-4 text-center text-sm font-medium text-emerald-600"
         >
             {{ status }}
-        </div>
-        <div
-            v-if="flashError"
-            class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-800"
-            role="alert"
-        >
-            {{ flashError }}
         </div>
 
         <Form
@@ -141,6 +130,8 @@ const showPassword = ref(false);
                 </div>
             </div>
         </Form>
+
+        <FlashToastHost />
     </AuthSplitLayout>
 </template>
 

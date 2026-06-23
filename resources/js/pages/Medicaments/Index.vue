@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import MedicamentsSectionNav from '@/components/medicaments/MedicamentsSectionNav.vue';
 import type { MedicamentsSectionTab } from '@/components/medicaments/MedicamentsSectionNav.vue';
+import FlashToastHost from '@/components/FlashToastHost.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -126,9 +127,6 @@ const props = withDefaults(
 );
 
 const page = usePage();
-const flashStatus = computed(
-    () => (page.props.flash as { status?: string })?.status,
-);
 const isAdmin = computed(() => {
     const roles =
         (page.props.auth as { user?: { roles?: string[] } })?.user?.roles ?? [];
@@ -368,13 +366,6 @@ const badgeTotal = computed(() =>
         <div
             class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
         >
-            <p
-                v-if="flashStatus"
-                class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800"
-            >
-                {{ flashStatus }}
-            </p>
-
             <!-- Badge + onglets -->
             <div
                 class="relative z-10 flex shrink-0 flex-wrap items-center gap-3"
@@ -1303,5 +1294,7 @@ const badgeTotal = computed(() =>
                 </div>
             </div>
         </div>
+
+        <FlashToastHost />
     </AppLayout>
 </template>

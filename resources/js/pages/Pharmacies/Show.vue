@@ -25,6 +25,7 @@ import {
 import { ref, computed, watch } from 'vue';
 import { previewPharmacieUsername } from '@/lib/laravelSlug';
 import AppToast from '@/components/AppToast.vue';
+import FlashToastHost from '@/components/FlashToastHost.vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import IdentifiantsCreesDialog from '@/components/IdentifiantsCreesDialog.vue';
 import PharmacieGestionCredit from '@/components/PharmacieGestionCredit.vue';
@@ -177,15 +178,6 @@ const lastCreatedCredentials = ref<{
 const credentialsDialogOpen = ref(false);
 
 const page = usePage();
-const flashStatus = computed(
-    () => (page.props.flash as { status?: string })?.status,
-);
-const createdUsername = computed(
-    () => (page.props.flash as { createdUsername?: string })?.createdUsername,
-);
-const flashError = computed(
-    () => (page.props.flash as { error?: string })?.error,
-);
 const isAdmin = computed(() => {
     const roles =
         (page.props.auth as { user?: { roles?: string[] } })?.user?.roles ?? [];
@@ -431,22 +423,7 @@ function creerUtilisateur() {
         >
             <BackLink href="/pharmacies">Retour à la liste</BackLink>
 
-            <div
-                v-if="flashError"
-                class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/30 dark:text-red-200"
-                role="alert"
-            >
-                {{ flashError }}
-            </div>
-            <div
-                v-if="flashStatus || createdUsername"
-                class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200"
-            >
-                <p v-if="flashStatus">{{ flashStatus }}</p>
-                <p v-if="createdUsername" class="mt-1 font-mono font-medium">
-                    Identifiant à transmettre : {{ createdUsername }}
-                </p>
-            </div>
+            <FlashToastHost inline-password-reset />
 
             <!-- Onglets fiche pharmacie (même style que Médicaments / Clients) -->
             <div class="flex flex-wrap items-center gap-4">
@@ -1210,6 +1187,7 @@ function creerUtilisateur() {
         />
 
         <AppToast
+            v-model:show="userCreateToast.show"
             :title="userCreateToast.title"
             :description="userCreateToast.subtitle"
         />
