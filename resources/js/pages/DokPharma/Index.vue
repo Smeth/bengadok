@@ -916,7 +916,7 @@ function resetZoom() {
                                                 <!-- Disponibilité -->
                                                 <td class="px-3 py-2.5">
                                                     <div
-                                                        class="flex flex-col gap-1.5"
+                                                        class="flex flex-col items-start gap-1.5"
                                                     >
                                                         <span
                                                             class="inline-flex w-fit rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
@@ -940,7 +940,25 @@ function resetZoom() {
                                                         </span>
                                                         <button
                                                             type="button"
-                                                            class="w-fit text-[11px] font-medium text-[#2563eb] hover:underline"
+                                                            class="relative inline-flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors focus:outline-none"
+                                                            :class="
+                                                                formLignes[
+                                                                    cmd.id
+                                                                ][p.id]
+                                                                    .dispo ===
+                                                                true
+                                                                    ? 'bg-[#22C55E]'
+                                                                    : 'bg-gray-200'
+                                                            "
+                                                            :title="
+                                                                formLignes[
+                                                                    cmd.id
+                                                                ][p.id]
+                                                                    .dispo ===
+                                                                null
+                                                                    ? 'En attente — cliquer pour indiquer disponible ou indisponible'
+                                                                    : undefined
+                                                            "
                                                             @click="
                                                                 toggleDispo(
                                                                     cmd.id,
@@ -948,15 +966,18 @@ function resetZoom() {
                                                                 )
                                                             "
                                                         >
-                                                            {{
-                                                                formLignes[
-                                                                    cmd.id
-                                                                ]?.[p.id]
-                                                                    ?.dispo ===
-                                                                null
-                                                                    ? 'Indiquer disponibilité'
-                                                                    : 'Modifier'
-                                                            }}
+                                                            <span
+                                                                class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                                                                :class="
+                                                                    formLignes[
+                                                                        cmd.id
+                                                                    ][p.id]
+                                                                        .dispo ===
+                                                                    true
+                                                                        ? 'translate-x-4'
+                                                                        : 'translate-x-0.5'
+                                                                "
+                                                            />
                                                         </button>
                                                     </div>
                                                 </td>
