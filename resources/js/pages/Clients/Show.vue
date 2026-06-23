@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import {
-    ArrowLeft,
     User,
     Phone,
     MapPin,
@@ -15,6 +14,7 @@ import {
 import { computed, ref } from 'vue';
 import ClientEnrichirProfilModal from '@/components/clients/ClientEnrichirProfilModal.vue';
 import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
+import BackLink from '@/components/ui/BackLink.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { clientNomComplet } from '@/lib/clientDisplayName';
@@ -135,27 +135,19 @@ function telAffiche(tel: string) {
             <!-- En-tête maquette -->
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="flex flex-wrap items-center gap-4">
-                    <Button
-                        variant="link"
-                        class="w-fit -ml-2 h-auto p-0"
-                        as-child
+                    <BackLink
+                        :href="
+                            client.est_prospect
+                                ? '/clients/prospects'
+                                : '/clients'
+                        "
                     >
-                        <Link
-                            :href="
-                                client.est_prospect
-                                    ? '/clients/prospects'
-                                    : '/clients'
-                            "
-                            class="flex items-center gap-2 text-[#459cd1] hover:underline"
-                        >
-                            <ArrowLeft class="size-4 shrink-0" />
-                            {{
-                                client.est_prospect
-                                    ? 'Retour aux prospects'
-                                    : 'Retour à la liste'
-                            }}
-                        </Link>
-                    </Button>
+                        {{
+                            client.est_prospect
+                                ? 'Retour aux prospects'
+                                : 'Retour à la liste'
+                        }}
+                    </BackLink>
                     <h1
                         class="text-2xl font-bold tracking-tight text-foreground"
                     >

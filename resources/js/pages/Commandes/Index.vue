@@ -796,23 +796,34 @@ function parseValidationErrors(e: unknown): Record<string, string> {
 
 const apiErrorsEnreg = ref<Record<string, string>>({});
 
-function submitEnregistrementFromModal(payload: FormEnregPayload) {
-    apiErrorsEnreg.value = {};
-    if (payload.ordonnance) {
-        const formData = new FormData();
+function appendEnregistrementFields(formData: FormData, payload: FormEnregPayload): void {
+    if (payload.client_id) {
+        formData.append('client_id', String(payload.client_id));
+    } else {
         formData.append('client_nom', payload.client_nom);
         formData.append('client_prenom', payload.client_prenom);
         formData.append('client_tel', payload.client_tel);
         formData.append('client_adresse', payload.client_adresse);
-        formData.append('client_arrondissement', payload.client_arrondissement);
-        if (payload.client_sexe)
-            formData.append('client_sexe', payload.client_sexe);
-        formData.append('pharmacie_id', payload.pharmacie_id);
-        if (payload.beneficiaire)
-            formData.append('beneficiaire', payload.beneficiaire);
-        formData.append('produits', JSON.stringify(payload.produits));
-        if (payload.commentaire)
-            formData.append('commentaire', payload.commentaire);
+    }
+    formData.append('client_arrondissement', payload.client_arrondissement);
+    if (payload.client_sexe) {
+        formData.append('client_sexe', payload.client_sexe);
+    }
+    formData.append('pharmacie_id', payload.pharmacie_id);
+    if (payload.beneficiaire) {
+        formData.append('beneficiaire', payload.beneficiaire);
+    }
+    formData.append('produits', JSON.stringify(payload.produits));
+    if (payload.commentaire) {
+        formData.append('commentaire', payload.commentaire);
+    }
+}
+
+function submitEnregistrementFromModal(payload: FormEnregPayload) {
+    apiErrorsEnreg.value = {};
+    if (payload.ordonnance) {
+        const formData = new FormData();
+        appendEnregistrementFields(formData, payload);
         formData.append('ordonnance', payload.ordonnance);
 
         router.post('/commandes', formData, {
@@ -838,6 +849,9 @@ function submitEnregistrementFromModal(payload: FormEnregPayload) {
             produits: payload.produits,
             commentaire: payload.commentaire || undefined,
         };
+        if (payload.client_id) {
+            data.client_id = payload.client_id;
+        }
         router.post('/commandes', data, {
             preserveScroll: true,
             onSuccess: () => {

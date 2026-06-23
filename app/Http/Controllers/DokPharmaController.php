@@ -7,6 +7,7 @@ use App\Models\Pharmacie;
 use App\Models\Produit;
 use App\Services\AdminParapharmaDashboardService;
 use App\Services\CommandeDateFormatter;
+use App\Services\CommandeMontantCalculator;
 use App\Services\PharmacieCreditService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -317,7 +318,11 @@ class DokPharmaController extends Controller
                 ? $qteConfirmee
                 : null;
 
-            $venteLibre = filter_var($ligne['vente_libre'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $venteLibre = filter_var(
+                $ligne['vente_libre'] ?? false,
+                FILTER_VALIDATE_BOOLEAN,
+                FILTER_NULL_ON_FAILURE,
+            ) ?? false;
 
             $pivotData = [
                 'status' => $status,
@@ -329,6 +334,15 @@ class DokPharmaController extends Controller
             }
 
             $commande->produits()->updateExistingPivot($produitId, $pivotData);
+
+            if (
+                in_array($status, ['disponible', 'partiel'], true)
+                && ! CommandeMontantCalculator::isParapharmaType($produit->type)
+            ) {
+                $produit->update([
+                    'type' => $venteLibre ? 'Vente libre' : 'Sur ordonnance',
+                ]);
+            }
 
             $qteEffective = $status === 'indisponible' ? 0 : ($qteConfirmee ?? 1);
             if ($qteEffective > 0) {

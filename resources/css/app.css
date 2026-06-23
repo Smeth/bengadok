@@ -442,3 +442,10 @@
 [role='progressbar'] {
     pointer-events: none !important;
 }
+
+/** Lien « Retour » sur fond dégradé BengaDok (lisibilité). */
+@layer components {
+    .bengadok-back-link {
+        @apply inline-flex items-center gap-2 text-sm font-semibold text-white drop-shadow-sm transition-colors hover:text-white/90 hover:underline;
+    }
+}

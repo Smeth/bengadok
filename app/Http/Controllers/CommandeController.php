@@ -351,8 +351,14 @@ class CommandeController extends Controller
 
     public function store(StoreCommandeRequest $request): RedirectResponse
     {
-        $data = $request->getDataForService();
-        $commande = $this->commandeService->create($data, $request->file('ordonnance'));
+        try {
+            $data = $request->getDataForService();
+            $commande = $this->commandeService->create($data, $request->file('ordonnance'));
+        } catch (\RuntimeException $e) {
+            return back()
+                ->withInput()
+                ->with('error', $e->getMessage());
+        }
 
         return redirect()->route('commandes.index')->with(
             'status',

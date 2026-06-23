@@ -50,7 +50,7 @@ class Produit extends Model
         $pu = (float) ($line['prix_unitaire'] ?? 0);
 
         $type = is_string($line['type'] ?? null) ? trim($line['type']) : '';
-        $defaultType = $type !== '' ? $type : 'Vente libre';
+        $defaultType = $type !== '' ? $type : null;
 
         $produit = static::firstOrCreate(
             [

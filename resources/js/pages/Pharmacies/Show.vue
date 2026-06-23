@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
-    ArrowLeft,
     Building2,
     Clock,
     MapPin,
@@ -29,6 +28,7 @@ import AppToast from '@/components/AppToast.vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import PharmacieGestionCredit from '@/components/PharmacieGestionCredit.vue';
 import { Button } from '@/components/ui/button';
+import BackLink from '@/components/ui/BackLink.vue';
 import {
     Dialog,
     DialogContent,
@@ -433,15 +433,7 @@ function creerUtilisateur() {
         <div
             class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
         >
-            <Button variant="link" class="w-fit -ml-2" as-child>
-                <Link
-                    href="/pharmacies"
-                    class="flex items-center gap-2 text-[#459cd1]"
-                >
-                    <ArrowLeft class="size-4" />
-                    Retour à la liste
-                </Link>
-            </Button>
+            <BackLink href="/pharmacies">Retour à la liste</BackLink>
 
             <div
                 v-if="flashError"

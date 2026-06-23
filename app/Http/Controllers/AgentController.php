@@ -65,9 +65,15 @@ class AgentController extends Controller
 
     public function storeCommande(StoreCommandeRequest $request)
     {
-        $data = $request->getDataForService();
-        $data['livreur_id'] = $data['livreur_id'] ?? null;
-        $commande = $this->commandeService->create($data, $request->file('ordonnance'));
+        try {
+            $data = $request->getDataForService();
+            $data['livreur_id'] = $data['livreur_id'] ?? null;
+            $commande = $this->commandeService->create($data, $request->file('ordonnance'));
+        } catch (\RuntimeException $e) {
+            return back()
+                ->withInput()
+                ->with('error', $e->getMessage());
+        }
 
         return redirect()->route('commandes.index')->with('success', "Commande {$commande->numero} créée.");
     }

@@ -1746,7 +1746,6 @@ function resetZoom() {
                                 >
                                 <span
                                     class="text-2xl font-bold text-gray-900"
-                                    >{{
                                     >{{ totalCommandeValidee(cmd).toFixed(1) }}</span
                                 >
                                 <span class="text-[12px] text-gray-500"
@@ -2086,7 +2085,6 @@ function resetZoom() {
                                 >
                                 <span
                                     class="text-2xl font-bold text-gray-900"
-                                    >{{
                                     >{{ totalCommandeValidee(cmd).toFixed(1) }}</span
                                 >
                                 <span class="text-[12px] text-gray-500"

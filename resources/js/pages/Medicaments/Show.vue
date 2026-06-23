@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft } from 'lucide-vue-next';
-import { Button } from '@/components/ui/button';
+import { Head } from '@inertiajs/vue3';
+import BackLink from '@/components/ui/BackLink.vue';
 import MedicamentsSectionNav from '@/components/medicaments/MedicamentsSectionNav.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
@@ -60,12 +59,7 @@ function designationComplete() {
         >
             <MedicamentsSectionNav />
 
-            <Button variant="ghost" size="sm" as-child>
-                <Link href="/medicaments" class="flex items-center gap-1">
-                    <ArrowLeft class="size-4" />
-                    Retour à la liste
-                </Link>
-            </Button>
+            <BackLink href="/medicaments">Retour à la liste</BackLink>
 
             <h1 class="text-2xl font-semibold">Détail Produit</h1>
 

@@ -112,12 +112,17 @@ class Ordonnance extends Model
      */
     public static function registerNewUpload(UploadedFile $file): self
     {
-        $ext = $file->getClientOriginalExtension();
+        $ext = $file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'bin';
         $path = $file->storeAs(
             'ordonnances/'.now()->format('Y-m'),
-            uniqid().'.'.$ext,
+            uniqid('ord_', true).'.'.$ext,
             self::STORAGE_DISK,
         );
+
+        if ($path === false || ! is_string($path) || $path === '') {
+            throw new \RuntimeException('Impossible d\'enregistrer le fichier ordonnance (vérifiez les droits sur storage/app/private).');
+        }
+
         $absolute = Storage::disk(self::STORAGE_DISK)->path($path);
         $hash = is_readable($absolute) ? hash_file('sha256', $absolute) : null;
 
@@ -127,24 +132,31 @@ class Ordonnance extends Model
         ]);
 
         DB::afterCommit(function () use ($ordonnance) {
-            $user = Auth::user();
-            if ($user === null || ! $user->hasAnyRole(['admin', 'super_admin', 'agent_call_center'])) {
-                return;
-            }
+            try {
+                $user = Auth::user();
+                if ($user === null || ! $user->hasAnyRole(['admin', 'super_admin', 'agent_call_center'])) {
+                    return;
+                }
 
-            OrdonnanceVerification::query()->firstOrCreate(
-                ['ordonnance_id' => $ordonnance->id],
-                ['status' => 'pending', 'decision' => 'pending']
-            );
+                OrdonnanceVerification::query()->firstOrCreate(
+                    ['ordonnance_id' => $ordonnance->id],
+                    ['status' => 'pending', 'decision' => 'pending']
+                );
 
-            $settings = OrdonnanceVerificationSetting::query()->first();
-            $immediate = $settings
-                && $settings->execution_mode === OrdonnanceVerificationSetting::EXECUTION_MODE_IMMEDIATE;
+                $settings = OrdonnanceVerificationSetting::query()->first();
+                $immediate = $settings
+                    && $settings->execution_mode === OrdonnanceVerificationSetting::EXECUTION_MODE_IMMEDIATE;
 
-            if ($immediate) {
-                ProcessOrdonnanceVerificationJob::dispatchSync($ordonnance->id);
-            } else {
-                ProcessOrdonnanceVerificationJob::dispatch($ordonnance->id);
+                if ($immediate) {
+                    ProcessOrdonnanceVerificationJob::dispatchSync($ordonnance->id);
+                } else {
+                    ProcessOrdonnanceVerificationJob::dispatch($ordonnance->id);
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Vérification ordonnance ignorée après upload (commande enregistrée).', [
+                    'ordonnance_id' => $ordonnance->id,
+                    'message' => $e->getMessage(),
+                ]);
             }
         });
 
