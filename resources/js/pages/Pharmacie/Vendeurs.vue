@@ -4,7 +4,6 @@ import {
     Users,
     ShieldCheck,
     Shield,
-    Copy,
     RefreshCw,
     CheckCircle2,
     X,
@@ -21,6 +20,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppToast from '@/components/AppToast.vue';
+import IdentifiantsCreesDialog from '@/components/IdentifiantsCreesDialog.vue';
 import { previewPharmacieUsername } from '@/lib/laravelSlug';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
@@ -51,6 +51,11 @@ const createSuccessToast = ref<{
     title: string;
     description?: string;
 }>({ show: false, title: '' });
+const credentialsDialogOpen = ref(false);
+const lastCreatedCredentials = ref<{
+    username: string;
+    password: string;
+} | null>(null);
 const form = ref({
     name: '',
     email: '',
@@ -94,12 +99,13 @@ function resetCreateForm() {
 
 function ouvrirCreate() {
     resetCreateForm();
-    modalCreate.value = true;
-}
-
-function copyCredentials() {
-    const text = `Identifiant : ${identifiantPreview.value}\nMot de passe : ${form.value.password}`;
-    navigator.clipboard.writeText(text);
+    router.reload({
+        only: ['nextUserId'],
+        preserveScroll: true,
+        onFinish: () => {
+            modalCreate.value = true;
+        },
+    });
 }
 
 function creerVendeur() {
@@ -121,17 +127,28 @@ function creerVendeur() {
                         flash?: {
                             status?: string;
                             createdUsername?: string;
+                            createdPassword?: string;
                         };
                     }
                 ).flash;
-                const username = flash?.createdUsername ?? identifiantPreview.value;
+                if (!flash?.createdUsername) {
+                    resetCreateForm();
+                    return;
+                }
+                const password =
+                    flash.createdPassword ?? form.value.password;
+                lastCreatedCredentials.value = {
+                    username: flash.createdUsername,
+                    password,
+                };
                 resetCreateForm();
+                credentialsDialogOpen.value = true;
                 createSuccessToast.value = {
                     show: true,
                     title:
-                        flash?.status?.trim() ||
-                        'Utilisateur créé. Transmettez les identifiants au collaborateur.',
-                    description: `Identifiant : ${username}`,
+                        flash.status?.trim() ||
+                        'Utilisateur créé. Copiez les identifiants ci-dessous.',
+                    description: `Identifiant : ${flash.createdUsername}`,
                 };
             },
             onError: (e) => {
@@ -322,9 +339,8 @@ function creerVendeur() {
                                 class="flex h-9 w-full min-w-0 rounded-md border border-input bg-muted px-3 py-1 font-mono text-sm shadow-xs outline-none md:text-sm"
                             />
                             <p class="text-xs text-muted-foreground">
-                                Aperçu indicatif (même format que le serveur).
-                                L’identifiant exact apparaît dans la
-                                notification après création.
+                                Aperçu indicatif — l'identifiant exact s'affiche
+                                dans la fenêtre de confirmation après création.
                             </p>
                         </div>
                         <div class="space-y-2">
@@ -355,31 +371,11 @@ function creerVendeur() {
                     </div>
 
                     <div class="rounded-lg bg-sky-50 p-4 dark:bg-sky-950/30">
-                        <h4
-                            class="mb-2 font-medium text-sky-800 dark:text-sky-200"
-                        >
-                            Identifiants à transmettre
-                        </h4>
                         <p class="text-sm text-muted-foreground">
-                            Identifiant :
-                            <span class="font-mono">{{
-                                identifiantPreview
-                            }}</span>
+                            Après validation, une fenêtre affichera l'identifiant
+                            enregistré en base avec le bouton « Copier les
+                            identifiants ».
                         </p>
-                        <p class="text-sm text-muted-foreground">
-                            Mot de passe :
-                            <span class="font-mono">{{ form.password }}</span>
-                        </p>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            class="mt-3 border-sky-300 text-sky-700 hover:bg-sky-100"
-                            @click="copyCredentials"
-                        >
-                            <Copy class="mr-2 size-4" />
-                            Copier les identifiants
-                        </Button>
                     </div>
 
                     <DialogFooter class="gap-2">
@@ -400,6 +396,13 @@ function creerVendeur() {
                 </form>
             </DialogContent>
         </Dialog>
+
+        <IdentifiantsCreesDialog
+            v-if="lastCreatedCredentials"
+            v-model:open="credentialsDialogOpen"
+            :username="lastCreatedCredentials.username"
+            :password="lastCreatedCredentials.password"
+        />
 
         <AppToast
             v-model:show="createSuccessToast.show"

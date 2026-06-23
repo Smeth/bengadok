@@ -57,6 +57,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
                 'createdUsername' => fn () => $request->session()->get('createdUsername'),
+                'createdPassword' => fn () => $request->session()->get('createdPassword'),
             ],
             'name' => config('app.name'),
             'auth' => [

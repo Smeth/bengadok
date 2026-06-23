@@ -26,6 +26,7 @@ import { ref, computed, watch } from 'vue';
 import { previewPharmacieUsername } from '@/lib/laravelSlug';
 import AppToast from '@/components/AppToast.vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
+import IdentifiantsCreesDialog from '@/components/IdentifiantsCreesDialog.vue';
 import PharmacieGestionCredit from '@/components/PharmacieGestionCredit.vue';
 import { Button } from '@/components/ui/button';
 import BackLink from '@/components/ui/BackLink.vue';
@@ -173,6 +174,7 @@ const lastCreatedCredentials = ref<{
     username: string;
     password: string;
 } | null>(null);
+const credentialsDialogOpen = ref(false);
 
 const page = usePage();
 const flashStatus = computed(
@@ -330,25 +332,13 @@ function resetFormUser() {
 
 function ouvrirCreateUser() {
     resetFormUser();
-    modalCreateUser.value = true;
-}
-
-function copyCredentials(usePreview = true) {
-    const username = usePreview
-        ? identifiantPreview.value
-        : (lastCreatedCredentials.value?.username ?? identifiantPreview.value);
-    const password =
-        lastCreatedCredentials.value?.password ?? formUser.value.password;
-    const text = `Identifiant : ${username}\nMot de passe : ${password}`;
-    navigator.clipboard.writeText(text);
-}
-
-function copyCreatedCredentials() {
-    if (!lastCreatedCredentials.value) return;
-    const { username, password } = lastCreatedCredentials.value;
-    navigator.clipboard.writeText(
-        `Identifiant : ${username}\nMot de passe : ${password}`,
-    );
+    router.reload({
+        only: ['nextUserId'],
+        preserveScroll: true,
+        onFinish: () => {
+            modalCreateUser.value = true;
+        },
+    });
 }
 
 function normalizeErrors(e: unknown): Record<string, string> {
@@ -397,22 +387,28 @@ function creerUtilisateur() {
                         flash?: {
                             status?: string;
                             createdUsername?: string;
+                            createdPassword?: string;
                         };
                     }
                 ).flash;
-                const username = flash?.createdUsername ?? identifiantPreview.value;
+                if (!flash?.createdUsername) {
+                    resetFormUser();
+                    return;
+                }
+                const password =
+                    flash.createdPassword ?? formUser.value.password;
                 lastCreatedCredentials.value = {
-                    username,
-                    password: formUser.value.password,
+                    username: flash.createdUsername,
+                    password,
                 };
                 resetFormUser();
-                const title =
-                    flash?.status?.trim() ||
-                    'Utilisateur créé. Les identifiants ont été enregistrés.';
+                credentialsDialogOpen.value = true;
                 userCreateToast.value = {
                     show: true,
-                    title,
-                    subtitle: `Identifiant : ${username}`,
+                    title:
+                        flash.status?.trim() ||
+                        'Utilisateur créé. Copiez les identifiants ci-dessous.',
+                    subtitle: `Identifiant : ${flash.createdUsername}`,
                 };
                 window.setTimeout(() => {
                     userCreateToast.value.show = false;
@@ -1036,10 +1032,9 @@ function creerUtilisateur() {
                                 class="flex h-9 w-full min-w-0 rounded-md border border-input bg-muted px-3 py-1 font-mono text-sm shadow-xs outline-none md:text-sm"
                             />
                             <p class="text-xs text-muted-foreground">
-                                Aperçu indicatif (même format que le serveur).
-                                L’identifiant exact est affiché dans la
-                                notification après création — utilisez celui-ci
-                                pour la connexion.
+                                Aperçu indicatif — le numéro final est attribué
+                                à la création. L'identifiant exact s'affiche
+                                dans la fenêtre de confirmation.
                             </p>
                         </div>
                         <div class="space-y-3">
@@ -1155,27 +1150,10 @@ function creerUtilisateur() {
                             Identifiants à transmettre
                         </h4>
                         <p class="text-sm text-muted-foreground">
-                            Identifiant :
-                            <span class="font-mono">{{
-                                identifiantPreview
-                            }}</span>
+                            Après « Créer l'utilisateur », une fenêtre affichera
+                            l'identifiant définitif (celui enregistré en base)
+                            avec le bouton de copie.
                         </p>
-                        <p class="text-sm text-muted-foreground">
-                            Mot de passe :
-                            <span class="font-mono">{{
-                                formUser.password
-                            }}</span>
-                        </p>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            class="mt-3 border-sky-300 text-sky-700 hover:bg-sky-100"
-                            @click="copyCredentials"
-                        >
-                            <Copy class="mr-2 size-4" />
-                            Copier les identifiants
-                        </Button>
                     </div>
 
                     <DialogFooter class="gap-2">
@@ -1224,8 +1202,14 @@ function creerUtilisateur() {
             @confirm="confirmRemoveUser"
         />
 
+        <IdentifiantsCreesDialog
+            v-if="lastCreatedCredentials"
+            v-model:open="credentialsDialogOpen"
+            :username="lastCreatedCredentials.username"
+            :password="lastCreatedCredentials.password"
+        />
+
         <AppToast
-            v-model:show="userCreateToast.show"
             :title="userCreateToast.title"
             :description="userCreateToast.subtitle"
         />

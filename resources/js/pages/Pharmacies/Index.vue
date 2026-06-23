@@ -21,6 +21,7 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
+import IdentifiantsCreesDialog from '@/components/IdentifiantsCreesDialog.vue';
 import GoogleMyMapsEmbed from '@/components/maps/GoogleMyMapsEmbed.vue';
 import PharmacieGestionCredit from '@/components/PharmacieGestionCredit.vue';
 import { Button } from '@/components/ui/button';
@@ -271,6 +272,11 @@ const form = ref({
 });
 
 const errors = ref<Record<string, string>>({});
+const credentialsDialogOpen = ref(false);
+const lastCreatedCredentials = ref<{
+    username: string;
+    password: string;
+} | null>(null);
 
 /** Inertia renvoie souvent des messages en string[] ; le template attend une chaîne. */
 function normalizeInertiaErrors(e: unknown): Record<string, string> {
@@ -331,8 +337,23 @@ function submitCreate() {
         },
         {
             preserveScroll: true,
-            onSuccess: () => {
+            onSuccess: (page) => {
                 showModal.value = false;
+                const flash = (
+                    page.props as {
+                        flash?: {
+                            createdUsername?: string;
+                            createdPassword?: string;
+                        };
+                    }
+                ).flash;
+                if (flash?.createdUsername && flash?.createdPassword) {
+                    lastCreatedCredentials.value = {
+                        username: flash.createdUsername,
+                        password: flash.createdPassword,
+                    };
+                    credentialsDialogOpen.value = true;
+                }
             },
             onError: (e) => {
                 errors.value = normalizeInertiaErrors(e);
@@ -1433,6 +1454,14 @@ watch(
             confirm-text="Supprimer"
             @update:open="showDeleteModal = $event"
             @confirm="confirmDelete"
+        />
+
+        <IdentifiantsCreesDialog
+            v-if="lastCreatedCredentials"
+            v-model:open="credentialsDialogOpen"
+            title="Compte gérant créé"
+            :username="lastCreatedCredentials.username"
+            :password="lastCreatedCredentials.password"
         />
     </AppLayout>
 </template>

@@ -8,6 +8,7 @@ use App\Models\TypePharmacie;
 use App\Models\User;
 use App\Models\Zone;
 use App\Services\PharmacieCreditService;
+use App\Services\PharmacieUsernameGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -126,7 +127,7 @@ class PharmacieController extends Controller
     {
         $pharmacie->load(['zone', 'typePharmacie', 'heurs', 'users.roles']);
 
-        $nextUserId = (User::max('id') ?? 0) + 1;
+        $nextUserId = PharmacieUsernameGenerator::predictNextUserId();
         $user = $request->user();
         $peutGererCredits = $user?->hasAnyRole(['admin', 'super_admin']) ?? false;
         $onglet = request()->query('onglet');
@@ -190,7 +191,10 @@ class PharmacieController extends Controller
             ['ouverture' => $validated['heure_ouverture'], 'fermeture' => $validated['heure_fermeture']]
         );
 
-        $pharmacie = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $heur) {
+        $createdUsername = null;
+        $createdPassword = null;
+
+        $pharmacie = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $heur, &$createdUsername, &$createdPassword) {
             $pharmacie = Pharmacie::create([
                 'zone_id' => $validated['zone_id'],
                 'type_pharmacie_id' => $validated['type_pharmacie_id'],
@@ -217,21 +221,28 @@ class PharmacieController extends Controller
                 ]);
                 $gerant->assignRole('gerant');
 
-                $slugPharma = Str::slug($validated['designation']);
-                $slugNom = Str::slug($validated['proprio_nom']);
-                $gerant->update([
-                    'username' => "{$slugPharma}_gerant_{$slugNom}_{$gerant->id}",
-                ]);
+                $createdUsername = PharmacieUsernameGenerator::assign(
+                    $gerant,
+                    $validated['designation'],
+                    'gerant',
+                    $validated['proprio_nom'],
+                );
+                $createdPassword = $tempPassword;
             }
 
             return $pharmacie;
         });
 
-        $message = $pharmacie->users()->exists()
-            ? "Pharmacie créée avec succès. Compte gérant créé (identifiant : {$pharmacie->users()->first()?->username})."
-            : 'Pharmacie créée avec succès. Vous pourrez ajouter un gérant ultérieurement.';
+        $redirect = redirect()->route('pharmacies.index');
 
-        return redirect()->route('pharmacies.index')->with('status', $message);
+        if ($createdUsername !== null) {
+            return $redirect
+                ->with('status', 'Pharmacie créée avec succès. Compte gérant créé.')
+                ->with('createdUsername', $createdUsername)
+                ->with('createdPassword', $createdPassword);
+        }
+
+        return $redirect->with('status', 'Pharmacie créée avec succès. Vous pourrez ajouter un gérant ultérieurement.');
     }
 
     public function update(Request $request, Pharmacie $pharmacie): RedirectResponse
@@ -322,14 +333,17 @@ class PharmacieController extends Controller
         ]);
         $newUser->assignRole($validated['role']);
 
-        $slugPharma = Str::slug($pharmacie->designation ?? 'pharmacie');
-        $slugNom = Str::slug($validated['name']);
-        $username = "{$slugPharma}_{$validated['role']}_{$slugNom}_{$newUser->id}";
-        $newUser->update(['username' => $username]);
+        $username = PharmacieUsernameGenerator::assign(
+            $newUser,
+            $pharmacie->designation ?? 'pharmacie',
+            $validated['role'],
+            $validated['name'],
+        );
 
         return back()
             ->with('status', "Utilisateur {$newUser->name} créé.")
-            ->with('createdUsername', $username);
+            ->with('createdUsername', $username)
+            ->with('createdPassword', $password);
     }
 
     public function resetUserPassword(Request $request, Pharmacie $pharmacie, User $user): RedirectResponse

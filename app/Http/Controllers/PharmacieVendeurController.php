@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\PharmacieUsernameGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -25,12 +25,10 @@ class PharmacieVendeurController extends Controller
             ->role('vendeur')
             ->get();
 
-        $nextUserId = (User::max('id') ?? 0) + 1;
-
         return Inertia::render('Pharmacie/Vendeurs', [
             'vendeurs' => $vendeurs,
             'pharmacie' => $pharmacie,
-            'nextUserId' => $nextUserId,
+            'nextUserId' => PharmacieUsernameGenerator::predictNextUserId(),
         ]);
     }
 
@@ -54,10 +52,12 @@ class PharmacieVendeurController extends Controller
             'email' => ['nullable', 'email', Rule::unique('users', 'email')],
             'phone' => ['required', 'string', 'max:32', Rule::unique('users', 'phone')],
             'password' => ['required', Password::defaults()],
+            'role' => 'required|in:gerant,vendeur',
         ]);
 
         $tempPassword = $validated['password'];
         $email = $validated['email'] ?? null;
+        $role = $validated['role'];
 
         $newUser = User::create([
             'name' => $validated['name'],
@@ -68,15 +68,18 @@ class PharmacieVendeurController extends Controller
             'pharmacie_id' => $pharmacieId,
             'email_verified_at' => $email ? now() : null,
         ]);
-        $newUser->assignRole('vendeur');
+        $newUser->assignRole($role);
 
-        $slugPharma = Str::slug($pharmacie->designation ?? 'pharmacie');
-        $slugNom = Str::slug($validated['name']);
-        $username = "{$slugPharma}_vendeur_{$slugNom}_{$newUser->id}";
-        $newUser->update(['username' => $username]);
+        $username = PharmacieUsernameGenerator::assign(
+            $newUser,
+            $pharmacie->designation ?? 'pharmacie',
+            $role,
+            $validated['name'],
+        );
 
         return back()
-            ->with('status', "Vendeur {$newUser->name} créé.")
-            ->with('createdUsername', $username);
+            ->with('status', "Utilisateur {$newUser->name} créé.")
+            ->with('createdUsername', $username)
+            ->with('createdPassword', $tempPassword);
     }
 }
