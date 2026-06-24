@@ -18,9 +18,27 @@ class ProduitDoublonService
         'forme_identique' => 'Forme identique',
     ];
 
+    /**
+     * Supprime les groupes en attente puis relance la détection (critères modifiés).
+     */
+    public function resyncPourCriteres(array $criteresActifs): void
+    {
+        GroupeDoublonsProduit::query()->where('statut', 'en_attente')->delete();
+
+        if ($criteresActifs === []) {
+            return;
+        }
+
+        $this->detecterEtCreerGroupes($criteresActifs);
+    }
+
     public function detecterEtCreerGroupes(?array $criteresActifs = null): void
     {
-        $criteresActifs = $criteresActifs ?? ['designation_similaire', 'dosage_identique', 'forme_identique'];
+        $criteresActifs = $criteresActifs ?? array_keys(self::CRITERES_DISPONIBLES);
+
+        if ($criteresActifs === []) {
+            return;
+        }
 
         $produits = Produit::all();
 
@@ -49,7 +67,11 @@ class ProduitDoublonService
             }
 
             $principalId = $this->choisirPrincipalSuggere($groupeProduits);
-            $criteresDetectes = $this->criteresDetectes($criteresActifs);
+            $criteresDetectes = $this->criteresCommunsAuGroupe($groupeProduits, $criteresActifs);
+
+            if ($criteresDetectes === []) {
+                continue;
+            }
 
             DB::transaction(function () use ($ids, $principalId, $criteresDetectes) {
                 $groupe = GroupeDoublonsProduit::create([
@@ -111,17 +133,70 @@ class ProduitDoublonService
     private function cleGroupage(Produit $p, array $criteresActifs): string
     {
         $parties = [];
+
         if (in_array('designation_similaire', $criteresActifs, true)) {
-            $parties[] = $this->normaliser($p->designation ?? '');
+            $n = $this->normaliser($p->designation ?? '');
+            if ($n !== '__vide__') {
+                $parties[] = 'd:'.$n;
+            }
         }
         if (in_array('dosage_identique', $criteresActifs, true)) {
-            $parties[] = $this->normaliser($p->dosage ?? '');
+            $n = $this->normaliser($p->dosage ?? '');
+            if ($n !== '__vide__') {
+                $parties[] = 'dos:'.$n;
+            }
         }
         if (in_array('forme_identique', $criteresActifs, true)) {
-            $parties[] = $this->normaliser($p->forme ?? '');
+            $n = $this->normaliser($p->forme ?? '');
+            if ($n !== '__vide__') {
+                $parties[] = 'f:'.$n;
+            }
         }
 
-        return implode('|||', $parties);
+        return $parties === [] ? '' : implode('|||', $parties);
+    }
+
+    /**
+     * Critères réellement communs au groupe (champs renseignés et identiques).
+     *
+     * @param  \Illuminate\Support\Collection<int, Produit>  $produits
+     * @return list<string>
+     */
+    private function criteresCommunsAuGroupe($produits, array $criteresActifs): array
+    {
+        $matched = [];
+
+        if (in_array('designation_similaire', $criteresActifs, true)) {
+            $vals = $produits
+                ->map(fn (Produit $p) => $this->normaliser($p->designation ?? ''))
+                ->unique()
+                ->values();
+            if ($vals->count() === 1 && $vals->first() !== '__vide__') {
+                $matched[] = 'designation_similaire';
+            }
+        }
+
+        if (in_array('dosage_identique', $criteresActifs, true)) {
+            $vals = $produits
+                ->map(fn (Produit $p) => $this->normaliser($p->dosage ?? ''))
+                ->unique()
+                ->values();
+            if ($vals->count() === 1 && $vals->first() !== '__vide__') {
+                $matched[] = 'dosage_identique';
+            }
+        }
+
+        if (in_array('forme_identique', $criteresActifs, true)) {
+            $vals = $produits
+                ->map(fn (Produit $p) => $this->normaliser($p->forme ?? ''))
+                ->unique()
+                ->values();
+            if ($vals->count() === 1 && $vals->first() !== '__vide__') {
+                $matched[] = 'forme_identique';
+            }
+        }
+
+        return $matched;
     }
 
     private function normaliser(string $s): string
@@ -157,11 +232,5 @@ class ProduitDoublonService
         return $produits
             ->sortByDesc(fn ($p) => [(int) ($ventesMap[$p->id] ?? 0), $p->created_at?->timestamp ?? 0])
             ->first()->id;
-    }
-
-    private function criteresDetectes(array $criteresActifs): array
-    {
-        return array_values(array_intersect($criteresActifs, array_keys(self::CRITERES_DISPONIBLES)))
-            ?: ['designation_similaire'];
     }
 }

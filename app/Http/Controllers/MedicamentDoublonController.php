@@ -24,15 +24,9 @@ class MedicamentDoublonController extends Controller
         $tri = (string) $request->input('tri', 'recent');
         $critere = (string) $request->input('critere', '');
 
-        $criteresActifs = $request->input('criteres', []);
-        if (! is_array($criteresActifs)) {
-            $criteresActifs = [];
-        }
-        if (empty($criteresActifs)) {
-            $criteresActifs = ['designation_similaire', 'dosage_identique', 'forme_identique'];
-        }
+        $criteresActifs = $this->resolveCriteresActifs($request);
 
-        $this->doublonService->detecterEtCreerGroupes($criteresActifs);
+        $this->doublonService->resyncPourCriteres($criteresActifs);
 
         $query = GroupeDoublonsProduit::with(['produits', 'principalProduit']);
 
@@ -41,6 +35,10 @@ class MedicamentDoublonController extends Controller
         }
 
         $groupes = $query->get();
+
+        $groupes = $groupes
+            ->filter(fn ($g) => $this->groupeVisiblePourCriteres($g, $criteresActifs))
+            ->values();
 
         if ($critere !== '') {
             $groupes = $groupes->filter(fn ($g) => in_array($critere, $g->criteres ?? [], true))->values();
@@ -66,10 +64,10 @@ class MedicamentDoublonController extends Controller
         };
 
         $stats = [
-            'en_attente' => GroupeDoublonsProduit::where('statut', 'en_attente')->count(),
-            'verifies' => GroupeDoublonsProduit::where('statut', 'verifie')->count(),
-            'fusionnes' => GroupeDoublonsProduit::where('statut', 'fusionne')->count(),
-            'total_produits' => GroupeDoublonsProduit::with('produits')->get()->sum(fn ($g) => $g->produits->count()),
+            'en_attente' => $groupes->where('statut', 'en_attente')->count(),
+            'verifies' => $groupes->where('statut', 'verifie')->count(),
+            'fusionnes' => $groupes->where('statut', 'fusionne')->count(),
+            'total_produits' => $groupes->sum(fn ($g) => $g->produits->count()),
         ];
 
         $criteresLabels = ProduitDoublonService::CRITERES_DISPONIBLES;
@@ -111,9 +109,46 @@ class MedicamentDoublonController extends Controller
         return Inertia::render('Medicaments/Doublons', [
             'groupes' => $groupesFormates->values()->all(),
             'stats' => $stats,
-            'filters' => $request->only(['search', 'statut', 'tri', 'critere', 'criteres']),
+            'filters' => array_merge(
+                $request->only(['search', 'statut', 'tri', 'critere']),
+                ['criteres' => $criteresActifs],
+            ),
             'criteresDisponibles' => $criteresLabels,
         ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resolveCriteresActifs(Request $request): array
+    {
+        $valid = array_keys(ProduitDoublonService::CRITERES_DISPONIBLES);
+
+        if (! $request->has('criteres')) {
+            return $valid;
+        }
+
+        $raw = $request->input('criteres', []);
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        return array_values(array_intersect($raw, $valid));
+    }
+
+    private function groupeVisiblePourCriteres(GroupeDoublonsProduit $groupe, array $criteresActifs): bool
+    {
+        if ($criteresActifs === []) {
+            return $groupe->statut !== 'en_attente';
+        }
+
+        if ($groupe->statut === 'en_attente') {
+            return true;
+        }
+
+        $stored = is_array($groupe->criteres) ? $groupe->criteres : [];
+
+        return count(array_intersect($stored, $criteresActifs)) > 0;
     }
 
     public function ignorer(GroupeDoublonsProduit $groupe): RedirectResponse

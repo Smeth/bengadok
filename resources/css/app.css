@@ -187,28 +187,25 @@
 
 @import './components/sidebar.css';
 
-/* Espace pharmacie Dok-Pharma : même fond et cartes sur toutes les vues (Figma 340:47) */
+/* Dégradé BengaDok (dashboard back-office, espace pharmacie) */
 @layer components {
-    /* Figma 340:47 — calque « background_color » : dégradé bleu → vert + blur 50px + opacité ~82 % */
-    .pharmacy-main-gradient {
-        position: relative;
-        isolation: isolate;
-        background: #ffffff;
-    }
-    .pharmacy-main-gradient::before {
-        content: '';
-        position: absolute;
-        /* Déborder légèrement pour éviter les bords trop nets après blur */
-        inset: -18% -12% -12% -12%;
+    .bengadok-page-gradient {
         background: linear-gradient(
             60.02deg,
             rgb(57, 149, 210) 35.89%,
-            rgb(91, 182, 110) 92.848%
+            rgb(91, 182, 110) 92.85%
         );
-        filter: blur(50px);
-        opacity: 0.82;
-        z-index: 0;
-        pointer-events: none;
+    }
+
+    /* Espace pharmacie Dok-Pharma : même fond que le dashboard back-office */
+    .pharmacy-main-gradient {
+        position: relative;
+        isolation: isolate;
+        background: linear-gradient(
+            60.02deg,
+            rgb(57, 149, 210) 35.89%,
+            rgb(91, 182, 110) 92.85%
+        );
     }
     /*
      * Ne pas utiliser `> * { z-index: 1 }` : la spécificité écrase les utilitaires

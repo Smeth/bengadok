@@ -372,6 +372,7 @@ class ClientController extends Controller
                 'tel' => $client->tel,
                 'tel_secondaire' => $client->tel_secondaire,
                 'adresse' => $client->adresse,
+                'arrondissement' => $client->arrondissement,
                 'zone' => $client->zone?->designation,
                 'client_depuis' => $clientDepuis?->format('d/m/Y'),
                 'derniere_commande' => ($derniereCommande?->date ?? $derniereCommande?->created_at)?->format('d/m/Y'),

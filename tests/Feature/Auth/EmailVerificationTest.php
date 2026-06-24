@@ -41,6 +41,25 @@ class EmailVerificationTest extends TestCase
         $response->assertRedirect(route('dashboard', absolute: false).'?verified=1');
     }
 
+    public function test_vendeur_is_redirected_to_pharmacy_after_email_verification(): void
+    {
+        $this->seed(\Database\Seeders\RolePermissionSeeder::class);
+
+        $user = User::factory()->unverified()->create();
+        $user->assignRole('vendeur');
+
+        Event::fake();
+
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->id, 'hash' => sha1($user->email)],
+        );
+
+        $this->actingAs($user)->get($verificationUrl)
+            ->assertRedirect('/dok-pharma/commandes?verified=1');
+    }
+
     public function test_email_is_not_verified_with_invalid_hash()
     {
         $user = User::factory()->unverified()->create();

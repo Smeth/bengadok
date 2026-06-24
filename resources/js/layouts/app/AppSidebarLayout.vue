@@ -41,14 +41,10 @@ const hasGradientBg = computed(
         <AppContent variant="sidebar" class="overflow-x-hidden">
             <div
                 class="relative isolate"
-                :class="hasGradientBg ? 'min-h-svh' : 'min-h-full'"
-                :style="
+                :class="
                     hasGradientBg
-                        ? {
-                              background:
-                                  'linear-gradient(60.02deg, rgb(57, 149, 210) 35.89%, rgb(91, 182, 110) 92.85%)',
-                          }
-                        : undefined
+                        ? 'min-h-svh bengadok-page-gradient'
+                        : 'min-h-full'
                 "
             >
                 <AppSidebarHeader

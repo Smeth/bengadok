@@ -27,63 +27,93 @@ Route::redirect('reglages', '/settings/profile')->name('reglages');
 Route::middleware(['auth'])->get('chargement', PostLoginLoadingController::class)->name('post-login.loading');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', [DashboardController::class, '__invoke'])->name('dashboard');
-    Route::post('dashboard/commission/payee', [DashboardController::class, 'marquerCommissionPayee'])
-        ->name('dashboard.commission.payee')
-        ->middleware('role:admin|super_admin');
+    Route::middleware('backoffice')->group(function () {
+        Route::get('dashboard', [DashboardController::class, '__invoke'])->name('dashboard');
+        Route::post('dashboard/commission/payee', [DashboardController::class, 'marquerCommissionPayee'])
+            ->name('dashboard.commission.payee')
+            ->middleware('role:admin|super_admin');
 
-    Route::prefix('pharmacies')->name('pharmacies.')->group(function () {
-        Route::get('/', [PharmacieController::class, 'index'])->name('index');
-        Route::post('/', [PharmacieController::class, 'store'])->name('store');
-        Route::get('{pharmacie}', [PharmacieController::class, 'show'])->name('show');
-        Route::patch('{pharmacie}', [PharmacieController::class, 'update'])->name('update');
-        Route::patch('{pharmacie}/toggle-garde', [PharmacieController::class, 'toggleGarde'])->name('toggle-garde');
-        Route::delete('{pharmacie}', [PharmacieController::class, 'destroy'])->name('destroy');
-        Route::post('{pharmacie}/users', [PharmacieController::class, 'storeUser'])->name('users.store')->middleware('role:admin|super_admin');
-        Route::patch('{pharmacie}/users/{user}/reset-password', [PharmacieController::class, 'resetUserPassword'])->name('users.reset-password')->middleware('role:admin|super_admin');
-        Route::delete('{pharmacie}/users/{user}', [PharmacieController::class, 'destroyUser'])->name('users.destroy')->middleware('role:admin|super_admin');
+        Route::prefix('pharmacies')->name('pharmacies.')->group(function () {
+            Route::get('/', [PharmacieController::class, 'index'])->name('index');
+            Route::post('/', [PharmacieController::class, 'store'])->name('store');
+            Route::get('{pharmacie}', [PharmacieController::class, 'show'])->name('show');
+            Route::patch('{pharmacie}', [PharmacieController::class, 'update'])->name('update');
+            Route::patch('{pharmacie}/toggle-garde', [PharmacieController::class, 'toggleGarde'])->name('toggle-garde');
+            Route::delete('{pharmacie}', [PharmacieController::class, 'destroy'])->name('destroy');
+            Route::post('{pharmacie}/users', [PharmacieController::class, 'storeUser'])->name('users.store')->middleware('role:admin|super_admin');
+            Route::patch('{pharmacie}/users/{user}/reset-password', [PharmacieController::class, 'resetUserPassword'])->name('users.reset-password')->middleware('role:admin|super_admin');
+            Route::delete('{pharmacie}/users/{user}', [PharmacieController::class, 'destroyUser'])->name('users.destroy')->middleware('role:admin|super_admin');
 
-        Route::middleware('role:admin|super_admin')->group(function () {
-            Route::post('{pharmacie}/credits/recharge', [PharmacieCreditController::class, 'recharge'])->name('credits.recharge');
-            Route::patch('{pharmacie}/credits/note', [PharmacieCreditController::class, 'updateNote'])->name('credits.note');
-            Route::patch('{pharmacie}/credits/alerte-seuil', [PharmacieCreditController::class, 'updateAlerteSeuil'])->name('credits.alerte');
+            Route::middleware('role:admin|super_admin')->group(function () {
+                Route::post('{pharmacie}/credits/recharge', [PharmacieCreditController::class, 'recharge'])->name('credits.recharge');
+                Route::patch('{pharmacie}/credits/note', [PharmacieCreditController::class, 'updateNote'])->name('credits.note');
+                Route::patch('{pharmacie}/credits/alerte-seuil', [PharmacieCreditController::class, 'updateAlerteSeuil'])->name('credits.alerte');
+            });
         });
-    });
-    Route::prefix('medicaments')->name('medicaments.')->group(function () {
-        Route::get('/', [MedicamentController::class, 'index'])->name('index');
-        Route::get('doublons', [MedicamentDoublonController::class, 'index'])->name('doublons');
-        Route::patch('doublons/{groupe}/ignorer', [MedicamentDoublonController::class, 'ignorer'])->name('doublons.ignorer');
-        Route::patch('doublons/{groupe}/verifier', [MedicamentDoublonController::class, 'verifier'])->name('doublons.verifier');
-        Route::patch('doublons/{groupe}/fusionner', [MedicamentDoublonController::class, 'fusionner'])->name('doublons.fusionner');
-        Route::post('catalogue/produits/destroy-bulk', [MedicamentCatalogueMaintenanceController::class, 'destroyProduitBulk'])->name('catalogue.produits.destroy-bulk')->middleware('role:admin|super_admin');
-        Route::post('catalogue/clear', [MedicamentCatalogueMaintenanceController::class, 'clearCatalogue'])->name('catalogue.clear')->middleware('role:admin|super_admin');
-        Route::post('db-medicaments/destroy-bulk', [DbMedicamentController::class, 'destroyBulk'])->name('db-medicaments.destroy-bulk')->middleware('role:admin|super_admin');
-        Route::post('db-medicaments/purge-all', [DbMedicamentController::class, 'purgeAll'])->name('db-medicaments.purge-all')->middleware('role:admin|super_admin');
-        Route::post('db-medicaments', [DbMedicamentController::class, 'store'])->name('db-medicaments.store')->middleware('role:admin|super_admin');
-        Route::patch('db-medicaments/{dbMedicament}', [DbMedicamentController::class, 'update'])->name('db-medicaments.update')->middleware('role:admin|super_admin');
-        Route::delete('db-medicaments/{dbMedicament}', [DbMedicamentController::class, 'destroy'])->name('db-medicaments.destroy')->middleware('role:admin|super_admin');
-        Route::get('{produit}', [MedicamentController::class, 'show'])->name('show');
-    });
-    Route::prefix('clients')->name('clients.')->group(function () {
-        Route::get('/', [ClientController::class, 'index'])->name('index');
-        Route::get('prospects', [ClientController::class, 'prospects'])->name('prospects');
-        Route::patch('{client}/promouvoir-client', [ClientController::class, 'promouvoirClient'])
-            ->name('promouvoir')
-            ->middleware('role:admin|super_admin|agent_call_center');
-        Route::get('doublons', [ClientDoublonController::class, 'index'])->name('doublons');
-        Route::patch('doublons/{groupe}/ignorer', [ClientDoublonController::class, 'ignorer'])->name('doublons.ignorer');
-        Route::patch('doublons/{groupe}/verifier', [ClientDoublonController::class, 'verifier'])->name('doublons.verifier');
-        Route::patch('doublons/{groupe}/fusionner', [ClientDoublonController::class, 'fusionner'])->name('doublons.fusionner');
-        Route::patch('{client}/enrichissement-profil', [ClientController::class, 'updateEnrichissementProfil'])->name('enrichissement-profil');
-        Route::get('{client}', [ClientController::class, 'show'])->name('show');
-    });
-    Route::prefix('utilisateurs')->name('utilisateurs.')->middleware('role:admin|super_admin')->group(function () {
-        Route::get('/', [UtilisateurBackofficeController::class, 'index'])->name('index');
-        Route::post('/', [UtilisateurBackofficeController::class, 'store'])->name('store');
-        Route::patch('{user}', [UtilisateurBackofficeController::class, 'update'])->name('update');
-        Route::patch('{user}/permissions', [UtilisateurBackofficeController::class, 'updatePermissions'])->name('update-permissions');
-        Route::delete('{user}', [UtilisateurBackofficeController::class, 'destroy'])->name('destroy');
-    });
+        Route::prefix('medicaments')->name('medicaments.')->group(function () {
+            Route::get('/', [MedicamentController::class, 'index'])->name('index');
+            Route::get('doublons', [MedicamentDoublonController::class, 'index'])->name('doublons');
+            Route::patch('doublons/{groupe}/ignorer', [MedicamentDoublonController::class, 'ignorer'])->name('doublons.ignorer');
+            Route::patch('doublons/{groupe}/verifier', [MedicamentDoublonController::class, 'verifier'])->name('doublons.verifier');
+            Route::patch('doublons/{groupe}/fusionner', [MedicamentDoublonController::class, 'fusionner'])->name('doublons.fusionner');
+            Route::post('catalogue/produits/destroy-bulk', [MedicamentCatalogueMaintenanceController::class, 'destroyProduitBulk'])->name('catalogue.produits.destroy-bulk')->middleware('role:admin|super_admin');
+            Route::post('catalogue/clear', [MedicamentCatalogueMaintenanceController::class, 'clearCatalogue'])->name('catalogue.clear')->middleware('role:admin|super_admin');
+            Route::post('db-medicaments/destroy-bulk', [DbMedicamentController::class, 'destroyBulk'])->name('db-medicaments.destroy-bulk')->middleware('role:admin|super_admin');
+            Route::post('db-medicaments/purge-all', [DbMedicamentController::class, 'purgeAll'])->name('db-medicaments.purge-all')->middleware('role:admin|super_admin');
+            Route::post('db-medicaments', [DbMedicamentController::class, 'store'])->name('db-medicaments.store')->middleware('role:admin|super_admin');
+            Route::patch('db-medicaments/{dbMedicament}', [DbMedicamentController::class, 'update'])->name('db-medicaments.update')->middleware('role:admin|super_admin');
+            Route::delete('db-medicaments/{dbMedicament}', [DbMedicamentController::class, 'destroy'])->name('db-medicaments.destroy')->middleware('role:admin|super_admin');
+            Route::get('{produit}', [MedicamentController::class, 'show'])->name('show');
+        });
+        Route::prefix('clients')->name('clients.')->group(function () {
+            Route::get('/', [ClientController::class, 'index'])->name('index');
+            Route::get('prospects', [ClientController::class, 'prospects'])->name('prospects');
+            Route::patch('{client}/promouvoir-client', [ClientController::class, 'promouvoirClient'])
+                ->name('promouvoir')
+                ->middleware('role:admin|super_admin|agent_call_center');
+            Route::get('doublons', [ClientDoublonController::class, 'index'])->name('doublons');
+            Route::patch('doublons/{groupe}/ignorer', [ClientDoublonController::class, 'ignorer'])->name('doublons.ignorer');
+            Route::patch('doublons/{groupe}/verifier', [ClientDoublonController::class, 'verifier'])->name('doublons.verifier');
+            Route::patch('doublons/{groupe}/fusionner', [ClientDoublonController::class, 'fusionner'])->name('doublons.fusionner');
+            Route::patch('{client}/enrichissement-profil', [ClientController::class, 'updateEnrichissementProfil'])->name('enrichissement-profil');
+            Route::get('{client}', [ClientController::class, 'show'])->name('show');
+        });
+        Route::prefix('utilisateurs')->name('utilisateurs.')->middleware('role:admin|super_admin')->group(function () {
+            Route::get('/', [UtilisateurBackofficeController::class, 'index'])->name('index');
+            Route::post('/', [UtilisateurBackofficeController::class, 'store'])->name('store');
+            Route::patch('{user}', [UtilisateurBackofficeController::class, 'update'])->name('update');
+            Route::patch('{user}/permissions', [UtilisateurBackofficeController::class, 'updatePermissions'])->name('update-permissions');
+            Route::delete('{user}', [UtilisateurBackofficeController::class, 'destroy'])->name('destroy');
+        });
+
+        // Commande (back-office)
+        Route::prefix('commandes')->name('commandes.')->group(function () {
+            Route::get('/', [CommandeController::class, 'index'])->name('index');
+            Route::get('recherche-pharmacie-proche', [CommandeController::class, 'rechercherPharmacieProche'])->name('recherche-pharmacie');
+            Route::post('bulk-annuler', [CommandeController::class, 'bulkAnnuler'])->name('bulk-annuler')->middleware('role:admin|super_admin|agent_call_center');
+            Route::post('/', [CommandeController::class, 'store'])->name('store')->middleware('role:admin|super_admin|agent_call_center');
+            Route::get('{commande}/recu', [CommandeController::class, 'recu'])->name('recu');
+            Route::get('{commande}/edit', [CommandeController::class, 'edit'])->name('edit')->middleware('role:admin|super_admin|agent_call_center');
+            Route::patch('{commande}', [CommandeController::class, 'update'])->name('update')->middleware('role:admin|super_admin|agent_call_center');
+            Route::get('{commande}', [CommandeController::class, 'show'])->name('show');
+            Route::patch('{commande}/status', [CommandeController::class, 'updateStatus'])->name('update-status');
+            Route::patch('{commande}/acceptation-client', [CommandeController::class, 'setAcceptationClient'])->name('acceptation-client');
+            Route::patch('{commande}/montant-livraison', [CommandeController::class, 'setMontantLivraison'])->name('montant-livraison');
+            Route::patch('{commande}/mode-paiement', [CommandeController::class, 'setModePaiement'])->name('mode-paiement');
+            Route::patch('{commande}/livreur', [CommandeController::class, 'setLivreur'])->name('livreur');
+        });
+
+        Route::prefix('agent')->name('agent.')->middleware('role:agent_call_center|admin|super_admin')->group(function () {
+            Route::redirect('/', '/commandes')->name('index');
+            Route::get('nouvelle-commande', [AgentController::class, 'nouvelleCommande'])->name('nouvelle-commande');
+            Route::post('commande', [AgentController::class, 'storeCommande'])->name('store-commande');
+            Route::post('commande/{commande}/renvoyer-pharmacie', [AgentController::class, 'renvoyerPharmacie'])->name('renvoyer-pharmacie');
+            Route::post('commande/{commande}/renvoyer-pharmacie-partiel', [AgentController::class, 'renvoyerPharmaciePartiel'])->name('renvoyer-pharmacie-partiel');
+            Route::get('recherche-pharmacie', [AgentController::class, 'rechercherPharmacie'])->name('recherche-pharmacie');
+            Route::get('recherche-client', [AgentController::class, 'rechercherClient'])->name('recherche-client');
+            Route::get('recherche-produit', [AgentController::class, 'rechercherProduit'])->name('recherche-produit');
+        });
+    }); // backoffice
 
     // Processus vendeur -> pharmacie
     Route::prefix('pharmacie')->name('pharmacie.')->middleware('role:gerant')->group(function () {
@@ -94,23 +124,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('ordonnances/{ordonnance}/fichier', [OrdonnanceController::class, 'fichier'])
         ->name('ordonnances.fichier');
 
-    // Commande
-    Route::prefix('commandes')->name('commandes.')->group(function () {
-        Route::get('/', [CommandeController::class, 'index'])->name('index');
-        Route::get('recherche-pharmacie-proche', [CommandeController::class, 'rechercherPharmacieProche'])->name('recherche-pharmacie');
-        Route::post('bulk-annuler', [CommandeController::class, 'bulkAnnuler'])->name('bulk-annuler')->middleware('role:admin|super_admin|agent_call_center');
-        Route::post('/', [CommandeController::class, 'store'])->name('store')->middleware('role:admin|super_admin|agent_call_center');
-        Route::get('{commande}/recu', [CommandeController::class, 'recu'])->name('recu');
-        Route::get('{commande}/edit', [CommandeController::class, 'edit'])->name('edit')->middleware('role:admin|super_admin|agent_call_center');
-        Route::patch('{commande}', [CommandeController::class, 'update'])->name('update')->middleware('role:admin|super_admin|agent_call_center');
-        Route::get('{commande}', [CommandeController::class, 'show'])->name('show');
-        Route::patch('{commande}/status', [CommandeController::class, 'updateStatus'])->name('update-status');
-        Route::patch('{commande}/acceptation-client', [CommandeController::class, 'setAcceptationClient'])->name('acceptation-client');
-        Route::patch('{commande}/montant-livraison', [CommandeController::class, 'setMontantLivraison'])->name('montant-livraison');
-        Route::patch('{commande}/mode-paiement', [CommandeController::class, 'setModePaiement'])->name('mode-paiement');
-        Route::patch('{commande}/livreur', [CommandeController::class, 'setLivreur'])->name('livreur');
-    });
-
     Route::prefix('dok-pharma')->name('dok-pharma.')->middleware('role:vendeur|gerant')->group(function () {
         Route::get('/', [DokPharmaController::class, 'dashboard'])->name('dashboard');
         Route::post('/commission/payee', [DokPharmaController::class, 'marquerCommissionPayee'])->name('commission.payee');
@@ -118,17 +131,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/commandes', [DokPharmaController::class, 'index'])->name('commandes');
         Route::post('{commande}/valider', [DokPharmaController::class, 'validerDisponibilite'])->name('valider');
         Route::post('{commande}/valider-retrait', [DokPharmaController::class, 'validerRetrait'])->name('valider-retrait');
-    });
-
-    Route::prefix('agent')->name('agent.')->middleware('role:agent_call_center|admin|super_admin')->group(function () {
-        Route::redirect('/', '/commandes')->name('index');
-        Route::get('nouvelle-commande', [AgentController::class, 'nouvelleCommande'])->name('nouvelle-commande');
-        Route::post('commande', [AgentController::class, 'storeCommande'])->name('store-commande');
-        Route::post('commande/{commande}/renvoyer-pharmacie', [AgentController::class, 'renvoyerPharmacie'])->name('renvoyer-pharmacie');
-        Route::post('commande/{commande}/renvoyer-pharmacie-partiel', [AgentController::class, 'renvoyerPharmaciePartiel'])->name('renvoyer-pharmacie-partiel');
-        Route::get('recherche-pharmacie', [AgentController::class, 'rechercherPharmacie'])->name('recherche-pharmacie');
-        Route::get('recherche-client', [AgentController::class, 'rechercherClient'])->name('recherche-client');
-        Route::get('recherche-produit', [AgentController::class, 'rechercherProduit'])->name('recherche-produit');
     });
 });
 

@@ -19,6 +19,14 @@ class DashboardController extends Controller
         $user = $request->user();
         if (
             $user
+            && $user->hasRole('vendeur')
+            && ! $user->hasAnyRole(['gerant', 'admin', 'super_admin'])
+        ) {
+            return redirect('/dok-pharma/commandes');
+        }
+
+        if (
+            $user
             && $user->hasRole('agent_call_center')
             && ! $user->hasAnyRole(['admin', 'super_admin'])
         ) {

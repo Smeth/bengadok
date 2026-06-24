@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\AuthRedirectPaths;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,6 +25,6 @@ class EnsureUserHasRole
             return $next($request);
         }
 
-        return redirect()->route('dashboard');
+        return redirect(AuthRedirectPaths::homeForUser($request->user()));
     }
 }

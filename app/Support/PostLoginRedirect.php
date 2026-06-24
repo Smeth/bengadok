@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 
 /**
@@ -12,15 +13,37 @@ final class PostLoginRedirect
     public const SESSION_KEY = 'post_login_redirect';
 
     /**
-     * Récupère url.intended si valide, sinon $fallback, et l'enregistre en session.
+     * Récupère url.intended si valide et autorisé pour le rôle, sinon $fallback.
      */
     public static function storeTarget(Request $request, string $fallback): string
     {
+        $user = $request->user();
         $intended = $request->session()->pull('url.intended');
         $target = self::sanitize($intended, $fallback, $request);
+
+        if (! AuthRedirectPaths::pathAllowedForUser($user, $target)) {
+            $target = AuthRedirectPaths::homeForUser($user);
+        }
+
         $request->session()->put(self::SESSION_KEY, $target);
 
         return $target;
+    }
+
+    public static function resolveStoredTarget(Request $request, ?User $user): string
+    {
+        $stored = $request->session()->pull(self::SESSION_KEY);
+        $fallback = AuthRedirectPaths::homeForUser($user);
+
+        if (! is_string($stored) || $stored === '') {
+            return $fallback;
+        }
+
+        if (! AuthRedirectPaths::pathAllowedForUser($user, $stored)) {
+            return $fallback;
+        }
+
+        return $stored;
     }
 
     private static function sanitize(mixed $url, string $fallback, Request $request): string

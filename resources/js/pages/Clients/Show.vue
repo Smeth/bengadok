@@ -29,6 +29,7 @@ const props = defineProps<{
         tel: string;
         tel_secondaire?: string;
         adresse: string;
+        arrondissement?: string | null;
         zone?: string;
         client_depuis: string;
         derniere_commande: string;
@@ -113,6 +114,19 @@ function telAffiche(tel: string) {
     if (digits.length >= 9) return `+242 ${t}`;
     return t;
 }
+
+/** Arrondissement saisi à la commande, sinon zone admin (Paramètres). */
+const zoneOuArrondissementAffiche = computed(() => {
+    const arr = props.client.arrondissement?.trim();
+    if (arr) {
+        return `${arr}, Brazzaville`;
+    }
+    const zone = props.client.zone?.trim();
+    if (zone) {
+        return `${zone}, Brazzaville`;
+    }
+    return '—';
+});
 </script>
 
 <template>
@@ -263,11 +277,7 @@ function telAffiche(tel: string) {
                                     Zone / Arrondissement
                                 </p>
                                 <p class="font-medium text-[#459cd1]">
-                                    {{
-                                        client.zone
-                                            ? `${client.zone}, Brazzaville`
-                                            : '—'
-                                    }}
+                                    {{ zoneOuArrondissementAffiche }}
                                 </p>
                             </div>
                         </div>

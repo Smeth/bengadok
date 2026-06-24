@@ -87,7 +87,6 @@ withDefaults(
 
     <PharmacyLayout
         page-title="Dashboard Pharmacie"
-        variant="plain"
         :pharmacies-disponibles="pharmacies_disponibles"
         :pharmacie-id="pharmacie_id ?? undefined"
         :pharmacie-designation="pharmacie?.designation"

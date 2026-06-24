@@ -2,13 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\SeedsRoles;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsRoles;
 
     public function test_guests_are_redirected_to_the_login_page()
     {
@@ -18,10 +19,9 @@ class DashboardTest extends TestCase
 
     public function test_authenticated_users_can_visit_the_dashboard()
     {
-        $user = User::factory()->create();
-        $this->actingAs($user);
+        $user = $this->userWithRole('admin');
 
-        $response = $this->get(route('dashboard'));
+        $response = $this->actingAs($user)->get(route('dashboard'));
         $response->assertOk();
     }
 }

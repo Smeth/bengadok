@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+            'backoffice' => \App\Http\Middleware\EnsureBackofficeAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -30,6 +30,14 @@ class FortifyServiceProvider extends ServiceProvider
             \Laravel\Fortify\Contracts\TwoFactorLoginResponse::class,
             \App\Http\Responses\TwoFactorLoginResponse::class
         );
+        $this->app->singleton(
+            \Laravel\Fortify\Contracts\VerifyEmailResponse::class,
+            \App\Http\Responses\VerifyEmailResponse::class
+        );
+        $this->app->bind(
+            \Laravel\Fortify\Http\Responses\RedirectAsIntended::class,
+            \App\Http\Responses\SafeRedirectAsIntended::class
+        );
     }
 
     /**

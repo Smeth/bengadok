@@ -114,7 +114,13 @@ watch(
 watch(
     () => props.filters.criteres,
     (v) => {
-        if (Array.isArray(v) && v.length > 0) criteresActifs.value = v;
+        if (!Array.isArray(v)) {
+            return;
+        }
+        criteresActifs.value =
+            v.length > 0
+                ? v
+                : Object.keys(props.criteresDisponibles ?? {});
     },
     { immediate: true },
 );
@@ -253,7 +259,9 @@ const statutLabels: Record<string, string> = {
                 </p>
                 <p class="mb-3 text-xs text-muted-foreground">
                     Cochez les critères utilisés pour regrouper les médicaments
-                    similaires. Au moins un doit rester actif.
+                    similaires. Au moins un doit rester actif. Les champs vides
+                    (forme, dosage) ne sont jamais pris en compte. La liste se
+                    recalcule à chaque changement de critère.
                 </p>
                 <div class="flex flex-wrap gap-3">
                     <label

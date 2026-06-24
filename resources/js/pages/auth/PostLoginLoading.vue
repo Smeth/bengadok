@@ -19,7 +19,7 @@ function safeRedirectUrl(): string {
     const u = props.redirectTo;
     return typeof u === 'string' && u.startsWith('/') && !u.startsWith('//')
         ? u
-        : '/dashboard';
+        : '/login';
 }
 
 onMounted(() => {
