@@ -82,6 +82,8 @@ chmod -R 775 storage bootstrap/cache
 chown -R root:www-data storage bootstrap/cache
 ```
 
+> **Note** : si Git refuse ensuite les commandes avec `fatal: dubious ownership in repository` (propriétaire du dossier différent de l'utilisateur SSH), le workflow `ci.yml` exécute automatiquement `git config --global --add safe.directory` avant chaque `git fetch` — aucune action manuelle requise.
+
 ### Configuration MySQL
 ```sql
 CREATE DATABASE bengadok CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
