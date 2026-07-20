@@ -155,13 +155,6 @@ function promouvoir(prospect: ProspectRow) {
         >
             <ClientsSectionNav active="prospects" />
 
-            <p class="max-w-3xl text-sm text-muted-foreground">
-                Contacts créés via les commandes qui ne sont pas encore
-                promus «&nbsp;client&nbsp;». La promotion est automatique
-                dès qu’une commande est validée ou livrée ; vous pouvez aussi
-                promouvoir manuellement.
-            </p>
-
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div
                     class="rounded-xl border border-border bg-white p-4 shadow-sm dark:bg-white/[0.96]"
