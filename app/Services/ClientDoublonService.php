@@ -179,14 +179,25 @@ class ClientDoublonService
     }
 
     /**
+     * Suggestion par défaut du profil à conserver : le plus de commandes valides,
+     * puis à égalité le plus ancien (ancienneté en base), sur la fiche la plus complète.
+     * Reste une suggestion : l'utilisateur peut choisir un autre profil au moment de la fusion.
+     *
      * @param  iterable<Client>|Collection<int, Client>  $clients
      */
     private function choisirPrincipal(iterable $clients): int
     {
         $col = Collection::wrap($clients);
-        $picked = $col->sortByDesc(fn ($c) => $c->commandes->filter(fn ($cmd) => in_array($cmd->status, Commande::STATUTS_COMPTABILISES_CLIENT, true))->count())
-            ->sortByDesc(fn ($c) => $c->created_at?->timestamp ?? 0)
-            ->first();
+        $picked = $col->sort(function (Client $a, Client $b) {
+            $countA = $a->commandes->filter(fn ($cmd) => in_array($cmd->status, Commande::STATUTS_COMPTABILISES_CLIENT, true))->count();
+            $countB = $b->commandes->filter(fn ($cmd) => in_array($cmd->status, Commande::STATUTS_COMPTABILISES_CLIENT, true))->count();
+
+            if ($countA !== $countB) {
+                return $countB <=> $countA;
+            }
+
+            return ($a->created_at?->timestamp ?? 0) <=> ($b->created_at?->timestamp ?? 0);
+        })->first();
 
         if ($picked === null) {
             throw new \RuntimeException('Groupe doublons clients vide.');
@@ -210,11 +221,15 @@ class ClientDoublonService
     /**
      * Fusionne les profils: garde le principal, transfère les commandes, supprime les autres.
      * Si $ajouterTelSecondaire, le numéro du premier doublon est ajouté comme tel_secondaire sur le principal.
+     * $principalId permet à l'utilisateur d'imposer le profil à conserver, sinon on retombe
+     * sur la suggestion automatique du groupe (voir {@see choisirPrincipal}).
      */
-    public function fusionner(GroupeDoublonsClient $groupe, bool $ajouterTelSecondaire = false): void
+    public function fusionner(GroupeDoublonsClient $groupe, bool $ajouterTelSecondaire = false, ?int $principalId = null): void
     {
         $groupe->load('clients');
-        $principal = $groupe->principalClient ?? $groupe->clients->first();
+        $principal = ($principalId !== null ? $groupe->clients->firstWhere('id', $principalId) : null)
+            ?? $groupe->principalClient
+            ?? $groupe->clients->first();
         $secondaires = $groupe->clients->filter(fn ($c) => $c->id !== $principal->id);
 
         DB::transaction(function () use ($principal, $secondaires, $groupe, $ajouterTelSecondaire) {

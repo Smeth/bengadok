@@ -128,7 +128,18 @@ class ClientDoublonController extends Controller
     public function fusionner(Request $request, GroupeDoublonsClient $groupe): RedirectResponse
     {
         $ajouterTelSecondaire = filter_var($request->input('ajouter_tel_secondaire', false), FILTER_VALIDATE_BOOLEAN);
-        $this->doublonService->fusionner($groupe, $ajouterTelSecondaire);
+
+        $principalId = $request->input('principal_client_id');
+        $principalId = $principalId !== null ? (int) $principalId : null;
+
+        if ($principalId !== null) {
+            $groupe->load('clients');
+            if (! $groupe->clients->contains('id', $principalId)) {
+                return redirect()->route('clients.doublons')->with('error', 'Client invalide.');
+            }
+        }
+
+        $this->doublonService->fusionner($groupe, $ajouterTelSecondaire, $principalId);
 
         return redirect()->route('clients.doublons')->with('success', 'Profils fusionnés avec succès.');
     }

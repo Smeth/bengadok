@@ -385,7 +385,7 @@ function logout() {
                     <button
                         v-if="!sidebarCollapsed"
                         type="button"
-                        class="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2.5 text-[14px] font-bold text-[#5c5959] transition-colors hover:bg-[rgba(92,89,89,0.08)] hover:text-[#5c5959]"
+                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-bold text-[#5c5959] transition-colors hover:bg-[rgba(92,89,89,0.08)]"
                         @click="logout"
                     >
                         <div
@@ -393,7 +393,7 @@ function logout() {
                         >
                             <LogOut class="size-5 shrink-0" />
                         </div>
-                        <span>Déconnexion</span>
+                        <span class="truncate leading-tight">Déconnexion</span>
                     </button>
                     <button
                         v-else

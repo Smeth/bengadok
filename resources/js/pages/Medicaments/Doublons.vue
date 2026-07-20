@@ -11,6 +11,8 @@ import {
     Merge,
     AlertCircle,
     CheckCheck,
+    TrendingUp,
+    Coins,
 } from 'lucide-vue-next';
 import { ref, watch, computed } from 'vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
@@ -206,6 +208,35 @@ function verifier(g: Groupe) {
 }
 
 const peutFusionner = computed(() => principalIdChoisi.value != null);
+
+const principalPourModal = computed(() => {
+    const g = groupeEnFusion.value;
+    if (!g?.medicaments?.length) return null;
+    return (
+        g.medicaments.find(
+            (m: MedicamentInGroup) => m.id === principalIdChoisi.value,
+        ) ?? null
+    );
+});
+
+const dupliquesPourModal = computed(() => {
+    const g = groupeEnFusion.value;
+    if (!g?.medicaments?.length) return [];
+    return g.medicaments.filter(
+        (m: MedicamentInGroup) => m.id !== principalIdChoisi.value,
+    );
+});
+
+const premierDuplique = computed(() => dupliquesPourModal.value[0] ?? null);
+
+const totalApresFusion = computed(() => {
+    const g = groupeEnFusion.value;
+    if (!g) return { ventes: 0, ca: 0 };
+    return {
+        ventes: g.total_si_fusion?.ventes ?? 0,
+        ca: g.total_si_fusion?.ca ?? 0,
+    };
+});
 
 const statutBadgeClasses: Record<string, string> = {
     en_attente: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50',
@@ -642,16 +673,19 @@ const statutLabels: Record<string, string> = {
                             <p
                                 class="mt-0.5 text-amber-700 dark:text-amber-300"
                             >
-                                Un seul médicament sera conservé. Les autres
-                                seront supprimés de la base. Choisissez celui à
-                                conserver.
+                                Les fiches sources seront fusionnées dans le
+                                <strong>médicament de référence</strong>
+                                (colonne de droite) : leurs ventes et leur
+                                historique lui seront rattachés, puis les
+                                fiches doublons disparaîtront.
                             </p>
                         </div>
                     </div>
 
                     <div>
                         <h4 class="mb-3 text-sm font-semibold text-foreground">
-                            Quel médicament souhaitez-vous conserver ?
+                            Quel médicament souhaitez-vous conserver comme
+                            référence ?
                         </h4>
                         <div class="space-y-2">
                             <label
@@ -692,15 +726,142 @@ const statutLabels: Record<string, string> = {
                         </div>
                     </div>
 
-                    <div
-                        class="rounded-lg border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-700 dark:bg-slate-800/50"
-                    >
-                        <p class="text-xs text-muted-foreground">
-                            <strong>{{
-                                (groupeEnFusion?.medicaments?.length ?? 1) - 1
-                            }}</strong>
-                            médicament(s) seront supprimés.
-                        </p>
+                    <!-- Aperçu : fiches sources (gauche) puis référence conservée (droite) -->
+                    <div>
+                        <h4
+                            class="mb-1.5 text-sm font-semibold text-foreground"
+                        >
+                            Aperçu du résultat de la fusion
+                        </h4>
+                        <div class="grid gap-2.5 sm:grid-cols-2">
+                            <div
+                                class="rounded-lg border-2 border-red-200 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-900/20"
+                            >
+                                <span
+                                    class="mb-2 inline-block rounded bg-red-600 px-2 py-0.5 text-[10px] font-medium text-white sm:text-xs"
+                                >
+                                    Fiches sources (absorbées · disparition)
+                                </span>
+                                <template v-if="premierDuplique">
+                                    <p
+                                        class="text-sm font-semibold text-foreground"
+                                    >
+                                        {{ designationComplete(premierDuplique) }}
+                                    </p>
+                                    <p
+                                        class="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm"
+                                    >
+                                        <Pill class="size-4 shrink-0" />
+                                        {{ premierDuplique.forme || '—' }}
+                                    </p>
+                                    <p
+                                        class="flex items-center gap-1.5 text-xs sm:text-sm"
+                                    >
+                                        <TrendingUp class="size-4 shrink-0" />
+                                        {{ premierDuplique.ventes }} ventes ·
+                                        {{
+                                            Number(
+                                                premierDuplique.ca,
+                                            ).toLocaleString('fr-FR')
+                                        }}
+                                        xaf
+                                    </p>
+                                    <p
+                                        v-if="dupliquesPourModal.length > 1"
+                                        class="mt-1.5 text-xs text-muted-foreground"
+                                    >
+                                        + {{ dupliquesPourModal.length - 1 }}
+                                        autre(s) fiche(s) source(s)
+                                    </p>
+                                </template>
+                            </div>
+                            <div
+                                class="rounded-lg border-2 border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/20"
+                            >
+                                <span
+                                    class="mb-2 inline-block rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-white sm:text-xs"
+                                >
+                                    Médicament de référence (conservé)
+                                </span>
+                                <template v-if="principalPourModal">
+                                    <p
+                                        class="text-sm font-semibold text-foreground"
+                                    >
+                                        {{
+                                            designationComplete(
+                                                principalPourModal,
+                                            )
+                                        }}
+                                    </p>
+                                    <p
+                                        class="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm"
+                                    >
+                                        <Pill class="size-4 shrink-0" />
+                                        {{ principalPourModal.forme || '—' }}
+                                    </p>
+                                    <p
+                                        class="flex items-center gap-1.5 text-xs sm:text-sm"
+                                    >
+                                        <TrendingUp class="size-4 shrink-0" />
+                                        {{ principalPourModal.ventes }} ventes
+                                        actuelles ·
+                                        {{
+                                            Number(
+                                                principalPourModal.ca,
+                                            ).toLocaleString('fr-FR')
+                                        }}
+                                        xaf
+                                    </p>
+                                </template>
+                                <p v-else class="text-xs text-muted-foreground">
+                                    Sélectionnez un médicament ci-dessus.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Résumé de la fusion -->
+                    <div>
+                        <h4
+                            class="mb-1.5 text-sm font-semibold text-foreground"
+                        >
+                            Résumé de la fusion
+                        </h4>
+                        <ul
+                            class="space-y-1 text-xs text-muted-foreground sm:text-sm"
+                        >
+                            <li
+                                v-if="principalPourModal"
+                                class="flex items-center gap-2"
+                            >
+                                <CheckCheck
+                                    class="size-3.5 shrink-0 text-[#459cd1] sm:size-4"
+                                />
+                                Médicament de référence :
+                                {{ designationComplete(principalPourModal) }}
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <CheckCheck
+                                    class="size-3.5 shrink-0 text-[#459cd1] sm:size-4"
+                                />
+                                {{ dupliquesPourModal.length }} fiche(s)
+                                source(s) seront fusionnée(s) sur ce
+                                médicament (ventes et historique rattachés)
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <Coins
+                                    class="size-3.5 shrink-0 text-[#459cd1] sm:size-4"
+                                />
+                                Total après fusion :
+                                {{ totalApresFusion.ventes }} ventes,
+                                {{
+                                    Number(
+                                        totalApresFusion.ca,
+                                    ).toLocaleString('fr-FR')
+                                }}
+                                xaf
+                            </li>
+                        </ul>
                     </div>
                 </div>
 

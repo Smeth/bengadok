@@ -162,6 +162,20 @@ class MedicamentController extends Controller
 
         $referencePu = (float) $produit->pu;
 
+        // Prix moyen réellement pratiqué par pharmacie, calculé à partir des ventes
+        // confirmées : la table produit_pharmacie n'est jamais alimentée en prix.
+        $ventesParPharmacie = DB::table('commande_produit')
+            ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
+            ->where('commande_produit.produit_id', $produit->id)
+            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->where(function ($q) {
+                $q->whereNull('commande_produit.status')
+                    ->orWhere('commande_produit.status', '<>', 'indisponible');
+            })
+            ->groupBy('commandes.pharmacie_id')
+            ->select('commandes.pharmacie_id', DB::raw('AVG(commande_produit.prix_unitaire) as prix_moyen'))
+            ->pluck('prix_moyen', 'pharmacie_id');
+
         $pharmaciesRows = Pharmacie::query()
             ->orderBy('pharmacies.designation')
             ->leftJoin('produit_pharmacie', function ($join) use ($produit) {
@@ -171,7 +185,19 @@ class MedicamentController extends Controller
             ->select('pharmacies.id', 'pharmacies.designation', 'produit_pharmacie.prix as pharmacie_prix')
             ->get();
 
-        $prixParLigne = $pharmaciesRows->map(fn ($row) => (float) ($row->pharmacie_prix ?? $referencePu));
+        $resolvePrix = function ($row) use ($ventesParPharmacie, $referencePu) {
+            if ($row->pharmacie_prix !== null && (float) $row->pharmacie_prix > 0) {
+                return (float) $row->pharmacie_prix;
+            }
+
+            if (isset($ventesParPharmacie[$row->id])) {
+                return round((float) $ventesParPharmacie[$row->id], 0);
+            }
+
+            return $referencePu;
+        };
+
+        $prixParLigne = $pharmaciesRows->map($resolvePrix);
         $prixPositifs = $prixParLigne->filter(fn ($v) => $v > 0)->values();
 
         if ($prixPositifs->isEmpty()) {
@@ -188,8 +214,8 @@ class MedicamentController extends Controller
         $ecartPct = $prixMin > 0 ? (int) round(($ecart / $prixMin) * 100) : 0;
         $plusieursTarifs = $prixMax - $prixMin > 0.009;
 
-        $comparaison = $pharmaciesRows->map(function ($row) use ($referencePu, $prixMin, $prixMax, $plusieursTarifs) {
-            $prix = (float) ($row->pharmacie_prix ?? $referencePu);
+        $comparaison = $pharmaciesRows->map(function ($row) use ($resolvePrix, $prixMin, $prixMax, $plusieursTarifs) {
+            $prix = $resolvePrix($row);
             $hasPrice = $prix > 0;
 
             return [

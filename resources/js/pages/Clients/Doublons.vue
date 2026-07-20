@@ -76,6 +76,7 @@ const searchQuery = ref(props.filters.search ?? '');
 const modalFusionOpen = ref(false);
 const groupeEnFusion = ref<Groupe | null>(null);
 const optionNumeroSecondaire = ref(true);
+const principalIdChoisi = ref<number | null>(null);
 const showIgnorerModal = ref(false);
 const groupeToIgnorer = ref<Groupe | null>(null);
 
@@ -101,13 +102,18 @@ function nomComplet(c: ClientInGroup) {
 const principalPourModal = computed(() => {
     const g = groupeEnFusion.value;
     if (!g?.clients?.length) return null;
-    return g.clients.find((c) => c.is_principal) ?? g.clients[0];
+    return (
+        g.clients.find((c: ClientInGroup) => c.id === principalIdChoisi.value) ??
+        null
+    );
 });
 
 const dupliquesPourModal = computed(() => {
     const g = groupeEnFusion.value;
     if (!g?.clients?.length) return [];
-    return g.clients.filter((c) => !c.is_principal);
+    return g.clients.filter(
+        (c: ClientInGroup) => c.id !== principalIdChoisi.value,
+    );
 });
 
 const premierDuplique = computed(() => dupliquesPourModal.value[0] ?? null);
@@ -125,24 +131,33 @@ const totalApresFusion = computed(() => {
     };
 });
 
+const peutFusionner = computed(() => principalIdChoisi.value != null);
+
 function ouvrirModalFusion(g: Groupe) {
     if (g.statut === 'fusionne') return;
     groupeEnFusion.value = g;
     optionNumeroSecondaire.value = true;
+    const suggere = g.clients.find((c) => c.is_principal) ?? g.clients[0];
+    principalIdChoisi.value = suggere?.id ?? null;
     modalFusionOpen.value = true;
 }
 
 function fermerModalFusion() {
     modalFusionOpen.value = false;
     groupeEnFusion.value = null;
+    principalIdChoisi.value = null;
 }
 
 function confirmerFusion() {
     const g = groupeEnFusion.value;
-    if (!g) return;
+    const pid = principalIdChoisi.value;
+    if (!g || !pid) return;
     router.patch(
         `/clients/doublons/${g.id}/fusionner`,
-        { ajouter_tel_secondaire: optionNumeroSecondaire.value },
+        {
+            ajouter_tel_secondaire: optionNumeroSecondaire.value,
+            principal_client_id: pid,
+        },
         { preserveScroll: true },
     );
     fermerModalFusion();
@@ -533,9 +548,52 @@ const statutLabels: Record<string, string> = {
                             >
                                 Les profils sources seront supprimés : leurs
                                 commandes seront rattachées au
-                                <strong>profil de référence</strong> (colonne
-                                de droite), future fiche cliente unique.
+                                <strong>profil de référence</strong> que vous
+                                choisissez ci-dessous, future fiche cliente
+                                unique.
                             </p>
+                        </div>
+                    </div>
+
+                    <!-- Choix du profil de référence -->
+                    <div>
+                        <h4 class="mb-3 text-sm font-semibold text-foreground">
+                            Quel profil souhaitez-vous conserver comme
+                            référence ?
+                        </h4>
+                        <div class="space-y-2">
+                            <label
+                                v-for="c in groupeEnFusion?.clients ?? []"
+                                :key="c.id"
+                                class="flex cursor-pointer items-start gap-3 rounded-lg border-2 p-3 transition-colors"
+                                :class="
+                                    principalIdChoisi === c.id
+                                        ? 'border-[#459cd1] bg-[#459cd1]/10'
+                                        : 'border-slate-200 hover:border-slate-300 dark:border-slate-700'
+                                "
+                            >
+                                <input
+                                    v-model="principalIdChoisi"
+                                    type="radio"
+                                    :value="c.id"
+                                    name="principal_client"
+                                    class="mt-1 size-4"
+                                />
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-semibold text-foreground">
+                                        {{ nomComplet(c) }}
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">
+                                        {{ c.tel }} ·
+                                        {{ c.nb_commandes }} commandes · Créé
+                                        le {{ c.created_at }}
+                                    </p>
+                                </div>
+                                <CheckCheck
+                                    v-if="principalIdChoisi === c.id"
+                                    class="size-5 shrink-0 text-[#459cd1]"
+                                />
+                            </label>
                         </div>
                     </div>
 
@@ -785,6 +843,7 @@ const statutLabels: Record<string, string> = {
                     </Button>
                     <Button
                         class="h-9 bg-[#459cd1] px-4 text-sm text-white hover:bg-[#3a8ab8]"
+                        :disabled="!peutFusionner"
                         @click="confirmerFusion"
                     >
                         Fusionner les profils

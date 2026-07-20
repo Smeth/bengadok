@@ -157,7 +157,7 @@ class ClientController extends Controller
 
     /**
      * Prospects : fiches où {@see Client::$promu_client_le} est encore null (aucune commande
-     * ayant encore déclenché la promotion suite à un statut admin validée ou retiree).
+     * encore marquée livrée — statut admin retiree — n'a déclenché la promotion en client).
      */
     public function prospects(Request $request): Response
     {
