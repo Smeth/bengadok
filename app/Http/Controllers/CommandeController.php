@@ -302,6 +302,7 @@ class CommandeController extends Controller
                 'quantite' => $quantite,
                 'prix_unitaire' => $prixUnitaire,
                 'status' => 'en_attente',
+                'type' => $produit->type,
             ]);
         }
 
@@ -368,6 +369,8 @@ class CommandeController extends Controller
 
     public function updateStatus(Request $request, Commande $commande): RedirectResponse
     {
+        $this->authorize('manageStatut', $commande);
+
         $validated = $request->validate([
             'status' => 'required|in:nouvelle,en_attente,validee,retiree,annulee',
             'motif_annulation' => ['required_if:status,annulee', 'nullable', 'string', 'max:100', Rule::exists('motifs_annulation', 'slug')],
@@ -496,6 +499,8 @@ class CommandeController extends Controller
 
     public function setAcceptationClient(Request $request, Commande $commande): RedirectResponse
     {
+        $this->authorize('manageStatut', $commande);
+
         $validated = $request->validate([
             'acceptation_client' => 'required|boolean',
         ]);
@@ -507,6 +512,8 @@ class CommandeController extends Controller
 
     public function setMontantLivraison(Request $request, Commande $commande): RedirectResponse
     {
+        $this->authorize('manageStatut', $commande);
+
         if ($commande->status === 'en_attente' && $commande->status_pharmacie === 'indisponible') {
             return back()->with('error', 'Impossible de définir les frais de livraison tant qu\'aucun médicament n\'est disponible.');
         }

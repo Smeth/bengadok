@@ -162,6 +162,11 @@ class StoreCommandeRequest extends FormRequest
             'client_sexe' => 'nullable|in:M,F',
             'pharmacie_id' => 'required|exists:pharmacies,id',
             'beneficiaire' => 'nullable|string|max:100',
+            // Nullable : CommandeService retombe sur now()/now()->format('H:i') si absents.
+            // Sans ces règles, un appelant qui les envoie les voyait silencieusement ignorées
+            // (validated() ne conserve que les clés déclarées dans rules()).
+            'date' => 'nullable|date',
+            'heurs' => 'nullable|string|max:10',
             'produits' => 'required|array|min:1',
             'produits.*.designation' => 'required|string|max:255',
             'produits.*.dosage' => 'nullable|string|max:50',

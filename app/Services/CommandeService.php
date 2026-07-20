@@ -145,6 +145,7 @@ class CommandeService
                 'quantite' => $quantite,
                 'prix_unitaire' => $prixUnitaire,
                 'status' => 'en_attente',
+                'type' => $produit->type,
             ]);
         }
 

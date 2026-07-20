@@ -9,6 +9,7 @@ use App\Models\Livreur;
 use App\Models\ModePaiement;
 use App\Models\Pharmacie;
 use App\Models\Produit;
+use App\Services\CommandeMontantCalculator;
 use App\Services\CommandeService;
 use App\Services\PharmacieProximiteService;
 use Illuminate\Http\Request;
@@ -103,19 +104,28 @@ class AgentController extends Controller
             return back()->with('error', 'Aucune autre pharmacie proche disponible.');
         }
 
-        $commande->update([
-            'pharmacie_id' => $pharmacieSuivante->id,
-            'pharmacie_refusee_id' => $pharmacieRefuseeId,
-            'status' => 'nouvelle',
-            'status_pharmacie' => 'nouvelle',
-        ]);
-
         foreach ($commande->produits as $p) {
             $commande->produits()->updateExistingPivot($p->id, [
                 'status' => 'en_attente',
                 'quantite_confirmee' => null,
             ]);
         }
+
+        // Montants recalculés sur les lignes redevenues « en_attente » : évite d'afficher
+        // les prix/statuts figés par l'ancienne pharmacie tant que la nouvelle n'a pas validé.
+        $commande->load('produits');
+        $montants = CommandeMontantCalculator::fromProduitsRelation($commande->produits, false);
+        $liv = $commande->montantLivraisonClient();
+
+        $commande->update([
+            'pharmacie_id' => $pharmacieSuivante->id,
+            'pharmacie_refusee_id' => $pharmacieRefuseeId,
+            'status' => 'nouvelle',
+            'status_pharmacie' => 'nouvelle',
+            'prix_medicaments' => $montants['prix_medicaments'],
+            'prix_parapharma' => $montants['prix_parapharma'],
+            'prix_total' => $montants['prix_lignes'] + $liv,
+        ]);
 
         return back()->with('success', "Commande renvoyée à {$pharmacieSuivante->designation}.");
     }
@@ -150,13 +160,16 @@ class AgentController extends Controller
         foreach ($validated['lignes'] as $ligne) {
             $produitId = (int) $ligne['produit_id'];
             $quantiteEnfant = (int) $ligne['quantite'];
-            $pivot = $commande->produits->firstWhere('id', $produitId)?->pivot;
+            $produitLigne = $commande->produits->firstWhere('id', $produitId);
+            $pivot = $produitLigne?->pivot;
             if (! $pivot) {
                 continue;
             }
             $quantiteParent = $pivot->quantite;
             $quantiteConfirmee = (int) ($pivot->quantite_confirmee ?? 0);
             $prixUnitaire = (float) $pivot->prix_unitaire;
+            // Le type est repris tel quel de la ligne d'origine (déjà figé ou, à défaut, catalogue courant).
+            $typeLigne = $pivot->type ?? $produitLigne->type;
 
             if ($quantiteEnfant <= 0 || $quantiteEnfant > $quantiteParent - $quantiteConfirmee) {
                 continue;
@@ -177,6 +190,7 @@ class AgentController extends Controller
                 'produit_id' => $produitId,
                 'quantite' => $quantiteEnfant,
                 'prix_unitaire' => $prixUnitaire,
+                'type' => $typeLigne,
             ];
         }
 
@@ -204,25 +218,34 @@ class AgentController extends Controller
             'status_pharmacie' => 'nouvelle',
         ]);
 
-        $prixTotalEnfant = 0;
         foreach ($produitsEnfant as $p) {
             $commandeEnfant->produits()->attach($p['produit_id'], [
                 'quantite' => $p['quantite'],
                 'prix_unitaire' => $p['prix_unitaire'],
                 'status' => 'en_attente',
+                'type' => $p['type'],
             ]);
-            $prixTotalEnfant += $p['quantite'] * $p['prix_unitaire'];
         }
+
+        // Enfant : toutes les lignes viennent d'être attachées « en_attente » (rien encore
+        // triagé par la nouvelle pharmacie) → somme brute, comme à la création d'une commande.
+        $montantsEnfant = CommandeMontantCalculator::fromInputLines($produitsEnfant);
+        $livEnfant = $commandeEnfant->montantLivraisonClient();
         $commandeEnfant->update([
-            'prix_medicaments' => $prixTotalEnfant,
-            'prix_total' => $prixTotalEnfant,
+            'prix_medicaments' => $montantsEnfant['prix_medicaments'],
+            'prix_parapharma' => $montantsEnfant['prix_parapharma'],
+            'prix_total' => $montantsEnfant['prix_lignes'] + $livEnfant,
         ]);
 
+        // Parent : lignes déjà triagées par la pharmacie (disponible/partiel/indisponible)
+        // → on exclut les indisponibles, comme partout ailleurs dans le calcul des montants.
         $commande->load('produits');
-        $prixParent = $commande->produits->sum(fn ($p) => $p->pivot->quantite * (float) $p->pivot->prix_unitaire);
+        $montantsParent = Commande::computeMontantsFromProduits($commande->produits);
+        $livParent = $commande->montantLivraisonClient();
         $commande->update([
-            'prix_medicaments' => $prixParent,
-            'prix_total' => $prixParent,
+            'prix_medicaments' => $montantsParent['prix_medicaments'],
+            'prix_parapharma' => $montantsParent['prix_parapharma'],
+            'prix_total' => $montantsParent['prix_lignes'] + $livParent,
         ]);
 
         $pharmacie = Pharmacie::findOrFail($pharmacieId);

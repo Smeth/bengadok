@@ -221,41 +221,43 @@ class PharmacieDashboardService
     }
 
     /**
+     * Priorité au type figé sur la ligne de commande (commande_produit.type) sur le type
+     * catalogue courant (produits.type) : évite qu'un changement ultérieur du type au
+     * catalogue ne reclasse rétroactivement une commande déjà passée.
+     *
      * @param  \Illuminate\Database\Query\Builder  $query
      */
-    private function scopeProduitParapharma($query, string $produitsAlias = 'produits'): void
+    private function scopeProduitParapharma($query, string $produitsAlias = 'produits', string $commandeProduitAlias = 'commande_produit'): void
     {
         $types = AppSetting::parapharmaConfig()['produit_types'];
+        $typeExpr = "COALESCE({$commandeProduitAlias}.type, {$produitsAlias}.type)";
 
         if ($types !== []) {
-            $query->whereIn("{$produitsAlias}.type", $types);
+            $list = collect($types)->map(fn (string $t) => "'".addslashes($t)."'")->implode(',');
+            $query->whereRaw("{$typeExpr} IN ({$list})");
 
             return;
         }
 
-        $query->whereRaw("LOWER({$produitsAlias}.type) LIKE ?", ['%parapharm%']);
+        $query->whereRaw("LOWER({$typeExpr}) LIKE ?", ['%parapharm%']);
     }
 
     /**
      * @param  \Illuminate\Database\Query\Builder  $query
      */
-    private function scopeProduitMedicament($query, string $produitsAlias = 'produits'): void
+    private function scopeProduitMedicament($query, string $produitsAlias = 'produits', string $commandeProduitAlias = 'commande_produit'): void
     {
         $types = AppSetting::parapharmaConfig()['produit_types'];
+        $typeExpr = "COALESCE({$commandeProduitAlias}.type, {$produitsAlias}.type)";
 
         if ($types !== []) {
-            $query->where(function ($q) use ($types, $produitsAlias) {
-                $q->whereNull("{$produitsAlias}.type")
-                    ->orWhereNotIn("{$produitsAlias}.type", $types);
-            });
+            $list = collect($types)->map(fn (string $t) => "'".addslashes($t)."'")->implode(',');
+            $query->whereRaw("({$typeExpr} IS NULL OR {$typeExpr} NOT IN ({$list}))");
 
             return;
         }
 
-        $query->where(function ($q) use ($produitsAlias) {
-            $q->whereNull("{$produitsAlias}.type")
-                ->orWhereRaw("LOWER({$produitsAlias}.type) NOT LIKE ?", ['%parapharm%']);
-        });
+        $query->whereRaw("({$typeExpr} IS NULL OR LOWER({$typeExpr}) NOT LIKE ?)", ['%parapharm%']);
     }
 
     /**

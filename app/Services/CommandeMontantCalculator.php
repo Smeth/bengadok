@@ -36,7 +36,9 @@ final class CommandeMontantCalculator
             $qte = $pivot->quantite_confirmee ?? $pivot->quantite;
             $montant = (float) $qte * (float) $pivot->prix_unitaire;
 
-            if (self::isParapharmaType($produit->type)) {
+            // Instantané pris à la commande si disponible, sinon type catalogue actuel
+            // (lignes historiques antérieures à l'ajout de commande_produit.type).
+            if (self::isParapharmaType($pivot->type ?? $produit->type)) {
                 $para += $montant;
             } else {
                 $med += $montant;

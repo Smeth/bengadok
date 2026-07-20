@@ -62,4 +62,21 @@ class CommandePolicy
 
         return in_array($commande->status, ['validee', 'a_preparer', 'retiree'], true);
     }
+
+    /**
+     * Changer le statut administratif (valider/livrer/annuler), le montant de livraison
+     * ou l'acceptation client — actions déjà réservées au back-office par le middleware
+     * de route ; la policy ajoute la même défense en profondeur que sur les autres actions.
+     */
+    public function manageStatut(User $user, Commande $commande): bool
+    {
+        if (! $user->hasAnyRole(['admin', 'super_admin', 'agent_call_center'])) {
+            return false;
+        }
+        if ($user->pharmacie_id && ! $user->hasAnyRole(['admin', 'super_admin'])) {
+            return $commande->pharmacie_id === $user->pharmacie_id;
+        }
+
+        return true;
+    }
 }

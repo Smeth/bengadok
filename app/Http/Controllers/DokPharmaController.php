@@ -279,6 +279,9 @@ class DokPharmaController extends Controller
         if (! $pharmacieId || $commande->pharmacie_id != $pharmacieId) {
             abort(403);
         }
+        if (! in_array($commande->status_pharmacie, ['nouvelle', 'attente_confirmation', 'indisponible'], true)) {
+            return back()->with('error', 'Cette commande a déjà été validée par l\'administrateur et ne peut plus être modifiée.');
+        }
 
         // Charger les produits pour connaître les quantités demandées
         $commande->load('produits');
@@ -288,12 +291,16 @@ class DokPharmaController extends Controller
         $nbDispo = 0;
         $nbIndispo = 0;
 
-        // Vérification préalable : tout produit disponible doit avoir un prix > 0
+        // Vérification préalable : tout produit disponible doit avoir un prix > 0 et une quantité confirmée >= 1
         foreach ($lignes as $ligne) {
             $status = $ligne['status'] ?? 'disponible';
             $prixUnitaire = isset($ligne['prix_unitaire']) ? (float) $ligne['prix_unitaire'] : 0;
             if (in_array($status, ['disponible', 'partiel']) && $prixUnitaire <= 0) {
                 return back()->with('error', 'Veuillez saisir le prix pour tous les médicaments disponibles avant d\'envoyer.');
+            }
+            $qteConfirmeeCheck = isset($ligne['quantite_confirmee']) ? (int) $ligne['quantite_confirmee'] : null;
+            if (in_array($status, ['disponible', 'partiel'], true) && $qteConfirmeeCheck !== null && $qteConfirmeeCheck < 1) {
+                return back()->with('error', 'La quantité confirmée doit être d\'au moins 1 pour un médicament disponible. Marquez-le plutôt indisponible.');
             }
         }
 
@@ -309,9 +316,10 @@ class DokPharmaController extends Controller
             $prixUnitaire = isset($ligne['prix_unitaire']) ? (float) $ligne['prix_unitaire'] : null;
 
             // Sécurité : la quantité confirmée ne peut pas dépasser la quantité demandée
+            // (le plancher à 1 est rejeté en amont plutôt que corrigé silencieusement, voir vérification préalable)
             $qteConfirmee = isset($ligne['quantite_confirmee']) ? (int) $ligne['quantite_confirmee'] : null;
             if ($qteConfirmee !== null) {
-                $qteConfirmee = max(1, min($qteConfirmee, $qteDemandee));
+                $qteConfirmee = min($qteConfirmee, $qteDemandee);
             }
 
             $qteStockee = in_array($status, ['disponible', 'partiel']) && $qteConfirmee !== null
@@ -324,10 +332,19 @@ class DokPharmaController extends Controller
                 FILTER_NULL_ON_FAILURE,
             ) ?? false;
 
+            // Type figé sur la ligne de commande : un produit parapharma déjà classé le reste
+            // (peu importe la case "vente libre"), sinon on tranche médicament vente libre / sur ordonnance.
+            // Ce type snapshot sur la ligne évite qu'un changement ultérieur du catalogue produit
+            // (ex: le même produit reclassé sur une autre commande) ne reclasse rétroactivement celle-ci.
+            $typeResolu = CommandeMontantCalculator::isParapharmaType($produit->type)
+                ? $produit->type
+                : ($venteLibre ? 'Vente libre' : 'Sur ordonnance');
+
             $pivotData = [
                 'status' => $status,
                 'quantite_confirmee' => $qteStockee,
                 'vente_libre' => $venteLibre,
+                'type' => $typeResolu,
             ];
             if ($prixUnitaire !== null) {
                 $pivotData['prix_unitaire'] = $prixUnitaire;

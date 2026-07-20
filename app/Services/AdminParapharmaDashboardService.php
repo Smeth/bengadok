@@ -179,19 +179,24 @@ class AdminParapharmaDashboardService
     }
 
     /**
-     * Applique le filtre « produit parapharmacie » sur une requête joignant produits.
+     * Applique le filtre « produit parapharmacie » sur une requête joignant produits
+     * (et, si présent, commande_produit). Priorité au type figé sur la ligne de commande
+     * (commande_produit.type) sur le type catalogue courant (produits.type) : évite qu'un
+     * changement ultérieur du type au catalogue ne reclasse rétroactivement une commande passée.
      */
-    public function scopeProduitParapharma(QueryBuilder|Builder $query, string $produitsAlias = 'produits'): void
+    public function scopeProduitParapharma(QueryBuilder|Builder $query, string $produitsAlias = 'produits', string $commandeProduitAlias = 'commande_produit'): void
     {
         $types = $this->config()['produit_types'];
+        $typeExpr = "COALESCE({$commandeProduitAlias}.type, {$produitsAlias}.type)";
 
         if ($types !== []) {
-            $query->whereIn("{$produitsAlias}.type", $types);
+            $list = collect($types)->map(fn (string $t) => "'".addslashes($t)."'")->implode(',');
+            $query->whereRaw("{$typeExpr} IN ({$list})");
 
             return;
         }
 
-        $query->whereRaw("LOWER({$produitsAlias}.type) LIKE ?", ['%parapharm%']);
+        $query->whereRaw("LOWER({$typeExpr}) LIKE ?", ['%parapharm%']);
     }
 
     /**

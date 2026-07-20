@@ -1287,10 +1287,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                         </div>
 
                         <div
-                            v-if="
-                                detailCommande.enfants?.length &&
-                                detailCommande.status === 'en_attente'
-                            "
+                            v-if="detailCommande.enfants?.length"
                             class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
                         >
                             <h3
@@ -1298,10 +1295,21 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                             >
                                 Commandes associées (autres pharmacies)
                             </h3>
-                            <p class="mb-3 text-[12px] leading-relaxed text-gray-500">
+                            <p
+                                v-if="detailCommande.status === 'en_attente'"
+                                class="mb-3 text-[12px] leading-relaxed text-gray-500"
+                            >
                                 Avant validation globale, le montant de livraison
                                 et le mode de paiement doivent être choisis pour
                                 chaque maillon encore « en attente ».
+                            </p>
+                            <p
+                                v-else
+                                class="mb-3 text-[12px] leading-relaxed text-gray-500"
+                            >
+                                Suivez chaque maillon jusqu'à sa livraison : le
+                                crédit pharmacie n'est déduit qu'une fois son
+                                propre statut passé à « Livrée ».
                             </p>
                             <ul class="space-y-2">
                                 <li
