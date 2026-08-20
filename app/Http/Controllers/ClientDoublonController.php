@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SyncClientDoublonsJob;
 use App\Models\Commande;
 use App\Models\GroupeDoublonsClient;
 use App\Services\ClientDoublonService;
+use App\Services\DoublonSyncCache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,10 +25,10 @@ class ClientDoublonController extends Controller
         $statut = $request->input('statut', '');
         $tri = $request->input('tri', 'recent');
 
-        $this->doublonService->detecterEtCreerGroupes();
+        $this->queueClientDoublonSyncIfNeeded();
 
         $query = GroupeDoublonsClient::with([
-            'clients' => fn ($q) => $q->with(['zone', 'commandes' => fn ($q2) => $q2->whereIn('status', Commande::STATUTS_COMPTABILISES_CLIENT)]),
+            'clients' => fn ($q) => $q->with(['commandes' => fn ($q2) => $q2->whereIn('status', Commande::STATUTS_COMPTABILISES_CLIENT)]),
             'principalClient',
         ]);
 
@@ -53,7 +56,7 @@ class ClientDoublonController extends Controller
             'en_attente' => GroupeDoublonsClient::where('statut', 'en_attente')->count(),
             'verifies' => GroupeDoublonsClient::where('statut', 'verifie')->count(),
             'fusionnes' => GroupeDoublonsClient::where('statut', 'fusionne')->count(),
-            'total_clients' => GroupeDoublonsClient::with('clients')->get()->sum(fn ($g) => $g->clients->count()),
+            'total_clients' => (int) DB::table('client_groupe_doublons')->count(),
         ];
 
         $groupesFormates = $groupes->values()->map(function ($g) {
@@ -70,7 +73,7 @@ class ClientDoublonController extends Controller
                     'tel' => $c->tel,
                     'tel_secondaire' => $c->tel_secondaire,
                     'adresse' => $c->adresse,
-                    'zone' => $c->zone?->designation,
+                    'arrondissement' => $c->arrondissementAffiche(),
                     'nb_commandes' => $nbCommandes,
                     'total_depense' => $totalDepense,
                     'created_at' => $c->created_at?->format('d/m/Y'),
@@ -87,7 +90,8 @@ class ClientDoublonController extends Controller
                 'tel_identique' => 'Téléphone identique',
                 'nom_et_tel_identique' => 'Nom et téléphone identiques',
                 'adresse_identique' => 'Adresse identique',
-                'meme_zone' => 'Même zone',
+                'meme_arrondissement' => 'Même arrondissement',
+                'meme_zone' => 'Même arrondissement',
             ];
             $criteres = collect($g->criteres ?? [])->map(fn ($k) => $criteresLabels[$k] ?? $k)->values()->toArray();
 
@@ -111,9 +115,19 @@ class ClientDoublonController extends Controller
         ]);
     }
 
+    public function resync(): RedirectResponse
+    {
+        DoublonSyncCache::invalidateClientSync();
+        $this->doublonService->detecterEtCreerGroupes();
+        DoublonSyncCache::markClientSyncCompleted();
+
+        return redirect()->route('clients.doublons')->with('success', 'Doublons clients resynchronisés.');
+    }
+
     public function ignorer(GroupeDoublonsClient $groupe): RedirectResponse
     {
         $groupe->update(['statut' => 'ignore']);
+        DoublonSyncCache::invalidateClientSync();
 
         return redirect()->route('clients.doublons')->with('success', 'Groupe ignoré.');
     }
@@ -121,6 +135,7 @@ class ClientDoublonController extends Controller
     public function verifier(GroupeDoublonsClient $groupe): RedirectResponse
     {
         $groupe->update(['statut' => 'verifie']);
+        DoublonSyncCache::invalidateClientSync();
 
         return redirect()->route('clients.doublons')->with('success', 'Groupe marqué comme vérifié.');
     }
@@ -140,7 +155,18 @@ class ClientDoublonController extends Controller
         }
 
         $this->doublonService->fusionner($groupe, $ajouterTelSecondaire, $principalId);
+        DoublonSyncCache::invalidateClientSync();
 
         return redirect()->route('clients.doublons')->with('success', 'Profils fusionnés avec succès.');
+    }
+
+    private function queueClientDoublonSyncIfNeeded(): void
+    {
+        if (! DoublonSyncCache::shouldQueueClientSync()) {
+            return;
+        }
+
+        DoublonSyncCache::markClientSyncQueued();
+        SyncClientDoublonsJob::dispatch();
     }
 }

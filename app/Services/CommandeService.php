@@ -78,7 +78,9 @@ class CommandeService
             } elseif (array_key_exists('client_sexe', $data)) {
                 $client->update(['sexe' => $data['client_sexe'] ?: null]);
             } elseif (array_key_exists('client_arrondissement', $data) && $data['client_arrondissement'] !== null && $data['client_arrondissement'] !== '') {
-                $client->update(['arrondissement' => $data['client_arrondissement']]);
+                $client->update([
+                    'arrondissement' => $data['client_arrondissement'],
+                ]);
             }
 
             return $client;

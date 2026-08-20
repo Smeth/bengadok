@@ -48,7 +48,9 @@ class DokPharmaController extends Controller
                 'config' => $parapharmaService->config(),
                 'kpis' => [
                     'nb_commandes' => 0,
+                    'ca_medicaments' => 0,
                     'ca_parapharma' => 0,
+                    'ca_total' => 0,
                     'credits_disponibles' => 0,
                     'credits_utilises' => 0,
                     'credits_prepayes_total' => 0,

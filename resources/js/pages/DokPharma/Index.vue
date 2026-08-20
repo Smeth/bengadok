@@ -8,9 +8,6 @@ import {
     Clock,
     FileText,
     ShoppingCart,
-    ZoomIn,
-    ZoomOut,
-    RefreshCw,
     X,
     CheckCircle2,
     Eye,
@@ -19,6 +16,8 @@ import {
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 import AppToast from '@/components/AppToast.vue';
+import DokPharmaOrdonnanceViewerModal from '@/components/dok-pharma/DokPharmaOrdonnanceViewerModal.vue';
+import DokPharmaValiderRetraitModal from '@/components/dok-pharma/DokPharmaValiderRetraitModal.vue';
 import { Input } from '@/components/ui/input';
 import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
 import { sousTotalCommandeProduits } from '@/lib/commandeTotals';
@@ -407,7 +406,6 @@ function confirmerAchat() {
 
 /* ─── Modal ordonnance ───────────────────────────────────────── */
 const ordModal = ref({ open: false, url: '', isPdf: false, numero: '' });
-const zoom = ref(100);
 
 const dispoSuccessToast = ref({ show: false, title: '', description: '' });
 const retraitSuccessToast = ref({ show: false, title: '', description: '' });
@@ -427,19 +425,9 @@ function openOrdonnance(cmd: Commande) {
         isPdf: cmd.ordonnance_is_pdf ?? false,
         numero: cmd.numero,
     };
-    zoom.value = 100;
 }
 function closeOrdonnance() {
     ordModal.value.open = false;
-}
-function zoomIn() {
-    zoom.value = Math.min(zoom.value + 25, 200);
-}
-function zoomOut() {
-    zoom.value = Math.max(zoom.value - 25, 50);
-}
-function resetZoom() {
-    zoom.value = 100;
 }
 </script>
 
@@ -2212,157 +2200,19 @@ function resetZoom() {
             </div>
         </div>
 
-        <!-- ═══ MODAL : Confirmation "Valider l'achat" ═══ -->
-        <Teleport to="body">
-            <div
-                v-if="confirmModal.open"
-                class="fixed inset-0 z-50 flex items-center justify-center p-4"
-                style="background: rgba(0, 0, 0, 0.5)"
-                @click.self="annulerConfirm"
-            >
-                <div
-                    class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
-                >
-                    <!-- Entête -->
-                    <div
-                        class="flex items-center gap-3 bg-[#FFFBEB] border-b border-[#FCD34D] px-6 py-4"
-                    >
-                        <div
-                            class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#F59E0B]/10"
-                        >
-                            <ShoppingCart class="size-5 text-[#F59E0B]" />
-                        </div>
-                        <div>
-                            <p class="text-[15px] font-extrabold text-gray-900">
-                                Confirmer le retrait de la commande
-                            </p>
-                            <p class="text-[12px] text-gray-500">
-                                Commande {{ confirmModal.cmd?.numero }}
-                            </p>
-                        </div>
-                    </div>
-                    <!-- Corps -->
-                    <div class="px-6 py-5">
-                        <p class="text-[14px] text-gray-700">
-                            Vous confirmez que la commande a bien été retirée
-                            par le livreur en pharmacie.
-                        </p>
-                        <p
-                            class="mt-2 text-[13px] font-semibold text-[#92400E] bg-[#FFFBEB] rounded-lg px-3 py-2 border border-[#FCD34D]"
-                        >
-                            ⚠ Cette action est irréversible. La commande passera
-                            en statut « Retirée ».
-                        </p>
-                    </div>
-                    <!-- Pied -->
-                    <div
-                        class="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4"
-                    >
-                        <button
-                            class="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-[13px] font-bold text-gray-700 hover:bg-gray-50 transition-colors"
-                            @click="annulerConfirm"
-                        >
-                            Annuler
-                        </button>
-                        <button
-                            class="flex items-center gap-2 rounded-xl bg-[#F59E0B] px-5 py-2.5 text-[13px] font-bold text-white shadow hover:bg-[#D97706] transition-colors"
-                            @click="confirmerAchat"
-                        >
-                            <ShoppingCart class="size-4" />
-                            Confirmer le retrait
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </Teleport>
+        <DokPharmaValiderRetraitModal
+            :open="confirmModal.open"
+            :numero="confirmModal.cmd?.numero"
+            @cancel="annulerConfirm"
+            @confirm="confirmerAchat"
+        />
 
-        <!-- ═══ MODAL : Visionneuse ordonnance ═══ -->
-        <Teleport to="body">
-            <div
-                v-if="ordModal.open"
-                class="fixed inset-0 z-50 flex items-center justify-center p-4"
-                style="background: rgba(0, 0, 0, 0.55)"
-                @click.self="closeOrdonnance"
-            >
-                <div
-                    class="relative flex w-full max-w-[500px] max-h-[90vh] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
-                >
-                    <!-- Entête -->
-                    <div
-                        class="flex items-center gap-3 border-b border-gray-100 px-5 py-4"
-                    >
-                        <div
-                            class="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#EFF6FF]"
-                        >
-                            <FileText class="size-5 text-[#3B82F6]" />
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[14px] font-extrabold text-gray-900">
-                                Ordonnance — Commande {{ ordModal.numero }}
-                            </p>
-                        </div>
-                        <button
-                            class="flex size-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
-                            @click="closeOrdonnance"
-                        >
-                            <X class="size-4" />
-                        </button>
-                    </div>
-                    <!-- Barre zoom -->
-                    <div
-                        class="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-2"
-                    >
-                        <button
-                            class="flex size-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600 hover:bg-gray-100"
-                            @click="zoomOut"
-                        >
-                            <ZoomOut class="size-3.5" />
-                        </button>
-                        <span
-                            class="min-w-[40px] text-center text-[12px] font-semibold text-gray-700"
-                            >{{ zoom }}%</span
-                        >
-                        <button
-                            class="flex size-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600 hover:bg-gray-100"
-                            @click="zoomIn"
-                        >
-                            <ZoomIn class="size-3.5" />
-                        </button>
-                        <button
-                            class="flex size-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600 hover:bg-gray-100"
-                            @click="resetZoom"
-                        >
-                            <RefreshCw class="size-3.5" />
-                        </button>
-                    </div>
-                    <!-- Visionneuse -->
-                    <div
-                        class="flex-1 overflow-auto bg-gray-100 flex items-start justify-center min-h-[250px] p-4"
-                    >
-                        <iframe
-                            v-if="ordModal.url && ordModal.isPdf"
-                            :src="`${ordModal.url}#toolbar=1`"
-                            class="h-[min(70vh,520px)] w-full rounded-lg border-0 bg-white shadow"
-                            title="Ordonnance PDF"
-                        />
-                        <img
-                            v-else-if="ordModal.url"
-                            :src="ordModal.url"
-                            alt="Ordonnance"
-                            class="rounded-lg shadow"
-                            :style="{
-                                transform: `scale(${zoom / 100})`,
-                                transformOrigin: 'top center',
-                                maxWidth: '100%',
-                            }"
-                        />
-                        <div v-else class="m-auto text-center text-gray-400">
-                            <FileText class="mx-auto mb-2 size-12 opacity-30" />
-                            <p class="text-[13px]">Ordonnance non disponible</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </Teleport>
+        <DokPharmaOrdonnanceViewerModal
+            :open="ordModal.open"
+            :url="ordModal.url"
+            :is-pdf="ordModal.isPdf"
+            :numero="ordModal.numero"
+            @close="closeOrdonnance"
+        />
     </PharmacyLayout>
 </template>

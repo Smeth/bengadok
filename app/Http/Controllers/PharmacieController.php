@@ -157,6 +157,7 @@ class PharmacieController extends Controller
                 'heure_ouverture' => $pharmacie->heurs?->ouverture ?? '08:00',
                 'heure_fermeture' => $pharmacie->heurs?->fermeture ?? '19:00',
                 'credits_solde' => (int) $pharmacie->credits_solde,
+                'credits_actif' => (bool) $pharmacie->credits_actif,
                 'users' => $pharmacie->users->map(fn ($u) => [
                     'id' => $u->id,
                     'name' => $u->name,
@@ -247,7 +248,7 @@ class PharmacieController extends Controller
 
     public function update(Request $request, Pharmacie $pharmacie): RedirectResponse
     {
-        $validated = $request->validate([
+        $rules = [
             'designation' => 'required|string|max:200',
             'adresse' => 'required|string',
             'telephone' => 'required|string|max:20',
@@ -259,13 +260,21 @@ class PharmacieController extends Controller
             'proprio_nom' => 'required|string|max:100',
             'proprio_email' => 'nullable|email',
             'proprio_tel' => 'nullable|string|max:20',
-        ]);
+        ];
+
+        // Réglage crédits/commission réservé à l'admin, comme les autres routes credits.*
+        $peutGererCredits = $request->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
+        if ($peutGererCredits) {
+            $rules['credits_actif'] = 'sometimes|boolean';
+        }
+
+        $validated = $request->validate($rules);
 
         $heur = Heur::firstOrCreate(
             ['ouverture' => $validated['heure_ouverture'], 'fermeture' => $validated['heure_fermeture']]
         );
 
-        $pharmacie->update([
+        $updatePayload = [
             'zone_id' => $validated['zone_id'] ?? null,
             'type_pharmacie_id' => $validated['type_pharmacie_id'],
             'heurs_id' => $heur->id,
@@ -276,7 +285,12 @@ class PharmacieController extends Controller
             'proprio_nom' => $validated['proprio_nom'],
             'proprio_tel' => $validated['proprio_tel'] ?? null,
             'proprio_email' => $validated['proprio_email'] ?? null,
-        ]);
+        ];
+        if ($peutGererCredits && array_key_exists('credits_actif', $validated)) {
+            $updatePayload['credits_actif'] = $validated['credits_actif'];
+        }
+
+        $pharmacie->update($updatePayload);
 
         return back()->with('status', 'Pharmacie mise à jour.');
     }

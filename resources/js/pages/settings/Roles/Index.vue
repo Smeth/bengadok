@@ -212,6 +212,13 @@ function permissionsApercu(
 
         <SettingsLayout>
             <div class="space-y-6">
+                <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
+                    Les accès effectifs aux pages passent par le <strong>rôle</strong>
+                    (middleware). Les permissions listées ci-dessous servent surtout à
+                    documenter les droits et à compléter le profil utilisateur ; elles ne
+                    remplacent pas le contrôle par rôle sur les routes.
+                </div>
+
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <h2 class="text-xl font-semibold">Gestion des rôles</h2>
                     <Button @click="ouvrirCreate">

@@ -20,22 +20,27 @@ class AdminParapharmaDashboardService
     /**
      * @return array<string, mixed>
      */
-    public function build(?string $moisParam = null, ?int $pharmacieId = null): array
-    {
+    public function build(
+        ?string $moisParam = null,
+        ?int $pharmacieId = null,
+        string $vuePeriode = 'mois',
+    ): array {
         $this->pharmacieId = $pharmacieId;
         $cfg = $this->config();
         $ref = $this->resolveMoisReference($moisParam);
-        [$debut, $finPeriode] = AppSetting::parapharmaPeriodeBounds($ref);
+        [$debutMois, $finMois] = AppSetting::parapharmaPeriodeBounds($ref);
+        [$debut, $finPeriode] = $this->resolvePeriodeBounds($ref, $vuePeriode);
 
         $inStatutsReussis = $this->inListSql(Commande::STATUTS_REUSSIS);
         $inStatutsVentes = $this->inListSql(Commande::STATUTS_STATS_VENTES);
 
-        $caParapharma = $this->sommeCaParapharma($debut, $finPeriode, $inStatutsVentes);
+        $caParapharma = $this->sommeCaParapharma($debutMois, $finMois, $inStatutsVentes);
+        $caMedicaments = $this->sommeCaMedicaments($debutMois, $finMois, $inStatutsVentes);
         $montantCommission = (int) round($caParapharma * $cfg['commission_percent'] / 100);
 
         $periode = $this->syncCommissionPeriode($ref, $montantCommission);
 
-        $nbCommandesParapharma = $this->nbCommandesAvecParapharma($debut, $finPeriode, $inStatutsVentes);
+        $nbCommandes = $this->nbCommandesTotal($debutMois, $finMois, $inStatutsVentes);
 
         $creditsUtilises = $this->nbDeductionsPeriode($debut, $finPeriode);
         $creditsDisponibles = $this->pharmacieId !== null
@@ -44,27 +49,35 @@ class AdminParapharmaDashboardService
         $creditsPrepayesTotal = $this->totalRecharges();
         $creditsConsommesTotal = $this->totalDeductions();
 
-        $ventesLignes = $this->ventesParapharmaParLigne(
-            $debut,
-            $finPeriode,
+        $ventesLignes = $this->ventesParLigne(
+            $debutMois,
+            $finMois,
             $inStatutsVentes,
             $cfg['credit_seuil_medicament_xaf']
         );
 
+        $ventesParPharmacie = $this->pharmacieId === null
+            ? $this->ventesParPharmacie($debut, $finPeriode, $inStatutsVentes)
+            : [];
+
+        $creditsParPharmacie = $this->pharmacieId === null
+            ? $this->creditsParPharmacie($debut, $finPeriode, $cfg)
+            : [];
+
         $historique = $this->historiqueCommissions($ref, $cfg);
 
         $commissionsParPharmacie = $this->pharmacieId === null
-            ? $this->commissionsParPharmacie($debut, $finPeriode, $inStatutsVentes, $cfg, $ref)
+            ? $this->commissionsParPharmacie($debutMois, $finMois, $inStatutsVentes, $cfg, $ref)
             : [];
 
         $commandesRecentes = $this->commandesRecentes(
-            $debut,
-            $finPeriode,
+            $debutMois,
+            $finMois,
             $cfg['credit_seuil_medicament_xaf']
         );
 
         $pharmacie = $this->pharmacieId !== null
-            ? Pharmacie::query()->find($this->pharmacieId, ['id', 'designation', 'telephone', 'email'])
+            ? Pharmacie::query()->find($this->pharmacieId, ['id', 'designation', 'telephone', 'email', 'credits_actif'])
             : null;
 
         return [
@@ -75,22 +88,26 @@ class AdminParapharmaDashboardService
                 'designation' => $pharmacie->designation,
                 'telephone' => $pharmacie->telephone,
                 'email' => $pharmacie->email,
+                'credits_actif' => (bool) $pharmacie->credits_actif,
             ] : null,
             'mois' => $ref->format('Y-m'),
             'mois_label' => $this->formatMoisFrancais($ref),
             'mois_options' => $this->moisSelectOptions($ref),
+            'vue_periode' => in_array($vuePeriode, ['mois', 'semaine'], true) ? $vuePeriode : 'mois',
             'config' => $cfg,
             'kpis' => [
-                'nb_commandes' => $nbCommandesParapharma,
+                'nb_commandes' => $nbCommandes,
+                'ca_medicaments' => $caMedicaments,
                 'ca_parapharma' => $caParapharma,
+                'ca_total' => $caMedicaments + $caParapharma,
                 'credits_disponibles' => $creditsDisponibles,
                 'credits_utilises' => $creditsUtilises,
                 'credits_prepayes_total' => $creditsPrepayesTotal,
                 'credits_consommes_total' => $creditsConsommesTotal,
-                'cout_credits_consommes' => $creditsUtilises * $cfg['credit_prix_unitaire_xaf'],
+                'cout_credits_consommes' => $this->coutDeductionsPeriode($debut, $finPeriode, $cfg['credit_prix_unitaire_xaf']),
                 'commandes_eligibles_credit' => $this->nbCommandesEligiblesCredit(
-                    $debut,
-                    $finPeriode,
+                    $debutMois,
+                    $finMois,
                     $cfg['credit_seuil_medicament_xaf']
                 ),
                 'montant_commission' => $montantCommission,
@@ -110,10 +127,12 @@ class AdminParapharmaDashboardService
                 ),
                 'montant' => $montantCommission,
                 'statut' => $periode->statut,
-                'statut_label' => $periode->statut === CommissionPeriode::STATUT_PAYE ? 'Payé' : 'En cours',
+                'statut_label' => $periode->statut === CommissionPeriode::STATUT_PAYE ? 'Payé' : 'En attente',
                 'paye_le' => $periode->paye_le?->format('d/m/Y'),
             ],
             'ventes' => $ventesLignes,
+            'ventes_par_pharmacie' => $ventesParPharmacie,
+            'credits_par_pharmacie' => $creditsParPharmacie,
             'historique_commissions' => $historique,
             'commissions_par_pharmacie' => $commissionsParPharmacie,
             'commandes_recentes' => $commandesRecentes,
@@ -254,6 +273,177 @@ class AdminParapharmaDashboardService
         return $depuisOps;
     }
 
+    private function coutDeductionsPeriode(
+        CarbonInterface $debut,
+        CarbonInterface $fin,
+        int $prixUnitaireFallback,
+    ): int {
+        $opsQuery = PharmacieCreditOperation::query()
+            ->where('type', PharmacieCreditOperation::TYPE_DEDUCTION)
+            ->whereHas('commande', function ($q) use ($debut, $fin) {
+                $q->whereBetween('date', [$debut, $fin]);
+                if ($this->pharmacieId !== null) {
+                    $q->where('pharmacie_id', $this->pharmacieId);
+                }
+            });
+
+        if ($this->pharmacieId !== null) {
+            $opsQuery->where('pharmacie_id', $this->pharmacieId);
+        }
+
+        $cout = (int) $opsQuery->sum('cout_xaf');
+        if ($cout > 0) {
+            return $cout;
+        }
+
+        return $this->nbDeductionsPeriode($debut, $fin) * $prixUnitaireFallback;
+    }
+
+    /**
+     * @return array{0: CarbonInterface, 1: CarbonInterface}
+     */
+    private function resolvePeriodeBounds(CarbonInterface $ref, string $vuePeriode): array
+    {
+        [$debutMois, $finMois] = AppSetting::parapharmaPeriodeBounds($ref);
+
+        if ($vuePeriode !== 'semaine') {
+            return [$debutMois, $finMois];
+        }
+
+        $fin = $finMois->copy()->min(now()->endOfDay());
+        $debut = $fin->copy()->subDays(6)->startOfDay();
+        if ($debut->lt($debutMois)) {
+            $debut = $debutMois->copy();
+        }
+
+        return [$debut, $fin];
+    }
+
+    /**
+     * @return array<int, array{
+     *     date: string,
+     *     pharmacie: string,
+     *     ca_medicaments: float,
+     *     ca_parapharma: float,
+     *     ca_total: float,
+     *     nb_commandes: int
+     * }>
+     */
+    private function ventesParPharmacie(
+        CarbonInterface $debut,
+        CarbonInterface $fin,
+        string $inStatuts,
+    ): array {
+        $rows = DB::table('commandes')
+            ->join('pharmacies', 'pharmacies.id', '=', 'commandes.pharmacie_id')
+            ->whereBetween('commandes.date', [$debut, $fin])
+            ->whereRaw("commandes.status IN ({$inStatuts})")
+            ->groupBy('commandes.date', 'commandes.pharmacie_id', 'pharmacies.designation')
+            ->selectRaw(
+                'commandes.date as jour,
+                pharmacies.designation as pharmacie,
+                COALESCE(SUM(commandes.prix_medicaments), 0) as ca_medicaments,
+                COALESCE(SUM(commandes.prix_parapharma), 0) as ca_parapharma,
+                COALESCE(SUM(commandes.prix_medicaments + commandes.prix_parapharma), 0) as ca_total,
+                COUNT(*) as nb_commandes'
+            )
+            ->orderByDesc('commandes.date')
+            ->orderBy('pharmacies.designation')
+            ->limit(80)
+            ->get();
+
+        return $rows->map(fn ($r) => [
+            'date' => $this->formatDateCourte(Carbon::parse($r->jour)),
+            'pharmacie' => (string) $r->pharmacie,
+            'ca_medicaments' => (float) $r->ca_medicaments,
+            'ca_parapharma' => (float) $r->ca_parapharma,
+            'ca_total' => (float) $r->ca_total,
+            'nb_commandes' => (int) $r->nb_commandes,
+        ])->values()->all();
+    }
+
+    /**
+     * @param  array{
+     *     credit_prix_unitaire_xaf: int,
+     *     credit_seuil_medicament_xaf: int
+     * }  $cfg
+     * @return array<int, array{
+     *     pharmacie_id: int,
+     *     pharmacie: string,
+     *     credits_medicaments: int,
+     *     credits_parapharmacie: int,
+     *     credits_total: int,
+     *     cout_total: int,
+     *     commandes_eligibles: int
+     * }>
+     */
+    private function creditsParPharmacie(
+        CarbonInterface $debut,
+        CarbonInterface $fin,
+        array $cfg,
+    ): array {
+        $prixUnitaire = $cfg['credit_prix_unitaire_xaf'];
+        $seuil = $cfg['credit_seuil_medicament_xaf'];
+        $items = [];
+
+        foreach (Pharmacie::query()->orderBy('designation')->get(['id', 'designation']) as $pharmacie) {
+            $ops = PharmacieCreditOperation::query()
+                ->where('pharmacie_id', $pharmacie->id)
+                ->where('type', PharmacieCreditOperation::TYPE_DEDUCTION)
+                ->whereHas('commande', fn ($q) => $q->whereBetween('date', [$debut, $fin]))
+                ->with('commande:id,prix_parapharma')
+                ->get();
+
+            $creditsMedicaments = 0;
+            $creditsParapharmacie = 0;
+            $coutTotal = 0;
+
+            foreach ($ops as $op) {
+                $qty = abs((int) $op->credits_delta);
+                $coutTotal += (int) ($op->cout_xaf ?: $qty * $prixUnitaire);
+                if ($op->commande && (float) $op->commande->prix_parapharma > 0) {
+                    $creditsParapharmacie += $qty;
+                } else {
+                    $creditsMedicaments += $qty;
+                }
+            }
+
+            $commandesEligibles = Commande::query()
+                ->where('pharmacie_id', $pharmacie->id)
+                ->whereBetween('date', [$debut, $fin])
+                ->whereIn('status', Commande::STATUTS_REUSSIS)
+                ->where('prix_medicaments', '>=', $seuil)
+                ->count();
+
+            $items[] = [
+                'pharmacie_id' => (int) $pharmacie->id,
+                'pharmacie' => $pharmacie->designation,
+                'credits_medicaments' => $creditsMedicaments,
+                'credits_parapharmacie' => $creditsParapharmacie,
+                'credits_total' => $creditsMedicaments + $creditsParapharmacie,
+                'cout_total' => $coutTotal > 0 ? $coutTotal : ($creditsMedicaments + $creditsParapharmacie) * $prixUnitaire,
+                'commandes_eligibles' => $commandesEligibles,
+            ];
+        }
+
+        return $items;
+    }
+
+    private function formatDateCourte(CarbonInterface $date): string
+    {
+        $mois = [
+            1 => 'Jan.', 2 => 'Fév.', 3 => 'Mar.', 4 => 'Avr.', 5 => 'Mai', 6 => 'Juin',
+            7 => 'Juil.', 8 => 'Août', 9 => 'Sep.', 10 => 'Oct.', 11 => 'Nov.', 12 => 'Déc.',
+        ];
+
+        return sprintf(
+            '%02d %s %d',
+            $date->day,
+            $mois[(int) $date->month] ?? $date->format('M'),
+            $date->year,
+        );
+    }
+
     /**
      * @return list<int>
      */
@@ -309,7 +499,58 @@ class AdminParapharmaDashboardService
         )->value('total');
     }
 
-    private function nbCommandesAvecParapharma(
+    /** Même méthode que sommeCaParapharma, sur les lignes médicaments (non parapharma). */
+    private function sommeCaMedicaments(
+        CarbonInterface $debut,
+        CarbonInterface $fin,
+        string $inStatuts,
+    ): float {
+        $query = DB::table('commande_produit')
+            ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
+            ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
+            ->whereBetween('commandes.date', [$debut, $fin])
+            ->whereRaw("commandes.status IN ({$inStatuts})")
+            ->where(function ($q) {
+                $q->whereNull('commande_produit.status')
+                    ->orWhere('commande_produit.status', '<>', 'indisponible');
+            });
+
+        if ($this->pharmacieId !== null) {
+            $query->where('commandes.pharmacie_id', $this->pharmacieId);
+        }
+
+        $this->scopeProduitMedicament($query);
+
+        return (float) $query->selectRaw(
+            'COALESCE(SUM(commande_produit.prix_unitaire * COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite)), 0) as total'
+        )->value('total');
+    }
+
+    /**
+     * Applique le filtre « produit médicament » (inverse de scopeProduitParapharma) sur une
+     * requête joignant produits et commande_produit.
+     */
+    private function scopeProduitMedicament(QueryBuilder|Builder $query, string $produitsAlias = 'produits', string $commandeProduitAlias = 'commande_produit'): void
+    {
+        $types = $this->config()['produit_types'];
+        $typeExpr = "COALESCE({$commandeProduitAlias}.type, {$produitsAlias}.type)";
+
+        if ($types !== []) {
+            $list = collect($types)->map(fn (string $t) => "'".addslashes($t)."'")->implode(',');
+            $query->whereRaw("({$typeExpr} IS NULL OR {$typeExpr} NOT IN ({$list}))");
+
+            return;
+        }
+
+        $query->whereRaw("({$typeExpr} IS NULL OR LOWER({$typeExpr}) NOT LIKE ?)", ['%parapharm%']);
+    }
+
+    /**
+     * Total des commandes de la période (tous produits confondus). La carte "Commandes"
+     * du dashboard n'est pas restreinte à la parapharmacie — contrairement au CA/ventes
+     * détaillées ci-dessous — donc on ne filtre pas par type de produit ici.
+     */
+    private function nbCommandesTotal(
         CarbonInterface $debut,
         CarbonInterface $fin,
         string $inStatuts,
@@ -322,19 +563,7 @@ class AdminParapharmaDashboardService
             $query->where('commandes.pharmacie_id', $this->pharmacieId);
         }
 
-        return (int) $query->whereExists(function ($q) {
-            $q->selectRaw('1')
-                ->from('commande_produit')
-                ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
-                ->whereColumn('commande_produit.commande_id', 'commandes.id')
-                ->where(function ($q2) {
-                    $q2->whereNull('commande_produit.status')
-                        ->orWhere('commande_produit.status', '<>', 'indisponible');
-                });
-            $this->scopeProduitParapharma($q);
-        })
-            ->distinct('commandes.id')
-            ->count('commandes.id');
+        return (int) $query->count();
     }
 
     private function nbCommandesEligiblesCredit(
@@ -355,9 +584,13 @@ class AdminParapharmaDashboardService
     }
 
     /**
+     * Détail des ventes, toutes lignes confondues (médicaments + parapharmacie) : la carte
+     * "Commandes" et ce tableau ne sont pas restreints à la parapharmacie, contrairement au
+     * CA/commission qui restent scopés parapharma (voir sommeCaParapharma).
+     *
      * @return array<int, array{date: string, produit: string, categorie: string, montant: float, commande_eligible_credit: bool, credit_utilise: int}>
      */
-    private function ventesParapharmaParLigne(
+    private function ventesParLigne(
         CarbonInterface $debut,
         CarbonInterface $fin,
         string $inStatuts,
@@ -379,8 +612,6 @@ class AdminParapharmaDashboardService
             $query->where('commandes.pharmacie_id', $this->pharmacieId);
         }
 
-        $this->scopeProduitParapharma($query);
-
         $rows = $query
             ->select(
                 'commandes.id as commande_id',
@@ -389,7 +620,7 @@ class AdminParapharmaDashboardService
                 'produits.designation',
                 'produits.dosage',
                 'produits.forme',
-                'produits.type as categorie',
+                DB::raw('COALESCE(commande_produit.type, produits.type) as categorie'),
                 DB::raw('commande_produit.prix_unitaire * COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite) as ligne_montant')
             )
             ->orderByDesc('commandes.date')

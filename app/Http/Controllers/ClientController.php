@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\ClientFrequence;
 use App\Models\Commande;
-use App\Models\Zone;
+use App\Services\ClientIndexService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,143 +15,19 @@ use Inertia\Response;
 
 class ClientController extends Controller
 {
+    public function __construct(
+        private ClientIndexService $clientIndexService,
+    ) {}
+
     public function index(Request $request): Response
     {
-        $search = $request->input('search', '');
-        $zoneId = $request->input('zone_id', '');
-        $tri = $request->input('tri', 'nom');
-        $frequenceLegacy = $request->input('frequence', '');
-        $frequenceId = $request->input('frequence_id', '');
-
-        $statutsKpi = Commande::STATUTS_COMPTABILISES_CLIENT;
-
-        $frequences = ClientFrequence::query()
-            ->orderByDesc('priorite')
-            ->orderBy('designation')
-            ->get();
-
-        if ($frequenceId === '' && $frequenceLegacy !== '') {
-            if ($frequenceLegacy === 'habitué') {
-                $frequenceId = (string) (ClientFrequence::query()->where('slug', 'habitue')->value('id') ?? '');
-            } elseif ($frequenceLegacy === 'occasionnel') {
-                $frequenceId = (string) (ClientFrequence::query()->where('slug', 'occasionnel')->value('id') ?? '');
-            }
-        }
-
-        $query = Client::with([
-            'zone',
-            'commandes' => fn ($q) => $q->whereIn('status', $statutsKpi)->orderBy('date')->orderBy('created_at'),
-        ])->whereNotNull('promu_client_le');
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('nom', 'like', "%{$search}%")
-                    ->orWhere('prenom', 'like', "%{$search}%")
-                    ->orWhere('tel', 'like', "%{$search}%")
-                    ->orWhere('adresse', 'like', "%{$search}%");
-            });
-        }
-
-        if ($zoneId) {
-            $query->where('zone_id', $zoneId);
-        }
-
-        $clients = $query->get()->map(function ($c) use ($statutsKpi, $frequences) {
-            $cmdComptees = $c->commandes->filter(fn ($cmd) => in_array($cmd->status, $statutsKpi, true));
-            $totalDepense = (float) $cmdComptees->sum('prix_total');
-            $nbCommandes = $cmdComptees->count();
-            $panierMoyen = $nbCommandes > 0 ? round($totalDepense / $nbCommandes, 0) : 0;
-            $moyenneJours = $this->moyenneJoursEntreCommandes($cmdComptees);
-
-            $medicamentsFrequents = DB::table('commande_produit')
-                ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
-                ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
-                ->where('commandes.client_id', $c->id)
-                ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
-                ->where(function ($q) {
-                    $q->whereNull('commande_produit.status')
-                        ->orWhere('commande_produit.status', '<>', 'indisponible');
-                })
-                ->select(
-                    'produits.designation',
-                    DB::raw('SUM(COALESCE(commande_produit.quantite_confirmee, commande_produit.quantite)) as total'),
-                )
-                ->groupBy('produits.id', 'produits.designation')
-                ->orderByDesc('total')
-                ->limit(3)
-                ->get()
-                ->pluck('designation')
-                ->toArray();
-
-            $frequenceLabel = null;
-            foreach ($frequences as $freq) {
-                if ($freq->correspondAuxStats($nbCommandes, $moyenneJours)) {
-                    $frequenceLabel = $freq->designation;
-                    break;
-                }
-            }
-
-            return [
-                'id' => $c->id,
-                'nom' => $c->nom,
-                'prenom' => $c->prenom,
-                'tel' => $c->tel,
-                'adresse' => $c->adresse,
-                'zone' => $c->zone?->designation,
-                'zone_id' => $c->zone_id,
-                'nb_commandes' => $nbCommandes,
-                'total_depense' => $totalDepense,
-                'panier_moyen' => $panierMoyen,
-                'medicaments_frequents' => $medicamentsFrequents,
-                'habitué' => $nbCommandes >= 5,
-                'frequence_label' => $frequenceLabel,
-                '_moyenne_jours' => $moyenneJours,
-                'created_at' => $c->created_at?->timestamp,
-            ];
-        });
-
-        if ($frequenceId !== '') {
-            $freq = $frequences->firstWhere('id', (int) $frequenceId);
-            if ($freq) {
-                $clients = $clients->filter(fn ($row) => $freq->correspondAuxStats(
-                    $row['nb_commandes'],
-                    $row['_moyenne_jours']
-                ))->map(function ($row) {
-                    unset($row['_moyenne_jours']);
-
-                    return $row;
-                })->values();
-            }
-        } else {
-            $clients = $clients->map(function ($row) {
-                unset($row['_moyenne_jours']);
-
-                return $row;
-            });
-        }
-
-        $clients = match ($tri) {
-            'commandes' => $clients->sortByDesc('nb_commandes')->values(),
-            'depense' => $clients->sortByDesc('total_depense')->values(),
-            'recent' => $clients->sortByDesc(fn ($c) => $c['created_at'] ?? 0)->values(),
-            default => $clients->sortBy(fn ($c) => ($c['prenom'] ?? '').' '.($c['nom'] ?? ''))->values(),
-        };
-
-        $zones = Zone::orderBy('designation')->get(['id', 'designation']);
+        $result = $this->clientIndexService->paginatedIndex($request);
 
         return Inertia::render('Clients/Index', [
-            'clients' => $clients,
-            'zones' => $zones,
-            'frequences' => $frequences->map(fn (ClientFrequence $f) => [
-                'id' => $f->id,
-                'designation' => $f->designation,
-                'slug' => $f->slug,
-                'commandes_minimum' => $f->commandes_minimum,
-                'commandes_maximum' => $f->commandes_maximum,
-                'intervalle_max_jours' => $f->intervalle_max_jours,
-                'priorite' => $f->priorite,
-            ])->values(),
-            'filters' => $request->only(['search', 'zone_id', 'tri', 'frequence', 'frequence_id']),
+            'clients' => $result['clients'],
+            'arrondissements' => $result['arrondissements'],
+            'frequences' => $result['frequences'],
+            'filters' => $request->only(['search', 'arrondissement', 'tri', 'frequence', 'frequence_id']),
         ]);
     }
 
@@ -162,7 +38,6 @@ class ClientController extends Controller
     public function prospects(Request $request): Response
     {
         $search = $request->input('search', '');
-        $zoneId = $request->input('zone_id', '');
         $arrondissement = $request->input('arrondissement', '');
         $tri = $request->input('tri', 'recent');
 
@@ -173,15 +48,14 @@ class ClientController extends Controller
             'avec_commandes' => (clone $baseQuery)->has('commandes')->count(),
             'sans_commande' => (clone $baseQuery)->doesntHave('commandes')->count(),
             'eligibles_promotion' => (clone $baseQuery)
-                ->whereHas('commandes', fn ($q) => $q->whereIn('status', ['validee', 'retiree']))
+                ->whereHas('commandes', fn ($q) => $q->where('status', 'retiree'))
                 ->count(),
         ];
 
         $query = (clone $baseQuery)
-            ->with(['zone'])
             ->withCount([
                 'commandes',
-                'commandes as commandes_reussies_count' => fn ($q) => $q->whereIn('status', ['validee', 'retiree']),
+                'commandes as commandes_reussies_count' => fn ($q) => $q->where('status', 'retiree'),
             ])
             ->withMax('commandes as derniere_commande_at', 'date');
 
@@ -194,10 +68,6 @@ class ClientController extends Controller
                     ->orWhere('adresse', 'like', "%{$search}%")
                     ->orWhere('arrondissement', 'like', "%{$search}%");
             });
-        }
-
-        if ($zoneId !== '') {
-            $query->where('zone_id', (int) $zoneId);
         }
 
         if ($arrondissement !== '') {
@@ -220,9 +90,7 @@ class ClientController extends Controller
                 'tel' => $c->tel,
                 'tel_secondaire' => $c->tel_secondaire,
                 'adresse' => $c->adresse ?? '',
-                'arrondissement' => $c->arrondissement,
-                'zone' => $c->zone?->designation,
-                'zone_id' => $c->zone_id,
+                'arrondissement' => $c->arrondissementAffiche(),
                 'nb_commandes' => (int) $c->commandes_count,
                 'nb_commandes_reussies' => (int) $c->commandes_reussies_count,
                 'derniere_commande' => $c->derniere_commande_at
@@ -232,14 +100,11 @@ class ClientController extends Controller
                 'statut' => $this->prospectStatut((int) $c->commandes_count, (int) $c->commandes_reussies_count),
             ]);
 
-        $zones = Zone::orderBy('designation')->get(['id', 'designation']);
-
         return Inertia::render('Clients/Prospects', [
             'prospects' => $prospects,
-            'zones' => $zones,
             'arrondissements' => Client::ARRONDISSEMENTS,
             'stats' => $stats,
-            'filters' => $request->only(['search', 'zone_id', 'arrondissement', 'tri']),
+            'filters' => $request->only(['search', 'arrondissement', 'tri']),
         ]);
     }
 
@@ -247,6 +112,14 @@ class ClientController extends Controller
     {
         if ($client->promu_client_le !== null) {
             return back()->with('error', 'Ce contact est déjà un client définitif.');
+        }
+
+        $aCommandeLivree = $client->commandes()->where('status', 'retiree')->exists();
+        if (! $aCommandeLivree) {
+            return back()->with(
+                'error',
+                'Promotion impossible : au moins une commande doit être livrée (statut « Livrée »).',
+            );
         }
 
         $client->update(['promu_client_le' => now()]);
@@ -289,7 +162,6 @@ class ClientController extends Controller
 
     public function show(Client $client): Response
     {
-        $client->load('zone');
         $commandes = $client->commandes()->whereIn('status', Commande::STATUTS_COMPTABILISES_CLIENT)->with('produits')->get();
 
         $totalDepense = $commandes->sum('prix_total');
@@ -372,8 +244,7 @@ class ClientController extends Controller
                 'tel' => $client->tel,
                 'tel_secondaire' => $client->tel_secondaire,
                 'adresse' => $client->adresse,
-                'arrondissement' => $client->arrondissement,
-                'zone' => $client->zone?->designation,
+                'arrondissement' => $client->arrondissementAffiche(),
                 'client_depuis' => $clientDepuis?->format('d/m/Y'),
                 'derniere_commande' => ($derniereCommande?->date ?? $derniereCommande?->created_at)?->format('d/m/Y'),
                 'nb_commandes' => $nbCommandes,

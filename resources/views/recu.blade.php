@@ -289,27 +289,6 @@
             </div>
         </div>
 
-        @php
-            $comCommande = trim((string) ($commande->commentaire ?? ''));
-            $comPharma = trim((string) ($commande->commentaire_pharmacie ?? ''));
-        @endphp
-        @if($comCommande !== '' || $comPharma !== '')
-            <hr class="hr">
-            <div class="section">
-                <h2>Commentaires</h2>
-                <div class="section-body">
-                    @if($comCommande !== '')
-                        <p style="margin:0 0 6px;font-weight:700">Commande (back-office)</p>
-                        <p style="margin:0;white-space:pre-wrap">{{ $comCommande }}</p>
-                    @endif
-                    @if($comPharma !== '')
-                        <p style="margin:10px 0 6px;font-weight:700">Pharmacie</p>
-                        <p style="margin:0;white-space:pre-wrap">{{ $comPharma }}</p>
-                    @endif
-                </div>
-            </div>
-        @endif
-
         <hr class="hr">
 
         <div class="section">

@@ -39,7 +39,7 @@ type ClientInGroup = {
     tel: string;
     tel_secondaire?: string | null;
     adresse: string;
-    zone?: string;
+    arrondissement?: string | null;
     nb_commandes: number;
     total_depense: number;
     created_at: string;
@@ -422,7 +422,7 @@ const statutLabels: Record<string, string> = {
                             >
                                 <MapPin class="size-4 shrink-0" />
                                 {{ c.adresse || '-'
-                                }}{{ c.zone ? `, ${c.zone}` : '' }}
+                                }}{{ c.arrondissement ? `, ${c.arrondissement}` : '' }}
                             </p>
                             <p class="mb-1 flex items-center gap-2 text-sm">
                                 <ListOrdered class="size-4 shrink-0" />
@@ -628,8 +628,8 @@ const statutLabels: Record<string, string> = {
                                     <MapPin class="size-4 shrink-0" />
                                     {{ premierDuplique.adresse || '-'
                                     }}{{
-                                        premierDuplique.zone
-                                            ? `, ${premierDuplique.zone}`
+                                        premierDuplique.arrondissement
+                                            ? `, ${premierDuplique.arrondissement}`
                                             : ''
                                     }}
                                 </p>
@@ -728,8 +728,8 @@ const statutLabels: Record<string, string> = {
                                     <MapPin class="size-4 shrink-0" />
                                     {{ principalPourModal.adresse || '-'
                                     }}{{
-                                        principalPourModal.zone
-                                            ? `, ${principalPourModal.zone}`
+                                        principalPourModal.arrondissement
+                                            ? `, ${principalPourModal.arrondissement}`
                                             : ''
                                     }}
                                 </p>

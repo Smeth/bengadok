@@ -15,7 +15,7 @@ class ClientDoublonService
      */
     public function detecterEtCreerGroupes(): void
     {
-        $clients = Client::with(['zone', 'commandes' => fn ($q) => $q->whereIn('status', Commande::STATUTS_COMPTABILISES_CLIENT)])
+        $clients = Client::with(['commandes' => fn ($q) => $q->whereIn('status', Commande::STATUTS_COMPTABILISES_CLIENT)])
             ->get();
 
         if ($clients->count() < 2) {
@@ -170,9 +170,11 @@ class ClientDoublonService
             $crit[] = 'adresse_identique';
         }
 
-        $zones = $groupeClients->pluck('zone_id')->unique()->filter();
-        if ($zones->count() === 1 && $zones->first() !== null) {
-            $crit[] = 'meme_zone';
+        $arrondissements = $groupeClients
+            ->map(fn ($c) => trim((string) ($c->arrondissement ?? '')))
+            ->filter(fn ($a) => $a !== '');
+        if ($arrondissements->isNotEmpty() && $arrondissements->unique()->count() === 1) {
+            $crit[] = 'meme_arrondissement';
         }
 
         return array_values(array_unique($crit));

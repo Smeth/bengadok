@@ -109,16 +109,31 @@ class CommandeController extends Controller
         ];
 
         if ($canManageCommandes) {
-            $payload['pharmacies'] = Pharmacie::with(['zone', 'typePharmacie', 'heurs'])->get();
-            $payload['zones'] = Zone::withCount('pharmacies')->get();
-            $payload['montantsLivraison'] = MontantLivraison::all();
-            $payload['modesPaiement'] = ModePaiement::query()->orderBy('designation')->get();
-            $payload['livreurs'] = Livreur::orderBy('nom')->orderBy('prenom')->get();
-            $payload['arrondissements'] = Client::ARRONDISSEMENTS;
-            $payload['parapharma_produit_types'] = AppSetting::parapharmaConfig()['produit_types'];
+            $payload['canManageCommandes'] = true;
         }
 
         return Inertia::render('Commandes/Index', $payload);
+    }
+
+    /**
+     * Référentiels lourds (pharmacies, zones, livreurs…) — chargés à la demande par le front.
+     */
+    public function referentiels(Request $request)
+    {
+        $user = $request->user();
+        if (! $user?->hasAnyRole(['admin', 'super_admin', 'agent_call_center'])) {
+            abort(403);
+        }
+
+        return response()->json([
+            'pharmacies' => Pharmacie::with(['zone', 'typePharmacie', 'heurs'])->get(),
+            'zones' => Zone::withCount('pharmacies')->get(),
+            'montantsLivraison' => MontantLivraison::all(),
+            'modesPaiement' => ModePaiement::query()->orderBy('designation')->get(),
+            'livreurs' => Livreur::orderBy('nom')->orderBy('prenom')->get(),
+            'arrondissements' => Client::ARRONDISSEMENTS,
+            'parapharma_produit_types' => AppSetting::parapharmaConfig()['produit_types'],
+        ]);
     }
 
     public function show(Request $request, Commande $commande)

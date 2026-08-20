@@ -16,12 +16,14 @@ class Pharmacie extends Model
         'credits_solde',
         'note_interne',
         'credits_alerte_seuil',
+        'credits_actif',
     ];
 
     protected $casts = [
         'de_garde' => 'boolean',
         'credits_solde' => 'integer',
         'credits_alerte_seuil' => 'integer',
+        'credits_actif' => 'boolean',
     ];
 
     public function creditOperations(): HasMany

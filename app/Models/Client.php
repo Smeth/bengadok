@@ -62,6 +62,19 @@ class Client extends Model
         return $this->belongsTo(Zone::class);
     }
 
+    /** Arrondissement Brazzaville affichable (liste fermée). */
+    public function arrondissementAffiche(): ?string
+    {
+        $arrondissement = trim((string) ($this->arrondissement ?? ''));
+        if ($arrondissement === '') {
+            return null;
+        }
+
+        return in_array($arrondissement, self::ARRONDISSEMENTS, true)
+            ? $arrondissement
+            : null;
+    }
+
     public function commandes(): HasMany
     {
         return $this->hasMany(Commande::class);

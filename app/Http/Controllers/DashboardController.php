@@ -42,8 +42,16 @@ class DashboardController extends Controller
             $mois = $request->get('mois');
             $period = $request->get('period', 'month');
             $period = is_string($period) ? $period : 'month';
+            $vuePeriode = $request->input('vue_periode', 'mois');
+            $vuePeriode = is_string($vuePeriode) && in_array($vuePeriode, ['mois', 'semaine'], true)
+                ? $vuePeriode
+                : 'mois';
 
-            $parapharma = $parapharmaService->build(is_string($mois) ? $mois : null);
+            $parapharma = $parapharmaService->build(
+                is_string($mois) ? $mois : null,
+                null,
+                $vuePeriode,
+            );
             $parapharmaKpis = $parapharma['kpis'];
             unset($parapharma['kpis']);
 
@@ -76,7 +84,11 @@ class DashboardController extends Controller
         $parapharmaService->marquerCommissionPayee($annee, $mois);
 
         return redirect()
-            ->route('dashboard', ['mois' => $validated['mois'], 'tab' => 'parapharma'])
+            ->route('dashboard', [
+                'mois' => $validated['mois'],
+                'tab' => 'parapharma',
+                'vue_periode' => $request->input('vue_periode', 'mois'),
+            ])
             ->with('success', 'Commission marquée comme payée.');
     }
 

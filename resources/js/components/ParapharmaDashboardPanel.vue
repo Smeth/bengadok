@@ -4,12 +4,16 @@ import {
     BarChart3,
     Check,
     ChevronDown,
+    ChevronRight,
     Coins,
+    Download,
     Eye,
     Info,
     Percent,
+    Pill,
     Plus,
     ShoppingBag,
+    Wallet,
     X,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -48,6 +52,23 @@ type CommissionParPharmacie = {
     statut: string;
     statut_label: string;
 };
+type VenteParPharmacie = {
+    date: string;
+    pharmacie: string;
+    ca_medicaments: number;
+    ca_parapharma: number;
+    ca_total: number;
+    nb_commandes: number;
+};
+type CreditsParPharmacie = {
+    pharmacie_id: number;
+    pharmacie: string;
+    credits_medicaments: number;
+    credits_parapharmacie: number;
+    credits_total: number;
+    cout_total: number;
+    commandes_eligibles: number;
+};
 
 const props = withDefaults(
     defineProps<{
@@ -58,10 +79,12 @@ const props = withDefaults(
         designation: string;
         telephone?: string;
         email?: string | null;
+        credits_actif?: boolean;
     } | null;
     mois: string;
     mois_label: string;
     mois_options: MoisOption[];
+    vue_periode?: 'mois' | 'semaine';
     config: {
         commission_percent: number;
         commission_jour_echeance: number;
@@ -73,7 +96,9 @@ const props = withDefaults(
     };
     kpis: {
         nb_commandes: number;
+        ca_medicaments: number;
         ca_parapharma: number;
+        ca_total: number;
         credits_disponibles: number;
         credits_utilises: number;
         credits_prepayes_total: number;
@@ -91,6 +116,8 @@ const props = withDefaults(
         paye_le: string | null;
     };
     ventes: VenteLigne[];
+    ventes_par_pharmacie?: VenteParPharmacie[];
+    credits_par_pharmacie?: CreditsParPharmacie[];
     historique_commissions: HistoriqueItem[];
     commandes_recentes: CommandeRecente[];
     commissions_par_pharmacie?: CommissionParPharmacie[];
@@ -100,14 +127,24 @@ const props = withDefaults(
         pharmacie_id: null,
         pharmacie: null,
         commissions_par_pharmacie: () => [],
+        ventes_par_pharmacie: () => [],
+        credits_par_pharmacie: () => [],
+        vue_periode: 'mois',
     },
 );
+
+const vuePeriode = computed(() => props.vue_periode ?? 'mois');
 
 const moisDropdownOpen = ref(false);
 const rechargeModalOpen = ref(false);
 
 const isPharmacie = computed(() => props.context === 'pharmacie');
 const isAdmin = computed(() => props.context === 'admin');
+
+/** Crédits/commission désactivés pour cette pharmacie (réglage admin) : blocs masqués. */
+const creditsActifs = computed(
+    () => !isPharmacie.value || props.pharmacie?.credits_actif !== false,
+);
 
 const commandesHref = computed(() =>
     isPharmacie.value ? '/dok-pharma/commandes' : '/commandes',
@@ -141,17 +178,28 @@ const rechargeForm = useForm({
     note: '',
 });
 
-function dashboardQuery(mois: string): Record<string, string | number> {
+function dashboardQuery(
+    mois: string,
+    periode: 'mois' | 'semaine' = vuePeriode.value,
+): Record<string, string | number> {
     if (isPharmacie.value && props.pharmacie_id) {
-        return { mois, pharmacie_id: props.pharmacie_id };
+        return { mois, pharmacie_id: props.pharmacie_id, vue_periode: periode };
     }
-    return { mois, tab: 'parapharma' };
+    return { mois, tab: 'parapharma', vue_periode: periode };
 }
 
 function setMois(value: string) {
     moisDropdownOpen.value = false;
     const url = isPharmacie.value ? '/dok-pharma' : dashboard();
     router.get(url, dashboardQuery(value), { preserveState: true });
+}
+
+function setVuePeriode(periode: 'mois' | 'semaine') {
+    if (periode === vuePeriode.value) {
+        return;
+    }
+    const url = isPharmacie.value ? '/dok-pharma' : dashboard();
+    router.get(url, dashboardQuery(props.mois, periode), { preserveState: true });
 }
 
 function marquerPaye() {
@@ -188,8 +236,116 @@ function statutBadgeClass(statut: string): string {
 
 <template>
     <div class="space-y-6">
-        <!-- KPIs -->
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <!-- KPIs : vue admin (toutes pharmacies) -->
+        <div v-if="isAdmin" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div
+                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+            >
+                <div class="mb-3 flex items-start justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600">
+                            CA médicaments
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            (toutes pharmacies)
+                        </p>
+                    </div>
+                    <div
+                        class="flex size-10 items-center justify-center rounded-xl bg-[#E8F5E9]"
+                    >
+                        <Pill class="size-5 text-[#198754]" />
+                    </div>
+                </div>
+                <p class="text-3xl font-extrabold text-gray-900">
+                    {{ formatXaf(kpis.ca_medicaments) }}
+                    <span class="text-base font-bold">XAF</span>
+                </p>
+                <p class="mt-1 text-xs text-gray-500">
+                    CA articles médicaments (lignes vente)
+                </p>
+            </div>
+
+            <div
+                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+            >
+                <div class="mb-3 flex items-start justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600">
+                            CA parapharmacie
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            (toutes pharmacies)
+                        </p>
+                    </div>
+                    <div
+                        class="flex size-10 items-center justify-center rounded-xl bg-[#E8F5E9]"
+                    >
+                        <BarChart3 class="size-5 text-[#198754]" />
+                    </div>
+                </div>
+                <p class="text-3xl font-extrabold text-gray-900">
+                    {{ formatXaf(kpis.ca_parapharma) }}
+                    <span class="text-base font-bold">XAF</span>
+                </p>
+                <p class="mt-1 text-xs text-gray-500">
+                    CA articles parapharmacie (lignes vente)
+                </p>
+            </div>
+
+            <div
+                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+            >
+                <div class="mb-3 flex items-start justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600">
+                            CA total
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            (médicaments + parapharmacie)
+                        </p>
+                    </div>
+                    <div
+                        class="flex size-10 items-center justify-center rounded-xl bg-[#E8F5E9]"
+                    >
+                        <Wallet class="size-5 text-[#198754]" />
+                    </div>
+                </div>
+                <p class="text-3xl font-extrabold text-gray-900">
+                    {{ formatXaf(kpis.ca_total) }}
+                    <span class="text-base font-bold">XAF</span>
+                </p>
+                <p class="mt-1 text-xs text-gray-500">
+                    Toutes pharmacies confondues
+                </p>
+            </div>
+
+            <div
+                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+            >
+                <div class="mb-3 flex items-start justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600">
+                            Commission ({{ config.commission_percent }}%)
+                        </p>
+                    </div>
+                    <div
+                        class="flex size-10 items-center justify-center rounded-xl bg-[#E8F5E9]"
+                    >
+                        <Percent class="size-5 text-[#198754]" />
+                    </div>
+                </div>
+                <p class="text-3xl font-extrabold text-gray-900">
+                    {{ formatXaf(kpis.montant_commission) }}
+                    <span class="text-base font-bold">XAF</span>
+                </p>
+                <p class="mt-1 text-xs text-gray-500">
+                    À verser pour la période, toutes pharmacies
+                </p>
+            </div>
+        </div>
+
+        <!-- KPIs : vue pharmacie (un seul établissement) -->
+        <div v-else class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div
                 class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
             >
@@ -244,6 +400,55 @@ function statutBadgeClass(statut: string): string {
             </div>
 
             <div
+                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+            >
+                <div class="mb-3 flex items-start justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600">
+                            CA médicaments
+                        </p>
+                    </div>
+                    <div
+                        class="flex size-10 items-center justify-center rounded-xl bg-[#E8F5E9]"
+                    >
+                        <Pill class="size-5 text-[#198754]" />
+                    </div>
+                </div>
+                <p class="text-3xl font-extrabold text-gray-900">
+                    {{ formatXaf(kpis.ca_medicaments) }}
+                    <span class="text-base font-bold">XAF</span>
+                </p>
+                <p class="mt-1 text-xs text-gray-500">
+                    CA articles médicaments (lignes vente)
+                </p>
+            </div>
+
+            <div
+                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+            >
+                <div class="mb-3 flex items-start justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600">
+                            CA total
+                        </p>
+                    </div>
+                    <div
+                        class="flex size-10 items-center justify-center rounded-xl bg-[#E8F5E9]"
+                    >
+                        <Wallet class="size-5 text-[#198754]" />
+                    </div>
+                </div>
+                <p class="text-3xl font-extrabold text-gray-900">
+                    {{ formatXaf(kpis.ca_total) }}
+                    <span class="text-base font-bold">XAF</span>
+                </p>
+                <p class="mt-1 text-xs text-gray-500">
+                    Médicaments + parapharmacie
+                </p>
+            </div>
+
+            <div
+                v-if="creditsActifs"
                 class="rounded-2xl border-2 border-[#E9D5FF] bg-gradient-to-br from-[#FAF5FF] to-white p-5 shadow-sm"
             >
                 <div class="mb-3 flex items-start justify-between">
@@ -296,6 +501,7 @@ function statutBadgeClass(statut: string): string {
             </div>
 
             <div
+                v-if="creditsActifs"
                 class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
             >
                 <div class="mb-3 flex items-start justify-between">
@@ -322,6 +528,7 @@ function statutBadgeClass(statut: string): string {
 
         <!-- Bandeau commission -->
         <div
+            v-if="creditsActifs"
             class="rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] p-6 shadow-sm"
         >
             <div
@@ -332,9 +539,16 @@ function statutBadgeClass(statut: string): string {
                         class="flex items-center gap-2 text-lg font-bold text-gray-900"
                     >
                         <Percent class="size-5 text-[#198754]" />
-                        Commission Parapharmacie ({{
-                            config.commission_percent
-                        }}%)
+                        <template v-if="isAdmin">
+                            % Commission Pharmacies ({{
+                                config.commission_percent
+                            }}%)
+                        </template>
+                        <template v-else>
+                            Commission Parapharmacie ({{
+                                config.commission_percent
+                            }}%)
+                        </template>
                         <Info class="size-4 text-gray-400" />
                     </h2>
                     <div class="mt-3 grid gap-2 sm:grid-cols-2">
@@ -403,14 +617,362 @@ function statutBadgeClass(statut: string): string {
             </div>
         </div>
 
-        <!-- Ventes + crédits -->
-        <div class="grid gap-6 lg:grid-cols-3">
+        <!-- Admin : ventes par pharmacie + crédits globaux / par pharmacie -->
+        <template v-if="isAdmin">
+            <div class="grid gap-6 lg:grid-cols-3">
+                <div
+                    class="lg:col-span-2 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+                >
+                    <div
+                        class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                        <h3 class="text-lg font-bold text-gray-900">
+                            Détail des ventes par pharmacie (médicaments &amp;
+                            para)
+                        </h3>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div
+                                class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5"
+                            >
+                                <button
+                                    type="button"
+                                    class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                                    :class="
+                                        vuePeriode === 'mois'
+                                            ? 'bg-[#198754] text-white shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    "
+                                    @click="setVuePeriode('mois')"
+                                >
+                                    Mois
+                                </button>
+                                <button
+                                    type="button"
+                                    class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                                    :class="
+                                        vuePeriode === 'semaine'
+                                            ? 'bg-[#198754] text-white shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    "
+                                    @click="setVuePeriode('semaine')"
+                                >
+                                    Semaine
+                                </button>
+                            </div>
+                            <div class="relative">
+                                <button
+                                    type="button"
+                                    class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold"
+                                    @click="
+                                        moisDropdownOpen = !moisDropdownOpen
+                                    "
+                                >
+                                    {{ mois_label }}
+                                    <ChevronDown class="size-4" />
+                                </button>
+                                <div
+                                    v-show="moisDropdownOpen"
+                                    class="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border bg-white py-1 shadow-lg"
+                                >
+                                    <button
+                                        v-for="opt in mois_options"
+                                        :key="opt.value"
+                                        type="button"
+                                        class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+                                        @click="setMois(opt.value)"
+                                    >
+                                        {{ opt.label }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        class="max-h-[min(380px,50vh)] overflow-auto rounded-lg border border-gray-100"
+                    >
+                        <table class="w-full min-w-[720px] text-left text-sm">
+                            <thead
+                                class="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgb(229,231,235)]"
+                            >
+                                <tr
+                                    class="border-b text-xs font-bold text-gray-500"
+                                >
+                                    <th class="pb-3 pr-4 pt-1">Date</th>
+                                    <th class="pb-3 pr-4 pt-1">Pharmacie</th>
+                                    <th class="pb-3 pr-4 pt-1 text-right">
+                                        Ventes médicaments (XAF)
+                                    </th>
+                                    <th class="pb-3 pr-4 pt-1 text-right">
+                                        Ventes parapharmacie (XAF)
+                                    </th>
+                                    <th class="pb-3 pr-4 pt-1 text-right">
+                                        Total ventes (XAF)
+                                    </th>
+                                    <th class="pb-3 pt-1 text-center">
+                                        Nbre de commandes
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-if="ventes_par_pharmacie.length === 0"
+                                    class="text-gray-500"
+                                >
+                                    <td colspan="6" class="py-8 text-center">
+                                        Aucune vente sur la période
+                                    </td>
+                                </tr>
+                                <tr
+                                    v-for="(v, i) in ventes_par_pharmacie"
+                                    :key="`${v.date}-${v.pharmacie}-${i}`"
+                                    class="border-b border-gray-50"
+                                >
+                                    <td class="py-3 pr-4 text-gray-700">
+                                        {{ v.date }}
+                                    </td>
+                                    <td
+                                        class="max-w-[180px] truncate py-3 pr-4 font-medium text-gray-900"
+                                        :title="v.pharmacie"
+                                    >
+                                        {{ v.pharmacie }}
+                                    </td>
+                                    <td
+                                        class="py-3 pr-4 text-right tabular-nums text-gray-700"
+                                    >
+                                        {{ formatXaf(v.ca_medicaments) }}
+                                    </td>
+                                    <td
+                                        class="py-3 pr-4 text-right tabular-nums text-gray-700"
+                                    >
+                                        {{ formatXaf(v.ca_parapharma) }}
+                                    </td>
+                                    <td
+                                        class="py-3 pr-4 text-right font-semibold tabular-nums text-[#198754]"
+                                    >
+                                        {{ formatXaf(v.ca_total) }}
+                                    </td>
+                                    <td
+                                        class="py-3 text-center tabular-nums font-medium"
+                                    >
+                                        {{ v.nb_commandes }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div
+                        class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4"
+                    >
+                        <button
+                            type="button"
+                            class="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900"
+                        >
+                            <Download class="size-4" />
+                            Exporter le tableau
+                        </button>
+                        <Link
+                            href="/commandes"
+                            class="inline-flex items-center gap-1 text-sm font-semibold text-[#198754] hover:underline"
+                        >
+                            Voir toutes les ventes
+                            <ChevronRight class="size-4" />
+                        </Link>
+                    </div>
+                </div>
+
+                <div
+                    class="rounded-2xl border-2 border-[#E9D5FF] bg-gradient-to-br from-[#FAF5FF] to-white p-6 shadow-sm"
+                >
+                    <div class="mb-6 flex items-center gap-3">
+                        <div
+                            class="flex size-10 items-center justify-center rounded-xl bg-[#F3E8FF]"
+                        >
+                            <BarChart3 class="size-5 text-[#7C3AED]" />
+                        </div>
+                        <h3 class="font-bold text-[#6B21A8]">
+                            Crédits consommés (Global)
+                        </h3>
+                    </div>
+                    <div class="space-y-6">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-600">
+                                Total des crédits utilisés
+                            </p>
+                            <p
+                                class="mt-1 text-4xl font-extrabold tabular-nums text-[#6B21A8]"
+                            >
+                                {{ formatXaf(kpis.credits_utilises) }}
+                                <span class="text-lg font-bold">crédits</span>
+                            </p>
+                        </div>
+                        <div class="border-t border-[#E9D5FF] pt-5">
+                            <p class="text-sm font-semibold text-gray-600">
+                                Coût total
+                            </p>
+                            <p
+                                class="mt-1 text-3xl font-extrabold tabular-nums text-[#6B21A8]"
+                            >
+                                {{ formatXaf(kpis.cout_credits_consommes) }}
+                                <span class="text-base font-bold">XAF</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+            >
+                <div
+                    class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                    <h3 class="text-lg font-bold text-gray-900">
+                        Crédits consommés par pharmacie
+                    </h3>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div
+                            class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5"
+                        >
+                            <button
+                                type="button"
+                                class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                                :class="
+                                    vuePeriode === 'mois'
+                                        ? 'bg-[#198754] text-white shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                "
+                                @click="setVuePeriode('mois')"
+                            >
+                                Mois
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                                :class="
+                                    vuePeriode === 'semaine'
+                                        ? 'bg-[#198754] text-white shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                "
+                                @click="setVuePeriode('semaine')"
+                            >
+                                Semaine
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <button
+                                type="button"
+                                class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold"
+                                @click="moisDropdownOpen = !moisDropdownOpen"
+                            >
+                                {{ mois_label }}
+                                <ChevronDown class="size-4" />
+                            </button>
+                            <div
+                                v-show="moisDropdownOpen"
+                                class="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border bg-white py-1 shadow-lg"
+                            >
+                                <button
+                                    v-for="opt in mois_options"
+                                    :key="`credits-${opt.value}`"
+                                    type="button"
+                                    class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+                                    @click="setMois(opt.value)"
+                                >
+                                    {{ opt.label }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[880px] text-left text-sm">
+                        <thead>
+                            <tr class="border-b text-xs font-bold text-gray-500">
+                                <th class="pb-3 pr-4">Pharmacie</th>
+                                <th class="pb-3 pr-4 text-right">
+                                    Crédits médicaments
+                                </th>
+                                <th class="pb-3 pr-4 text-right">
+                                    Crédits parapharmacie
+                                </th>
+                                <th class="pb-3 pr-4 text-right">
+                                    Total crédits utilisés
+                                </th>
+                                <th class="pb-3 pr-4 text-right">
+                                    Coût total (XAF)
+                                </th>
+                                <th class="pb-3 text-center">
+                                    Nbre de commandes éligibles
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="row in credits_par_pharmacie"
+                                :key="row.pharmacie_id"
+                                class="border-b border-gray-50"
+                            >
+                                <td class="py-3 pr-4 font-medium text-gray-900">
+                                    {{ row.pharmacie }}
+                                </td>
+                                <td
+                                    class="py-3 pr-4 text-right tabular-nums text-gray-700"
+                                >
+                                    {{ row.credits_medicaments }}
+                                </td>
+                                <td
+                                    class="py-3 pr-4 text-right tabular-nums text-gray-700"
+                                >
+                                    {{ row.credits_parapharmacie }}
+                                </td>
+                                <td
+                                    class="py-3 pr-4 text-right font-semibold tabular-nums text-[#198754]"
+                                >
+                                    {{ row.credits_total }}
+                                </td>
+                                <td
+                                    class="py-3 pr-4 text-right tabular-nums text-gray-800"
+                                >
+                                    {{ formatXaf(row.cout_total) }}
+                                </td>
+                                <td
+                                    class="py-3 text-center tabular-nums font-medium"
+                                >
+                                    {{ row.commandes_eligibles }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div
+                    class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4"
+                >
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900"
+                    >
+                        <Download class="size-4" />
+                        Exporter le tableau
+                    </button>
+                    <Link
+                        href="/pharmacies"
+                        class="inline-flex items-center gap-1 text-sm font-semibold text-[#198754] hover:underline"
+                    >
+                        Voir toutes les pharmacies
+                        <ChevronRight class="size-4" />
+                    </Link>
+                </div>
+            </div>
+        </template>
+
+        <!-- Pharmacie : ventes détaillées + sidebar crédits -->
+        <div v-else class="grid gap-6 lg:grid-cols-3">
             <div
                 class="lg:col-span-2 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
             >
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-bold text-gray-900">
-                        Détail des ventes (parapharmacie)
+                        Détail des ventes (médicaments + parapharmacie)
                     </h3>
                     <div class="relative">
                         <button
@@ -570,78 +1132,8 @@ function statutBadgeClass(statut: string): string {
             </div>
         </div>
 
-        <!-- Commissions par pharmacie (admin) -->
-        <div
-            v-if="isAdmin && commissions_par_pharmacie.length > 0"
-            class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
-        >
-            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h3 class="text-lg font-bold text-gray-900">
-                        Commissions par pharmacie
-                    </h3>
-                    <p class="mt-1 text-sm text-gray-500">
-                        Détail par officine pour {{ mois_label }}. Le bandeau
-                        ci-dessus reste le total agrégé plateforme.
-                    </p>
-                </div>
-                <Link
-                    href="/pharmacies"
-                    class="text-sm font-semibold text-[#198754] hover:underline"
-                >
-                    Gérer crédits par pharmacie
-                </Link>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full min-w-[720px] text-left text-sm">
-                    <thead>
-                        <tr class="border-b text-xs font-bold text-gray-500">
-                            <th class="pb-3 pr-4">Pharmacie</th>
-                            <th class="pb-3 pr-4 text-right">CA parapharma</th>
-                            <th class="pb-3 pr-4 text-right">Commission</th>
-                            <th class="pb-3 pr-4">Statut</th>
-                            <th class="pb-3 text-right">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="row in commissions_par_pharmacie"
-                            :key="row.pharmacie_id"
-                            class="border-b border-gray-50"
-                        >
-                            <td class="py-3 pr-4 font-medium text-gray-900">
-                                {{ row.pharmacie }}
-                            </td>
-                            <td class="py-3 pr-4 text-right tabular-nums">
-                                {{ formatXaf(row.ca_parapharma) }} XAF
-                            </td>
-                            <td class="py-3 pr-4 text-right font-semibold tabular-nums">
-                                {{ formatXaf(row.montant_commission) }} XAF
-                            </td>
-                            <td class="py-3 pr-4">
-                                <span
-                                    class="inline-flex rounded-full px-2 py-0.5 text-xs font-bold"
-                                    :class="statutBadgeClass(row.statut_label)"
-                                >
-                                    {{ row.statut_label }}
-                                </span>
-                            </td>
-                            <td class="py-3 text-right">
-                                <Link
-                                    :href="`/pharmacies/${row.pharmacie_id}`"
-                                    class="text-[13px] font-semibold text-[#459cd1] hover:underline"
-                                >
-                                    Fiche
-                                </Link>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Historique + commandes récentes -->
-        <div class="grid gap-6 lg:grid-cols-2">
+        <!-- Historique + commandes récentes (pharmacie uniquement) -->
+        <div v-if="isPharmacie" class="grid gap-6 lg:grid-cols-2">
             <div
                 class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
             >

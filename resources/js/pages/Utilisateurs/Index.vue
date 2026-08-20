@@ -663,6 +663,8 @@ function rechercher() {
                     <p class="text-sm text-muted-foreground">
                         Permissions supplémentaires (en plus du rôle). Les
                         permissions du rôle ne peuvent pas être retirées ici.
+                        L’accès aux écrans est déterminé par le rôle Spatie, pas
+                        par ces cases à cocher.
                     </p>
                 </DialogHeader>
                 <form

@@ -78,6 +78,7 @@ const props = defineProps<{
         heurs: { ouverture: string; fermeture: string } | null;
         heure_ouverture: string;
         heure_fermeture: string;
+        credits_actif: boolean;
         users: UserItem[];
     };
     zones: Zone[];
@@ -156,6 +157,7 @@ const form = ref({
     proprio_nom: props.pharmacie.proprio_nom ?? '',
     proprio_email: props.pharmacie.proprio_email ?? '',
     proprio_tel: props.pharmacie.proprio_tel ?? '',
+    credits_actif: props.pharmacie.credits_actif,
 });
 const errors = ref<Record<string, string>>({});
 
@@ -204,6 +206,7 @@ function openEditModal() {
         proprio_nom: props.pharmacie.proprio_nom ?? '',
         proprio_email: props.pharmacie.proprio_email ?? '',
         proprio_tel: props.pharmacie.proprio_tel ?? '',
+        credits_actif: props.pharmacie.credits_actif,
     };
     errors.value = {};
     showEditModal.value = true;
@@ -870,6 +873,32 @@ function creerUtilisateur() {
                                 />
                             </div>
                         </div>
+                    </div>
+
+                    <div v-if="isAdmin" class="space-y-2 rounded-lg border p-3">
+                        <label
+                            class="flex cursor-pointer items-start gap-3"
+                        >
+                            <input
+                                v-model="form.credits_actif"
+                                type="checkbox"
+                                class="mt-1 size-4"
+                            />
+                            <span>
+                                <span
+                                    class="block text-sm font-medium text-foreground"
+                                    >Crédits et commission parapharmacie
+                                    actifs</span
+                                >
+                                <span
+                                    class="block text-xs text-muted-foreground"
+                                    >Si désactivé, les blocs crédits/commission
+                                    disparaissent du dashboard de cette
+                                    pharmacie et aucun crédit n'est
+                                    déduit.</span
+                                >
+                            </span>
+                        </label>
                     </div>
 
                     <DialogFooter class="gap-2">

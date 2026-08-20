@@ -10,6 +10,23 @@ type VenteLigne = {
     commande_eligible_credit: boolean;
     credit_utilise: number;
 };
+type VenteParPharmacie = {
+    date: string;
+    pharmacie: string;
+    ca_medicaments: number;
+    ca_parapharma: number;
+    ca_total: number;
+    nb_commandes: number;
+};
+type CreditsParPharmacie = {
+    pharmacie_id: number;
+    pharmacie: string;
+    credits_medicaments: number;
+    credits_parapharmacie: number;
+    credits_total: number;
+    cout_total: number;
+    commandes_eligibles: number;
+};
 type HistoriqueItem = {
     mois: string;
     periode: string;
@@ -39,6 +56,7 @@ defineProps<{
     mois: string;
     mois_label: string;
     mois_options: MoisOption[];
+    vue_periode?: 'mois' | 'semaine';
     config: {
         commission_percent: number;
         commission_jour_echeance: number;
@@ -50,7 +68,9 @@ defineProps<{
     };
     kpis: {
         nb_commandes: number;
+        ca_medicaments: number;
         ca_parapharma: number;
+        ca_total: number;
         credits_disponibles: number;
         credits_utilises: number;
         credits_prepayes_total: number;
@@ -68,6 +88,8 @@ defineProps<{
         paye_le: string | null;
     };
     ventes: VenteLigne[];
+    ventes_par_pharmacie?: VenteParPharmacie[];
+    credits_par_pharmacie?: CreditsParPharmacie[];
     historique_commissions: HistoriqueItem[];
     commandes_recentes: CommandeRecente[];
     commissions_par_pharmacie?: CommissionParPharmacie[];

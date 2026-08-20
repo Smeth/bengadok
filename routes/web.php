@@ -53,6 +53,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::prefix('medicaments')->name('medicaments.')->group(function () {
             Route::get('/', [MedicamentController::class, 'index'])->name('index');
             Route::get('doublons', [MedicamentDoublonController::class, 'index'])->name('doublons');
+            Route::post('doublons/resync', [MedicamentDoublonController::class, 'resync'])->name('doublons.resync');
             Route::patch('doublons/{groupe}/ignorer', [MedicamentDoublonController::class, 'ignorer'])->name('doublons.ignorer');
             Route::patch('doublons/{groupe}/verifier', [MedicamentDoublonController::class, 'verifier'])->name('doublons.verifier');
             Route::patch('doublons/{groupe}/fusionner', [MedicamentDoublonController::class, 'fusionner'])->name('doublons.fusionner');
@@ -72,6 +73,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->name('promouvoir')
                 ->middleware('role:admin|super_admin|agent_call_center');
             Route::get('doublons', [ClientDoublonController::class, 'index'])->name('doublons');
+            Route::post('doublons/resync', [ClientDoublonController::class, 'resync'])->name('doublons.resync');
             Route::patch('doublons/{groupe}/ignorer', [ClientDoublonController::class, 'ignorer'])->name('doublons.ignorer');
             Route::patch('doublons/{groupe}/verifier', [ClientDoublonController::class, 'verifier'])->name('doublons.verifier');
             Route::patch('doublons/{groupe}/fusionner', [ClientDoublonController::class, 'fusionner'])->name('doublons.fusionner');
@@ -89,6 +91,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Commande (back-office)
         Route::prefix('commandes')->name('commandes.')->group(function () {
             Route::get('/', [CommandeController::class, 'index'])->name('index');
+            Route::get('referentiels', [CommandeController::class, 'referentiels'])->name('referentiels');
             Route::get('recherche-pharmacie-proche', [CommandeController::class, 'rechercherPharmacieProche'])->name('recherche-pharmacie');
             Route::post('bulk-annuler', [CommandeController::class, 'bulkAnnuler'])->name('bulk-annuler')->middleware('role:admin|super_admin|agent_call_center');
             Route::post('/', [CommandeController::class, 'store'])->name('store')->middleware('role:admin|super_admin|agent_call_center');

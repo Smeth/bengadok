@@ -152,7 +152,7 @@ class PharmacieCreditService
 
         return DB::transaction(function () use ($commande, $cfg) {
             $pharmacie = Pharmacie::query()->whereKey($commande->pharmacie_id)->lockForUpdate()->first();
-            if (! $pharmacie || (int) $pharmacie->credits_solde < 1) {
+            if (! $pharmacie || ! $pharmacie->credits_actif || (int) $pharmacie->credits_solde < 1) {
                 return null;
             }
 

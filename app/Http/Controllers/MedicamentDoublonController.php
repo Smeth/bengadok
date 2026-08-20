@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SyncMedicamentDoublonsJob;
 use App\Models\Commande;
 use App\Models\GroupeDoublonsProduit;
+use App\Services\DoublonSyncCache;
 use App\Services\ProduitDoublonService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,8 +27,8 @@ class MedicamentDoublonController extends Controller
         $critere = (string) $request->input('critere', '');
 
         $criteresActifs = $this->resolveCriteresActifs($request);
-
-        $this->doublonService->resyncPourCriteres($criteresActifs);
+        $criteriaKey = DoublonSyncCache::medicamentCriteriaKey($criteresActifs);
+        $this->queueMedicamentDoublonSyncIfNeeded($criteresActifs, $criteriaKey);
 
         $query = GroupeDoublonsProduit::with(['produits', 'principalProduit']);
 
@@ -151,9 +153,21 @@ class MedicamentDoublonController extends Controller
         return count(array_intersect($stored, $criteresActifs)) > 0;
     }
 
+    public function resync(Request $request): RedirectResponse
+    {
+        $criteresActifs = $this->resolveCriteresActifs($request);
+        $this->doublonService->resyncPourCriteres($criteresActifs);
+        DoublonSyncCache::markMedicamentSyncCompleted(
+            DoublonSyncCache::medicamentCriteriaKey($criteresActifs),
+        );
+
+        return redirect()->route('medicaments.doublons', $request->query())->with('success', 'Doublons médicaments resynchronisés.');
+    }
+
     public function ignorer(GroupeDoublonsProduit $groupe): RedirectResponse
     {
         $groupe->update(['statut' => 'ignore']);
+        DoublonSyncCache::invalidateMedicamentSync();
 
         return redirect()->route('medicaments.doublons')->with('success', 'Groupe ignoré.');
     }
@@ -161,6 +175,7 @@ class MedicamentDoublonController extends Controller
     public function verifier(GroupeDoublonsProduit $groupe): RedirectResponse
     {
         $groupe->update(['statut' => 'verifie']);
+        DoublonSyncCache::invalidateMedicamentSync();
 
         return redirect()->route('medicaments.doublons')->with('success', 'Groupe marqué comme vérifié.');
     }
@@ -176,8 +191,19 @@ class MedicamentDoublonController extends Controller
             return redirect()->route('medicaments.doublons')->with('error', 'Médicament invalide.');
         }
         $this->doublonService->fusionner($groupe, $principalId);
+        DoublonSyncCache::invalidateMedicamentSync();
 
         return redirect()->route('medicaments.doublons')->with('success', 'Médicaments fusionnés avec succès.');
+    }
+
+    private function queueMedicamentDoublonSyncIfNeeded(array $criteresActifs, string $criteriaKey): void
+    {
+        if (! DoublonSyncCache::shouldQueueMedicamentSync($criteriaKey)) {
+            return;
+        }
+
+        DoublonSyncCache::markMedicamentSyncQueued($criteriaKey);
+        SyncMedicamentDoublonsJob::dispatch($criteresActifs, $criteriaKey);
     }
 
     private function getVentesMap(): array

@@ -472,44 +472,6 @@ function getPiePath(
                     class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] relative overflow-hidden group hover:shadow-lg transition-shadow"
                 >
                     <h3 class="mb-6 text-[14px] font-extrabold text-[#5c5959]">
-                        Revenue Total Comission
-                    </h3>
-                    <div class="mb-4 flex items-baseline gap-2">
-                        <span class="text-[32px] font-extrabold text-black">{{
-                            Number(kpis.revenuTotal).toLocaleString('fr-FR')
-                        }}</span>
-                        <span class="text-[14px] font-bold text-black"
-                            >XAF</span
-                        >
-                    </div>
-                    <div
-                        class="flex items-center gap-2 text-[11px] font-semibold"
-                    >
-                        <span
-                            class="flex items-center gap-1 rounded-full border border-black/20 px-2 py-1"
-                            :class="
-                                kpis.evolutionRevenu >= 0
-                                    ? 'text-black'
-                                    : 'text-red-600'
-                            "
-                        >
-                            <ArrowUpRight
-                                v-if="kpis.evolutionRevenu >= 0"
-                                class="size-3"
-                            />
-                            <ArrowDownRight v-else class="size-3" />
-                            {{ Math.abs(kpis.evolutionRevenu) }}%
-                        </span>
-                        <span class="text-[#5c5959]">{{
-                            kpiEvolutionHint
-                        }}</span>
-                    </div>
-                </div>
-
-                <div
-                    class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] relative overflow-hidden group hover:shadow-lg transition-shadow"
-                >
-                    <h3 class="mb-6 text-[14px] font-extrabold text-[#5c5959]">
                         Pharmacies partenaires
                     </h3>
                     <div class="mb-4 flex items-baseline gap-2">
@@ -610,6 +572,44 @@ function getPiePath(
                             />
                             <ArrowDownRight v-else class="size-3" />
                             {{ Math.abs(kpis.evolutionClients) }}%
+                        </span>
+                        <span class="text-[#5c5959]">{{
+                            kpiEvolutionHint
+                        }}</span>
+                    </div>
+                </div>
+
+                <div
+                    class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] relative overflow-hidden group hover:shadow-lg transition-shadow"
+                >
+                    <h3 class="mb-6 text-[14px] font-extrabold text-[#5c5959]">
+                        CA total
+                    </h3>
+                    <div class="mb-4 flex items-baseline gap-2">
+                        <span class="text-[32px] font-extrabold text-black">{{
+                            Number(kpis.revenuTotal).toLocaleString('fr-FR')
+                        }}</span>
+                        <span class="text-[14px] font-bold text-black"
+                            >XAF</span
+                        >
+                    </div>
+                    <div
+                        class="flex items-center gap-2 text-[11px] font-semibold"
+                    >
+                        <span
+                            class="flex items-center gap-1 rounded-full border border-black/20 px-2 py-1"
+                            :class="
+                                kpis.evolutionRevenu >= 0
+                                    ? 'text-black'
+                                    : 'text-red-600'
+                            "
+                        >
+                            <ArrowUpRight
+                                v-if="kpis.evolutionRevenu >= 0"
+                                class="size-3"
+                            />
+                            <ArrowDownRight v-else class="size-3" />
+                            {{ Math.abs(kpis.evolutionRevenu) }}%
                         </span>
                         <span class="text-[#5c5959]">{{
                             kpiEvolutionHint

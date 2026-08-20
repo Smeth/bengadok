@@ -18,7 +18,7 @@ type Client = {
     prenom: string | null;
     tel: string;
     adresse: string;
-    zone?: string;
+    arrondissement?: string | null;
     nb_commandes: number;
     total_depense: number;
     panier_moyen: number;
@@ -37,14 +37,22 @@ type FrequenceRow = {
     priorite: number;
 };
 
+type PaginatedClients = {
+    data: Client[];
+    links: { url: string | null; label: string; active: boolean }[];
+    from: number | null;
+    to: number | null;
+    total: number;
+};
+
 const props = withDefaults(
     defineProps<{
-        clients: Client[];
-        zones: Array<{ id: number; designation: string }>;
+        clients: PaginatedClients;
+        arrondissements: string[];
         frequences?: FrequenceRow[];
         filters: {
             search?: string;
-            zone_id?: string;
+            arrondissement?: string;
             tri?: string;
             frequence?: string;
             frequence_id?: string;
@@ -89,7 +97,7 @@ function filtrer(key: string, value: string) {
     if (key !== 'frequence_id' && key !== 'frequence') {
         /* garder les filtres fréquence */
     }
-    router.get('/clients', next, { preserveState: true });
+    router.get('/clients', next, { preserveState: true, replace: true });
 }
 
 function nomComplet(c: Client) {
@@ -139,23 +147,23 @@ function nomComplet(c: Client) {
                         <option value="recent">Récent</option>
                     </select>
                     <select
-                        :value="filters.zone_id"
-                        class="flex h-10 rounded-lg border border-white/80 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm"
+                        :value="filters.arrondissement || ''"
+                        class="flex h-10 max-w-[180px] rounded-lg border border-white/80 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm"
                         @change="
                             (e: Event) =>
                                 filtrer(
-                                    'zone_id',
+                                    'arrondissement',
                                     (e.target as HTMLSelectElement).value,
                                 )
                         "
                     >
-                        <option value="">Toutes les zones</option>
+                        <option value="">Tous les arrondissements</option>
                         <option
-                            v-for="z in zones"
-                            :key="z.id"
-                            :value="String(z.id)"
+                            v-for="a in arrondissements"
+                            :key="a"
+                            :value="a"
                         >
-                            {{ z.designation }}
+                            {{ a }}
                         </option>
                     </select>
                     <select
@@ -182,13 +190,13 @@ function nomComplet(c: Client) {
                         class="ml-auto flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-white"
                     >
                         <Users class="size-4" />
-                        <span class="font-semibold">{{ clients.length }}</span>
+                        <span class="font-semibold">{{ clients.total }}</span>
                     </div>
                 </form>
 
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div
-                        v-for="c in clients"
+                        v-for="c in clients.data"
                         :key="c.id"
                         class="rounded-xl border border-white/80 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/95"
                     >
@@ -199,10 +207,10 @@ function nomComplet(c: Client) {
                                 </h3>
                                 <div class="mt-1 flex flex-wrap gap-1">
                                     <span
-                                        v-if="c.zone"
+                                        v-if="c.arrondissement"
                                         class="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-800 dark:bg-sky-900/30"
                                     >
-                                        {{ c.zone }}
+                                        {{ c.arrondissement }}
                                     </span>
                                     <span
                                         v-if="c.frequence_label"
@@ -284,6 +292,58 @@ function nomComplet(c: Client) {
                                 </span>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <p
+                    v-if="!clients.data.length"
+                    class="py-10 text-center text-sm text-muted-foreground"
+                >
+                    Aucun client avec les filtres actuels.
+                </p>
+
+                <div
+                    v-if="clients.links.length > 3"
+                    class="flex items-center justify-between px-2"
+                >
+                    <div class="hidden text-sm text-muted-foreground sm:block">
+                        Affichage de
+                        <span class="font-medium text-foreground">{{
+                            clients.from
+                        }}</span>
+                        à
+                        <span class="font-medium text-foreground">{{
+                            clients.to
+                        }}</span>
+                        sur
+                        <span class="font-medium text-foreground">{{
+                            clients.total
+                        }}</span>
+                        résultats
+                    </div>
+                    <div class="flex flex-wrap items-center gap-1">
+                        <template
+                            v-for="(link, pIndex) in clients.links"
+                            :key="pIndex"
+                        >
+                            <div
+                                v-if="link.url === null"
+                                class="flex min-w-9 items-center justify-center rounded-lg border border-transparent px-3 py-1.5 text-sm text-muted-foreground"
+                                v-html="link.label"
+                            />
+                            <Link
+                                v-else
+                                :href="link.url"
+                                class="flex min-w-9 items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted/50"
+                                :class="
+                                    link.active
+                                        ? 'border-[#459cd1] bg-[#459cd1] text-white'
+                                        : 'border-input bg-white text-foreground'
+                                "
+                            >
+                                <span v-html="link.label" />
+                            </Link>
+                        </template>
                     </div>
                 </div>
             </div>

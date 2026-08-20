@@ -37,6 +37,7 @@ withDefaults(
             designation: string;
             telephone?: string;
             email?: string | null;
+            credits_actif?: boolean;
         } | null;
         pharmacies_disponibles?: Array<{ id: number; designation: string }>;
         mois: string;
@@ -53,7 +54,9 @@ withDefaults(
         };
         kpis: {
             nb_commandes: number;
+            ca_medicaments: number;
             ca_parapharma: number;
+            ca_total: number;
             credits_disponibles: number;
             credits_utilises: number;
             credits_prepayes_total: number;
@@ -91,7 +94,7 @@ withDefaults(
         :pharmacie-id="pharmacie_id ?? undefined"
         :pharmacie-designation="pharmacie?.designation"
     >
-        <div class="px-5 pb-10 sm:px-8">
+        <div class="px-5 pb-10 pt-5 sm:px-8 sm:pt-6">
             <ParapharmaDashboardPanel
                 context="pharmacie"
                 :mois="mois"

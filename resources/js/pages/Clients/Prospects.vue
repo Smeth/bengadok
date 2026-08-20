@@ -28,7 +28,6 @@ type ProspectRow = {
     tel_secondaire?: string | null;
     adresse: string;
     arrondissement?: string | null;
-    zone?: string | null;
     nb_commandes: number;
     nb_commandes_reussies: number;
     derniere_commande?: string | null;
@@ -46,7 +45,6 @@ type PaginatedProspects = {
 
 const props = defineProps<{
     prospects: PaginatedProspects;
-    zones: Array<{ id: number; designation: string }>;
     arrondissements: string[];
     stats: {
         total: number;
@@ -56,7 +54,6 @@ const props = defineProps<{
     };
     filters: {
         search?: string;
-        zone_id?: string;
         arrondissement?: string;
         tri?: string;
     };
@@ -240,26 +237,6 @@ function promouvoir(prospect: ProspectRow) {
                     <option value="commandes">Nb commandes</option>
                 </select>
                 <select
-                    :value="filters.zone_id || ''"
-                    class="flex h-10 rounded-lg border border-white/80 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm"
-                    @change="
-                        (e: Event) =>
-                            filtrer(
-                                'zone_id',
-                                (e.target as HTMLSelectElement).value,
-                            )
-                    "
-                >
-                    <option value="">Toutes les zones</option>
-                    <option
-                        v-for="z in zones"
-                        :key="z.id"
-                        :value="String(z.id)"
-                    >
-                        {{ z.designation }}
-                    </option>
-                </select>
-                <select
                     :value="filters.arrondissement || ''"
                     class="flex h-10 max-w-[180px] rounded-lg border border-white/80 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm"
                     @change="
@@ -270,7 +247,7 @@ function promouvoir(prospect: ProspectRow) {
                             )
                     "
                 >
-                    <option value="">Tous arrondissements</option>
+                    <option value="">Tous les arrondissements</option>
                     <option v-for="a in arrondissements" :key="a" :value="a">
                         {{ a }}
                     </option>
@@ -305,7 +282,7 @@ function promouvoir(prospect: ProspectRow) {
                                 Adresse
                             </th>
                             <th class="px-4 py-3 text-left font-medium">
-                                Zone
+                                Arrondissement
                             </th>
                             <th class="px-4 py-3 text-center font-medium">
                                 Commandes
@@ -353,7 +330,7 @@ function promouvoir(prospect: ProspectRow) {
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-muted-foreground">
-                                {{ p.zone || '—' }}
+                                {{ p.arrondissement || '—' }}
                             </td>
                             <td
                                 class="px-4 py-3 text-center tabular-nums font-medium"
@@ -388,7 +365,10 @@ function promouvoir(prospect: ProspectRow) {
                                         Fiche
                                     </Link>
                                     <Button
-                                        v-if="canPromouvoir"
+                                        v-if="
+                                            canPromouvoir &&
+                                            p.statut === 'eligible_promotion'
+                                        "
                                         type="button"
                                         size="sm"
                                         variant="outline"

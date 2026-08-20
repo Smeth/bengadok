@@ -89,51 +89,80 @@ const props = withDefaults(
             periode?: string;
             date?: string;
         };
-        pharmacies?: Array<{
-            id: number;
-            designation: string;
-            adresse: string;
-            telephone: string;
-            zone_id?: number;
-            de_garde?: boolean;
-            zone?: { id: number; designation: string };
-            type_pharmacie?: { designation: string };
-            heurs?: { ouverture: string; fermeture: string };
-        }>;
-        zones?: Array<{
-            id: number;
-            designation: string;
-            pharmacies_count: number;
-        }>;
-        montantsLivraison?: Array<{ id: number; designation: number }>;
-        modesPaiement?: Array<{ id: number; designation: string }>;
-        livreurs?: Array<{
-            id: number;
-            nom: string;
-            prenom: string;
-            tel: string;
-        }>;
-        /** Ouvre le panneau détail (ex. redirection depuis /commandes/{id} ou lien partagé). */
         openDetailCommandeId?: number | null;
-        /** Arrondissements (Brazzaville) pour les formulaires commande. */
-        arrondissements?: string[];
-        /** Types produit parapharmacie (paramètres app). */
-        parapharma_produit_types?: string[];
+        canManageCommandes?: boolean;
     }>(),
     {
         commandes: () => ({ data: [], links: [] }),
         stats: () => ({}),
         filters: () => ({}),
-        pharmacies: () => [],
-        zones: () => [],
-        montantsLivraison: () => [],
-        modesPaiement: () => [],
-        livreurs: () => [],
         openDetailCommandeId: null,
-        arrondissements: () => [],
-        parapharma_produit_types: () => ['Parapharmacie'],
+        canManageCommandes: false,
     },
 );
+
+type PharmacieRef = {
+    id: number;
+    designation: string;
+    adresse: string;
+    telephone: string;
+    zone_id?: number;
+    de_garde?: boolean;
+    zone?: { id: number; designation: string };
+    type_pharmacie?: { designation: string };
+    heurs?: { ouverture: string; fermeture: string };
+};
+
+const pharmacies = ref<PharmacieRef[]>([]);
+const zones = ref<Array<{ id: number; designation: string; pharmacies_count: number }>>([]);
+const montantsLivraison = ref<Array<{ id: number; designation: number }>>([]);
+const modesPaiement = ref<Array<{ id: number; designation: string }>>([]);
+const livreurs = ref<Array<{ id: number; nom: string; prenom: string; tel: string }>>([]);
+const arrondissements = ref<string[]>([]);
+const parapharmaProduitTypes = ref<string[]>(['Parapharmacie']);
+const referentielsLoading = ref(false);
+let referentielsLoaded = false;
+
+async function loadReferentiels(): Promise<void> {
+    if (!props.canManageCommandes) {
+        return;
+    }
+    if (referentielsLoaded) {
+        return;
+    }
+    if (referentielsLoading.value) {
+        return;
+    }
+    referentielsLoading.value = true;
+    try {
+        const r = await fetch('/commandes/referentiels', {
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+        });
+        if (!r.ok) {
+            return;
+        }
+        const json = await r.json();
+        pharmacies.value = json.pharmacies ?? [];
+        zones.value = json.zones ?? [];
+        montantsLivraison.value = json.montantsLivraison ?? [];
+        modesPaiement.value = json.modesPaiement ?? [];
+        livreurs.value = json.livreurs ?? [];
+        arrondissements.value = json.arrondissements ?? [];
+        parapharmaProduitTypes.value =
+            json.parapharma_produit_types ?? ['Parapharmacie'];
+        referentielsLoaded = true;
+    } finally {
+        referentielsLoading.value = false;
+    }
+}
+
+function ensureReferentiels(): void {
+    void loadReferentiels();
+}
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
@@ -482,6 +511,7 @@ function descriptionDecisionVerification(decision: string | undefined): string {
 let detailFetchGeneration = 0;
 
 async function openDetail(id: number) {
+    ensureReferentiels();
     const gen = ++detailFetchGeneration;
     loadingDetail.value = true;
     showDetailModal.value = true;
@@ -752,11 +782,13 @@ function confirmAnnulerEtRelancer() {
 function openRelancerModal() {
     if (!detailCommande.value) return;
     errorsRelancer.value = {};
+    ensureReferentiels();
     showRelancerModal.value = true;
 }
 
 function openEnregistrementModal() {
     apiErrorsEnreg.value = {};
+    ensureReferentiels();
     showEnregistrementModal.value = true;
 }
 
@@ -765,7 +797,7 @@ const sousTotal = () => detailSplit.value.sousTotal;
 const detailSplit = computed(() =>
     splitProduitsCommande(
         detailCommande.value?.produits,
-        props.parapharma_produit_types ?? ['Parapharmacie'],
+        parapharmaProduitTypes.value,
     ),
 );
 
@@ -2443,9 +2475,9 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
         <CommandeEnregistrementModal
             v-model:open="showEnregistrementModal"
             :zones="zones ?? []"
-            :pharmacies="pharmacies ?? []"
-            :arrondissements="arrondissements ?? []"
-            :parapharma-produit-types="parapharma_produit_types ?? []"
+            :pharmacies="pharmacies"
+            :arrondissements="arrondissements"
+            :parapharma-produit-types="parapharmaProduitTypes"
             :api-errors="apiErrorsEnreg"
             @submit="submitEnregistrementFromModal"
         />
@@ -2456,9 +2488,9 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
             mode="relance"
             :commande="detailCommande ?? undefined"
             :zones="zones ?? []"
-            :pharmacies="pharmacies ?? []"
-            :arrondissements="arrondissements ?? []"
-            :parapharma-produit-types="parapharma_produit_types ?? []"
+            :pharmacies="pharmacies"
+            :arrondissements="arrondissements"
+            :parapharma-produit-types="parapharmaProduitTypes"
             :api-errors="errorsRelancer"
             @submit="submitRelancerFromModal"
         />
