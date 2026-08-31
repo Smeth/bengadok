@@ -22,6 +22,7 @@ trait CreatesMinimalFixtures
         $this->seed(RolePermissionSeeder::class);
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
+
     protected function createZone(string $designation = 'Zone test'): Zone
     {
         return Zone::query()->create([

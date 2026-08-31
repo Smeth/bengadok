@@ -214,4 +214,3 @@ class ClientIndexService
         return $grouped;
     }
 }
-

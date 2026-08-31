@@ -3,7 +3,6 @@
 namespace Tests\Feature\Clients;
 
 use App\Actions\PromoteClientsFromSuccessfulOrdersAction;
-use App\Models\Commande;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesMinimalFixtures;
 use Tests\Concerns\SeedsRoles;
