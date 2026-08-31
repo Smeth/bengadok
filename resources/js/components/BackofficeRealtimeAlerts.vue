@@ -9,8 +9,6 @@ import {
     showOrderBrowserNotification,
 } from '@/lib/orderBrowserNotification';
 import { playOrderAlertSound, unlockOrderAlertSound } from '@/lib/orderAlertSound';
-import type { BackofficeOrderAlert } from '@/lib/backofficeOrderAlertDetector';
-import { registerBackofficeOrderAlertHandler } from '@/lib/backofficeOrderAlertsBus';
 import {
     dismissOrderAlertBanner,
     ORDER_ALERT_PREFS_CHANGED_EVENT,
