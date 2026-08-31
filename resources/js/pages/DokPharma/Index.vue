@@ -16,6 +16,7 @@ import {
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 import AppToast from '@/components/AppToast.vue';
+import FlashToastHost from '@/components/FlashToastHost.vue';
 import DokPharmaOrdonnanceViewerModal from '@/components/dok-pharma/DokPharmaOrdonnanceViewerModal.vue';
 import DokPharmaValiderRetraitModal from '@/components/dok-pharma/DokPharmaValiderRetraitModal.vue';
 import { Input } from '@/components/ui/input';
@@ -2214,5 +2215,7 @@ function closeOrdonnance() {
             :numero="ordModal.numero"
             @close="closeOrdonnance"
         />
+
+        <FlashToastHost />
     </PharmacyLayout>
 </template>

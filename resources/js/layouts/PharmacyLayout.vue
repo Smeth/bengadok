@@ -12,6 +12,7 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
+import PharmacyRealtimeAlerts from '@/components/PharmacyRealtimeAlerts.vue';
 import RealtimeNotificationsListener from '@/components/RealtimeNotificationsListener.vue';
 import {
     DropdownMenu,
@@ -105,6 +106,7 @@ interface NotificationItem {
     id: number;
     numero: string;
     status_label: string;
+    alert_kind?: 'nouvelle' | 'a_preparer' | string | null;
     client?: { nom: string; prenom?: string } | null;
     beneficiaire?: string | null;
     url: string;
@@ -125,10 +127,22 @@ function formatOrdererName(item: NotificationItem): string {
 const notifications = computed(() => {
     const n = (
         page.props as {
-            notifications?: { count: number; items: NotificationItem[] };
+            notifications?: {
+                count: number;
+                count_nouvelles?: number;
+                count_a_preparer?: number;
+                items: NotificationItem[];
+            };
         }
     ).notifications;
-    return n ?? { count: 0, items: [] };
+    return (
+        n ?? {
+            count: 0,
+            count_nouvelles: 0,
+            count_a_preparer: 0,
+            items: [],
+        }
+    );
 });
 
 const formatDate = (iso?: string) => {
@@ -154,6 +168,7 @@ function logout() {
 <template>
     <div class="flex min-h-svh bg-white">
         <RealtimeNotificationsListener />
+        <PharmacyRealtimeAlerts />
         <aside
             class="fixed left-0 top-0 z-40 flex h-svh flex-col overflow-x-hidden overflow-y-auto bg-white shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)] transition-[width] duration-200 ease-out"
             :style="{ width: `${asideWidthPx}px` }"
@@ -477,15 +492,34 @@ function logout() {
                             class="relative flex size-[57px] shrink-0 items-center justify-center rounded-full border border-black/[0.08] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#3995d2]/30"
                             aria-label="Notifications"
                         >
-                            <Bell class="size-[22px] text-[#3995d2]" />
+                            <Bell
+                                class="size-[22px] text-[#3995d2]"
+                                :class="
+                                    notifications.count > 0
+                                        ? 'animate-pulse'
+                                        : ''
+                                "
+                            />
                             <span
-                                v-if="notifications.count > 0"
-                                class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#3995d2] px-1 text-[10px] font-semibold text-white ring-2 ring-white"
+                                v-if="
+                                    (notifications.count_nouvelles ?? 0) > 0
+                                "
+                                class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white ring-2 ring-white"
                             >
                                 {{
-                                    notifications.count > 99
+                                    (notifications.count_nouvelles ?? 0) > 99
                                         ? '99+'
-                                        : notifications.count
+                                        : notifications.count_nouvelles
+                                }}
+                            </span>
+                            <span
+                                v-if="(notifications.count_a_preparer ?? 0) > 0"
+                                class="absolute -bottom-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-sky-600 px-1 text-[10px] font-semibold text-white ring-2 ring-white"
+                            >
+                                {{
+                                    (notifications.count_a_preparer ?? 0) > 99
+                                        ? '99+'
+                                        : notifications.count_a_preparer
                                 }}
                             </span>
                         </button>
@@ -499,7 +533,8 @@ function logout() {
                                 v-if="notifications.count > 0"
                                 class="text-xs font-normal text-muted-foreground"
                             >
-                                {{ notifications.count }} commande(s)
+                                {{ notifications.count_nouvelles ?? 0 }} nouvelle(s) ·
+                                {{ notifications.count_a_preparer ?? 0 }} à préparer
                             </span>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
@@ -514,11 +549,23 @@ function logout() {
                                 class="block w-full cursor-pointer px-2 py-2 text-left text-sm hover:bg-accent"
                                 @click="router.visit(item.url)"
                             >
-                                <div class="font-medium">
-                                    Commande {{ formatOrdererName(item) }}
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                        :class="
+                                            item.alert_kind === 'a_preparer'
+                                                ? 'bg-sky-100 text-sky-800'
+                                                : 'bg-amber-100 text-amber-900'
+                                        "
+                                    >
+                                        {{ item.status_label }}
+                                    </span>
+                                    <span class="font-medium">
+                                        {{ formatOrdererName(item) }}
+                                    </span>
                                 </div>
-                                <div class="text-xs text-muted-foreground">
-                                    {{ item.numero }} · {{ item.status_label }}
+                                <div class="mt-1 text-xs text-muted-foreground">
+                                    {{ item.numero }}
                                 </div>
                                 <div
                                     class="mt-0.5 text-xs text-muted-foreground"
@@ -531,7 +578,7 @@ function logout() {
                             v-else
                             class="px-2 py-6 text-center text-sm text-muted-foreground"
                         >
-                            Aucune nouvelle commande
+                            Aucune commande à traiter
                         </div>
                         <DropdownMenuSeparator />
                         <Link

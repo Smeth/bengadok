@@ -115,6 +115,32 @@ CACHE_STORE=database
 
 LOG_CHANNEL=daily
 LOG_LEVEL=error
+
+# Temps réel (Laravel Reverb + Echo) — voir sections 3 et 4
+BROADCAST_CONNECTION=reverb
+# Ne pas mettre « null » en prod : les notifications / listes commandes ne se rafraîchissent plus en direct.
+
+REVERB_APP_ID=          # php artisan reverb:install ou valeurs uniques
+REVERB_APP_KEY=
+REVERB_APP_SECRET=
+
+# Processus Reverb (écoute locale, non exposé sur Internet)
+REVERB_SERVER_HOST=0.0.0.0
+REVERB_SERVER_PORT=8080
+
+# URL vue par le navigateur (via Nginx HTTPS + proxy /app)
+REVERB_HOST=bengadok.com
+REVERB_PORT=443
+REVERB_SCHEME=https
+
+# Injectées au build Vite — npm run build obligatoire après modification
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+VITE_REVERB_HOST="${REVERB_HOST}"
+VITE_REVERB_PORT="${REVERB_PORT}"
+VITE_REVERB_SCHEME="${REVERB_SCHEME}"
+
+SESSION_SECURE_COOKIE=true
+# SESSION_DOMAIN=.bengadok.com   # seulement si sous-domaines (www, api, …)
 ```
 
 ---
@@ -150,6 +176,20 @@ server {
         try_files $uri $uri/ /index.php?$query_string;
     }
 
+    # Laravel Reverb (WebSocket) — temps réel notifications / commandes
+    # Reverb écoute en local sur 8080 ; le navigateur se connecte en wss:// via ce proxy.
+    location /app {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;
+        proxy_pass http://127.0.0.1:8080;
+    }
+
     location ~ \.php$ {
         fastcgi_pass unix:/var/run/php/php8.4-fpm.sock;
         fastcgi_index index.php;
@@ -183,6 +223,8 @@ sudo systemctl reload nginx
 sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d bengadok.com -d www.bengadok.com
 ```
+
+> **Firewall** : ne pas ouvrir le port **8080** publiquement. Seul Nginx (443) doit être accessible ; le proxy `/app` relaie vers `127.0.0.1:8080`.
 
 ---
 
@@ -227,6 +269,45 @@ supervisorctl status
 ```
 
 > **Obligatoire pour le déploiement** : Supervisor doit être installé et les programmes `bengadok-worker` / `bengadok-reverb` actifs. Le workflow CI échoue si `supervisorctl` est absent ou si le redémarrage des workers échoue.
+
+### Temps réel — vérifications après déploiement
+
+| Étape | Commande / action | Résultat attendu |
+|-------|-------------------|------------------|
+| Reverb actif | `supervisorctl status bengadok-reverb` | `RUNNING` |
+| Port local | `ss -tlnp \| grep 8080` | écoute sur `127.0.0.1:8080` ou `0.0.0.0:8080` |
+| Broadcast | `php artisan tinker --execute="echo config('broadcasting.default');"` | `reverb` |
+| Cache config | `php artisan config:cache` | après toute modif. `.env` |
+| Build front | `npm run build` | si `VITE_REVERB_*` a changé |
+| Navigateur | DevTools → Network → **WS** | `wss://bengadok.com/app/...` → statut **101** |
+| Auth canal privé | connecté au dashboard | pas d’erreur 403 sur `/broadcasting/auth` |
+
+**Logs utiles**
+
+```bash
+tail -f /var/log/supervisor/bengadok-reverb.log
+tail -f /var/log/nginx/bengadok.error.log
+```
+
+**Dépannage fréquent**
+
+| Symptôme | Cause probable |
+|----------|----------------|
+| Pas de rafraîchissement auto des commandes | `BROADCAST_CONNECTION=null` ou Reverb arrêté |
+| WS en échec (failed) dans le navigateur | bloc `location /app` absent ou mal rechargé Nginx |
+| WS vers mauvais host/port | `VITE_REVERB_*` incorrect ou build non refait |
+| 403 sur `/broadcasting/auth` | session expirée, cookie non sécurisé (`SESSION_SECURE_COOKIE`) |
+| Reverb OK en local, KO en prod | oublier `php artisan config:cache` après `.env` |
+
+**Générer les clés Reverb (première install)**
+
+```bash
+cd /var/www/bengadok/bengadok
+php artisan reverb:install   # ou remplir REVERB_APP_* manuellement dans .env
+php artisan config:cache
+npm run build
+supervisorctl restart bengadok-reverb
+```
 
 ---
 

@@ -75,6 +75,8 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'notifications' => fn () => $this->getNotifications($request),
+            /** Compteurs commandes pharmacie (alertes temps réel hors page commandes). */
+            'pharmacyStats' => fn () => $this->getPharmacyStats($request),
             /** Motifs d'annulation (liste triée : slug, label, autorise_relance) */
             'motifs_annulation' => fn () => MotifAnnulation::orderedForShare(),
             /** Délai (heures) avant de pouvoir resélectionner la même pharmacie lors d'une relance */
@@ -97,8 +99,39 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
+     * Compteurs commandes pour l’espace pharmacie (partagés sur toutes les pages).
+     *
+     * @return array{nouvelles: int, a_preparer: int}|null
+     */
+    private function getPharmacyStats(Request $request): ?array
+    {
+        $user = $request->user();
+        if (! $user || ! $user->pharmacie_id) {
+            return null;
+        }
+
+        $roles = $user->getRoleNames()->toArray();
+        if (! in_array('gerant', $roles, true) && ! in_array('vendeur', $roles, true)) {
+            return null;
+        }
+
+        $pharmacieId = $user->pharmacie_id;
+
+        return [
+            'nouvelles' => Commande::query()
+                ->where('pharmacie_id', $pharmacieId)
+                ->where('status_pharmacie', 'nouvelle')
+                ->count(),
+            'a_preparer' => Commande::query()
+                ->where('pharmacie_id', $pharmacieId)
+                ->where('status_pharmacie', 'valide_a_preparer')
+                ->count(),
+        ];
+    }
+
+    /**
      * Récupère les notifications selon le rôle de l'utilisateur.
-     * - Pharmacie (gerant, vendeur) : nouvelles commandes assignées
+     * - Pharmacie (gerant, vendeur) : nouvelles commandes + commandes à préparer
      * - Backoffice (admin, agent) : commandes validées envoyées par les pharmacies
      */
     private function getNotifications(Request $request): array
@@ -115,10 +148,56 @@ class HandleInertiaRequests extends Middleware
         $query = Commande::query();
 
         if ($isPharmacie && $user->pharmacie_id) {
-            // Pharmacie : nouvelles commandes — prénom/nom du client (nécessaire pour préparer / contacter)
-            $query->with(['client:id,nom,prenom'])
-                ->where('pharmacie_id', $user->pharmacie_id)
-                ->where('status_pharmacie', 'nouvelle');
+            $pharmacieId = $user->pharmacie_id;
+
+            $countNouvelles = Commande::query()
+                ->where('pharmacie_id', $pharmacieId)
+                ->where('status_pharmacie', 'nouvelle')
+                ->count();
+
+            $countAPreparer = Commande::query()
+                ->where('pharmacie_id', $pharmacieId)
+                ->where('status_pharmacie', 'valide_a_preparer')
+                ->count();
+
+            $items = Commande::query()
+                ->with(['client:id,nom,prenom'])
+                ->where('pharmacie_id', $pharmacieId)
+                ->whereIn('status_pharmacie', ['nouvelle', 'valide_a_preparer'])
+                ->orderByRaw("CASE WHEN status_pharmacie = 'nouvelle' THEN 0 ELSE 1 END")
+                ->orderByDesc('updated_at')
+                ->limit(10)
+                ->get(['id', 'numero', 'status', 'status_pharmacie', 'client_id', 'pharmacie_id', 'beneficiaire', 'created_at', 'updated_at'])
+                ->map(function (Commande $c) {
+                    $alertKind = $c->status_pharmacie === 'valide_a_preparer'
+                        ? 'a_preparer'
+                        : 'nouvelle';
+
+                    return [
+                        'id' => $c->id,
+                        'numero' => $c->numero,
+                        'status' => $c->status,
+                        'status_pharmacie' => $c->status_pharmacie,
+                        'alert_kind' => $alertKind,
+                        'status_label' => $alertKind === 'a_preparer'
+                            ? 'À préparer'
+                            : 'Nouvelle commande',
+                        'client' => $c->client ? ['nom' => $c->client->nom, 'prenom' => $c->client->prenom] : null,
+                        'beneficiaire' => $c->beneficiaire,
+                        'pharmacie' => null,
+                        'created_at' => $c->created_at?->toIso8601String(),
+                        'url' => $this->notificationCommandesListUrl($c, true),
+                    ];
+                })
+                ->values()
+                ->toArray();
+
+            return [
+                'count' => $countNouvelles + $countAPreparer,
+                'count_nouvelles' => $countNouvelles,
+                'count_a_preparer' => $countAPreparer,
+                'items' => $items,
+            ];
         } elseif ($isBackoffice) {
             // Backoffice : commandes en attente de validation admin
             $query->with(['client:id,nom,prenom', 'pharmacie:id,designation'])
