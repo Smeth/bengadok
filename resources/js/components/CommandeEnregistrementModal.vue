@@ -252,16 +252,39 @@ const pharmaciesZoneEnreg = computed(() => {
     return list;
 });
 
-function isOuverte(heurs?: {
-    ouverture: string;
-    fermeture: string;
-}): boolean | null {
+function isOuverte(
+    heurs?: {
+        ouverture: string;
+        fermeture: string;
+    },
+    deGarde = false,
+): boolean | null {
+    if (deGarde) {
+        return true;
+    }
+
     if (!heurs?.ouverture || !heurs?.fermeture) return null;
     const now = new Date();
     const [oh, om] = heurs.ouverture.split(':').map(Number);
     const [fh, fm] = heurs.fermeture.split(':').map(Number);
     const n = now.getHours() * 60 + now.getMinutes();
-    return n >= oh * 60 + om && n <= fh * 60 + fm;
+    const open = oh * 60 + om;
+    const close = fh * 60 + fm;
+
+    if (close >= open) {
+        return n >= open && n <= close;
+    }
+
+    // Pharmacie de nuit (ex. 19:00 → 08:00)
+    return n >= open || n <= close;
+}
+
+function estDeGarde(p: { de_garde?: boolean; type_pharmacie?: { designation?: string } }): boolean {
+    if (p.de_garde) {
+        return true;
+    }
+
+    return (p.type_pharmacie?.designation ?? '').toLowerCase().includes('garde');
 }
 
 function getProduitError(index: number, field: string): string {
@@ -932,7 +955,14 @@ watch(
                                             />
                                         </div>
                                         <span
-                                            v-if="isOuverte(p.heurs) === true"
+                                            v-if="estDeGarde(p)"
+                                            class="rounded border border-amber-400 bg-amber-50 px-2 py-0.5 text-[7px] font-bold text-amber-800"
+                                            >De garde</span
+                                        >
+                                        <span
+                                            v-else-if="
+                                                isOuverte(p.heurs) === true
+                                            "
                                             class="rounded border border-[#016630] bg-white px-2 py-0.5 text-[7px] font-bold text-[#016630]"
                                             >Ouvert</span
                                         >

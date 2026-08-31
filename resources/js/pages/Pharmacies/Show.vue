@@ -754,22 +754,7 @@ function creerUtilisateur() {
                                 {{ errors.adresse }}
                             </p>
                         </div>
-                        <div class="space-y-2">
-                            <Label for="edit-telephone">Téléphone *</Label>
-                            <Input
-                                id="edit-telephone"
-                                v-model="form.telephone"
-                            />
-                        </div>
-                        <div class="space-y-2">
-                            <Label for="edit-email">Email</Label>
-                            <Input
-                                id="edit-email"
-                                v-model="form.email"
-                                type="email"
-                            />
-                        </div>
-                        <div class="space-y-2">
+                        <div class="space-y-2 sm:col-span-2">
                             <Label for="edit-zone">Arrondissement</Label>
                             <select
                                 id="edit-zone"
@@ -787,6 +772,21 @@ function creerUtilisateur() {
                             </select>
                         </div>
                         <div class="space-y-2">
+                            <Label for="edit-telephone">Téléphone *</Label>
+                            <Input
+                                id="edit-telephone"
+                                v-model="form.telephone"
+                            />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="edit-email">Email</Label>
+                            <Input
+                                id="edit-email"
+                                v-model="form.email"
+                                type="email"
+                            />
+                        </div>
+                        <div class="space-y-2 sm:col-span-2">
                             <Label>Type de pharmacie *</Label>
                             <div class="flex gap-4">
                                 <label

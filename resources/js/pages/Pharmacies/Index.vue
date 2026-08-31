@@ -1233,6 +1233,32 @@ watch(
                                 {{ errors.adresse }}
                             </p>
                         </div>
+                        <div class="space-y-2 sm:col-span-2">
+                            <Label for="create-zone">Arrondissement *</Label>
+                            <select
+                                id="create-zone"
+                                v-model="form.zone_id"
+                                class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                required
+                            >
+                                <option value="">
+                                    Sélectionner un arrondissement
+                                </option>
+                                <option
+                                    v-for="z in zones"
+                                    :key="z.id"
+                                    :value="String(z.id)"
+                                >
+                                    {{ z.designation }}
+                                </option>
+                            </select>
+                            <p
+                                v-if="errors.zone_id"
+                                class="text-sm text-red-600"
+                            >
+                                {{ errors.zone_id }}
+                            </p>
+                        </div>
                         <div class="space-y-2">
                             <Label for="telephone">Téléphone *</Label>
                             <Input
@@ -1259,32 +1285,6 @@ watch(
                             />
                             <p v-if="errors.email" class="text-sm text-red-600">
                                 {{ errors.email }}
-                            </p>
-                        </div>
-                        <div class="space-y-2 sm:col-span-2">
-                            <Label for="create-zone">Arrondissement *</Label>
-                            <select
-                                id="create-zone"
-                                v-model="form.zone_id"
-                                class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                required
-                            >
-                                <option value="">
-                                    Sélectionner un arrondissement
-                                </option>
-                                <option
-                                    v-for="z in zones"
-                                    :key="z.id"
-                                    :value="String(z.id)"
-                                >
-                                    {{ z.designation }}
-                                </option>
-                            </select>
-                            <p
-                                v-if="errors.zone_id"
-                                class="text-sm text-red-600"
-                            >
-                                {{ errors.zone_id }}
                             </p>
                         </div>
                     </div>
