@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { usePage } from '@inertiajs/vue3';
 import {
+    Bell,
     Key,
     Palette,
     RotateCcw,
@@ -36,6 +37,21 @@ const canAccessConfiguration = computed(() => {
     return roles.includes('admin') || roles.includes('super_admin');
 });
 
+const canManageOrderAlerts = computed(() => {
+    const roles =
+        (page.props.auth as { user?: { roles?: string[] } })?.user?.roles ?? [];
+
+    return roles.some((role) =>
+        [
+            'gerant',
+            'vendeur',
+            'admin',
+            'super_admin',
+            'agent_call_center',
+        ].includes(role),
+    );
+});
+
 const sidebarNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
         { title: 'Profil', href: editProfile(), icon: User },
@@ -43,6 +59,13 @@ const sidebarNavItems = computed<NavItem[]>(() => {
         { title: 'Authentification 2FA', href: show(), icon: Shield },
         { title: 'Apparence', href: editAppearance(), icon: Palette },
     ];
+    if (canManageOrderAlerts.value) {
+        items.push({
+            title: 'Alertes commandes',
+            href: '/settings/alertes',
+            icon: Bell,
+        });
+    }
     if (canAccessConfiguration.value) {
         items.push({
             title: 'Configuration',

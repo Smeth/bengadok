@@ -2,7 +2,13 @@
 import { router, usePage } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
 import { onMounted, onUnmounted } from 'vue';
+import { useBackofficePortal } from '@/composables/useBackofficePortal';
 import { usePharmacyPortal } from '@/composables/usePharmacyPortal';
+import {
+    detectBackofficeOrderAlerts,
+    takeBackofficeAlertSnapshot,
+} from '@/lib/backofficeOrderAlertDetector';
+import { dispatchBackofficeOrderAlerts } from '@/lib/backofficeOrderAlertsBus';
 import {
     detectPharmacyOrderAlerts,
     takePharmacyAlertSnapshot,
@@ -19,21 +25,34 @@ const emit = defineEmits<{
 
 const page = usePage();
 const { isPharmacyPortalUser } = usePharmacyPortal();
+const { isBackofficePortalUser } = useBackofficePortal();
 
-function handleReloadSuccess(beforeSnapshot: ReturnType<
-    typeof takePharmacyAlertSnapshot
-> | null): void {
-    if (!beforeSnapshot || !isPharmacyPortalUser.value) {
-        return;
+function handleReloadSuccess(
+    beforePharmacySnapshot: ReturnType<typeof takePharmacyAlertSnapshot> | null,
+    beforeBackofficeSnapshot: ReturnType<
+        typeof takeBackofficeAlertSnapshot
+    > | null,
+): void {
+    if (beforePharmacySnapshot && isPharmacyPortalUser.value) {
+        const pharmacyAlerts = detectPharmacyOrderAlerts(
+            beforePharmacySnapshot,
+            takePharmacyAlertSnapshot(page),
+        );
+
+        if (pharmacyAlerts.length > 0) {
+            dispatchPharmacyOrderAlerts(pharmacyAlerts);
+        }
     }
 
-    const alerts = detectPharmacyOrderAlerts(
-        beforeSnapshot,
-        takePharmacyAlertSnapshot(page),
-    );
+    if (beforeBackofficeSnapshot && isBackofficePortalUser.value) {
+        const backofficeAlerts = detectBackofficeOrderAlerts(
+            beforeBackofficeSnapshot,
+            takeBackofficeAlertSnapshot(page),
+        );
 
-    if (alerts.length > 0) {
-        dispatchPharmacyOrderAlerts(alerts);
+        if (backofficeAlerts.length > 0) {
+            dispatchBackofficeOrderAlerts(backofficeAlerts);
+        }
     }
 }
 
@@ -42,12 +61,15 @@ function handleReloadSuccess(beforeSnapshot: ReturnType<
  * si l’utilisateur est sur l’index (pharmacie ou backoffice).
  */
 function reloadPropsAfterCommandeBroadcast() {
-    const beforeSnapshot = isPharmacyPortalUser.value
+    const beforePharmacySnapshot = isPharmacyPortalUser.value
         ? takePharmacyAlertSnapshot(page)
+        : null;
+    const beforeBackofficeSnapshot = isBackofficePortalUser.value
+        ? takeBackofficeAlertSnapshot(page)
         : null;
 
     const onSuccess = () => {
-        handleReloadSuccess(beforeSnapshot);
+        handleReloadSuccess(beforePharmacySnapshot, beforeBackofficeSnapshot);
     };
 
     const url = page.url;
@@ -67,6 +89,20 @@ function reloadPropsAfterCommandeBroadcast() {
                       'pharmacyStats',
                   ]
                 : ['notifications', 'pharmacyStats'],
+            preserveScroll: true,
+            onSuccess,
+        });
+        return;
+    }
+
+    if (isBackofficePortalUser.value) {
+        const onCommandesPage =
+            url === '/commandes' || url.startsWith('/commandes?');
+
+        router.reload({
+            only: onCommandesPage
+                ? ['notifications', 'commandes', 'stats', 'backofficeStats']
+                : ['notifications', 'backofficeStats'],
             preserveScroll: true,
             onSuccess,
         });

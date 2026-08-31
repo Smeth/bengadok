@@ -5,6 +5,7 @@ import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
+import BackofficeRealtimeAlerts from '@/components/BackofficeRealtimeAlerts.vue';
 import RealtimeNotificationsListener from '@/components/RealtimeNotificationsListener.vue';
 import type { BreadcrumbItem } from '@/types';
 
@@ -37,6 +38,7 @@ const hasGradientBg = computed(
 <template>
     <AppShell variant="sidebar">
         <RealtimeNotificationsListener />
+        <BackofficeRealtimeAlerts />
         <AppSidebar />
         <AppContent variant="sidebar" class="overflow-x-hidden">
             <div

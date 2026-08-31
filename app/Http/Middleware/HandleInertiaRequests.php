@@ -77,6 +77,8 @@ class HandleInertiaRequests extends Middleware
             'notifications' => fn () => $this->getNotifications($request),
             /** Compteurs commandes pharmacie (alertes temps réel hors page commandes). */
             'pharmacyStats' => fn () => $this->getPharmacyStats($request),
+            /** Compteurs commandes back-office (alertes temps réel hors page commandes). */
+            'backofficeStats' => fn () => $this->getBackofficeStats($request),
             /** Motifs d'annulation (liste triée : slug, label, autorise_relance) */
             'motifs_annulation' => fn () => MotifAnnulation::orderedForShare(),
             /** Délai (heures) avant de pouvoir resélectionner la même pharmacie lors d'une relance */
@@ -130,9 +132,40 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
+     * Compteurs commandes pour le back-office (partagés sur toutes les pages).
+     *
+     * @return array{en_attente: int, nouvelles: int}|null
+     */
+    private function getBackofficeStats(Request $request): ?array
+    {
+        $user = $request->user();
+        if (! $user) {
+            return null;
+        }
+
+        $roles = $user->getRoleNames()->toArray();
+        if (
+            ! in_array('admin', $roles, true)
+            && ! in_array('super_admin', $roles, true)
+            && ! in_array('agent_call_center', $roles, true)
+        ) {
+            return null;
+        }
+
+        return [
+            'en_attente' => Commande::query()
+                ->where('status', 'en_attente')
+                ->count(),
+            'nouvelles' => Commande::query()
+                ->where('status', 'nouvelle')
+                ->count(),
+        ];
+    }
+
+    /**
      * Récupère les notifications selon le rôle de l'utilisateur.
      * - Pharmacie (gerant, vendeur) : nouvelles commandes + commandes à préparer
-     * - Backoffice (admin, agent) : commandes validées envoyées par les pharmacies
+     * - Backoffice (admin, agent) : retours pharmacie (en attente) + nouvelles commandes
      */
     private function getNotifications(Request $request): array
     {
@@ -144,8 +177,6 @@ class HandleInertiaRequests extends Middleware
         $roles = $user->getRoleNames()->toArray();
         $isPharmacie = in_array('gerant', $roles) || in_array('vendeur', $roles);
         $isBackoffice = in_array('admin', $roles) || in_array('agent_call_center', $roles) || in_array('super_admin', $roles);
-
-        $query = Commande::query();
 
         if ($isPharmacie && $user->pharmacie_id) {
             $pharmacieId = $user->pharmacie_id;
@@ -199,36 +230,58 @@ class HandleInertiaRequests extends Middleware
                 'items' => $items,
             ];
         } elseif ($isBackoffice) {
-            // Backoffice : commandes en attente de validation admin
-            $query->with(['client:id,nom,prenom', 'pharmacie:id,designation'])
+            $countEnAttente = Commande::query()
                 ->where('status', 'en_attente')
-                ->where('updated_at', '>=', now()->subDays(3));
+                ->where('updated_at', '>=', now()->subDays(3))
+                ->count();
+
+            $countNouvelles = Commande::query()
+                ->where('status', 'nouvelle')
+                ->count();
+
+            $items = Commande::query()
+                ->with(['client:id,nom,prenom', 'pharmacie:id,designation'])
+                ->where(function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->where('status', 'en_attente')
+                            ->where('updated_at', '>=', now()->subDays(3));
+                    })->orWhere('status', 'nouvelle');
+                })
+                ->orderByRaw("CASE WHEN status = 'en_attente' THEN 0 ELSE 1 END")
+                ->orderByDesc('updated_at')
+                ->limit(10)
+                ->get(['id', 'numero', 'status', 'status_pharmacie', 'client_id', 'pharmacie_id', 'beneficiaire', 'created_at', 'updated_at'])
+                ->map(function (Commande $c) {
+                    $alertKind = $c->status === 'nouvelle' ? 'nouvelle' : 'en_attente';
+
+                    return [
+                        'id' => $c->id,
+                        'numero' => $c->numero,
+                        'status' => $c->status,
+                        'status_pharmacie' => $c->status_pharmacie,
+                        'alert_kind' => $alertKind,
+                        'status_label' => $alertKind === 'en_attente'
+                            ? 'En attente validation'
+                            : 'Nouvelle commande',
+                        'client' => $c->client ? ['nom' => $c->client->nom, 'prenom' => $c->client->prenom] : null,
+                        'beneficiaire' => $c->beneficiaire,
+                        'pharmacie' => $c->pharmacie ? ['designation' => $c->pharmacie->designation] : null,
+                        'created_at' => $c->created_at?->toIso8601String(),
+                        'url' => $this->notificationCommandesListUrl($c, false),
+                    ];
+                })
+                ->values()
+                ->toArray();
+
+            return [
+                'count' => $countEnAttente + $countNouvelles,
+                'count_en_attente' => $countEnAttente,
+                'count_nouvelles' => $countNouvelles,
+                'items' => $items,
+            ];
         } else {
             return ['count' => 0, 'items' => []];
         }
-
-        $count = (clone $query)->count();
-        $items = $query->orderByDesc('created_at')
-            ->limit(10)
-            ->get(['id', 'numero', 'status', 'status_pharmacie', 'client_id', 'pharmacie_id', 'beneficiaire', 'created_at', 'updated_at'])
-            ->map(function (Commande $c) use ($isPharmacie) {
-                return [
-                    'id' => $c->id,
-                    'numero' => $c->numero,
-                    'status' => $c->status,
-                    'status_pharmacie' => $c->status_pharmacie,
-                    'status_label' => Commande::STATUSES[$c->status] ?? $c->status,
-                    'client' => $c->client ? ['nom' => $c->client->nom, 'prenom' => $c->client->prenom] : null,
-                    'beneficiaire' => $c->beneficiaire,
-                    'pharmacie' => $isPharmacie ? null : ($c->pharmacie ? ['designation' => $c->pharmacie->designation] : null),
-                    'created_at' => $c->created_at?->toIso8601String(),
-                    'url' => $this->notificationCommandesListUrl($c, $isPharmacie),
-                ];
-            })
-            ->values()
-            ->toArray();
-
-        return ['count' => $count, 'items' => $items];
     }
 
     /**

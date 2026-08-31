@@ -36,6 +36,7 @@ interface NotificationItem {
     id: number;
     numero: string;
     status_label: string;
+    alert_kind?: 'en_attente' | 'nouvelle' | string | null;
     client?: { nom: string; prenom?: string };
     pharmacie?: { designation: string };
     url: string;
@@ -51,10 +52,22 @@ const user = computed(
 const notifications = computed(() => {
     const n = (
         page.props as {
-            notifications?: { count: number; items: NotificationItem[] };
+            notifications?: {
+                count: number;
+                count_en_attente?: number;
+                count_nouvelles?: number;
+                items: NotificationItem[];
+            };
         }
     ).notifications;
-    return n ?? { count: 0, items: [] };
+    return (
+        n ?? {
+            count: 0,
+            count_en_attente: 0,
+            count_nouvelles: 0,
+            items: [],
+        }
+    );
 });
 
 const { getInitials } = useInitials();
@@ -124,15 +137,30 @@ const formatDate = (iso?: string) => {
             <DropdownMenu v-if="user">
                 <DropdownMenuTrigger as-child>
                     <Button variant="ghost" size="icon" class="relative">
-                        <Bell class="size-5" />
+                        <Bell
+                            class="size-5"
+                            :class="
+                                notifications.count > 0 ? 'animate-pulse' : ''
+                            "
+                        />
                         <span
-                            v-if="notifications.count > 0"
-                            class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground"
+                            v-if="(notifications.count_en_attente ?? 0) > 0"
+                            class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-medium text-white"
                         >
                             {{
-                                notifications.count > 99
+                                (notifications.count_en_attente ?? 0) > 99
                                     ? '99+'
-                                    : notifications.count
+                                    : notifications.count_en_attente
+                            }}
+                        </span>
+                        <span
+                            v-if="(notifications.count_nouvelles ?? 0) > 0"
+                            class="absolute -bottom-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-sky-600 px-1 text-[10px] font-medium text-white"
+                        >
+                            {{
+                                (notifications.count_nouvelles ?? 0) > 99
+                                    ? '99+'
+                                    : notifications.count_nouvelles
                             }}
                         </span>
                     </Button>
@@ -146,7 +174,8 @@ const formatDate = (iso?: string) => {
                             v-if="notifications.count > 0"
                             class="text-xs font-normal text-muted-foreground"
                         >
-                            {{ notifications.count }} commande(s)
+                            {{ notifications.count_en_attente ?? 0 }} en attente ·
+                            {{ notifications.count_nouvelles ?? 0 }} nouvelle(s)
                         </span>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
@@ -161,12 +190,23 @@ const formatDate = (iso?: string) => {
                             class="block w-full cursor-pointer px-2 py-2 text-left text-sm hover:bg-accent"
                             @click="router.visit(item.url)"
                         >
-                            <div class="font-medium">
-                                Commande {{ item.numero }}
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                    :class="
+                                        item.alert_kind === 'nouvelle'
+                                            ? 'bg-sky-100 text-sky-800'
+                                            : 'bg-amber-100 text-amber-900'
+                                    "
+                                >
+                                    {{ item.status_label }}
+                                </span>
+                                <span class="font-medium">
+                                    {{ item.numero }}
+                                </span>
                             </div>
-                            <div class="text-xs text-muted-foreground">
-                                {{ formatClientName(item.client) }} ·
-                                {{ item.status_label }}
+                            <div class="mt-1 text-xs text-muted-foreground">
+                                {{ formatClientName(item.client) }}
                             </div>
                             <div
                                 v-if="item.pharmacie"
@@ -183,7 +223,7 @@ const formatDate = (iso?: string) => {
                         v-else
                         class="px-2 py-6 text-center text-sm text-muted-foreground"
                     >
-                        Aucune nouvelle commande
+                        Aucune commande à traiter
                     </div>
                     <DropdownMenuSeparator />
                     <Link

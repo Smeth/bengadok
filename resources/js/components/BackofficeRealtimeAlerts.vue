@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import AppToast from '@/components/AppToast.vue';
+import type { BackofficeOrderAlert } from '@/lib/backofficeOrderAlertDetector';
+import { registerBackofficeOrderAlertHandler } from '@/lib/backofficeOrderAlertsBus';
 import {
     browserNotificationPermission,
-    requestPharmacyBrowserNotificationPermission,
-    showPharmacyBrowserNotification,
-} from '@/lib/pharmacyBrowserNotification';
-import { playPharmacyAlertSound, unlockPharmacyAlertSound } from '@/lib/pharmacyAlertSound';
-import type { PharmacyOrderAlert } from '@/lib/pharmacyOrderAlertDetector';
+    requestOrderBrowserNotificationPermission,
+    showOrderBrowserNotification,
+} from '@/lib/orderBrowserNotification';
+import { playOrderAlertSound, unlockOrderAlertSound } from '@/lib/orderAlertSound';
+import type { BackofficeOrderAlert } from '@/lib/backofficeOrderAlertDetector';
+import { registerBackofficeOrderAlertHandler } from '@/lib/backofficeOrderAlertsBus';
 import {
     dismissOrderAlertBanner,
     ORDER_ALERT_PREFS_CHANGED_EVENT,
     shouldShowOrderAlertBanner,
 } from '@/lib/orderAlertPreferences';
-import { registerPharmacyOrderAlertHandler } from '@/lib/pharmacyOrderAlertsBus';
 
 type ToastState = {
     show: boolean;
@@ -31,28 +33,28 @@ const toast = ref<ToastState>({
     durationMs: 9000,
 });
 
-const queue = ref<PharmacyOrderAlert[]>([]);
+const queue = ref<BackofficeOrderAlert[]>([]);
 const showPermissionBanner = ref(false);
 
 function dismissPermissionBanner(): void {
     showPermissionBanner.value = false;
-    dismissOrderAlertBanner('pharma');
+    dismissOrderAlertBanner('backoffice');
 }
 
 async function enableAggressiveAlerts(): Promise<void> {
-    unlockPharmacyAlertSound();
-    await requestPharmacyBrowserNotificationPermission();
+    unlockOrderAlertSound();
+    await requestOrderBrowserNotificationPermission();
     dismissPermissionBanner();
 }
 
 function syncPermissionBanner(): void {
     showPermissionBanner.value = shouldShowOrderAlertBanner(
-        'pharma',
+        'backoffice',
         browserNotificationPermission(),
     );
 }
 
-function pushAlerts(alerts: PharmacyOrderAlert[]): void {
+function pushAlerts(alerts: BackofficeOrderAlert[]): void {
     queue.value.push(...alerts);
     drainQueue();
 }
@@ -67,21 +69,21 @@ function drainQueue(): void {
         return;
     }
 
-    playPharmacyAlertSound(next.kind);
+    playOrderAlertSound(next.soundProfile);
 
-    showPharmacyBrowserNotification({
+    showOrderBrowserNotification({
         title: next.title,
         body: next.description,
         url: next.url,
-        tag: `pharmacy-${next.kind}-${next.count}`,
+        tag: `backoffice-${next.kind}-${next.count}`,
     });
 
     toast.value = {
         show: true,
         title: next.title,
         description: next.description,
-        variant: next.kind === 'nouvelle' ? 'urgent' : 'info',
-        durationMs: next.kind === 'nouvelle' ? 10000 : 8500,
+        variant: next.toastVariant,
+        durationMs: next.kind === 'en_attente' ? 10000 : 8500,
     };
 }
 
@@ -95,7 +97,7 @@ watch(
 );
 
 function onDocumentClick(): void {
-    unlockPharmacyAlertSound();
+    unlockOrderAlertSound();
 }
 
 let unregisterAlertHandler: (() => void) | null = null;
@@ -108,7 +110,7 @@ onMounted(() => {
         ORDER_ALERT_PREFS_CHANGED_EVENT,
         syncPermissionBanner,
     );
-    unregisterAlertHandler = registerPharmacyOrderAlertHandler(pushAlerts);
+    unregisterAlertHandler = registerBackofficeOrderAlertHandler(pushAlerts);
 });
 
 onUnmounted(() => {
@@ -142,7 +144,7 @@ onUnmounted(() => {
             </p>
             <p class="mt-1 text-sm text-amber-900">
                 Autorisez le son et les notifications navigateur pour ne
-                manquer aucune nouvelle commande ni validation back-office.
+                manquer aucun retour pharmacie ni nouvelle commande.
             </p>
             <div class="mt-3 flex flex-wrap gap-2">
                 <button
