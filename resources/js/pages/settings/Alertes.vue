@@ -18,7 +18,6 @@ const breadcrumbItems: BreadcrumbItem[] = [
 ];
 
 const {
-    isPharmacyPortalUser,
     isBackofficePortalUser,
     soundEnabled,
     browserPermission,
@@ -158,22 +157,13 @@ const {
                 </section>
 
                 <section
+                    v-if="isBackofficePortalUser"
                     class="rounded-xl border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground"
                 >
-                    <p v-if="isPharmacyPortalUser">
-                        Espace pharmacie : alertes pour les
-                        <strong>nouvelles commandes</strong> et les commandes
-                        <strong>à préparer</strong> après validation
-                        back-office.
-                    </p>
-                    <p v-else-if="isBackofficePortalUser">
+                    <p>
                         Back-office : alertes pour les
                         <strong>retours pharmacie</strong> et les
                         <strong>nouvelles commandes</strong> à traiter.
-                    </p>
-                    <p class="mt-2">
-                        Les préférences sont enregistrées sur cet appareil et
-                        ce navigateur (pas sur le serveur).
                     </p>
                 </section>
 
