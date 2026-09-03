@@ -25,6 +25,7 @@ import {
     fieldError,
     normalizeInertiaErrors,
 } from '@/lib/validationErrors';
+import { useCommandeCreationFields } from '@/composables/useCommandeCreationFields';
 import type { BreadcrumbItem } from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -67,7 +68,11 @@ const props = defineProps<{
     pharmacies: Pharmacie[];
     modesPaiement: Array<{ id: number; designation: string }>;
     livreurs: Array<{ id: number; nom: string; prenom: string; tel: string }>;
+    arrondissements: string[];
 }>();
+
+const { isRequired: isFieldRequired, validate: validateCreationFields } =
+    useCommandeCreationFields('agent');
 
 const page = usePage();
 /** Erreurs de validation locale (avant envoi) ; les erreurs serveur viennent de `page.props.errors`. */
@@ -113,6 +118,7 @@ const clientNom = ref('');
 const clientPrenom = ref('');
 const clientAdresse = ref('');
 const clientTel = ref('');
+const clientArrondissement = ref('');
 const beneficiaireId = ref<number | ''>('');
 
 // ─── Pharmacie (2 étapes) ─────────────────────────────────────────────────────
@@ -267,13 +273,20 @@ const showSubmitAnalysisProgress = computed(
 function submit() {
     localErrors.value = {};
 
-    const e: Record<string, string> = {};
-    if (!clientPrenom.value?.trim())
-        e.client_prenom = 'Le prénom du client est obligatoire.';
-    if (!clientTel.value?.trim())
-        e.client_tel = 'Le téléphone est obligatoire.';
-    if (!clientAdresse.value?.trim())
-        e.client_adresse = "L'adresse est obligatoire.";
+    const e: Record<string, string> = {
+        ...validateCreationFields({
+            client_nom: clientNom.value,
+            client_prenom: clientPrenom.value,
+            client_tel: clientTel.value,
+            client_adresse: clientAdresse.value,
+            client_arrondissement: clientArrondissement.value,
+            ordonnance: ordonnanceFile.value,
+            mode_paiement_id: modePaiementId.value,
+            livreur_id: beneficiaireId.value,
+            commentaire: commentaire.value,
+        }),
+    };
+
     if (!pharmacieId.value)
         e.pharmacie_id = 'Veuillez sélectionner une pharmacie.';
 
@@ -322,6 +335,7 @@ function submit() {
         prenom: clientPrenom.value.trim(),
         tel: clientTel.value.trim(),
         adresse: clientAdresse.value.trim(),
+        arrondissement: clientArrondissement.value.trim() || undefined,
     };
 
     const opts = {
@@ -340,6 +354,12 @@ function submit() {
         formData.append('produits', JSON.stringify(produitsValides));
         formData.append('ordonnance', ordonnanceFile.value);
         formData.append('client_nouveau', JSON.stringify(clientNouveau));
+        if (clientArrondissement.value) {
+            formData.append(
+                'client_arrondissement',
+                clientArrondissement.value,
+            );
+        }
         if (modePaiementId.value)
             formData.append('mode_paiement_id', String(modePaiementId.value));
         if (beneficiaireId.value)
@@ -357,6 +377,7 @@ function submit() {
                 pharmacie_id: pharmacieId.value,
                 produits: produitsValides,
                 client_nouveau: clientNouveau,
+                client_arrondissement: clientArrondissement.value || undefined,
                 mode_paiement_id: modePaiementId.value || undefined,
                 livreur_id: beneficiaireId.value || undefined,
                 commentaire: commentaire.value || undefined,
@@ -425,7 +446,11 @@ function annuler() {
                         <div>
                             <label class="text-sm font-medium text-gray-700"
                                 >Prénom du client
-                                <span class="text-red-600">*</span></label
+                                <span
+                                    v-if="isFieldRequired('client_prenom')"
+                                    class="text-red-600"
+                                    >*</span
+                                ></label
                             >
                             <input
                                 v-model="clientPrenom"
@@ -438,6 +463,12 @@ function annuler() {
                             <label class="text-sm font-medium text-gray-700"
                                 >Nom
                                 <span
+                                    v-if="isFieldRequired('client_nom')"
+                                    class="text-red-600"
+                                    >*</span
+                                >
+                                <span
+                                    v-else
                                     class="text-xs font-normal text-gray-500"
                                     >(facultatif)</span
                                 ></label
@@ -452,7 +483,11 @@ function annuler() {
                         <div>
                             <label class="text-sm font-medium text-gray-700"
                                 >Adresse
-                                <span class="text-red-600">*</span></label
+                                <span
+                                    v-if="isFieldRequired('client_adresse')"
+                                    class="text-red-600"
+                                    >*</span
+                                ></label
                             >
                             <input
                                 v-model="clientAdresse"
@@ -463,11 +498,58 @@ function annuler() {
                         </div>
                     </div>
 
+                    <!-- Ligne 1b : Arrondissement -->
+                    <div
+                        v-if="
+                            isFieldRequired('client_arrondissement') ||
+                            props.arrondissements.length
+                        "
+                    >
+                        <label class="text-sm font-medium text-gray-700"
+                            >Arrondissement
+                            <span
+                                v-if="
+                                    isFieldRequired('client_arrondissement')
+                                "
+                                class="text-red-600"
+                                >*</span
+                            ></label
+                        >
+                        <div class="relative mt-1">
+                            <select
+                                v-model="clientArrondissement"
+                                class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">
+                                    Choisir un arrondissement…
+                                </option>
+                                <option
+                                    v-for="a in props.arrondissements"
+                                    :key="a"
+                                    :value="a"
+                                >
+                                    {{ a }}
+                                </option>
+                            </select>
+                            <ChevronDown
+                                class="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-gray-400"
+                            />
+                        </div>
+                        <InputError
+                            :message="errors.client_arrondissement"
+                        />
+                    </div>
+
                     <!-- Ligne 2 : Bénéficiaire | Téléphone -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="text-sm font-medium text-gray-700"
-                                >Bénéficiaire</label
+                                >Livreur / bénéficiaire
+                                <span
+                                    v-if="isFieldRequired('livreur_id')"
+                                    class="text-red-600"
+                                    >*</span
+                                ></label
                             >
                             <div class="relative mt-1">
                                 <select
@@ -489,11 +571,16 @@ function annuler() {
                                     class="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-gray-400"
                                 />
                             </div>
+                            <InputError :message="errors.livreur_id" />
                         </div>
                         <div>
                             <label class="text-sm font-medium text-gray-700"
                                 >Téléphone
-                                <span class="text-red-600">*</span></label
+                                <span
+                                    v-if="isFieldRequired('client_tel')"
+                                    class="text-red-600"
+                                    >*</span
+                                ></label
                             >
                             <div class="relative mt-1">
                                 <Phone
@@ -846,7 +933,14 @@ function annuler() {
                             <div class="flex items-center gap-4">
                                 <label
                                     class="shrink-0 text-sm font-medium text-gray-700"
-                                    >Mode de paiement</label
+                                    >Mode de paiement
+                                    <span
+                                        v-if="
+                                            isFieldRequired('mode_paiement_id')
+                                        "
+                                        class="text-red-600"
+                                        >*</span
+                                    ></label
                                 >
                                 <div class="relative flex-1">
                                     <select
@@ -877,9 +971,17 @@ function annuler() {
                     <div class="grid grid-cols-2 gap-4">
                         <!-- Ordonnance (FilePond) -->
                         <div class="flex flex-col gap-2">
+                            <label class="text-sm font-medium text-gray-700"
+                                >Ordonnance
+                                <span
+                                    v-if="isFieldRequired('ordonnance')"
+                                    class="text-red-600"
+                                    >*</span
+                                ></label
+                            >
                             <OrdonnanceUppy
                                 v-model="ordonnanceFile"
-                                label="Ordonnance"
+                                label="Joindre un fichier"
                                 show-analysis-notice
                                 :analysis-notice="analysisNoticeText"
                             />
@@ -892,12 +994,23 @@ function annuler() {
                         </div>
 
                         <!-- Commentaires -->
-                        <textarea
-                            v-model="commentaire"
-                            placeholder="Commentaires ..."
-                            rows="5"
-                            class="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        />
+                        <div class="flex flex-col">
+                            <label class="mb-1 text-sm font-medium text-gray-700"
+                                >Commentaires
+                                <span
+                                    v-if="isFieldRequired('commentaire')"
+                                    class="text-red-600"
+                                    >*</span
+                                ></label
+                            >
+                            <textarea
+                                v-model="commentaire"
+                                placeholder="Commentaires ..."
+                                rows="5"
+                                class="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            />
+                            <InputError :message="errors.commentaire" />
+                        </div>
                     </div>
                 </div>
                 <!-- ── Fin du corps ── -->

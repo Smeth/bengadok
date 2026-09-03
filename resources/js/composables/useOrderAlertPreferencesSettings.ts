@@ -5,20 +5,28 @@ import {
     browserNotificationPermission,
     requestOrderBrowserNotificationPermission,
 } from '@/lib/orderBrowserNotification';
-import type { OrderAlertPortal } from '@/lib/orderAlertPreferences';
+import type { OrderAlertPortal, OrderAlertSoundPreset } from '@/lib/orderAlertPreferences';
 import {
+    getOrderAlertSoundPreset,
     isOrderAlertSoundEnabled,
     ORDER_ALERT_PREFS_CHANGED_EVENT,
+    ORDER_ALERT_SOUND_PRESET_OPTIONS,
     resetOrderAlertBannerDismissed,
     setOrderAlertSoundEnabled,
+    setOrderAlertSoundPreset,
 } from '@/lib/orderAlertPreferences';
-import { playOrderAlertSound, unlockOrderAlertSound } from '@/lib/orderAlertSound';
+import {
+    playOrderAlertSound,
+    previewOrderAlertSoundPreset,
+    unlockOrderAlertSound,
+} from '@/lib/orderAlertSound';
 
 export function useOrderAlertPreferencesSettings() {
     const { isPharmacyPortalUser } = usePharmacyPortal();
     const { isBackofficePortalUser } = useBackofficePortal();
 
     const soundEnabled = ref(isOrderAlertSoundEnabled());
+    const soundPreset = ref<OrderAlertSoundPreset>(getOrderAlertSoundPreset());
     const browserPermission = ref(browserNotificationPermission());
     const statusMessage = ref('');
     const statusVariant = ref<'success' | 'error' | 'info'>('info');
@@ -41,7 +49,20 @@ export function useOrderAlertPreferencesSettings() {
 
     function onPrefsChanged(): void {
         soundEnabled.value = isOrderAlertSoundEnabled();
+        soundPreset.value = getOrderAlertSoundPreset();
         refreshBrowserPermission();
+    }
+
+    function setSoundPreset(preset: OrderAlertSoundPreset): void {
+        soundPreset.value = preset;
+        setOrderAlertSoundPreset(preset);
+        statusMessage.value = 'Type de signal mis à jour.';
+        statusVariant.value = 'success';
+
+        if (soundEnabled.value) {
+            unlockOrderAlertSound();
+            previewOrderAlertSoundPreset(preset);
+        }
     }
 
     function setSoundEnabled(enabled: boolean): void {
@@ -128,11 +149,14 @@ export function useOrderAlertPreferencesSettings() {
         isPharmacyPortalUser,
         isBackofficePortalUser,
         soundEnabled,
+        soundPreset,
+        soundPresetOptions: ORDER_ALERT_SOUND_PRESET_OPTIONS,
         browserPermission,
         statusMessage,
         statusVariant,
         permissionLabel,
         setSoundEnabled,
+        setSoundPreset,
         requestBrowserNotifications,
         showReminderBannerAgain,
         testAlertSound,

@@ -83,6 +83,8 @@ class HandleInertiaRequests extends Middleware
             'motifs_annulation' => fn () => MotifAnnulation::orderedForShare(),
             /** Délai (heures) avant de pouvoir resélectionner la même pharmacie lors d'une relance */
             'delai_relance_meme_pharmacie_heures' => fn () => AppSetting::delaiRelanceMemePharmacieHeures(),
+            /** Champs obligatoires configurables à la création de commande */
+            'commandeCreationFields' => fn () => \App\Support\CommandeCreationFields::definitionsForFrontend(),
             /** OCR / règles ordonnance : mode d’exécution pour l’UI (barre d’attente, etc.) */
             'ordonnanceVerificationSettings' => function () {
                 $row = OrdonnanceVerificationSetting::query()->first();

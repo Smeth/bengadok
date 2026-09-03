@@ -3,11 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Models\AppSetting;
-use App\Models\Client;
 use App\Models\Commande;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreCommandeRequest extends FormRequest
 {
@@ -147,40 +145,7 @@ class StoreCommandeRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
-            'client_id' => 'nullable|exists:clients,id',
-            'client_nom' => 'nullable|string|max:100',
-            'client_prenom' => 'required_without:client_id|string|max:100',
-            'client_tel' => 'required_without:client_id|string|max:20',
-            'client_adresse' => 'required_without:client_id|string',
-            'client_arrondissement' => [
-                Rule::requiredIf(fn () => $this->routeIs('commandes.store')),
-                'nullable',
-                'string',
-                Rule::in(Client::ARRONDISSEMENTS),
-            ],
-            'client_sexe' => 'nullable|in:M,F',
-            'pharmacie_id' => 'required|exists:pharmacies,id',
-            'beneficiaire' => 'nullable|string|max:100',
-            // Nullable : CommandeService retombe sur now()/now()->format('H:i') si absents.
-            // Sans ces règles, un appelant qui les envoie les voyait silencieusement ignorées
-            // (validated() ne conserve que les clés déclarées dans rules()).
-            'date' => 'nullable|date',
-            'heurs' => 'nullable|string|max:10',
-            'produits' => 'required|array|min:1',
-            'produits.*.designation' => 'required|string|max:255',
-            'produits.*.dosage' => 'nullable|string|max:50',
-            'produits.*.forme' => 'nullable|string|max:50',
-            'produits.*.quantite' => 'required|integer|min:1',
-            'produits.*.prix_unitaire' => 'required|numeric|min:0',
-            'produits.*.type' => 'nullable|string|max:100',
-            'ordonnance' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
-            'reutiliser_ordonnance_commande_id' => 'nullable|integer|exists:commandes,id',
-            'mode_paiement_id' => 'nullable|exists:modes_paiement,id',
-            'montant_livraison_id' => 'nullable|exists:montants_livraison,id',
-            'livreur_id' => 'nullable|exists:livreurs,id',
-            'commentaire' => 'nullable|string',
-        ];
+        return \App\Support\CommandeCreationFields::validationRules($this);
     }
 
     /**

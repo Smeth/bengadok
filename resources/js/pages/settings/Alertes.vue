@@ -20,11 +20,14 @@ const breadcrumbItems: BreadcrumbItem[] = [
 const {
     isBackofficePortalUser,
     soundEnabled,
+    soundPreset,
+    soundPresetOptions,
     browserPermission,
     statusMessage,
     statusVariant,
     permissionLabel,
     setSoundEnabled,
+    setSoundPreset,
     requestBrowserNotifications,
     showReminderBannerAgain,
     testAlertSound,
@@ -75,6 +78,37 @@ const {
                                     Activer le son des alertes
                                 </Label>
                             </div>
+
+                            <div class="space-y-2">
+                                <Label for="order-alert-sound-preset">
+                                    Type de signal
+                                </Label>
+                                <select
+                                    id="order-alert-sound-preset"
+                                    :value="soundPreset"
+                                    class="flex h-9 w-full max-w-sm rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    @change="
+                                        setSoundPreset(
+                                            ($event.target as HTMLSelectElement)
+                                                .value as typeof soundPreset,
+                                        )
+                                    "
+                                >
+                                    <option
+                                        v-for="opt in soundPresetOptions"
+                                        :key="opt.id"
+                                        :value="opt.id"
+                                    >
+                                        {{ opt.label }} — {{ opt.description }}
+                                    </option>
+                                </select>
+                                <p class="text-xs text-muted-foreground">
+                                    Enregistré dans ce navigateur uniquement
+                                    (chaque poste peut choisir un signal
+                                    différent).
+                                </p>
+                            </div>
+
                             <Button
                                 type="button"
                                 variant="outline"

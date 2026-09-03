@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { isParapharmaType } from '@/lib/commandeTotals';
+import { useCommandeCreationFields } from '@/composables/useCommandeCreationFields';
 
 export type ProduitEnreg = {
     designation: string;
@@ -131,6 +132,17 @@ const defaultParapharmaType = computed(
 );
 
 const page = usePage();
+const { isRequired: isFieldRequired, validate: validateCreationFields } =
+    useCommandeCreationFields('admin');
+
+const sansClientExistant = computed(() => {
+    if (props.mode === 'relance' && props.commande?.client?.id) {
+        return false;
+    }
+
+    return true;
+});
+
 const delaiRelanceHeures = computed(() =>
     Number(
         (page.props as { delai_relance_meme_pharmacie_heures?: number })
@@ -400,15 +412,32 @@ function close() {
 }
 
 function onSubmit() {
-    const err: Record<string, string> = {};
-    if (!form.value.client_prenom?.trim())
-        err.client_prenom = 'Le prénom du client est obligatoire.';
-    if (!form.value.client_tel?.trim())
-        err.client_tel = 'Le téléphone est obligatoire.';
-    if (!form.value.client_adresse?.trim())
-        err.client_adresse = "L'adresse est obligatoire.";
-    if (!form.value.client_arrondissement?.trim())
-        err.client_arrondissement = "L'arrondissement est obligatoire.";
+    const skipOrdonnanceIfReused =
+        props.mode === 'relance' &&
+        !!props.commande?.id &&
+        !form.value.ordonnance &&
+        !!ordonnanceUrlExistante.value;
+
+    const err: Record<string, string> = {
+        ...validateCreationFields(
+            {
+                client_nom: form.value.client_nom,
+                client_prenom: form.value.client_prenom,
+                client_tel: form.value.client_tel,
+                client_adresse: form.value.client_adresse,
+                client_arrondissement: form.value.client_arrondissement,
+                client_sexe: form.value.client_sexe,
+                beneficiaire: form.value.beneficiaire,
+                ordonnance: form.value.ordonnance,
+                commentaire: form.value.commentaire,
+            },
+            {
+                sansClientExistant: sansClientExistant.value,
+                skipOrdonnanceIfReused,
+            },
+        ),
+    };
+
     if (!form.value.pharmacie_id)
         err.pharmacie_id = 'Veuillez sélectionner une pharmacie.';
     const produitsMedicamentsValides = form.value.produits
@@ -595,12 +624,19 @@ watch(
                             <div class="flex flex-col gap-1.5">
                                 <Label class="text-sm font-medium text-black"
                                     >Prénom du client
-                                    <span class="text-[#dc3545]">*</span></Label
+                                    <span
+                                        v-if="
+                                            isFieldRequired('client_prenom', {
+                                                sansClientExistant,
+                                            })
+                                        "
+                                        class="text-[#dc3545]"
+                                        >*</span
+                                    ></Label
                                 >
                                 <input
                                     v-model="form.client_prenom"
                                     type="text"
-                                    required
                                     placeholder="Ex : Didier"
                                     class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
                                     :class="{
@@ -618,6 +654,16 @@ watch(
                                 <Label class="text-sm font-medium text-black"
                                     >Nom du client
                                     <span
+                                        v-if="
+                                            isFieldRequired('client_nom', {
+                                                sansClientExistant,
+                                            })
+                                        "
+                                        class="text-[#dc3545]"
+                                        >*</span
+                                    >
+                                    <span
+                                        v-else
                                         class="text-xs font-normal text-[rgba(92,89,89,0.6)]"
                                         >(facultatif)</span
                                     ></Label
@@ -641,7 +687,15 @@ watch(
                             <div class="flex flex-col gap-1.5">
                                 <Label class="text-sm font-medium text-black"
                                     >Téléphone
-                                    <span class="text-[#dc3545]">*</span></Label
+                                    <span
+                                        v-if="
+                                            isFieldRequired('client_tel', {
+                                                sansClientExistant,
+                                            })
+                                        "
+                                        class="text-[#dc3545]"
+                                        >*</span
+                                    ></Label
                                 >
                                 <div
                                     class="flex h-[42px] overflow-hidden rounded-[10px] border border-[#ccc5c5] focus-within:border-[#0d6efd] focus-within:ring-1 focus-within:ring-[#0d6efd]"
@@ -672,7 +726,16 @@ watch(
                         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div class="flex flex-col gap-1.5">
                                 <Label class="text-sm font-medium text-black"
-                                    >Genre</Label
+                                    >Genre
+                                    <span
+                                        v-if="
+                                            isFieldRequired('client_sexe', {
+                                                sansClientExistant,
+                                            })
+                                        "
+                                        class="text-[#dc3545]"
+                                        >*</span
+                                    ></Label
                                 >
                                 <div class="relative">
                                     <select
@@ -690,7 +753,12 @@ watch(
                             </div>
                             <div class="flex flex-col gap-1.5">
                                 <Label class="text-sm font-medium text-black"
-                                    >Bénéficiaire</Label
+                                    >Bénéficiaire
+                                    <span
+                                        v-if="isFieldRequired('beneficiaire')"
+                                        class="text-[#dc3545]"
+                                        >*</span
+                                    ></Label
                                 >
                                 <div class="relative">
                                     <select
@@ -720,7 +788,15 @@ watch(
                             <div class="flex min-w-0 flex-col gap-1.5">
                                 <Label class="text-sm font-medium text-black"
                                     >Adresse
-                                    <span class="text-[#dc3545]">*</span></Label
+                                    <span
+                                        v-if="
+                                            isFieldRequired('client_adresse', {
+                                                sansClientExistant,
+                                            })
+                                        "
+                                        class="text-[#dc3545]"
+                                        >*</span
+                                    ></Label
                                 >
                                 <input
                                     v-model="form.client_adresse"
@@ -742,7 +818,16 @@ watch(
                             <div class="flex min-w-0 flex-col gap-1.5">
                                 <Label class="text-sm font-medium text-black"
                                     >Arrondissement
-                                    <span class="text-[#dc3545]">*</span></Label
+                                    <span
+                                        v-if="
+                                            isFieldRequired(
+                                                'client_arrondissement',
+                                                { sansClientExistant },
+                                            )
+                                        "
+                                        class="text-[#dc3545]"
+                                        >*</span
+                                    ></Label
                                 >
                                 <div class="relative">
                                     <select
@@ -1415,6 +1500,21 @@ watch(
                     <!-- Ordonnance (dashed #e2e8f0) + Commentaires (solid #e2e8f0) : deux blocs égaux côte à côte -->
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div class="flex flex-col gap-2">
+                            <Label class="text-sm font-medium text-black"
+                                >Ordonnance
+                                <span
+                                    v-if="
+                                        isFieldRequired('ordonnance') &&
+                                        !(
+                                            mode === 'relance' &&
+                                            ordonnanceUrlExistante &&
+                                            !form.ordonnance
+                                        )
+                                    "
+                                    class="text-[#dc3545]"
+                                    >*</span
+                                ></Label
+                            >
                             <p
                                 v-if="
                                     ordonnanceUrlExistante && !form.ordonnance
@@ -1437,14 +1537,37 @@ watch(
                                 v-model="form.ordonnance"
                                 variant="card"
                             />
+                            <p
+                                v-if="errors.ordonnance"
+                                class="text-xs text-[#dc3545]"
+                            >
+                                {{ errors.ordonnance }}
+                            </p>
                         </div>
                         <div class="flex flex-col">
+                            <Label class="mb-1.5 text-sm font-medium text-black"
+                                >Commentaires
+                                <span
+                                    v-if="isFieldRequired('commentaire')"
+                                    class="text-[#dc3545]"
+                                    >*</span
+                                ></Label
+                            >
                             <textarea
                                 v-model="form.commentaire"
                                 placeholder="Commentaires ..."
                                 rows="4"
                                 class="min-h-[120px] resize-none rounded-[10px] border border-[#e2e8f0] bg-white p-3 text-sm placeholder:italic placeholder:text-[#94a3b8] focus:border-[#3B82F6] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                                :class="{
+                                    'border-[#dc3545]': errors.commentaire,
+                                }"
                             />
+                            <p
+                                v-if="errors.commentaire"
+                                class="mt-1 text-xs text-[#dc3545]"
+                            >
+                                {{ errors.commentaire }}
+                            </p>
                         </div>
                     </div>
                 </div>

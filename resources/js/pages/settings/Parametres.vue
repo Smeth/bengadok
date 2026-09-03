@@ -17,6 +17,7 @@ import {
     Timer,
     FileCheck,
     Percent,
+    ClipboardList,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
@@ -33,6 +34,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
+import { contextLabel } from '@/lib/commandeCreationFields';
+import type { CommandeCreationFieldDefinition } from '@/lib/commandeCreationFields';
 import type { BreadcrumbItem } from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -137,6 +140,7 @@ const props = withDefaults(
         appSettings: AppSettingsProps;
         parapharmaSettings: ParapharmaSettingsProps;
         ordonnanceVerificationSettings: OrdonnanceVerificationSettings;
+        commandeCreationChamps: CommandeCreationFieldDefinition[];
         onglet: string | null;
     }>(),
     {
@@ -167,6 +171,7 @@ const props = withDefaults(
             keywords_patient: [],
             keywords_medicament: [],
         }),
+        commandeCreationChamps: () => [],
         onglet: null,
     },
 );
@@ -195,6 +200,11 @@ const onglets = [
         icon: CalendarClock,
     },
     { id: 'relanceCommande', label: 'Relance commandes', icon: Timer },
+    {
+        id: 'commandeCreation',
+        label: 'Création commande',
+        icon: ClipboardList,
+    },
     {
         id: 'parapharma',
         label: 'Parapharmacie & crédits',
@@ -606,6 +616,36 @@ function sauverRelanceDelai() {
     submit(
         '/settings/parametres/relance-delai',
         { delai_relance_meme_pharmacie_heures: n },
+        'patch',
+    );
+}
+
+const commandeCreationForm = ref<Record<string, boolean>>({});
+
+watch(
+    () => props.commandeCreationChamps,
+    (rows) => {
+        const next: Record<string, boolean> = {};
+        for (const row of rows) {
+            next[row.key] = row.required;
+        }
+        commandeCreationForm.value = next;
+    },
+    { immediate: true },
+);
+
+const commandeCreationClientFields = computed(() =>
+    props.commandeCreationChamps.filter((f) => f.group === 'client'),
+);
+
+const commandeCreationCommandeFields = computed(() =>
+    props.commandeCreationChamps.filter((f) => f.group === 'commande'),
+);
+
+function sauverCommandeCreationChamps() {
+    submit(
+        '/settings/parametres/commande-creation-champs',
+        { champs: commandeCreationForm.value },
         'patch',
     );
 }
@@ -2052,6 +2092,128 @@ function sauverOrdonnanceVerification() {
                         type="submit"
                         :disabled="enCours"
                         class="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-60"
+                    >
+                        <Check class="h-4 w-4" /> Enregistrer
+                    </button>
+                </form>
+            </section>
+
+            <!-- ══════════════════ CRÉATION COMMANDE ══════════════════ -->
+            <section
+                v-if="ongletActif === 'commandeCreation'"
+                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+            >
+                <div class="border-b bg-gray-50 px-5 py-3">
+                    <h2
+                        class="font-semibold text-gray-700 flex items-center gap-2"
+                    >
+                        <ClipboardList class="h-4 w-4 text-sky-600" />
+                        Champs obligatoires — création de commande
+                    </h2>
+                </div>
+                <div
+                    class="space-y-2 border-b border-sky-100 bg-sky-50/40 px-5 py-4"
+                >
+                    <p class="text-sm leading-relaxed text-gray-600">
+                        Cochez les champs à rendre
+                        <span class="font-semibold">obligatoires</span> lors de
+                        l’enregistrement d’une nouvelle commande (back-office et
+                        espace agent). Les champs non cochés restent facultatifs.
+                        La validation serveur suit ces réglages.
+                    </p>
+                </div>
+                <form
+                    class="space-y-8 px-5 py-6"
+                    @submit.prevent="sauverCommandeCreationChamps"
+                >
+                    <div>
+                        <h3
+                            class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500"
+                        >
+                            Client
+                        </h3>
+                        <ul class="divide-y divide-gray-100 rounded-lg border">
+                            <li
+                                v-for="field in commandeCreationClientFields"
+                                :key="field.key"
+                                class="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                            >
+                                <div>
+                                    <p class="text-sm font-medium text-gray-800">
+                                        {{ field.label }}
+                                    </p>
+                                    <p class="text-xs text-gray-500">
+                                        {{ contextLabel(field.contexts) }}
+                                        · défaut :
+                                        {{
+                                            field.default
+                                                ? 'obligatoire'
+                                                : 'facultatif'
+                                        }}
+                                    </p>
+                                </div>
+                                <label
+                                    class="flex cursor-pointer items-center gap-2 text-sm"
+                                >
+                                    <input
+                                        v-model="
+                                            commandeCreationForm[field.key]
+                                        "
+                                        type="checkbox"
+                                        class="size-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500"
+                                    />
+                                    Obligatoire
+                                </label>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3
+                            class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500"
+                        >
+                            Commande
+                        </h3>
+                        <ul class="divide-y divide-gray-100 rounded-lg border">
+                            <li
+                                v-for="field in commandeCreationCommandeFields"
+                                :key="field.key"
+                                class="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                            >
+                                <div>
+                                    <p class="text-sm font-medium text-gray-800">
+                                        {{ field.label }}
+                                    </p>
+                                    <p class="text-xs text-gray-500">
+                                        {{ contextLabel(field.contexts) }}
+                                        · défaut :
+                                        {{
+                                            field.default
+                                                ? 'obligatoire'
+                                                : 'facultatif'
+                                        }}
+                                    </p>
+                                </div>
+                                <label
+                                    class="flex cursor-pointer items-center gap-2 text-sm"
+                                >
+                                    <input
+                                        v-model="
+                                            commandeCreationForm[field.key]
+                                        "
+                                        type="checkbox"
+                                        class="size-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500"
+                                    />
+                                    Obligatoire
+                                </label>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <button
+                        type="submit"
+                        :disabled="enCours"
+                        class="flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-60"
                     >
                         <Check class="h-4 w-4" /> Enregistrer
                     </button>

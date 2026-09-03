@@ -13,6 +13,7 @@ use App\Models\MotifAnnulation;
 use App\Models\OrdonnanceVerificationSetting;
 use App\Models\TypePharmacie;
 use App\Models\Zone;
+use App\Support\CommandeCreationFields;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -38,6 +39,7 @@ class ParametresController extends Controller
             'clientFrequences',
             'relanceCommande',
             'ordonnanceVerification',
+            'commandeCreation',
             'parapharma',
         ];
         $onglet = $request->query('onglet');
@@ -73,6 +75,7 @@ class ParametresController extends Controller
             ],
             'parapharmaSettings' => AppSetting::parapharmaConfig(),
             'ordonnanceVerificationSettings' => $this->ordonnanceVerificationSettingsPayload(),
+            'commandeCreationChamps' => CommandeCreationFields::definitionsForFrontend(),
             'onglet' => $onglet,
         ]);
     }
@@ -91,6 +94,28 @@ class ParametresController extends Controller
         }
 
         return back()->with('status', 'Délai de relance (même pharmacie) enregistré.');
+    }
+
+    public function updateCommandeCreationChamps(Request $request)
+    {
+        $keys = array_keys(CommandeCreationFields::META);
+
+        $validated = $request->validate([
+            'champs' => 'required|array',
+            ...collect($keys)->mapWithKeys(fn (string $key) => ["champs.{$key}" => 'boolean'])->all(),
+        ]);
+
+        $current = AppSetting::commandeCreationFieldsConfig();
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $validated['champs'])) {
+                $current[$key] = (bool) $validated['champs'][$key];
+            }
+        }
+
+        $row = AppSetting::ensureRowExists();
+        $row->update(['commande_creation_champs' => $current]);
+
+        return back()->with('status', 'Champs obligatoires (création commande) enregistrés.');
     }
 
     public function updateParapharma(Request $request)

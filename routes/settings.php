@@ -112,6 +112,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::patch('relance-delai', [ParametresController::class, 'updateRelanceDelai'])->name('relance-delai.update');
 
+            Route::patch(
+                'commande-creation-champs',
+                [ParametresController::class, 'updateCommandeCreationChamps'],
+            )->name('commande-creation-champs.update');
+
             Route::patch('parapharma', [ParametresController::class, 'updateParapharma'])->name('parapharma.update');
 
             Route::patch(

@@ -21,6 +21,7 @@ class AppSetting extends Model
         'parapharma_produit_types',
         'parapharma_credit_alerte_seuil',
         'parapharma_credit_deduction_auto',
+        'commande_creation_champs',
     ];
 
     protected function casts(): array
@@ -36,6 +37,7 @@ class AppSetting extends Model
             'parapharma_produit_types' => 'array',
             'parapharma_credit_alerte_seuil' => 'integer',
             'parapharma_credit_deduction_auto' => 'boolean',
+            'commande_creation_champs' => 'array',
         ];
     }
 
@@ -44,6 +46,43 @@ class AppSetting extends Model
         $v = static::query()->value('delai_relance_meme_pharmacie_heures');
 
         return max(0, (int) ($v ?? 0));
+    }
+
+    /**
+     * Champs obligatoires à la création d'une commande (clé => bool).
+     *
+     * @return array<string, bool>
+     */
+    public static function commandeCreationFieldsConfig(): array
+    {
+        $defaults = static::commandeCreationFieldsDefaults();
+        $stored = static::query()->value('commande_creation_champs');
+
+        if (! is_array($stored)) {
+            return $defaults;
+        }
+
+        $merged = $defaults;
+        foreach ($defaults as $key => $default) {
+            if (array_key_exists($key, $stored)) {
+                $merged[$key] = (bool) $stored[$key];
+            }
+        }
+
+        return $merged;
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    public static function commandeCreationFieldsDefaults(): array
+    {
+        $defaults = [];
+        foreach (\App\Support\CommandeCreationFields::META as $key => $meta) {
+            $defaults[$key] = (bool) $meta['default'];
+        }
+
+        return $defaults;
     }
 
     /**

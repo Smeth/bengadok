@@ -29,6 +29,7 @@ class AgentController extends Controller
             'pharmacies' => Pharmacie::with(['zone', 'typePharmacie', 'heurs'])->get(),
             'modesPaiement' => ModePaiement::all(),
             'livreurs' => Livreur::all(),
+            'arrondissements' => Client::ARRONDISSEMENTS,
         ]);
     }
 

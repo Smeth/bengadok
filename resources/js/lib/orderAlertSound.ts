@@ -1,6 +1,13 @@
-import { isOrderAlertSoundEnabled } from '@/lib/orderAlertPreferences';
+import {
+    getOrderAlertSoundPreset,
+    isOrderAlertSoundEnabled,
+    type OrderAlertSoundPreset,
+} from '@/lib/orderAlertPreferences';
 
+/** Conservé pour compatibilité des appelants (nouvelle commande vs info). */
 export type AlertSoundProfile = 'urgent' | 'info';
+
+export type { OrderAlertSoundPreset as OrderAlertSoundPresetId };
 
 let audioContext: AudioContext | null = null;
 
@@ -33,11 +40,12 @@ function playTone(
     frequency: number,
     duration = 0.16,
     volume = 0.28,
+    wave: OscillatorType = 'square',
 ): void {
     const oscillator = context.createOscillator();
     const gain = context.createGain();
 
-    oscillator.type = 'square';
+    oscillator.type = wave;
     oscillator.frequency.value = frequency;
     oscillator.connect(gain);
     gain.connect(context.destination);
@@ -50,7 +58,31 @@ function playTone(
     oscillator.stop(startAt + duration + 0.02);
 }
 
-export function playOrderAlertSound(profile: AlertSoundProfile): void {
+function playPreset(context: AudioContext, preset: OrderAlertSoundPreset): void {
+    const start = context.currentTime;
+
+    switch (preset) {
+        case 'urgent':
+            playTone(context, start, 880, 0.14, 0.32);
+            playTone(context, start + 0.18, 1175, 0.14, 0.32);
+            playTone(context, start + 0.36, 880, 0.18, 0.34);
+            return;
+        case 'discret':
+            playTone(context, start, 740, 0.16, 0.22, 'sine');
+            playTone(context, start + 0.22, 988, 0.2, 0.24, 'sine');
+            return;
+        case 'classique':
+            playTone(context, start, 523, 0.18, 0.26, 'sine');
+            playTone(context, start + 0.2, 659, 0.22, 0.28, 'sine');
+            playTone(context, start + 0.44, 784, 0.24, 0.3, 'sine');
+            return;
+        case 'court':
+            playTone(context, start, 880, 0.1, 0.3);
+            return;
+    }
+}
+
+export function playOrderAlertSound(_profile?: AlertSoundProfile): void {
     if (!isOrderAlertSoundEnabled()) {
         return;
     }
@@ -61,15 +93,18 @@ export function playOrderAlertSound(profile: AlertSoundProfile): void {
         return;
     }
 
-    const start = audioContext.currentTime;
+    playPreset(audioContext, getOrderAlertSoundPreset());
+}
 
-    if (profile === 'urgent') {
-        playTone(audioContext, start, 880, 0.14, 0.32);
-        playTone(audioContext, start + 0.18, 1175, 0.14, 0.32);
-        playTone(audioContext, start + 0.36, 880, 0.18, 0.34);
+/** Lecture d’un preset précis (page Paramètres → test). */
+export function previewOrderAlertSoundPreset(
+    preset: OrderAlertSoundPreset,
+): void {
+    unlockOrderAlertSound();
+
+    if (!audioContext) {
         return;
     }
 
-    playTone(audioContext, start, 740, 0.16, 0.26);
-    playTone(audioContext, start + 0.22, 988, 0.2, 0.28);
+    playPreset(audioContext, preset);
 }
