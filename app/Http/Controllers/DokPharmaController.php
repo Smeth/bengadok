@@ -29,7 +29,7 @@ class DokPharmaController extends Controller
     public function dashboard(
         Request $request,
         AdminParapharmaDashboardService $parapharmaService,
-    ): Response {
+    ): Response|RedirectResponse {
         $user = $request->user();
         if ($user && $user->hasRole('vendeur') && ! $user->hasRole('gerant')) {
             return redirect('/dok-pharma/commandes');
@@ -89,6 +89,8 @@ class DokPharmaController extends Controller
         Request $request,
         AdminParapharmaDashboardService $parapharmaService,
     ): RedirectResponse {
+        abort_unless($request->user()?->hasRole('gerant'), 403);
+
         $context = $this->resolvePharmacieDashboardContext($request);
         abort_unless($context['pharmacie_id'] !== null, 403);
 
@@ -111,6 +113,8 @@ class DokPharmaController extends Controller
         Request $request,
         PharmacieCreditService $creditService,
     ): RedirectResponse {
+        abort_unless($request->user()?->hasRole('gerant'), 403);
+
         $context = $this->resolvePharmacieDashboardContext($request);
         abort_unless($context['pharmacie_id'] !== null, 403);
 
@@ -180,7 +184,7 @@ class DokPharmaController extends Controller
         ];
     }
 
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
         $pharmacieId = $request->user()?->pharmacie_id;
         if (! $pharmacieId) {
@@ -189,11 +193,19 @@ class DokPharmaController extends Controller
                 'stats' => ['nouvelles' => 0, 'en_attente' => 0, 'a_preparer' => 0, 'livrees' => 0],
                 'onglet' => $request->input('onglet', 'nouvelles'),
                 'search' => Str::limit(trim((string) $request->input('search', '')), 100, ''),
+                'canViewHistorique' => ! $this->userIsVendeurSeul($request),
             ]);
         }
 
         $onglet = $request->input('onglet', 'nouvelles');
         $search = Str::limit(trim((string) $request->input('search', '')), 100, '');
+
+        if ($this->userIsVendeurSeul($request) && $onglet === 'livrees') {
+            return redirect()->route('dok-pharma.commandes', array_filter([
+                'onglet' => 'nouvelles',
+                'search' => $search !== '' ? $search : null,
+            ]));
+        }
 
         $query = Commande::with(['client', 'produits', 'ordonnance', 'piecesJointes.uploadedBy'])
             ->where('pharmacie_id', $pharmacieId);
@@ -275,7 +287,17 @@ class DokPharmaController extends Controller
             'stats' => $stats,
             'onglet' => $onglet,
             'search' => $search,
+            'canViewHistorique' => ! $this->userIsVendeurSeul($request),
         ]);
+    }
+
+    private function userIsVendeurSeul(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user !== null
+            && $user->hasRole('vendeur')
+            && ! $user->hasRole('gerant');
     }
 
     /**

@@ -28,12 +28,13 @@ class AuthRedirectPathsTest extends TestCase
         $this->assertTrue(AuthRedirectPaths::pathAllowedForUser($user, '/dok-pharma/commandes'));
     }
 
-    public function test_gerant_can_access_dashboard_but_not_clients_doublons(): void
+    public function test_gerant_cannot_access_dashboard_or_clients_doublons(): void
     {
         $user = $this->userWithRole('gerant');
 
-        $this->assertTrue(AuthRedirectPaths::pathAllowedForUser($user, '/dashboard'));
+        $this->assertFalse(AuthRedirectPaths::pathAllowedForUser($user, '/dashboard'));
         $this->assertFalse(AuthRedirectPaths::pathAllowedForUser($user, '/clients/doublons'));
+        $this->assertTrue(AuthRedirectPaths::pathAllowedForUser($user, '/dok-pharma'));
     }
 
     public function test_resolve_destination_filters_unauthorized_intended_url(): void
@@ -46,6 +47,20 @@ class AuthRedirectPathsTest extends TestCase
 
         $this->assertSame(
             '/dok-pharma/commandes',
+            AuthRedirectPaths::resolveDestination($request, $user),
+        );
+    }
+
+    public function test_gerant_intended_legacy_dashboard_falls_back_to_dok_pharma(): void
+    {
+        $user = $this->userWithRole('gerant');
+
+        $request = Request::create('/email/verify', 'GET');
+        $request->setLaravelSession($this->app['session']->driver());
+        $request->session()->put('url.intended', '/dashboard');
+
+        $this->assertSame(
+            '/dok-pharma',
             AuthRedirectPaths::resolveDestination($request, $user),
         );
     }

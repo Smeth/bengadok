@@ -134,13 +134,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('dok-pharma')->name('dok-pharma.')->middleware('role:vendeur|gerant')->group(function () {
         Route::get('/', [DokPharmaController::class, 'dashboard'])->name('dashboard');
-        Route::post('/commission/payee', [DokPharmaController::class, 'marquerCommissionPayee'])->name('commission.payee');
-        Route::post('/credits/recharge', [DokPharmaController::class, 'rechargerCredits'])->name('credits.recharge');
         Route::get('/commandes', [DokPharmaController::class, 'index'])->name('commandes');
         Route::post('{commande}/valider', [DokPharmaController::class, 'validerDisponibilite'])->name('valider');
         Route::post('{commande}/valider-retrait', [DokPharmaController::class, 'validerRetrait'])->name('valider-retrait');
         Route::post('{commande}/pieces-jointes', [CommandePieceJointeController::class, 'store'])->name('pieces-jointes.store');
         Route::delete('{commande}/pieces-jointes/{pieceJointe}', [CommandePieceJointeController::class, 'destroy'])->name('pieces-jointes.destroy');
+    });
+
+    Route::prefix('dok-pharma')->name('dok-pharma.')->middleware('role:gerant')->group(function () {
+        Route::post('/commission/payee', [DokPharmaController::class, 'marquerCommissionPayee'])->name('commission.payee');
+        Route::post('/credits/recharge', [DokPharmaController::class, 'rechargerCredits'])->name('credits.recharge');
     });
 });
 

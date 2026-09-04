@@ -87,8 +87,12 @@ const mainNavItems = computed<NavItem[]>(() => {
     }
     if (isGerant && !isAdmin) {
         return [
-            { title: 'Tableau de bord', href: dashboard(), icon: LayoutGrid },
-            { title: 'Commandes', href: '/dok-pharma', icon: ClipboardList },
+            { title: 'Tableau de bord', href: '/dok-pharma', icon: LayoutGrid },
+            {
+                title: 'Commandes',
+                href: '/dok-pharma/commandes',
+                icon: ClipboardList,
+            },
             { title: 'Vendeurs', href: '/pharmacie/vendeurs', icon: UserCog },
         ];
     }

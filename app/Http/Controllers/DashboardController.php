@@ -17,12 +17,8 @@ class DashboardController extends Controller
         AdminParapharmaDashboardService $parapharmaService,
     ): Response|RedirectResponse {
         $user = $request->user();
-        if (
-            $user
-            && $user->hasRole('vendeur')
-            && ! $user->hasAnyRole(['gerant', 'admin', 'super_admin'])
-        ) {
-            return redirect('/dok-pharma/commandes');
+        if ($this->shouldRedirectPharmacyStaffFromBackoffice($user)) {
+            return redirect(AuthRedirectPaths::homeForUser($user));
         }
 
         if (
@@ -90,6 +86,19 @@ class DashboardController extends Controller
                 'vue_periode' => $request->input('vue_periode', 'mois'),
             ])
             ->with('success', 'Commission marquée comme payée.');
+    }
+
+    private function shouldRedirectPharmacyStaffFromBackoffice(?\App\Models\User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            return false;
+        }
+
+        return $user->hasAnyRole(['gerant', 'vendeur']);
     }
 
     private function utiliseDashboardParapharmaAdmin(?\App\Models\User $user): bool

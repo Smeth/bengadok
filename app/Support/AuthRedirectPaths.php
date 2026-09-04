@@ -104,11 +104,6 @@ final class AuthRedirectPaths
             return self::isAgentBackofficePath($path);
         }
 
-        if (self::isPharmacyStaff($roles)) {
-            return in_array('gerant', $roles, true)
-                && ($path === '/dashboard' || str_starts_with($path, '/dashboard/'));
-        }
-
         return false;
     }
 

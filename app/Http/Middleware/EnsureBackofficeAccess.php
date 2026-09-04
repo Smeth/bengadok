@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Bloque l’accès au back-office pour vendeur / gérant (sauf dashboard gérant).
+ * Bloque l’accès au back-office pour vendeur / gérant (y compris /dashboard legacy).
  */
 class EnsureBackofficeAccess
 {

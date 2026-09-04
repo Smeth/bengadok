@@ -9,6 +9,7 @@ import {
     PanelLeftClose,
     PanelLeftOpen,
     Settings,
+    UserCog,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -334,6 +335,54 @@ function logout() {
                             "
                         >
                             Commandes
+                        </span>
+                    </Link>
+
+                    <Link
+                        v-if="!isVendeurSeul"
+                        href="/pharmacie/vendeurs"
+                        class="sidebar-menu-btn-react group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150"
+                        :class="
+                            (sidebarCollapsed
+                                ? 'w-auto justify-center px-2'
+                                : '',
+                            isCurrentUrl('/pharmacie/vendeurs')
+                                ? 'bg-[#5BB66E] font-bold text-white shadow-sm'
+                                : 'bg-transparent hover:bg-[rgba(92,89,89,0.08)]')
+                        "
+                        :data-active="
+                            isCurrentUrl('/pharmacie/vendeurs')
+                                ? 'true'
+                                : undefined
+                        "
+                    >
+                        <div
+                            class="sidebar-menu-icon flex size-[36px] shrink-0 items-center justify-center rounded-full transition-colors"
+                            :class="
+                                isCurrentUrl('/pharmacie/vendeurs')
+                                    ? 'bg-white/25 text-white'
+                                    : 'bg-[rgba(92,89,89,0.25)] group-hover:bg-[rgba(92,89,89,0.35)]'
+                            "
+                        >
+                            <UserCog
+                                class="sidebar-menu-icon-svg size-6"
+                                :class="
+                                    isCurrentUrl('/pharmacie/vendeurs')
+                                        ? 'text-white'
+                                        : 'text-[#5c5959]'
+                                "
+                            />
+                        </div>
+                        <span
+                            v-if="!sidebarCollapsed"
+                            class="sidebar-menu-label truncate text-[14px] font-bold leading-tight text-[#5c5959] transition-colors"
+                            :class="
+                                isCurrentUrl('/pharmacie/vendeurs')
+                                    ? '!text-white'
+                                    : ''
+                            "
+                        >
+                            Vendeurs
                         </span>
                     </Link>
                 </nav>

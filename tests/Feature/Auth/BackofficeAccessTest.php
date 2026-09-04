@@ -35,7 +35,7 @@ class BackofficeAccessTest extends TestCase
             ->assertRedirect($expectedHome);
     }
 
-    public function test_gerant_is_redirected_from_clients_doublons_but_can_open_dashboard(): void
+    public function test_gerant_is_redirected_from_dashboard_and_clients_doublons(): void
     {
         $gerant = $this->userWithRole('gerant');
 
@@ -45,7 +45,7 @@ class BackofficeAccessTest extends TestCase
 
         $this->actingAs($gerant)
             ->get('/dashboard')
-            ->assertOk();
+            ->assertRedirect('/dok-pharma');
     }
 
     public function test_login_with_intended_backoffice_url_redirects_vendeur_to_pharmacy_home(): void

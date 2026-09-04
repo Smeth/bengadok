@@ -23,9 +23,7 @@ import AppToast from '@/components/AppToast.vue';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import IdentifiantsCreesDialog from '@/components/IdentifiantsCreesDialog.vue';
 import { previewPharmacieUsername } from '@/lib/laravelSlug';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { dashboard } from '@/routes';
-import type { BreadcrumbItem } from '@/types';
+import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
 
 const props = defineProps<{
     vendeurs: Array<{
@@ -38,12 +36,6 @@ const props = defineProps<{
     pharmacie: { id: number; designation: string };
     nextUserId?: number;
 }>();
-
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Tableau de bord', href: dashboard() },
-    { title: 'Ma pharmacie', href: '/dok-pharma' },
-    { title: 'Vendeurs', href: '#' },
-];
 
 const modalCreate = ref(false);
 const formErrors = ref<Record<string, string>>({});
@@ -163,8 +155,8 @@ function creerVendeur() {
 <template>
     <Head title="Vendeurs - BengaDok" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-1 flex-col gap-6 p-4">
+    <PharmacyLayout page-title="Vendeurs">
+        <div class="flex flex-1 flex-col gap-6 p-4 sm:p-6">
             <div class="flex items-center justify-between">
                 <h1 class="text-2xl font-semibold">
                     Vendeurs - {{ pharmacie?.designation }}
@@ -413,5 +405,5 @@ function creerVendeur() {
         />
 
         <FlashToastHost />
-    </AppLayout>
+    </PharmacyLayout>
 </template>

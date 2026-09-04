@@ -113,6 +113,7 @@ const props = defineProps<{
     };
     onglet: string;
     search?: string;
+    canViewHistorique?: boolean;
 }>();
 
 const searchQuery = ref(props.search ?? '');
@@ -563,6 +564,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                 </button>
 
                 <button
+                    v-if="canViewHistorique !== false"
                     type="button"
                     class="flex min-h-9 flex-1 items-center justify-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow-sm transition-all sm:flex-none sm:px-3"
                     :class="
