@@ -328,10 +328,11 @@ class AdminParapharmaDashboardService
         CarbonInterface $debut,
         CarbonInterface $fin,
     ): array {
-        $rows = DB::table('commandes')
+        $query = DB::table('commandes')
             ->join('pharmacies', 'pharmacies.id', '=', 'commandes.pharmacie_id')
             ->whereBetween('commandes.date', [$debut, $fin]);
-        $this->whereCaComptabilise($rows)
+
+        $rows = $this->whereCaComptabilise($query)
             ->groupBy('commandes.date', 'commandes.pharmacie_id', 'pharmacies.designation')
             ->selectRaw(
                 'commandes.date as jour,
