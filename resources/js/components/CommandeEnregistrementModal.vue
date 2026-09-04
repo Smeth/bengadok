@@ -49,8 +49,6 @@ export type FormEnregPayload = {
     client_sexe: '' | 'M' | 'F';
     pharmacie_id: string;
     beneficiaire: string;
-    date?: string;
-    heurs?: string;
     montant_livraison_id?: string;
     produits: Array<{
         designation: string;
@@ -139,15 +137,6 @@ const defaultParapharmaType = computed(
 const page = usePage();
 const { isRequired: isFieldRequired, validate: validateCreationFields, applies: fieldApplies } =
     useCommandeCreationFields('admin');
-
-function defaultCommandeDate(): string {
-    return new Date().toISOString().slice(0, 10);
-}
-
-function defaultCommandeHeure(): string {
-    const d = new Date();
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
 
 const sansClientExistant = computed(() => {
     if (props.mode === 'relance' && props.commande?.client?.id) {
@@ -240,8 +229,6 @@ const form = ref({
     client_sexe: '' as '' | 'M' | 'F',
     pharmacie_id: '',
     beneficiaire: '',
-    date: defaultCommandeDate(),
-    heurs: defaultCommandeHeure(),
     montant_livraison_id: '',
     produits: [ligneProduitVide()] as ProduitEnreg[],
     produitsParapharma: [ligneProduitVide()] as ProduitEnreg[],
@@ -370,8 +357,6 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
             : '') as '' | 'M' | 'F',
         pharmacie_id: '',
         beneficiaire: 'Soi-même',
-        date: defaultCommandeDate(),
-        heurs: defaultCommandeHeure(),
         montant_livraison_id: '',
         produits: medicaments.length ? medicaments : [ligneProduitVide()],
         produitsParapharma: parapharma.length
@@ -414,8 +399,6 @@ function resetForm() {
         client_sexe: '' as '' | 'M' | 'F',
         pharmacie_id: '',
         beneficiaire: '',
-        date: defaultCommandeDate(),
-        heurs: defaultCommandeHeure(),
         montant_livraison_id: '',
         produits: [ligneProduitVide()],
         produitsParapharma: [ligneProduitVide()],
@@ -451,8 +434,6 @@ function onSubmit() {
                 client_arrondissement: form.value.client_arrondissement,
                 client_sexe: form.value.client_sexe,
                 beneficiaire: form.value.beneficiaire,
-                date: form.value.date,
-                heurs: form.value.heurs,
                 montant_livraison_id: form.value.montant_livraison_id,
                 ordonnance: form.value.ordonnance,
                 commentaire: form.value.commentaire,
@@ -560,8 +541,6 @@ function onSubmit() {
         client_sexe: form.value.client_sexe,
         pharmacie_id: form.value.pharmacie_id,
         beneficiaire: form.value.beneficiaire || '',
-        date: fieldApplies('date') ? form.value.date : undefined,
-        heurs: fieldApplies('heurs') ? form.value.heurs : undefined,
         montant_livraison_id: fieldApplies('montant_livraison_id')
             ? form.value.montant_livraison_id || undefined
             : undefined,
@@ -814,67 +793,9 @@ watch(
                             </div>
                         </div>
                         <div
-                            v-if="
-                                fieldApplies('date') ||
-                                fieldApplies('heurs') ||
-                                fieldApplies('montant_livraison_id')
-                            "
+                            v-if="fieldApplies('montant_livraison_id')"
                             class="grid grid-cols-1 gap-4 md:grid-cols-3"
                         >
-                            <div
-                                v-if="fieldApplies('date')"
-                                class="flex flex-col gap-1.5"
-                            >
-                                <Label class="text-sm font-medium text-black"
-                                    >Date de commande
-                                    <span
-                                        v-if="isFieldRequired('date')"
-                                        class="text-[#dc3545]"
-                                        >*</span
-                                    ></Label
-                                >
-                                <input
-                                    v-model="form.date"
-                                    type="date"
-                                    class="h-[42px] w-full rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
-                                    :class="{
-                                        'border-[#dc3545]': errors.date,
-                                    }"
-                                />
-                                <p
-                                    v-if="errors.date"
-                                    class="text-xs text-[#dc3545]"
-                                >
-                                    {{ errors.date }}
-                                </p>
-                            </div>
-                            <div
-                                v-if="fieldApplies('heurs')"
-                                class="flex flex-col gap-1.5"
-                            >
-                                <Label class="text-sm font-medium text-black"
-                                    >Heure
-                                    <span
-                                        v-if="isFieldRequired('heurs')"
-                                        class="text-[#dc3545]"
-                                        >*</span
-                                    ></Label
-                                >
-                                <input
-                                    v-model="form.heurs"
-                                    type="time"
-                                    class="h-[42px] w-full rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
-                                    :class="{
-                                        'border-[#dc3545]': errors.heurs,
-                                    }"
-                                />
-                                <p
-                                    v-if="errors.heurs"
-                                    class="text-xs text-[#dc3545]"
-                                >
-                                    {{ errors.heurs }}
-                                </p>
-                            </div>
                             <div
                                 v-if="fieldApplies('montant_livraison_id')"
                                 class="flex flex-col gap-1.5"

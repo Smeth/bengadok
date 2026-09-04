@@ -53,18 +53,6 @@ class CommandeCreationFields
             'group' => 'commande',
             'contexts' => ['admin'],
         ],
-        'date' => [
-            'label' => 'Date de commande',
-            'default' => false,
-            'group' => 'commande',
-            'contexts' => ['admin', 'agent'],
-        ],
-        'heurs' => [
-            'label' => 'Heure',
-            'default' => false,
-            'group' => 'commande',
-            'contexts' => ['admin', 'agent'],
-        ],
         'ordonnance' => [
             'label' => 'Ordonnance (fichier)',
             'default' => false,
@@ -182,12 +170,6 @@ class CommandeCreationFields
                 : ['nullable', 'in:M,F'],
             'pharmacie_id' => 'required|exists:pharmacies,id',
             'beneficiaire' => array_merge($stringRequiredAnyClient('beneficiaire'), ['max:100']),
-            'date' => self::isRequiredForRequest('date', $request)
-                ? 'required|date'
-                : 'nullable|date',
-            'heurs' => self::isRequiredForRequest('heurs', $request)
-                ? 'required|string|max:10'
-                : 'nullable|string|max:10',
             'produits' => 'required|array|min:1',
             'produits.*.designation' => 'required|string|max:255',
             'produits.*.dosage' => 'nullable|string|max:50',

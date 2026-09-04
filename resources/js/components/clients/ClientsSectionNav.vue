@@ -20,7 +20,7 @@ const tabs: {
     { id: 'prospects', label: 'Prospects', href: '/clients/prospects' },
     {
         id: 'doublons',
-        label: 'Gestion des doublons Clients',
+        label: 'Gestion des doublons',
         href: '/clients/doublons',
     },
     {

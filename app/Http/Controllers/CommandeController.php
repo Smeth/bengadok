@@ -247,8 +247,6 @@ class CommandeController extends Controller
             'client_arrondissement' => ['nullable', Rule::in(Client::ARRONDISSEMENTS)],
             'pharmacie_id' => 'required|exists:pharmacies,id',
             'beneficiaire' => 'nullable|string|max:100',
-            'date' => 'required|date',
-            'heurs' => 'required|string|max:10',
             'produits' => 'required|array|min:1',
             'produits.*.id' => 'nullable|integer|exists:produits,id',
             'produits.*.designation' => 'required|string|max:255',
@@ -296,8 +294,6 @@ class CommandeController extends Controller
             'ordonnance_id' => $ordonnanceId,
             'mode_paiement_id' => $validated['mode_paiement_id'] ?? null,
             'montant_livraison_id' => $validated['montant_livraison_id'] ?? null,
-            'date' => $validated['date'],
-            'heurs' => $validated['heurs'],
             'commentaire' => $validated['commentaire'] ?? null,
             'beneficiaire' => $validated['beneficiaire'] ?? null,
         ]);
@@ -339,15 +335,11 @@ class CommandeController extends Controller
 
         $validated = $request->validate([
             'commentaire' => 'nullable|string',
-            'beneficiaire' => 'nullable|string|max:100',
         ]);
 
         $commande->update([
             'commentaire' => isset($validated['commentaire']) && trim((string) $validated['commentaire']) !== ''
                 ? trim((string) $validated['commentaire'])
-                : null,
-            'beneficiaire' => isset($validated['beneficiaire']) && trim((string) $validated['beneficiaire']) !== ''
-                ? trim((string) $validated['beneficiaire'])
                 : null,
         ]);
 

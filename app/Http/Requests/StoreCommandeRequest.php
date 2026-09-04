@@ -31,6 +31,10 @@ class StoreCommandeRequest extends FormRequest
         if ($this->has('client_arrondissement') && $this->input('client_arrondissement') === '') {
             $this->merge(['client_arrondissement' => null]);
         }
+
+        // Date et heure : toujours fixées côté serveur à la création.
+        $this->request->remove('date');
+        $this->request->remove('heurs');
     }
 
     private function normalizeAgentInput(): void

@@ -17,8 +17,6 @@ export const COMMANDE_CREATION_FIELD_MESSAGES: Record<string, string> = {
     client_arrondissement: "L'arrondissement est obligatoire.",
     client_sexe: 'La civilité est obligatoire.',
     beneficiaire: 'Le bénéficiaire est obligatoire.',
-    date: 'La date de commande est obligatoire.',
-    heurs: "L'heure est obligatoire.",
     ordonnance: "L'ordonnance est obligatoire.",
     mode_paiement_id: 'Le mode de paiement est obligatoire.',
     montant_livraison_id: 'Le montant de livraison est obligatoire.',
@@ -94,8 +92,6 @@ export function validateCommandeCreationFields(
     checkString('client_arrondissement', values.client_arrondissement);
     checkString('client_sexe', values.client_sexe);
     checkString('beneficiaire', values.beneficiaire);
-    checkString('date', values.date);
-    checkString('heurs', values.heurs);
     checkString('commentaire', values.commentaire);
 
     if (

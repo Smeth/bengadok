@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
-    Search,
     UserCircle,
     Users,
     ShoppingBag,
@@ -9,9 +8,13 @@ import {
     Sparkles,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import ClientsEmptyState from '@/components/clients/ClientsEmptyState.vue';
+import ClientsFilterPanel from '@/components/clients/ClientsFilterPanel.vue';
+import ClientsPagination from '@/components/clients/ClientsPagination.vue';
 import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
+import ClientsStatCard from '@/components/clients/ClientsStatCard.vue';
+import { clientsSelectClass } from '@/components/clients/clientsUi';
+import { Button } from '@/components/ui/button';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { clientNomComplet } from '@/lib/clientDisplayName';
@@ -153,77 +156,41 @@ function promouvoir(prospect: ProspectRow) {
             <ClientsSectionNav active="prospects" />
 
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <div
-                    class="rounded-xl border border-border bg-white p-4 shadow-sm dark:bg-white/[0.96]"
-                >
-                    <div class="flex items-center gap-2 text-muted-foreground">
-                        <UserCircle class="size-4" />
-                        <span class="text-xs font-medium uppercase tracking-wide"
-                            >Total prospects</span
-                        >
-                    </div>
-                    <p class="mt-2 text-2xl font-bold tabular-nums">
-                        {{ stats.total }}
-                    </p>
-                </div>
-                <div
-                    class="rounded-xl border border-border bg-white p-4 shadow-sm dark:bg-white/[0.96]"
-                >
-                    <div class="flex items-center gap-2 text-muted-foreground">
-                        <ShoppingBag class="size-4" />
-                        <span class="text-xs font-medium uppercase tracking-wide"
-                            >Avec commandes</span
-                        >
-                    </div>
-                    <p class="mt-2 text-2xl font-bold tabular-nums">
-                        {{ stats.avec_commandes }}
-                    </p>
-                </div>
-                <div
-                    class="rounded-xl border border-border bg-white p-4 shadow-sm dark:bg-white/[0.96]"
-                >
-                    <div class="flex items-center gap-2 text-muted-foreground">
-                        <Sparkles class="size-4" />
-                        <span class="text-xs font-medium uppercase tracking-wide"
-                            >Prêts à promouvoir</span
-                        >
-                    </div>
-                    <p class="mt-2 text-2xl font-bold tabular-nums text-emerald-700">
-                        {{ stats.eligibles_promotion }}
-                    </p>
-                </div>
-                <div
-                    class="rounded-xl border border-border bg-white p-4 shadow-sm dark:bg-white/[0.96]"
-                >
-                    <div class="flex items-center gap-2 text-muted-foreground">
-                        <Users class="size-4" />
-                        <span class="text-xs font-medium uppercase tracking-wide"
-                            >Sans commande</span
-                        >
-                    </div>
-                    <p class="mt-2 text-2xl font-bold tabular-nums">
-                        {{ stats.sans_commande }}
-                    </p>
-                </div>
+                <ClientsStatCard
+                    label="Total prospects"
+                    :value="stats.total"
+                    :icon="UserCircle"
+                />
+                <ClientsStatCard
+                    label="Avec commandes"
+                    :value="stats.avec_commandes"
+                    :icon="ShoppingBag"
+                />
+                <ClientsStatCard
+                    label="Prêts à promouvoir"
+                    :value="stats.eligibles_promotion"
+                    :icon="Sparkles"
+                    value-class="text-emerald-700"
+                />
+                <ClientsStatCard
+                    label="Sans commande"
+                    :value="stats.sans_commande"
+                    :icon="Users"
+                />
             </div>
 
-            <form
-                class="flex flex-wrap items-center gap-4"
-                @submit.prevent="submitSearch"
+            <ClientsFilterPanel
+                v-model:search="searchQuery"
+                placeholder="Rechercher (nom, tél., adresse, arrdt.)..."
+                show-submit
+                :counter="prospects.total"
+                :counter-icon="UserCircle"
+                counter-class="bg-amber-500"
+                @submit="submitSearch"
             >
-                <div class="relative min-w-[200px] flex-1">
-                    <Search
-                        class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
-                    />
-                    <Input
-                        v-model="searchQuery"
-                        placeholder="Rechercher (nom, tél., adresse, arrdt.)..."
-                        class="h-10 rounded-full border-0 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-white/90"
-                    />
-                </div>
                 <select
                     :value="filters.tri || 'recent'"
-                    class="flex h-10 rounded-lg border border-white/80 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm"
+                    :class="clientsSelectClass"
                     @change="
                         (e: Event) =>
                             filtrer(
@@ -238,7 +205,7 @@ function promouvoir(prospect: ProspectRow) {
                 </select>
                 <select
                     :value="filters.arrondissement || ''"
-                    class="flex h-10 max-w-[180px] rounded-lg border border-white/80 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm"
+                    :class="[clientsSelectClass, 'max-w-[200px]']"
                     @change="
                         (e: Event) =>
                             filtrer(
@@ -252,21 +219,10 @@ function promouvoir(prospect: ProspectRow) {
                         {{ a }}
                     </option>
                 </select>
-                <Button
-                    type="submit"
-                    class="rounded-lg bg-[#459cd1] text-white hover:bg-[#3a87b8]"
-                >
-                    Rechercher
-                </Button>
-                <div
-                    class="ml-auto flex items-center gap-2 rounded-lg bg-amber-500 px-3 py-1.5 text-white"
-                >
-                    <UserCircle class="size-4" />
-                    <span class="font-semibold">{{ prospects.total }}</span>
-                </div>
-            </form>
+            </ClientsFilterPanel>
 
             <div
+                v-if="prospects.data.length"
                 class="overflow-x-auto rounded-xl border border-border bg-white shadow-sm dark:border-white/10 dark:bg-white/[0.96]"
             >
                 <table class="w-full min-w-[980px] text-sm">
@@ -384,59 +340,19 @@ function promouvoir(prospect: ProspectRow) {
                         </tr>
                     </tbody>
                 </table>
-
-                <p
-                    v-if="!prospects.data.length"
-                    class="py-10 text-center text-sm text-muted-foreground"
-                >
-                    Aucun prospect avec les filtres actuels.
-                </p>
             </div>
 
-            <div
-                v-if="prospects.links.length > 3"
-                class="flex items-center justify-between px-2"
-            >
-                <div class="hidden text-sm text-muted-foreground sm:block">
-                    Affichage de
-                    <span class="font-medium text-foreground">{{
-                        prospects.from
-                    }}</span>
-                    à
-                    <span class="font-medium text-foreground">{{
-                        prospects.to
-                    }}</span>
-                    sur
-                    <span class="font-medium text-foreground">{{
-                        prospects.total
-                    }}</span>
-                    résultats
-                </div>
-                <div class="flex flex-wrap items-center gap-1">
-                    <template
-                        v-for="(link, pIndex) in prospects.links"
-                        :key="pIndex"
-                    >
-                        <div
-                            v-if="link.url === null"
-                            class="flex min-w-9 items-center justify-center rounded-lg border border-transparent px-3 py-1.5 text-sm text-muted-foreground"
-                            v-html="link.label"
-                        />
-                        <Link
-                            v-else
-                            :href="link.url"
-                            class="flex min-w-9 items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted/50"
-                            :class="
-                                link.active
-                                    ? 'border-[#459cd1] bg-[#459cd1] text-white'
-                                    : 'border-input bg-white text-foreground'
-                            "
-                        >
-                            <span v-html="link.label" />
-                        </Link>
-                    </template>
-                </div>
-            </div>
+            <ClientsEmptyState
+                v-else
+                message="Aucun prospect avec les filtres actuels."
+            />
+
+            <ClientsPagination
+                :links="prospects.links"
+                :from="prospects.from"
+                :to="prospects.to"
+                :total="prospects.total"
+            />
         </div>
 
         <FlashToastHost />

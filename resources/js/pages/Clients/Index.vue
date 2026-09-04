@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Search, Users, Phone } from 'lucide-vue-next';
+import { Users, Phone } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import ClientsEmptyState from '@/components/clients/ClientsEmptyState.vue';
+import ClientsFilterPanel from '@/components/clients/ClientsFilterPanel.vue';
+import ClientsPagination from '@/components/clients/ClientsPagination.vue';
 import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
+import { clientsSelectClass } from '@/components/clients/clientsUi';
+import { Button } from '@/components/ui/button';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import type { ClientsSectionTab } from '@/components/clients/ClientsSectionNav.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -115,23 +118,17 @@ function nomComplet(c: Client) {
             <ClientsSectionNav :active="activeSection" />
 
             <div v-if="activeSection === 'liste'" class="space-y-4">
-                <form
-                    class="flex flex-wrap items-center gap-4"
-                    @submit.prevent="filtrer('search', searchQuery)"
+                <ClientsFilterPanel
+                    v-model:search="searchQuery"
+                    placeholder="Rechercher un client..."
+                    :counter="clients.total"
+                    :counter-icon="Users"
+                    counter-class="bg-emerald-600"
+                    @submit="filtrer('search', searchQuery)"
                 >
-                    <div class="relative min-w-[200px] flex-1">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
-                        />
-                        <Input
-                            v-model="searchQuery"
-                            placeholder="Rechercher un client..."
-                            class="h-10 rounded-full border-0 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-white/90"
-                        />
-                    </div>
                     <select
                         :value="filters.tri"
-                        class="flex h-10 rounded-lg border border-white/80 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm"
+                        :class="clientsSelectClass"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -148,7 +145,7 @@ function nomComplet(c: Client) {
                     </select>
                     <select
                         :value="filters.arrondissement || ''"
-                        class="flex h-10 max-w-[180px] rounded-lg border border-white/80 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm"
+                        :class="[clientsSelectClass, 'max-w-[200px]']"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -168,7 +165,7 @@ function nomComplet(c: Client) {
                     </select>
                     <select
                         :value="filters.frequence_id || ''"
-                        class="flex h-10 max-w-[220px] rounded-lg border border-white/80 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm"
+                        :class="[clientsSelectClass, 'max-w-[220px]']"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -186,19 +183,13 @@ function nomComplet(c: Client) {
                             {{ f.designation }}
                         </option>
                     </select>
-                    <div
-                        class="ml-auto flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-white"
-                    >
-                        <Users class="size-4" />
-                        <span class="font-semibold">{{ clients.total }}</span>
-                    </div>
-                </form>
+                </ClientsFilterPanel>
 
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div
                         v-for="c in clients.data"
                         :key="c.id"
-                        class="rounded-xl border border-white/80 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/95"
+                        class="rounded-xl border border-border bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.96]"
                     >
                         <div class="mb-3 flex items-start justify-between">
                             <div>
@@ -295,65 +286,23 @@ function nomComplet(c: Client) {
                     </div>
                 </div>
 
-                <p
+                <ClientsEmptyState
                     v-if="!clients.data.length"
-                    class="py-10 text-center text-sm text-muted-foreground"
-                >
-                    Aucun client avec les filtres actuels.
-                </p>
+                    message="Aucun client avec les filtres actuels."
+                />
 
-                <div
-                    v-if="clients.links.length > 3"
-                    class="flex items-center justify-between px-2"
-                >
-                    <div class="hidden text-sm text-muted-foreground sm:block">
-                        Affichage de
-                        <span class="font-medium text-foreground">{{
-                            clients.from
-                        }}</span>
-                        à
-                        <span class="font-medium text-foreground">{{
-                            clients.to
-                        }}</span>
-                        sur
-                        <span class="font-medium text-foreground">{{
-                            clients.total
-                        }}</span>
-                        résultats
-                    </div>
-                    <div class="flex flex-wrap items-center gap-1">
-                        <template
-                            v-for="(link, pIndex) in clients.links"
-                            :key="pIndex"
-                        >
-                            <div
-                                v-if="link.url === null"
-                                class="flex min-w-9 items-center justify-center rounded-lg border border-transparent px-3 py-1.5 text-sm text-muted-foreground"
-                                v-html="link.label"
-                            />
-                            <Link
-                                v-else
-                                :href="link.url"
-                                class="flex min-w-9 items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted/50"
-                                :class="
-                                    link.active
-                                        ? 'border-[#459cd1] bg-[#459cd1] text-white'
-                                        : 'border-input bg-white text-foreground'
-                                "
-                            >
-                                <span v-html="link.label" />
-                            </Link>
-                        </template>
-                    </div>
-                </div>
+                <ClientsPagination
+                    :links="clients.links"
+                    :from="clients.from"
+                    :to="clients.to"
+                    :total="clients.total"
+                />
             </div>
 
-            <div
+            <ClientsEmptyState
                 v-else
-                class="rounded-xl border bg-white p-8 text-center dark:border-white/10 dark:bg-white/95"
-            >
-                <p class="text-muted-foreground">Statistiques – à venir</p>
-            </div>
+                message="Statistiques – à venir"
+            />
         </div>
 
         <FlashToastHost />

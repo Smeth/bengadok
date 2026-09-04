@@ -75,15 +75,6 @@ const props = defineProps<{
 const { isRequired: isFieldRequired, validate: validateCreationFields, applies: fieldApplies } =
     useCommandeCreationFields('agent');
 
-function defaultCommandeDate(): string {
-    return new Date().toISOString().slice(0, 10);
-}
-
-function defaultCommandeHeure(): string {
-    const d = new Date();
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
 const page = usePage();
 /** Erreurs de validation locale (avant envoi) ; les erreurs serveur viennent de `page.props.errors`. */
 const localErrors = ref<Record<string, string>>({});
@@ -250,8 +241,6 @@ const totalCommande = computed(() =>
 
 const modePaiementId = ref<number | ''>('');
 
-const dateCommande = ref(defaultCommandeDate());
-const heureCommande = ref(defaultCommandeHeure());
 const montantLivraisonId = ref<number | ''>('');
 
 // ─── Ordonnance ───────────────────────────────────────────────────────────────
@@ -298,8 +287,6 @@ function submit() {
             mode_paiement_id: modePaiementId.value,
             livreur_id: beneficiaireId.value,
             commentaire: commentaire.value,
-            date: dateCommande.value,
-            heurs: heureCommande.value,
             montant_livraison_id: montantLivraisonId.value,
         }),
     };
@@ -383,10 +370,6 @@ function submit() {
             formData.append('livreur_id', String(beneficiaireId.value));
         if (commentaire.value)
             formData.append('commentaire', commentaire.value);
-        if (fieldApplies('date'))
-            formData.append('date', dateCommande.value);
-        if (fieldApplies('heurs'))
-            formData.append('heurs', heureCommande.value);
         if (fieldApplies('montant_livraison_id') && montantLivraisonId.value)
             formData.append(
                 'montant_livraison_id',
@@ -407,8 +390,6 @@ function submit() {
                 mode_paiement_id: modePaiementId.value || undefined,
                 livreur_id: beneficiaireId.value || undefined,
                 commentaire: commentaire.value || undefined,
-                date: fieldApplies('date') ? dateCommande.value : undefined,
-                heurs: fieldApplies('heurs') ? heureCommande.value : undefined,
                 montant_livraison_id:
                     fieldApplies('montant_livraison_id') && montantLivraisonId.value
                         ? montantLivraisonId.value
@@ -628,76 +609,35 @@ function annuler() {
                         </div>
                     </div>
 
-                    <!-- Date / heure / livraison -->
-                    <div
-                        v-if="
-                            fieldApplies('date') ||
-                            fieldApplies('heurs') ||
-                            fieldApplies('montant_livraison_id')
-                        "
-                        class="grid grid-cols-1 gap-4 sm:grid-cols-3"
-                    >
-                        <div v-if="fieldApplies('date')">
-                            <label class="text-sm font-medium text-gray-700"
-                                >Date de commande
-                                <span
-                                    v-if="isFieldRequired('date')"
-                                    class="text-red-600"
-                                    >*</span
-                                ></label
+                    <!-- Montant livraison -->
+                    <div v-if="fieldApplies('montant_livraison_id')">
+                        <label class="text-sm font-medium text-gray-700"
+                            >Montant livraison
+                            <span
+                                v-if="isFieldRequired('montant_livraison_id')"
+                                class="text-red-600"
+                                >*</span
+                            ></label
+                        >
+                        <div class="relative mt-1">
+                            <select
+                                v-model="montantLivraisonId"
+                                class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
-                            <input
-                                v-model="dateCommande"
-                                type="date"
-                                class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            <InputError :message="errors.date" />
-                        </div>
-                        <div v-if="fieldApplies('heurs')">
-                            <label class="text-sm font-medium text-gray-700"
-                                >Heure
-                                <span
-                                    v-if="isFieldRequired('heurs')"
-                                    class="text-red-600"
-                                    >*</span
-                                ></label
-                            >
-                            <input
-                                v-model="heureCommande"
-                                type="time"
-                                class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            <InputError :message="errors.heurs" />
-                        </div>
-                        <div v-if="fieldApplies('montant_livraison_id')">
-                            <label class="text-sm font-medium text-gray-700"
-                                >Montant livraison
-                                <span
-                                    v-if="isFieldRequired('montant_livraison_id')"
-                                    class="text-red-600"
-                                    >*</span
-                                ></label
-                            >
-                            <div class="relative mt-1">
-                                <select
-                                    v-model="montantLivraisonId"
-                                    class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                <option value="">Choisir…</option>
+                                <option
+                                    v-for="m in props.montantsLivraison"
+                                    :key="m.id"
+                                    :value="m.id"
                                 >
-                                    <option value="">Choisir…</option>
-                                    <option
-                                        v-for="m in props.montantsLivraison"
-                                        :key="m.id"
-                                        :value="m.id"
-                                    >
-                                        {{ m.designation }} xaf
-                                    </option>
-                                </select>
-                                <ChevronDown
-                                    class="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-gray-400"
-                                />
-                            </div>
-                            <InputError :message="errors.montant_livraison_id" />
+                                    {{ m.designation }} xaf
+                                </option>
+                            </select>
+                            <ChevronDown
+                                class="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-gray-400"
+                            />
                         </div>
+                        <InputError :message="errors.montant_livraison_id" />
                     </div>
 
                     <!-- ── Section Pharmacie Partenaire ── -->

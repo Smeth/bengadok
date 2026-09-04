@@ -36,14 +36,13 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
         $this->actingAs($admin)
             ->patch("/commandes/{$commande->id}/complementaires", [
                 'commentaire' => 'Appeler avant livraison',
-                'beneficiaire' => 'Conjoint',
             ])
             ->assertRedirect()
             ->assertSessionHas('status');
 
         $commande->refresh();
         $this->assertSame('Appeler avant livraison', $commande->commentaire);
-        $this->assertSame('Conjoint', $commande->beneficiaire);
+        $this->assertNull($commande->beneficiaire);
     }
 
     public function test_pharmacy_can_upload_and_list_piece_jointe(): void
@@ -81,16 +80,16 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
                 ->has('commandes.data.0.pieces_jointes', 1));
     }
 
-    public function test_creation_with_date_heure_and_livraison_when_required(): void
+    public function test_creation_sets_date_and_heure_automatically(): void
     {
+        $this->travelTo(now()->startOfDay()->setTime(15, 45));
+
         AppSetting::ensureRowExists()->update([
             'commande_creation_champs' => [
                 'client_prenom' => true,
                 'client_tel' => true,
                 'client_adresse' => true,
                 'client_arrondissement' => true,
-                'date' => true,
-                'heurs' => true,
                 'montant_livraison_id' => true,
             ],
         ]);
@@ -106,8 +105,8 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
             'client_tel' => '0611223344',
             'client_adresse' => '12 rue test',
             'client_arrondissement' => Client::ARRONDISSEMENTS[0],
-            'date' => '2026-09-04',
-            'heurs' => '14:30',
+            'date' => '2020-01-01',
+            'heurs' => '08:00',
             'montant_livraison_id' => $montant->id,
             'produits' => [
                 [
@@ -125,8 +124,8 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
 
         $commande = Commande::query()->latest('id')->first();
         $this->assertNotNull($commande);
-        $this->assertSame('2026-09-04', $commande->date->format('Y-m-d'));
-        $this->assertSame('14:30', $commande->heurs);
+        $this->assertSame(now()->format('Y-m-d'), $commande->date->format('Y-m-d'));
+        $this->assertSame('15:45', $commande->heurs);
         $this->assertSame($montant->id, (int) $commande->montant_livraison_id);
     }
 }

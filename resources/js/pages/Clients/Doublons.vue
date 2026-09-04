@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
-    Search,
     Filter,
     Check,
     Phone,
@@ -13,6 +12,8 @@ import {
     AlertCircle,
     UsersRound,
     CheckCheck,
+    Clock,
+    UserCheck,
 } from 'lucide-vue-next';
 import { ref, watch, computed } from 'vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
@@ -24,8 +25,11 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import ClientsEmptyState from '@/components/clients/ClientsEmptyState.vue';
+import ClientsFilterPanel from '@/components/clients/ClientsFilterPanel.vue';
 import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
+import ClientsStatCard from '@/components/clients/ClientsStatCard.vue';
+import { clientsSelectClass } from '@/components/clients/clientsUi';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { clientNomComplet } from '@/lib/clientDisplayName';
@@ -215,26 +219,45 @@ const statutLabels: Record<string, string> = {
         >
             <ClientsSectionNav active="doublons" />
 
-            <!-- Search & Filters -->
-            <form
-                class="flex flex-wrap items-center gap-4"
-                @submit.prevent="filtrer('search', searchQuery)"
+            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <ClientsStatCard
+                    label="Groupes à traiter"
+                    :value="stats.en_attente"
+                    :icon="Clock"
+                    value-class="text-amber-700"
+                />
+                <ClientsStatCard
+                    label="Groupes vérifiés"
+                    :value="stats.verifies"
+                    :icon="UserCheck"
+                    value-class="text-[#459cd1]"
+                />
+                <ClientsStatCard
+                    label="Profils fusionnés"
+                    :value="stats.fusionnes"
+                    :icon="Merge"
+                    value-class="text-emerald-700"
+                />
+                <ClientsStatCard
+                    label="Clients concernés"
+                    :value="stats.total_clients"
+                    :icon="UsersRound"
+                />
+            </div>
+
+            <ClientsFilterPanel
+                v-model:search="searchQuery"
+                placeholder="Rechercher par nom ou tél..."
+                show-submit
+                :counter="groupes.length"
+                :counter-icon="UsersRound"
+                @submit="filtrer('search', searchQuery)"
             >
-                <div class="relative flex-1 min-w-[200px]">
-                    <Search
-                        class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                    />
-                    <Input
-                        v-model="searchQuery"
-                        placeholder="Rechercher par nom ou tél..."
-                        class="pl-9"
-                    />
-                </div>
                 <div class="flex items-center gap-2">
-                    <Filter class="size-4 text-muted-foreground" />
+                    <Filter class="size-4 shrink-0 text-slate-500" />
                     <select
                         :value="filters.tri"
-                        class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        :class="clientsSelectClass"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -250,10 +273,10 @@ const statutLabels: Record<string, string> = {
                     </select>
                 </div>
                 <div class="flex items-center gap-2">
-                    <Check class="size-4 text-muted-foreground" />
+                    <Check class="size-4 shrink-0 text-slate-500" />
                     <select
                         :value="filters.statut"
-                        class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        :class="clientsSelectClass"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -262,73 +285,21 @@ const statutLabels: Record<string, string> = {
                                 )
                         "
                     >
-                        <option value="">Toutes les statuts</option>
-                        <option value="en_attente">En Attente</option>
+                        <option value="">Tous les statuts</option>
+                        <option value="en_attente">En attente</option>
                         <option value="verifie">Vérifiés</option>
                         <option value="fusionne">Fusionnés</option>
                         <option value="ignore">Ignorés</option>
                     </select>
                 </div>
-            </form>
-
-            <!-- Stats cards -->
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div
-                    class="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/50 dark:bg-amber-900/20"
-                >
-                    <p
-                        class="text-3xl font-bold text-amber-700 dark:text-amber-400"
-                    >
-                        {{ stats.en_attente }}
-                    </p>
-                    <p class="text-sm text-amber-800 dark:text-amber-300">
-                        Groupes à traiter
-                    </p>
-                </div>
-                <div
-                    class="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800/50 dark:bg-blue-900/20"
-                >
-                    <p
-                        class="text-3xl font-bold text-blue-700 dark:text-blue-400"
-                    >
-                        {{ stats.verifies }}
-                    </p>
-                    <p class="text-sm text-blue-800 dark:text-blue-300">
-                        Groupes vérifiés
-                    </p>
-                </div>
-                <div
-                    class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800/50 dark:bg-emerald-900/20"
-                >
-                    <p
-                        class="text-3xl font-bold text-emerald-700 dark:text-emerald-400"
-                    >
-                        {{ stats.fusionnes }}
-                    </p>
-                    <p class="text-sm text-emerald-800 dark:text-emerald-300">
-                        Profils fusionnés
-                    </p>
-                </div>
-                <div
-                    class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-white/5"
-                >
-                    <p
-                        class="text-3xl font-bold text-slate-800 dark:text-slate-200"
-                    >
-                        {{ stats.total_clients }}
-                    </p>
-                    <p class="text-sm text-muted-foreground">
-                        Clients concernés
-                    </p>
-                </div>
-            </div>
+            </ClientsFilterPanel>
 
             <!-- Groupes list -->
             <div class="space-y-6">
                 <div
                     v-for="g in groupes"
                     :key="g.id"
-                    class="rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/95"
+                    class="rounded-xl border border-border bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.96]"
                 >
                     <div
                         class="mb-4 flex flex-wrap items-start justify-between gap-4"
@@ -499,12 +470,10 @@ const statutLabels: Record<string, string> = {
                     </div>
                 </div>
 
-                <div
+                <ClientsEmptyState
                     v-if="!groupes.length"
-                    class="rounded-xl border border-dashed bg-white/50 py-12 text-center text-muted-foreground dark:border-white/10"
-                >
-                    Aucun groupe de doublons trouvé.
-                </div>
+                    message="Aucun groupe de doublons trouvé."
+                />
             </div>
         </div>
 

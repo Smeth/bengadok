@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { ChevronDown, FileEdit, Pill, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import OrdonnanceAnalysisProgressBar from '@/components/OrdonnanceAnalysisProgressBar.vue';
 import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
 import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import BackLink from '@/components/ui/BackLink.vue';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { fieldError, normalizeInertiaErrors } from '@/lib/validationErrors';
+import { formatCommandeDateHeure } from '@/lib/formatDateLocal';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
@@ -55,6 +56,14 @@ const props = defineProps<{
     arrondissements: string[];
 }>();
 
+const inputClass =
+    'h-[42px] w-full rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm text-gray-900 placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]';
+const selectClass =
+    'h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm text-gray-900 focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]';
+const sectionTitleClass =
+    'text-[20px] font-black italic text-[rgba(92,89,89,0.4)]';
+const labelClass = 'text-sm font-medium text-black';
+
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
     { title: 'Commandes', href: '/commandes' },
@@ -65,6 +74,8 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Modifier', href: '#' },
 ];
 
+const retourHref = `/commandes?detail=${props.commande.id}`;
+
 const clientId = ref(props.commande.client?.id ?? '');
 const clientNom = ref(props.commande.client?.nom ?? '');
 const clientPrenom = ref(props.commande.client?.prenom ?? '');
@@ -74,14 +85,19 @@ const clientArrondissement = ref(
     props.commande.client?.arrondissement ?? '',
 );
 const pharmacieId = ref(props.commande.pharmacie?.id ?? '');
-const date = ref(props.commande.date?.slice(0, 10) ?? '');
-const heurs = ref(props.commande.heurs ?? '08:00');
 const beneficiaire = ref(props.commande.beneficiaire ?? '');
 const commentaire = ref(props.commande.commentaire ?? '');
 const modePaiementId = ref(props.commande.mode_paiement?.id ?? '');
 const montantLivraisonId = ref(props.commande.montant_livraison?.id ?? '');
 const ordonnanceFile = ref<File | null>(null);
 const enSubmission = ref(false);
+
+const dateHeureAffichee = computed(() =>
+    formatCommandeDateHeure({
+        date: props.commande.date,
+        heurs: props.commande.heurs,
+    }),
+);
 
 const page = usePage();
 const errors = computed(() =>
@@ -91,6 +107,10 @@ const errors = computed(() =>
 );
 function produitErr(i: number, field: string): string | undefined {
     return fieldError(errors.value, `produits.${i}.${field}`);
+}
+
+function fieldHasError(key: string): boolean {
+    return Boolean(errors.value[key]);
 }
 
 type OvSettings = { enabled?: boolean; execution_mode?: string };
@@ -166,6 +186,12 @@ watch(
     { immediate: true },
 );
 
+function ligneTotal(p: ProduitLigne): string {
+    return (
+        (Number(p.prix_unitaire) || 0) * (p.quantite || 0)
+    ).toFixed(1);
+}
+
 function ajouterProduit() {
     produitsSelection.value.push({
         designation: '',
@@ -208,8 +234,6 @@ function submit() {
         client_adresse: clientAdresse.value.trim(),
         client_arrondissement: clientArrondissement.value || undefined,
         pharmacie_id: pharmacieId.value || undefined,
-        date: date.value,
-        heurs: heurs.value,
         beneficiaire: beneficiaire.value.trim(),
         produits: produitsValides,
         mode_paiement_id: modePaiementId.value || undefined,
@@ -248,301 +272,594 @@ function submit() {
     <Head :title="`Modifier commande ${commande.numero} - BengaDok`" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <form class="flex flex-1 flex-col gap-6 p-4" @submit.prevent="submit">
-            <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-semibold">
-                    Modifier la commande {{ commande.numero }}
-                </h1>
-                <Link :href="`/commandes?detail=${commande.id}`">
-                    <Button variant="outline">Annuler</Button>
-                </Link>
-            </div>
-
+        <div
+            class="relative min-h-full overflow-x-auto rounded-xl p-6 md:p-8"
+        >
             <div
-                v-if="Object.keys(errors).length > 0"
-                class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
-                role="alert"
+                class="relative overflow-hidden rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] md:p-8"
             >
-                Veuillez corriger les champs indiqués ci-dessous.
-            </div>
-
-            <div class="grid gap-6 lg:grid-cols-2">
-                <div class="space-y-4">
-                    <h3 class="font-semibold">Client</h3>
-                    <div class="space-y-2">
-                        <Label>Prénom (recommandé)</Label>
-                        <Input v-model="clientPrenom" placeholder="Prénom" />
-                        <InputError :message="errors.client_prenom" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label>Nom (facultatif)</Label>
-                        <Input v-model="clientNom" placeholder="Nom" />
-                        <InputError :message="errors.client_nom" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label
-                            >Téléphone
-                            <span class="text-red-600">*</span></Label
-                        >
-                        <Input
-                            v-model="clientTel"
-                            required
-                            placeholder="Téléphone"
-                        />
-                        <InputError :message="errors.client_tel" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label
-                            >Adresse
-                            <span class="text-red-600">*</span></Label
-                        >
-                        <Input
-                            v-model="clientAdresse"
-                            required
-                            placeholder="Adresse"
-                        />
-                        <InputError :message="errors.client_adresse" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label>Arrondissement</Label>
-                        <select
-                            v-model="clientArrondissement"
-                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        >
-                            <option value="">Non renseigné</option>
-                            <option
-                                v-for="a in arrondissements"
-                                :key="a"
-                                :value="a"
-                            >
-                                {{ a }}
-                            </option>
-                        </select>
-                        <InputError :message="errors.client_arrondissement" />
-                    </div>
-                </div>
-
-                <div class="space-y-4">
-                    <h3 class="font-semibold">Commande</h3>
-                    <div class="space-y-2">
-                        <Label
-                            >Pharmacie
-                            <span class="text-red-600">*</span></Label
-                        >
-                        <select
-                            v-model="pharmacieId"
-                            required
-                            class="w-full rounded-md border border-input bg-background px-3 py-2"
-                        >
-                            <option value="">Choisir une pharmacie</option>
-                            <option
-                                v-for="p in pharmacies"
-                                :key="p.id"
-                                :value="p.id"
-                            >
-                                {{ p.designation }} ({{ p.zone?.designation }})
-                                - {{ p.adresse }}
-                            </option>
-                        </select>
-                        <InputError :message="errors.pharmacie_id" />
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="space-y-2">
-                            <Label
-                                >Date
-                                <span class="text-red-600">*</span></Label
-                            >
-                            <Input v-model="date" type="date" required />
-                            <InputError :message="errors.date" />
-                        </div>
-                        <div class="space-y-2">
-                            <Label
-                                >Heure
-                                <span class="text-red-600">*</span></Label
-                            >
-                            <Input v-model="heurs" type="time" required />
-                            <InputError :message="errors.heurs" />
-                        </div>
-                    </div>
-                    <div class="space-y-2">
-                        <Label>Bénéficiaire</Label>
-                        <Input
-                            v-model="beneficiaire"
-                            placeholder="Bénéficiaire"
-                        />
-                        <InputError :message="errors.beneficiaire" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label>Commentaire</Label>
-                        <Input
-                            v-model="commentaire"
-                            placeholder="Commentaire"
-                        />
-                        <InputError :message="errors.commentaire" />
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <Label
-                    >Médicaments
-                    <span class="text-red-600">*</span></Label
+                <!-- En-tête -->
+                <div
+                    class="mb-6 flex flex-col gap-4 border-b border-[#ccc5c5] pb-5 sm:flex-row sm:items-center sm:justify-between"
                 >
-                <InputError :message="errors.produits" />
-                <div class="mt-2 space-y-2">
-                    <div
-                        v-for="(p, i) in produitsSelection"
-                        :key="i"
-                        class="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-end"
-                    >
-                        <div class="flex min-w-[120px] flex-1 flex-col gap-1">
-                            <span class="text-xs text-muted-foreground"
-                                >Désignation
-                                <span class="text-red-600">*</span></span
-                            >
-                            <Input
-                                v-model="p.designation"
-                                placeholder="Désignation"
-                                class="w-full"
-                            />
-                            <InputError :message="produitErr(i, 'designation')" />
-                        </div>
-                        <div class="flex w-24 flex-col gap-1">
-                            <span class="text-xs text-muted-foreground"
-                                >Dosage</span
-                            >
-                            <Input
-                                v-model="p.dosage"
-                                placeholder="Dosage"
-                                class="w-full"
-                            />
-                            <InputError :message="produitErr(i, 'dosage')" />
-                        </div>
-                        <div class="flex w-28 flex-col gap-1">
-                            <span class="text-xs text-muted-foreground"
-                                >Forme</span
-                            >
-                            <select
-                                v-model="p.forme"
-                                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            >
-                                <option value="">—</option>
-                                <option
-                                    v-for="f in formesPharmaceutiques"
-                                    :key="f"
-                                    :value="f"
-                                >
-                                    {{ f }}
-                                </option>
-                            </select>
-                            <InputError :message="produitErr(i, 'forme')" />
-                        </div>
-                        <div class="flex w-16 flex-col gap-1">
-                            <span class="text-xs text-muted-foreground"
-                                >Qté
-                                <span class="text-red-600">*</span></span
-                            >
-                            <Input
-                                v-model.number="p.quantite"
-                                type="number"
-                                min="1"
-                                class="w-full"
-                                placeholder="Qté"
-                            />
-                            <InputError :message="produitErr(i, 'quantite')" />
-                        </div>
-                        <div class="flex w-24 flex-col gap-1">
-                            <span class="text-xs text-muted-foreground"
-                                >Prix
-                                <span class="text-red-600">*</span></span
-                            >
-                            <Input
-                                v-model.number="p.prix_unitaire"
-                                type="number"
-                                min="0"
-                                class="w-full"
-                                placeholder="Prix"
-                            />
-                            <InputError :message="produitErr(i, 'prix_unitaire')" />
-                        </div>
-                        <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            class="self-end"
-                            @click="supprimerProduit(i)"
-                            >×</Button
+                    <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                        <BackLink :href="retourHref">
+                            Retour à la commande
+                        </BackLink>
+                        <h1
+                            class="flex min-w-0 items-center gap-3 text-xl font-black tracking-wide text-[#3995d2]"
                         >
+                            <FileEdit
+                                class="size-5 shrink-0 text-[#3995d2]"
+                                aria-hidden="true"
+                            />
+                            <span class="truncate"
+                                >Modifier {{ commande.numero }}</span
+                            >
+                        </h1>
                     </div>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        @click="ajouterProduit"
-                        >+ Ajouter médicament</Button
+                    <Link
+                        :href="retourHref"
+                        class="inline-flex shrink-0 items-center justify-center rounded-[10px] border border-[#ccc5c5] bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
                     >
+                        Annuler
+                    </Link>
                 </div>
-            </div>
 
-            <div>
-                <OrdonnanceUppy
-                    v-model="ordonnanceFile"
-                    label="Nouvelle ordonnance (remplace l'actuelle)"
-                    show-analysis-notice
-                    :analysis-notice="analysisNoticeText"
-                />
-                <InputError :message="errors.ordonnance" />
-                <OrdonnanceAnalysisProgressBar
-                    class="mt-2"
-                    :visible="showSubmitAnalysisProgress"
-                    :label="submitProgressLabel"
-                />
-                <OrdonnanceFilePreview
-                    v-if="ordonnanceFile"
-                    :file="ordonnanceFile"
-                    class="mt-3"
-                    max-height="14rem"
-                />
-            </div>
+                <div
+                    v-if="Object.keys(errors).length > 0"
+                    class="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+                    role="alert"
+                >
+                    Veuillez corriger les champs indiqués ci-dessous.
+                </div>
 
-            <div class="grid gap-4 md:grid-cols-2">
-                <div class="space-y-2">
-                    <Label>Mode de paiement</Label>
-                    <select
-                        v-model="modePaiementId"
-                        class="w-full rounded-md border border-input bg-background px-3 py-2"
-                    >
-                        <option value="">—</option>
-                        <option
-                            v-for="m in modesPaiement"
-                            :key="m.id"
-                            :value="m.id"
+                <form class="space-y-5" @submit.prevent="submit">
+                    <div class="grid gap-5 lg:grid-cols-2">
+                        <!-- Client -->
+                        <section
+                            class="rounded-[10px] border border-[#ccc5c5] p-5"
                         >
-                            {{ m.designation }}
-                        </option>
-                    </select>
-                    <InputError :message="errors.mode_paiement_id" />
-                </div>
-                <div class="space-y-2">
-                    <Label>Montant livraison</Label>
-                    <select
-                        v-model="montantLivraisonId"
-                        class="w-full rounded-md border border-input bg-background px-3 py-2"
-                    >
-                        <option value="">—</option>
-                        <option
-                            v-for="m in montantsLivraison"
-                            :key="m.id"
-                            :value="m.id"
-                        >
-                            {{ Number(m.designation).toLocaleString('fr-FR') }}
-                            XAF
-                        </option>
-                    </select>
-                    <InputError :message="errors.montant_livraison_id" />
-                </div>
-            </div>
+                            <h2 :class="[sectionTitleClass, 'mb-4']">
+                                Informations client
+                            </h2>
+                            <div class="space-y-4">
+                                <div class="grid gap-4 sm:grid-cols-2">
+                                    <div class="flex flex-col gap-1.5">
+                                        <Label :class="labelClass"
+                                            >Prénom
+                                            <span class="text-[#dc3545]"
+                                                >*</span
+                                            ></Label
+                                        >
+                                        <input
+                                            v-model="clientPrenom"
+                                            type="text"
+                                            placeholder="Ex : Dalia"
+                                            :class="[
+                                                inputClass,
+                                                {
+                                                    'border-[#dc3545]':
+                                                        fieldHasError(
+                                                            'client_prenom',
+                                                        ),
+                                                },
+                                            ]"
+                                        />
+                                        <InputError
+                                            :message="errors.client_prenom"
+                                        />
+                                    </div>
+                                    <div class="flex flex-col gap-1.5">
+                                        <Label :class="labelClass"
+                                            >Nom
+                                            <span
+                                                class="text-xs font-normal text-[rgba(92,89,89,0.6)]"
+                                                >(facultatif)</span
+                                            ></Label
+                                        >
+                                        <input
+                                            v-model="clientNom"
+                                            type="text"
+                                            placeholder="Ex : Fofana"
+                                            :class="inputClass"
+                                        />
+                                        <InputError
+                                            :message="errors.client_nom"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <Label :class="labelClass"
+                                        >Téléphone
+                                        <span class="text-[#dc3545]"
+                                            >*</span
+                                        ></Label
+                                    >
+                                    <input
+                                        v-model="clientTel"
+                                        type="text"
+                                        required
+                                        placeholder="Ex : 068544242"
+                                        :class="[
+                                            inputClass,
+                                            {
+                                                'border-[#dc3545]':
+                                                    fieldHasError(
+                                                        'client_tel',
+                                                    ),
+                                            },
+                                        ]"
+                                    />
+                                    <InputError
+                                        :message="errors.client_tel"
+                                    />
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <Label :class="labelClass"
+                                        >Adresse
+                                        <span class="text-[#dc3545]"
+                                            >*</span
+                                        ></Label
+                                    >
+                                    <input
+                                        v-model="clientAdresse"
+                                        type="text"
+                                        required
+                                        placeholder="Ex : La Glacière"
+                                        :class="[
+                                            inputClass,
+                                            {
+                                                'border-[#dc3545]':
+                                                    fieldHasError(
+                                                        'client_adresse',
+                                                    ),
+                                            },
+                                        ]"
+                                    />
+                                    <InputError
+                                        :message="errors.client_adresse"
+                                    />
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <Label :class="labelClass"
+                                        >Arrondissement</Label
+                                    >
+                                    <div class="relative">
+                                        <select
+                                            v-model="clientArrondissement"
+                                            :class="selectClass"
+                                        >
+                                            <option value="">
+                                                Non renseigné
+                                            </option>
+                                            <option
+                                                v-for="a in arrondissements"
+                                                :key="a"
+                                                :value="a"
+                                            >
+                                                {{ a }}
+                                            </option>
+                                        </select>
+                                        <ChevronDown
+                                            class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]"
+                                        />
+                                    </div>
+                                    <InputError
+                                        :message="errors.client_arrondissement"
+                                    />
+                                </div>
+                            </div>
+                        </section>
 
-            <Button type="submit">Enregistrer les modifications</Button>
-        </form>
+                        <!-- Commande -->
+                        <section
+                            class="rounded-[10px] border border-[#ccc5c5] p-5"
+                        >
+                            <h2 :class="[sectionTitleClass, 'mb-4']">
+                                Détails commande
+                            </h2>
+                            <div class="space-y-4">
+                                <div class="flex flex-col gap-1.5">
+                                    <Label :class="labelClass"
+                                        >Pharmacie
+                                        <span class="text-[#dc3545]"
+                                            >*</span
+                                        ></Label
+                                    >
+                                    <div class="relative">
+                                        <select
+                                            v-model="pharmacieId"
+                                            required
+                                            :class="[
+                                                selectClass,
+                                                {
+                                                    'border-[#dc3545]':
+                                                        fieldHasError(
+                                                            'pharmacie_id',
+                                                        ),
+                                                },
+                                            ]"
+                                        >
+                                            <option value="">
+                                                Choisir une pharmacie
+                                            </option>
+                                            <option
+                                                v-for="p in pharmacies"
+                                                :key="p.id"
+                                                :value="p.id"
+                                            >
+                                                {{ p.designation }} ({{
+                                                    p.zone?.designation
+                                                }}) — {{ p.adresse }}
+                                            </option>
+                                        </select>
+                                        <ChevronDown
+                                            class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]"
+                                        />
+                                    </div>
+                                    <InputError
+                                        :message="errors.pharmacie_id"
+                                    />
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <Label :class="labelClass"
+                                        >Date et heure</Label
+                                    >
+                                    <p
+                                        class="flex h-[42px] items-center rounded-[10px] border border-[#ccc5c5] bg-[#f8fafc] px-3 text-sm text-gray-700"
+                                    >
+                                        {{ dateHeureAffichee }}
+                                    </p>
+                                    <p class="text-xs text-[rgba(92,89,89,0.6)]">
+                                        Fixées automatiquement à la création de
+                                        la commande.
+                                    </p>
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <Label :class="labelClass"
+                                        >Bénéficiaire</Label
+                                    >
+                                    <input
+                                        v-model="beneficiaire"
+                                        type="text"
+                                        placeholder="Ex : Soi-même"
+                                        :class="inputClass"
+                                    />
+                                    <InputError
+                                        :message="errors.beneficiaire"
+                                    />
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <Label :class="labelClass"
+                                        >Commentaire</Label
+                                    >
+                                    <textarea
+                                        v-model="commentaire"
+                                        rows="3"
+                                        placeholder="Commentaire interne…"
+                                        class="min-h-[88px] w-full resize-y rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm text-gray-900 placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                    />
+                                    <InputError
+                                        :message="errors.commentaire"
+                                    />
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Médicaments -->
+                    <section
+                        class="rounded-[10px] border border-[#ccc5c5] p-5"
+                    >
+                        <div
+                            class="mb-4 flex flex-wrap items-center justify-between gap-2"
+                        >
+                            <h2 :class="sectionTitleClass">
+                                Médicaments
+                                <span class="text-[#dc3545] not-italic"
+                                    >*</span
+                                >
+                            </h2>
+                            <button
+                                type="button"
+                                class="flex items-center gap-2 rounded-[10px] bg-[#0d6efd] px-3.5 py-2 text-sm font-black text-white transition-colors hover:bg-blue-700"
+                                @click="ajouterProduit"
+                            >
+                                <Pill class="size-5" />
+                                Ajouter un médicament
+                            </button>
+                        </div>
+                        <InputError :message="errors.produits" />
+
+                        <div
+                            v-for="(p, i) in produitsSelection"
+                            :key="i"
+                            class="mb-4 rounded-[10px] border border-[#ccc5c5] bg-[#fafafa] p-4 last:mb-0"
+                        >
+                            <div
+                                class="flex items-start justify-between gap-3"
+                            >
+                                <div
+                                    class="grid min-w-0 flex-1 grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-[minmax(9.5rem,1.35fr)_minmax(5.75rem,0.85fr)_minmax(6.5rem,0.95fr)_minmax(7.25rem,1.05fr)]"
+                                >
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Nom médicament
+                                            <span class="text-[#dc3545]"
+                                                >*</span
+                                            ></Label
+                                        >
+                                        <input
+                                            v-model="p.designation"
+                                            placeholder="Ex : Vivagest"
+                                            :class="[
+                                                inputClass,
+                                                {
+                                                    'border-[#dc3545]':
+                                                        produitErr(
+                                                            i,
+                                                            'designation',
+                                                        ),
+                                                },
+                                            ]"
+                                        />
+                                        <InputError
+                                            :message="
+                                                produitErr(i, 'designation')
+                                            "
+                                        />
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Dosage</Label
+                                        >
+                                        <input
+                                            v-model="p.dosage"
+                                            placeholder="Ex : 1000 mg"
+                                            :class="inputClass"
+                                        />
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Forme</Label
+                                        >
+                                        <div class="relative">
+                                            <select
+                                                v-model="p.forme"
+                                                :class="selectClass"
+                                            >
+                                                <option value="">
+                                                    Choisir…
+                                                </option>
+                                                <option
+                                                    v-for="f in formesPharmaceutiques"
+                                                    :key="f"
+                                                    :value="f"
+                                                >
+                                                    {{ f }}
+                                                </option>
+                                            </select>
+                                            <ChevronDown
+                                                class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Quantité
+                                            <span class="text-[#dc3545]"
+                                                >*</span
+                                            ></Label
+                                        >
+                                        <input
+                                            v-model.number="p.quantite"
+                                            type="number"
+                                            min="1"
+                                            :class="[
+                                                inputClass,
+                                                'text-center md:max-w-[7.5rem]',
+                                                {
+                                                    'border-[#dc3545]':
+                                                        produitErr(
+                                                            i,
+                                                            'quantite',
+                                                        ),
+                                                },
+                                            ]"
+                                        />
+                                        <InputError
+                                            :message="produitErr(i, 'quantite')"
+                                        />
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Prix unitaire
+                                            <span class="text-[#dc3545]"
+                                                >*</span
+                                            ></Label
+                                        >
+                                        <div
+                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white"
+                                            :class="{
+                                                'border-[#dc3545]':
+                                                    produitErr(
+                                                        i,
+                                                        'prix_unitaire',
+                                                    ),
+                                            }"
+                                        >
+                                            <input
+                                                v-model.number="p.prix_unitaire"
+                                                type="number"
+                                                min="0"
+                                                step="1"
+                                                placeholder="0"
+                                                class="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm outline-none focus:ring-0"
+                                            />
+                                            <span
+                                                class="pr-3 text-sm font-medium text-black"
+                                                >xaf</span
+                                            >
+                                        </div>
+                                        <InputError
+                                            :message="
+                                                produitErr(i, 'prix_unitaire')
+                                            "
+                                        />
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Total</Label
+                                        >
+                                        <div
+                                            class="flex h-[42px] items-center rounded-[10px] border border-[#ccc5c5] bg-[#f8fafc] px-3 text-sm tabular-nums text-black"
+                                        >
+                                            {{ ligneTotal(p) }}
+                                            <span class="ml-1 font-medium"
+                                                >xaf</span
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    v-if="produitsSelection.length > 1"
+                                    type="button"
+                                    class="mt-1 shrink-0 rounded-lg p-2 text-[rgba(92,89,89,0.5)] transition-colors hover:bg-red-50 hover:text-[#dc3545]"
+                                    aria-label="Supprimer la ligne"
+                                    @click="supprimerProduit(i)"
+                                >
+                                    <X class="size-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Ordonnance -->
+                    <section
+                        class="rounded-[10px] border border-[#ccc5c5] p-5"
+                    >
+                        <h2 :class="[sectionTitleClass, 'mb-4']">
+                            Ordonnance
+                        </h2>
+                        <OrdonnanceUppy
+                            v-model="ordonnanceFile"
+                            label="Nouvelle ordonnance (remplace l'actuelle)"
+                            show-analysis-notice
+                            :analysis-notice="analysisNoticeText"
+                        />
+                        <InputError :message="errors.ordonnance" />
+                        <OrdonnanceAnalysisProgressBar
+                            class="mt-2"
+                            :visible="showSubmitAnalysisProgress"
+                            :label="submitProgressLabel"
+                        />
+                        <OrdonnanceFilePreview
+                            v-if="ordonnanceFile"
+                            :file="ordonnanceFile"
+                            class="mt-3"
+                            max-height="14rem"
+                        />
+                    </section>
+
+                    <!-- Paiement & livraison -->
+                    <section
+                        class="rounded-[10px] border border-[#ccc5c5] p-5"
+                    >
+                        <h2 :class="[sectionTitleClass, 'mb-4']">
+                            Paiement & livraison
+                        </h2>
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div class="flex flex-col gap-1.5">
+                                <Label :class="labelClass"
+                                    >Mode de paiement</Label
+                                >
+                                <div class="relative">
+                                    <select
+                                        v-model="modePaiementId"
+                                        :class="selectClass"
+                                    >
+                                        <option value="">—</option>
+                                        <option
+                                            v-for="m in modesPaiement"
+                                            :key="m.id"
+                                            :value="m.id"
+                                        >
+                                            {{ m.designation }}
+                                        </option>
+                                    </select>
+                                    <ChevronDown
+                                        class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]"
+                                    />
+                                </div>
+                                <InputError
+                                    :message="errors.mode_paiement_id"
+                                />
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <Label :class="labelClass"
+                                    >Montant livraison</Label
+                                >
+                                <div class="relative">
+                                    <select
+                                        v-model="montantLivraisonId"
+                                        :class="selectClass"
+                                    >
+                                        <option value="">—</option>
+                                        <option
+                                            v-for="m in montantsLivraison"
+                                            :key="m.id"
+                                            :value="m.id"
+                                        >
+                                            {{
+                                                Number(
+                                                    m.designation,
+                                                ).toLocaleString('fr-FR')
+                                            }}
+                                            XAF
+                                        </option>
+                                    </select>
+                                    <ChevronDown
+                                        class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]"
+                                    />
+                                </div>
+                                <InputError
+                                    :message="errors.montant_livraison_id"
+                                />
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Actions -->
+                    <div
+                        class="flex flex-wrap items-center justify-end gap-3 border-t border-[#ccc5c5] pt-5"
+                    >
+                        <Link
+                            :href="retourHref"
+                            class="inline-flex items-center justify-center rounded-[10px] border border-[#ccc5c5] bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+                        >
+                            Annuler
+                        </Link>
+                        <button
+                            type="submit"
+                            class="inline-flex items-center justify-center rounded-[10px] bg-[#0d6efd] px-6 py-2.5 text-sm font-black text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60"
+                            :disabled="enSubmission"
+                        >
+                            {{
+                                enSubmission
+                                    ? 'Enregistrement…'
+                                    : 'Enregistrer les modifications'
+                            }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </AppLayout>
 </template>

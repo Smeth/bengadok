@@ -262,7 +262,7 @@ const motifLabelBySlug = computed(() =>
 const searchQuery = ref(props.filters.search ?? '');
 const activeTab = ref<'gestion' | 'statistiques'>('gestion');
 const detailCommande = ref<CommandeDetail | null>(null);
-const complementairesForm = ref({ commentaire: '', beneficiaire: '' });
+const complementairesForm = ref({ commentaire: '' });
 const savingComplementaires = ref(false);
 
 const peutModifierCommandeComplete = computed(() => {
@@ -282,7 +282,6 @@ const peutEditerComplementaires = computed(() => {
 watch(detailCommande, (c) => {
     complementairesForm.value = {
         commentaire: c?.commentaire ?? '',
-        beneficiaire: c?.beneficiaire ?? '',
     };
 });
 
@@ -293,7 +292,6 @@ function saveComplementaires() {
         `/commandes/${detailCommande.value.id}/complementaires`,
         {
             commentaire: complementairesForm.value.commentaire,
-            beneficiaire: complementairesForm.value.beneficiaire,
         },
         {
             preserveScroll: true,
@@ -520,6 +518,18 @@ function classesPivotStatusProduit(status: string | undefined | null): string {
 
 function estVenteLibrePivot(venteLibre: boolean | undefined | null): boolean {
     return Boolean(venteLibre);
+}
+
+function classesVenteLibrePivot(venteLibre: boolean | undefined | null): string {
+    return estVenteLibrePivot(venteLibre)
+        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+        : 'border-gray-200 bg-gray-50 text-gray-600';
+}
+
+function libelleVenteLibrePivot(venteLibre: boolean | undefined | null): string {
+    return estVenteLibrePivot(venteLibre)
+        ? 'En vente libre'
+        : 'Pas en vente libre';
 }
 
 /** Libellés FR pour la décision (l’API stocke pass, review, fail, etc.). */
@@ -889,12 +899,6 @@ function appendEnregistrementFields(formData: FormData, payload: FormEnregPayloa
     formData.append('produits', JSON.stringify(payload.produits));
     if (payload.commentaire) {
         formData.append('commentaire', payload.commentaire);
-    }
-    if (payload.date) {
-        formData.append('date', payload.date);
-    }
-    if (payload.heurs) {
-        formData.append('heurs', payload.heurs);
     }
     if (payload.montant_livraison_id) {
         formData.append('montant_livraison_id', payload.montant_livraison_id);
@@ -1531,36 +1535,20 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                                     )
                                                 }}
                                             </span>
-                                            <div
-                                                class="flex items-center gap-2"
+                                            <span
+                                                class="rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
+                                                :class="
+                                                    classesVenteLibrePivot(
+                                                        p.pivot.vente_libre,
+                                                    )
+                                                "
                                             >
-                                                <span
-                                                    class="text-[11px] font-medium text-gray-500"
-                                                    >En vente libre</span
-                                                >
-                                                <span
-                                                    class="relative inline-flex h-5 w-9 items-center rounded-full"
-                                                    :class="
-                                                        estVenteLibrePivot(
-                                                            p.pivot.vente_libre,
-                                                        )
-                                                            ? 'bg-[#22C55E]'
-                                                            : 'bg-gray-200'
-                                                    "
-                                                >
-                                                    <span
-                                                        class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow"
-                                                        :class="
-                                                            estVenteLibrePivot(
-                                                                p.pivot
-                                                                    .vente_libre,
-                                                            )
-                                                                ? 'translate-x-4'
-                                                                : 'translate-x-0.5'
-                                                        "
-                                                    />
-                                                </span>
-                                            </div>
+                                                {{
+                                                    libelleVenteLibrePivot(
+                                                        p.pivot.vente_libre,
+                                                    )
+                                                }}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -1842,18 +1830,19 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 </h3>
                                 <div class="space-y-3">
                                     <div>
-                                        <Label
-                                            for="detail-beneficiaire"
-                                            class="text-[13px] text-gray-600"
-                                            >Bénéficiaire</Label
+                                        <p
+                                            class="text-[13px] font-medium text-gray-600"
                                         >
-                                        <input
-                                            id="detail-beneficiaire"
-                                            v-model="complementairesForm.beneficiaire"
-                                            type="text"
-                                            placeholder="Ex. Soi-même, conjoint…"
-                                            class="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-[14px] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
-                                        />
+                                            Bénéficiaire
+                                        </p>
+                                        <p
+                                            class="mt-1 text-[14px] text-gray-800"
+                                        >
+                                            {{
+                                                detailCommande.beneficiaire?.trim() ||
+                                                '—'
+                                            }}
+                                        </p>
                                     </div>
                                     <div>
                                         <Label
@@ -1884,6 +1873,21 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 </div>
                             </div>
                             <template v-else>
+                                <div>
+                                    <h3
+                                        class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
+                                    >
+                                        Bénéficiaire
+                                    </h3>
+                                    <p
+                                        class="text-[14px] text-gray-700 leading-relaxed"
+                                    >
+                                        {{
+                                            detailCommande.beneficiaire?.trim() ||
+                                            '—'
+                                        }}
+                                    </p>
+                                </div>
                                 <div>
                                     <h3
                                         class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
