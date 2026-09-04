@@ -489,11 +489,11 @@ function logout() {
                     <DropdownMenuTrigger as-child>
                         <button
                             type="button"
-                            class="relative flex size-[57px] shrink-0 items-center justify-center rounded-full border border-black/[0.08] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#3995d2]/30"
+                            class="relative flex size-[57px] shrink-0 items-center justify-center rounded-full border border-black/[0.08] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#459cd1]/30"
                             aria-label="Notifications"
                         >
                             <Bell
-                                class="size-[22px] text-[#3995d2]"
+                                class="size-[22px] text-[#459cd1]"
                                 :class="
                                     notifications.count > 0
                                         ? 'animate-pulse'
@@ -618,7 +618,7 @@ function logout() {
                                 </p>
                                 <p
                                     v-if="roleLabel"
-                                    class="truncate text-[12px] font-semibold text-[#3995d2]"
+                                    class="truncate text-[12px] font-semibold text-[#459cd1]"
                                 >
                                     {{ roleLabel }}
                                 </p>

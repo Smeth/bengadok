@@ -54,7 +54,7 @@ function resetZoom() {
                     <div
                         class="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#EFF6FF]"
                     >
-                        <FileText class="size-5 text-[#3B82F6]" />
+                        <FileText class="size-5 text-[#459cd1]" />
                     </div>
                     <div class="min-w-0 flex-1">
                         <p class="text-[14px] font-extrabold text-gray-900">

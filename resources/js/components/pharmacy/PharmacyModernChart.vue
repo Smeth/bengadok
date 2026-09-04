@@ -21,7 +21,7 @@ const maxVal = computed(() => Math.max(1, ...props.points.map((p) => p.valeur)))
 
 const gradient = computed(() => {
     if (props.variant === 'blue') {
-        return 'linear-gradient(180deg, #60b4f0 0%, #3995d2 100%)';
+        return 'linear-gradient(180deg, #7ec8ea 0%, #459cd1 100%)';
     }
     if (props.variant === 'amber') {
         return 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)';

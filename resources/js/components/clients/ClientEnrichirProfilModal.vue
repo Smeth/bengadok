@@ -111,15 +111,15 @@ function submit() {
         >
             <!-- En-tête Figma : titre bleu + fermeture -->
             <div
-                class="relative flex shrink-0 items-center gap-3 border-b border-[#e8e4e4] bg-gradient-to-r from-[#3995d2]/12 via-white to-[#5bb66e]/10 px-5 py-3 pr-14 sm:px-6"
+                class="relative flex shrink-0 items-center gap-3 border-b border-[#e8e4e4] bg-gradient-to-r from-[#459cd1]/12 via-white to-[#5bb66e]/10 px-5 py-3 pr-14 sm:px-6"
             >
                 <div
-                    class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[rgba(13,110,253,0.13)] text-[#3995d2]"
+                    class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[rgba(69,156,209,0.13)] text-[#459cd1]"
                 >
                     <UserPlus class="size-5" />
                 </div>
                 <h2
-                    class="text-lg font-black tracking-wide text-[#3995d2] sm:text-xl"
+                    class="text-lg font-black tracking-wide text-[#459cd1] sm:text-xl"
                 >
                     Rajouter les informations
                 </h2>
@@ -160,16 +160,16 @@ function submit() {
                             class="flex h-[63px] w-[73px] shrink-0 flex-col items-center justify-between rounded-[9px] border border-[rgba(92,89,89,0.4)] bg-white py-1.5 text-center transition-all hover:bg-slate-50/80"
                             :class="
                                 selectedNiches.includes(opt.id)
-                                    ? 'ring-2 ring-[#3995d2] ring-offset-1 ring-offset-background'
+                                    ? 'ring-2 ring-[#459cd1] ring-offset-1 ring-offset-background'
                                     : ''
                             "
                             @click="toggleNiche(opt.id)"
                         >
                             <div
-                                class="flex size-8 items-center justify-center rounded-lg border border-[rgba(92,89,89,0.35)] bg-[rgba(13,110,253,0.13)] text-[#5c5959]"
+                                class="flex size-8 items-center justify-center rounded-lg border border-[rgba(92,89,89,0.35)] bg-[rgba(69,156,209,0.13)] text-[#5c5959]"
                                 :class="
                                     selectedNiches.includes(opt.id)
-                                        ? 'border-[#3995d2]/50'
+                                        ? 'border-[#459cd1]/50'
                                         : ''
                                 "
                             >
@@ -210,16 +210,16 @@ function submit() {
                             class="flex h-[63px] w-[73px] shrink-0 flex-col items-center justify-between rounded-[9px] border border-[rgba(92,89,89,0.4)] bg-white py-1.5 text-center transition-all hover:bg-slate-50/80"
                             :class="
                                 selectedCanal === opt.id
-                                    ? 'ring-2 ring-[#3995d2] ring-offset-1 ring-offset-background'
+                                    ? 'ring-2 ring-[#459cd1] ring-offset-1 ring-offset-background'
                                     : ''
                             "
                             @click="selectCanal(opt.id)"
                         >
                             <div
-                                class="flex size-8 items-center justify-center rounded-lg border border-[rgba(92,89,89,0.35)] bg-[rgba(13,110,253,0.13)] text-[#5c5959]"
+                                class="flex size-8 items-center justify-center rounded-lg border border-[rgba(92,89,89,0.35)] bg-[rgba(69,156,209,0.13)] text-[#5c5959]"
                                 :class="
                                     selectedCanal === opt.id
-                                        ? 'border-[#3995d2]/50'
+                                        ? 'border-[#459cd1]/50'
                                         : ''
                                 "
                             >
@@ -266,7 +266,7 @@ function submit() {
                 </Button>
                 <Button
                     type="button"
-                    class="h-11 min-w-[185px] rounded-[15px] bg-[#0d6efd] px-6 text-base font-black text-white hover:bg-[#0b5ed7]"
+                    class="h-11 min-w-[185px] rounded-[15px] bg-[#459cd1] px-6 text-base font-black text-white hover:bg-[#3a87b8]"
                     :disabled="processing"
                     @click="submit"
                 >

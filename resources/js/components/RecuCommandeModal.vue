@@ -102,14 +102,14 @@ function fermer() {
                     <div class="flex items-center gap-3">
                         <button
                             type="button"
-                            class="flex h-9 items-center justify-center rounded-[10px] bg-[#0d6efd] px-4 text-[14px] font-bold text-white transition-colors hover:bg-blue-700"
+                            class="flex h-9 items-center justify-center rounded-[10px] bg-[#459cd1] px-4 text-[14px] font-bold text-white transition-colors hover:bg-[#3a87b8]"
                             @click="imprimer"
                         >
                             Imprimer reçu client
                         </button>
                         <button
                             type="button"
-                            class="flex h-9 items-center justify-center rounded-[10px] border border-[#0d6efd] bg-white px-4 text-[14px] font-bold text-[#0d6efd] transition-colors hover:bg-blue-50"
+                            class="flex h-9 items-center justify-center rounded-[10px] border border-[#459cd1] bg-white px-4 text-[14px] font-bold text-[#459cd1] transition-colors hover:bg-[#459cd1]/10"
                             @click="telecharger"
                         >
                             Télécharger
@@ -129,7 +129,7 @@ function fermer() {
                 <div
                     v-if="commande"
                     ref="recuContent"
-                    class="mx-auto mb-4 w-full max-w-[520px] overflow-hidden rounded-[14px] border-2 border-[#3995d2] bg-white px-5 py-5 print:border print:shadow-none"
+                    class="mx-auto mb-4 w-full max-w-[520px] overflow-hidden rounded-[14px] border-2 border-[#459cd1] bg-white px-5 py-5 print:border print:shadow-none"
                 >
                     <!-- Logo + Titre -->
                     <div class="mb-4 flex flex-col items-center">
@@ -381,7 +381,7 @@ function fermer() {
                     </div>
 
                     <!-- Footer contact -->
-                    <div class="rounded-lg bg-[#0d6efd] px-4 py-2.5 text-white">
+                    <div class="rounded-lg bg-[#459cd1] px-4 py-2.5 text-white">
                         <p class="text-[12px]">
                             Pour tous vos besoins en médicaments contactez-nous
                             : <strong>+242 06 121 21 54</strong> —

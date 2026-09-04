@@ -16,12 +16,14 @@ import {
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 import PharmaciePieceJointeSection from '@/components/dok-pharma/PharmaciePieceJointeSection.vue';
+import ModulePagination from '@/components/shared/ModulePagination.vue';
 import AppToast from '@/components/AppToast.vue';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import DokPharmaOrdonnanceViewerModal from '@/components/dok-pharma/DokPharmaOrdonnanceViewerModal.vue';
 import DokPharmaValiderRetraitModal from '@/components/dok-pharma/DokPharmaValiderRetraitModal.vue';
 import { Input } from '@/components/ui/input';
 import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
+import { modulePaginationWrapperClass } from '@/lib/bengadokUi';
 import { sousTotalCommandeProduits } from '@/lib/commandeTotals';
 import {
     classesStatutDisponibiliteLigne,
@@ -493,7 +495,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                     class="flex min-h-9 flex-1 items-center justify-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow-sm transition-all sm:min-w-0 sm:flex-none sm:px-3"
                     :class="
                         onglet === 'nouvelles'
-                            ? 'bg-[#3995d2] text-white ring-2 ring-white/40'
+                            ? 'bg-[#459cd1] text-white ring-2 ring-white/40'
                             : 'bg-white/80 text-gray-800 hover:bg-white'
                     "
                     @click="changeOnglet('nouvelles')"
@@ -503,7 +505,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                         :class="
                             onglet === 'nouvelles'
                                 ? 'bg-white/25'
-                                : 'bg-[#3995d2]/15 text-[#3995d2]'
+                                : 'bg-[#459cd1]/15 text-[#459cd1]'
                         "
                     >
                         {{ stats.nouvelles }}
@@ -678,10 +680,10 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                             >
                                 <div class="flex items-center gap-3">
                                     <div
-                                        class="flex size-9 items-center justify-center rounded-full bg-[#3B82F6]/10"
+                                        class="flex size-9 items-center justify-center rounded-full bg-[#459cd1]/10"
                                     >
                                         <FileText
-                                            class="size-5 text-[#3B82F6]"
+                                            class="size-5 text-[#459cd1]"
                                         />
                                     </div>
                                     <div>
@@ -1119,7 +1121,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                         class="rounded-xl px-6 py-2.5 text-[13px] font-bold shadow transition-colors"
                                         :class="
                                             peutEnvoyerDisponibilite(cmd)
-                                                ? 'bg-[#3995d2] text-white hover:bg-[#3181b8]'
+                                                ? 'bg-[#459cd1] text-white hover:bg-[#3a87b8]'
                                                 : 'cursor-not-allowed bg-gray-300 text-gray-600'
                                         "
                                         :disabled="
@@ -1260,10 +1262,10 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                             >
                                 <div class="flex items-center gap-3">
                                     <div
-                                        class="flex size-9 items-center justify-center rounded-full bg-[#3B82F6]/10"
+                                        class="flex size-9 items-center justify-center rounded-full bg-[#459cd1]/10"
                                     >
                                         <FileText
-                                            class="size-5 text-[#3B82F6]"
+                                            class="size-5 text-[#459cd1]"
                                         />
                                     </div>
                                     <div>
@@ -1280,7 +1282,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                     </div>
                                 </div>
                                 <button
-                                    class="flex items-center gap-1.5 rounded-lg border border-[#3B82F6] px-3 py-1.5 text-[11px] font-bold text-[#3B82F6] hover:bg-[#EFF6FF] transition-colors"
+                                    class="flex items-center gap-1.5 rounded-lg border border-[#459cd1] px-3 py-1.5 text-[11px] font-bold text-[#459cd1] hover:bg-[#459cd1]/10 transition-colors"
                                     @click.stop="openOrdonnance(cmd)"
                                 >
                                     <Eye class="size-3.5" />Voir
@@ -1579,10 +1581,10 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                             >
                                 <div class="flex items-center gap-3">
                                     <div
-                                        class="flex size-9 items-center justify-center rounded-full bg-[#3B82F6]/10"
+                                        class="flex size-9 items-center justify-center rounded-full bg-[#459cd1]/10"
                                     >
                                         <FileText
-                                            class="size-5 text-[#3B82F6]"
+                                            class="size-5 text-[#459cd1]"
                                         />
                                     </div>
                                     <div>
@@ -1599,7 +1601,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                     </div>
                                 </div>
                                 <button
-                                    class="flex items-center gap-1.5 rounded-lg border border-[#3B82F6] px-3 py-1.5 text-[11px] font-bold text-[#3B82F6] hover:bg-[#EFF6FF] transition-colors"
+                                    class="flex items-center gap-1.5 rounded-lg border border-[#459cd1] px-3 py-1.5 text-[11px] font-bold text-[#459cd1] hover:bg-[#459cd1]/10 transition-colors"
                                     @click.stop="openOrdonnance(cmd)"
                                 >
                                     <Eye class="size-3.5" />Voir
@@ -1915,10 +1917,10 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                             >
                                 <div class="flex items-center gap-3">
                                     <div
-                                        class="flex size-9 items-center justify-center rounded-full bg-[#3B82F6]/10"
+                                        class="flex size-9 items-center justify-center rounded-full bg-[#459cd1]/10"
                                     >
                                         <FileText
-                                            class="size-5 text-[#3B82F6]"
+                                            class="size-5 text-[#459cd1]"
                                         />
                                     </div>
                                     <div>
@@ -1935,7 +1937,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                     </div>
                                 </div>
                                 <button
-                                    class="flex items-center gap-1.5 rounded-lg border border-[#3B82F6] px-3 py-1.5 text-[11px] font-bold text-[#3B82F6] hover:bg-[#EFF6FF] transition-colors"
+                                    class="flex items-center gap-1.5 rounded-lg border border-[#459cd1] px-3 py-1.5 text-[11px] font-bold text-[#459cd1] hover:bg-[#459cd1]/10 transition-colors"
                                     @click.stop="openOrdonnance(cmd)"
                                 >
                                     <Eye class="size-3.5" />Voir
@@ -2180,52 +2182,13 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                 </template>
             </div>
 
-            <!-- ── Pagination (lisible sur dégradé, alignée maquette pharmacie) ── -->
-            <div
-                v-if="commandes.links?.length > 3"
-                class="mt-2 flex flex-col gap-4 rounded-[28px] border border-white/90 bg-white/95 px-4 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.14)] backdrop-blur-md sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6 sm:py-4"
-            >
-                <p
-                    class="text-center text-[13px] leading-snug text-[#5c5959] sm:text-left sm:text-[14px]"
-                >
-                    Affichage de
-                    <span class="tabular-nums font-black text-black">{{
-                        commandes.from
-                    }}</span>
-                    à
-                    <span class="tabular-nums font-black text-black">{{
-                        commandes.to
-                    }}</span>
-                    sur
-                    <span class="tabular-nums font-black text-[#3995d2]">{{
-                        commandes.total
-                    }}</span>
-                    commandes
-                </p>
-                <nav
-                    class="flex flex-wrap items-center justify-center gap-1.5 sm:justify-end"
-                    aria-label="Pagination"
-                >
-                    <template v-for="(link, i) in commandes.links" :key="i">
-                        <span
-                            v-if="!link.url"
-                            class="flex min-h-9 min-w-9 items-center justify-center rounded-full bg-gray-100 px-2.5 py-2 text-[13px] font-semibold text-gray-400"
-                            v-html="link.label"
-                        />
-                        <Link
-                            v-else
-                            :href="link.url"
-                            class="flex min-h-9 min-w-9 items-center justify-center rounded-full border px-3 py-2 text-[13px] font-bold transition-all duration-150"
-                            :class="
-                                link.active
-                                    ? 'border-[#3995d2] bg-[#3995d2] text-white shadow-[0_4px_12px_rgba(57,149,210,0.45)] ring-2 ring-white/70'
-                                    : 'border-gray-200/90 bg-white text-[#5c5959] shadow-sm hover:border-[#3995d2]/50 hover:text-[#3995d2] hover:shadow-md'
-                            "
-                        >
-                            <span v-html="link.label" />
-                        </Link>
-                    </template>
-                </nav>
+            <div :class="[modulePaginationWrapperClass, 'mt-2']">
+                <ModulePagination
+                    :links="commandes.links"
+                    :from="commandes.from"
+                    :to="commandes.to"
+                    :total="commandes.total"
+                />
             </div>
         </div>
 

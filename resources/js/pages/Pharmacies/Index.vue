@@ -6,7 +6,6 @@ import {
     MapPin,
     Mail,
     Phone,
-    Search,
     Plus,
     Trash2,
     ShieldAlert,
@@ -24,6 +23,9 @@ import ConfirmModal from '@/components/ConfirmModal.vue';
 import IdentifiantsCreesDialog from '@/components/IdentifiantsCreesDialog.vue';
 import GoogleMyMapsEmbed from '@/components/maps/GoogleMyMapsEmbed.vue';
 import PharmacieGestionCredit from '@/components/PharmacieGestionCredit.vue';
+import ModuleFilterPanel from '@/components/shared/ModuleFilterPanel.vue';
+import ModuleInlineTabs from '@/components/shared/ModuleInlineTabs.vue';
+import ModulePagination from '@/components/shared/ModulePagination.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -35,6 +37,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { moduleCardClass, modulePageClass, modulePaginationWrapperClass } from '@/lib/bengadokUi';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -153,6 +156,28 @@ function setModuleTab(tab: ModuleTabId) {
         { preserveState: true, preserveScroll: true },
     );
 }
+
+const pharmacyModuleTabs = computed(() => {
+    const tabs: {
+        id: ModuleTabId;
+        label: string;
+        icon: typeof Building2;
+    }[] = [
+        {
+            id: 'liste',
+            label: 'Gestion des pharmacies',
+            icon: Building2,
+        },
+    ];
+    if (isAdmin.value) {
+        tabs.push({
+            id: 'credits',
+            label: 'Gestion de crédit',
+            icon: Coins,
+        });
+    }
+    return tabs;
+});
 
 function ouvrirGestionCredits(pharmacieId: number) {
     router.get(
@@ -409,81 +434,37 @@ watch(
     />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div
-            class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
-        >
-            <!-- Onglets module (comme Médicaments / Clients) -->
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        type="button"
-                        class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                        :class="
-                            activeModuleTab === 'liste'
-                                ? 'bg-[#459cd1] text-white'
-                                : 'bg-white/80 text-muted-foreground hover:bg-white'
-                        "
-                        @click="setModuleTab('liste')"
-                    >
-                        <Building2 class="size-4 shrink-0" />
-                        Gestion des pharmacies
-                    </button>
-                    <button
-                        v-if="isAdmin"
-                        type="button"
-                        class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                        :class="
-                            activeModuleTab === 'credits'
-                                ? 'bg-[#459cd1] text-white'
-                                : 'bg-white/80 text-muted-foreground hover:bg-white'
-                        "
-                        @click="setModuleTab('credits')"
-                    >
-                        <Coins class="size-4 shrink-0" />
-                        Gestion de crédit
-                    </button>
-                </div>
-            </div>
+        <div :class="modulePageClass">
+            <ModuleInlineTabs
+                :model-value="activeModuleTab"
+                :tabs="pharmacyModuleTabs"
+                @update:model-value="
+                    setModuleTab($event as ModuleTabId)
+                "
+            />
 
             <!-- Onglet : liste des pharmacies -->
             <template v-if="activeModuleTab === 'liste'">
-            <div class="flex flex-col gap-5 mb-2">
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <Button
-                        class="bg-[#0d6efd] text-white hover:bg-blue-600 rounded-lg px-4 h-10 shadow-sm"
-                        @click="openModal"
-                    >
-                        <Plus class="mr-2 size-4" />
-                        Nouvelle Pharmacie
-                    </Button>
-                </div>
-
-                <!-- Ligne Bas : Recherche + Toggle Vues/Badges -->
+            <ModuleFilterPanel
+                v-model:search="searchQuery"
+                placeholder="Rechercher une pharmacie..."
+                :counter="pharmacies.total"
+                :counter-icon="Building2"
+                counter-class="bg-[#459cd1]"
+                @submit="search"
+            >
                 <div
-                    class="flex flex-wrap items-center justify-between gap-4 w-full"
+                    class="flex items-center gap-1.5 rounded-lg border border-red-100 bg-white px-3 py-1.5 text-red-600 shadow-sm"
+                    title="Pharmacies de garde"
                 >
-                    <form
-                        class="flex w-full max-w-[480px]"
-                        @submit.prevent="search"
-                    >
-                        <div class="relative flex-1">
-                            <Search
-                                class="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-400"
-                            />
-                            <Input
-                                v-model="searchQuery"
-                                placeholder="Recherche une pharmacie..."
-                                class="rounded-full bg-white border-0 pl-11 shadow-sm h-10 w-full focus-visible:ring-2 focus-visible:ring-blue-500 text-[14px]"
-                                @keyup.enter="search"
-                            />
-                        </div>
-                    </form>
-
-                    <div class="flex items-center gap-4">
-                        <!-- Switch Liste / Card / Carte -->
-                        <div
-                            class="flex bg-white rounded-lg shadow-sm p-1 gap-1"
-                        >
+                    <span class="text-sm font-bold tabular-nums">{{
+                        stats.de_garde
+                    }}</span>
+                    <ShieldAlert class="size-4" />
+                </div>
+                <div
+                    class="flex gap-1 rounded-lg bg-white p-1 shadow-sm ring-1 ring-black/5"
+                >
                             <Button
                                 :variant="
                                     viewMode === 'liste' ? 'secondary' : 'ghost'
@@ -532,30 +513,17 @@ watch(
                                 <MapIcon class="mr-2 size-4" />
                                 Carte
                             </Button>
-                        </div>
-
-                        <!-- Badges Compteurs -->
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="flex h-10 min-w-[50px] items-center justify-center gap-1.5 rounded-[10px] bg-white text-red-600 font-extrabold shadow-sm px-3 border border-red-50"
-                            >
-                                <span class="text-[16px]">{{
-                                    stats.de_garde
-                                }}</span>
-                                <ShieldAlert class="size-4" />
-                            </div>
-                            <div
-                                class="flex h-10 min-w-[50px] items-center justify-center gap-1.5 rounded-[10px] bg-[#0d6efd] text-white font-extrabold shadow-sm px-3"
-                            >
-                                <span class="text-[16px]">{{
-                                    stats.total
-                                }}</span>
-                                <Building2 class="size-4" />
-                            </div>
-                        </div>
-                    </div>
                 </div>
-            </div>
+                <template #actions>
+                    <Button
+                        class="bg-[#459cd1] text-white hover:bg-[#3a87b8]"
+                        @click="openModal"
+                    >
+                        <Plus class="mr-2 size-4" />
+                        Nouvelle pharmacie
+                    </Button>
+                </template>
+            </ModuleFilterPanel>
 
             <!-- Vue Liste (tableau) -->
             <div v-if="viewMode === 'liste'" class="space-y-2">
@@ -789,7 +757,7 @@ watch(
                     <!-- Header Carte -->
                     <div class="mb-5 flex items-start gap-3">
                         <div
-                            class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e3eefa] text-[#0d6efd]"
+                            class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#459cd1]/10 text-[#459cd1]"
                         >
                             <Sun
                                 v-if="
@@ -828,7 +796,7 @@ watch(
                                     ?.toLowerCase()
                                     .includes('jour')
                             "
-                            class="rounded-lg bg-[#0d6efd] px-2.5 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider"
+                            class="rounded-lg bg-[#459cd1] px-2.5 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider"
                         >
                             Jour
                         </span>
@@ -980,55 +948,16 @@ watch(
                 title="Carte des pharmacies BengaDok"
             />
 
-            <!-- Pagination (Liste et Card) — carte lisible sur dégradé, style BengaDok -->
             <div
                 v-if="viewMode === 'liste' || viewMode === 'card'"
-                class="mt-6 flex flex-col gap-4 rounded-[28px] border border-white/90 bg-white/95 px-4 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.14)] backdrop-blur-md sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6 sm:py-4"
+                :class="modulePaginationWrapperClass"
             >
-                <p
-                    class="text-center text-[13px] leading-snug text-[#5c5959] sm:text-left sm:text-[14px]"
-                >
-                    Affichage de
-                    <span class="tabular-nums font-black text-black">{{
-                        pharmacies.from
-                    }}</span>
-                    à
-                    <span class="tabular-nums font-black text-black">{{
-                        pharmacies.to
-                    }}</span>
-                    sur
-                    <span class="tabular-nums font-black text-[#3995d2]">{{
-                        pharmacies.total
-                    }}</span>
-                    résultats
-                </p>
-                <nav
-                    class="flex flex-wrap items-center justify-center gap-1.5 sm:justify-end"
-                    aria-label="Pagination"
-                >
-                    <template
-                        v-for="(link, pIndex) in pharmacies.links"
-                        :key="pIndex"
-                    >
-                        <div
-                            v-if="link.url === null"
-                            class="flex min-h-9 min-w-9 items-center justify-center rounded-full bg-gray-100 px-2.5 py-2 text-[13px] font-semibold text-gray-400"
-                            v-html="link.label"
-                        />
-                        <Link
-                            v-else
-                            :href="link.url"
-                            class="flex min-h-9 min-w-9 items-center justify-center rounded-full border px-3 py-2 text-[13px] font-bold transition-all duration-150"
-                            :class="
-                                link.active
-                                    ? 'border-[#3995d2] bg-[#3995d2] text-white shadow-[0_4px_12px_rgba(57,149,210,0.45)] ring-2 ring-white/70'
-                                    : 'border-gray-200/90 bg-white text-[#5c5959] shadow-sm hover:border-[#3995d2]/50 hover:text-[#3995d2] hover:shadow-md'
-                            "
-                        >
-                            <span v-html="link.label" />
-                        </Link>
-                    </template>
-                </nav>
+                <ModulePagination
+                    :links="pharmacies.links"
+                    :from="pharmacies.from"
+                    :to="pharmacies.to"
+                    :total="pharmacies.total"
+                />
             </div>
             </template>
 

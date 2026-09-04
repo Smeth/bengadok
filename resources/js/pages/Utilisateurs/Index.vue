@@ -2,7 +2,6 @@
 import { Head, router } from '@inertiajs/vue3';
 import {
     Plus,
-    Search,
     Pencil,
     Lock,
     Trash2,
@@ -12,6 +11,8 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
+import ModuleEmptyState from '@/components/shared/ModuleEmptyState.vue';
+import ModuleFilterPanel from '@/components/shared/ModuleFilterPanel.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { moduleCardClass, modulePageClass } from '@/lib/bengadokUi';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -223,42 +225,43 @@ function rechercher() {
     <Head title="Utilisateurs Backoffice - BengaDok" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-1 flex-col gap-6 p-4 md:p-6">
+        <div :class="modulePageClass">
             <div class="flex flex-wrap items-center justify-between gap-4">
-                <h1 class="text-2xl font-semibold">Utilisateurs Backoffice</h1>
-                <div class="flex items-center gap-3">
-                    <div
-                        class="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5"
+                <h1 class="text-2xl font-semibold tracking-tight">
+                    Utilisateurs Backoffice
+                </h1>
+            </div>
+
+            <ModuleFilterPanel
+                v-model:search="searchQuery"
+                placeholder="Rechercher un utilisateur..."
+                show-submit
+                :counter="users.length"
+                :counter-icon="Users"
+                @submit="rechercher"
+            >
+                <template #actions>
+                    <Button
+                        class="bg-[#459cd1] text-white hover:bg-[#3a87b8]"
+                        @click="ouvrirCreate"
                     >
-                        <Users class="size-4 text-primary" />
-                        <span class="text-sm font-medium text-primary">{{
-                            users.length
-                        }}</span>
-                    </div>
-                    <Button @click="ouvrirCreate">
                         <Plus class="size-4" />
-                        Nouvel Utilisateur
+                        Nouvel utilisateur
                     </Button>
-                </div>
-            </div>
+                </template>
+            </ModuleFilterPanel>
 
-            <div class="relative">
-                <Search
-                    class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                />
-                <Input
-                    v-model="searchQuery"
-                    placeholder="Rechercher un utilisateur..."
-                    class="pl-9"
-                    @keyup.enter="rechercher"
-                />
-            </div>
-
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div
+                v-if="users.length"
+                class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            >
                 <div
                     v-for="user in users"
                     :key="user.id"
-                    class="flex flex-col rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+                    :class="[
+                        moduleCardClass,
+                        'flex flex-col p-4 transition-shadow hover:shadow-md',
+                    ]"
                 >
                     <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0 flex-1">
@@ -348,12 +351,10 @@ function rechercher() {
                 </div>
             </div>
 
-            <p
-                v-if="!users.length"
-                class="py-12 text-center text-muted-foreground"
-            >
-                Aucun utilisateur backoffice trouvé.
-            </p>
+            <ModuleEmptyState
+                v-else
+                message="Aucun utilisateur backoffice trouvé."
+            />
         </div>
 
         <!-- Modal Créer -->

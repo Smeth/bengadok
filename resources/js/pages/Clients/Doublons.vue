@@ -25,11 +25,11 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog';
-import ClientsEmptyState from '@/components/clients/ClientsEmptyState.vue';
-import ClientsFilterPanel from '@/components/clients/ClientsFilterPanel.vue';
+import ModuleEmptyState from '@/components/shared/ModuleEmptyState.vue';
+import ModuleFilterPanel from '@/components/shared/ModuleFilterPanel.vue';
+import ModuleStatCard from '@/components/shared/ModuleStatCard.vue';
 import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
-import ClientsStatCard from '@/components/clients/ClientsStatCard.vue';
-import { clientsSelectClass } from '@/components/clients/clientsUi';
+import { moduleCardClass, modulePageClass, moduleSelectClass } from '@/lib/bengadokUi';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { clientNomComplet } from '@/lib/clientDisplayName';
@@ -214,38 +214,36 @@ const statutLabels: Record<string, string> = {
     <Head title="Gestion des doublons Clients - BengaDok" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div
-            class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
-        >
+        <div :class="modulePageClass">
             <ClientsSectionNav active="doublons" />
 
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <ClientsStatCard
+                <ModuleStatCard
                     label="Groupes à traiter"
                     :value="stats.en_attente"
                     :icon="Clock"
                     value-class="text-amber-700"
                 />
-                <ClientsStatCard
+                <ModuleStatCard
                     label="Groupes vérifiés"
                     :value="stats.verifies"
                     :icon="UserCheck"
                     value-class="text-[#459cd1]"
                 />
-                <ClientsStatCard
+                <ModuleStatCard
                     label="Profils fusionnés"
                     :value="stats.fusionnes"
                     :icon="Merge"
                     value-class="text-emerald-700"
                 />
-                <ClientsStatCard
+                <ModuleStatCard
                     label="Clients concernés"
                     :value="stats.total_clients"
                     :icon="UsersRound"
                 />
             </div>
 
-            <ClientsFilterPanel
+            <ModuleFilterPanel
                 v-model:search="searchQuery"
                 placeholder="Rechercher par nom ou tél..."
                 show-submit
@@ -257,7 +255,7 @@ const statutLabels: Record<string, string> = {
                     <Filter class="size-4 shrink-0 text-slate-500" />
                     <select
                         :value="filters.tri"
-                        :class="clientsSelectClass"
+                        :class="moduleSelectClass"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -276,7 +274,7 @@ const statutLabels: Record<string, string> = {
                     <Check class="size-4 shrink-0 text-slate-500" />
                     <select
                         :value="filters.statut"
-                        :class="clientsSelectClass"
+                        :class="moduleSelectClass"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -292,7 +290,7 @@ const statutLabels: Record<string, string> = {
                         <option value="ignore">Ignorés</option>
                     </select>
                 </div>
-            </ClientsFilterPanel>
+            </ModuleFilterPanel>
 
             <!-- Groupes list -->
             <div class="space-y-6">
@@ -470,7 +468,7 @@ const statutLabels: Record<string, string> = {
                     </div>
                 </div>
 
-                <ClientsEmptyState
+                <ModuleEmptyState
                     v-if="!groupes.length"
                     message="Aucun groupe de doublons trouvé."
                 />

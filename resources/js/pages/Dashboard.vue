@@ -362,7 +362,7 @@ function getPiePath(
                     class="rounded-[10px] px-4 py-2 text-[14px] font-semibold transition-colors"
                     :class="
                         activeTab === 'parapharma'
-                            ? 'bg-[#0d6efd] text-white'
+                            ? 'bg-[#459cd1] text-white'
                             : 'text-gray-700 hover:bg-gray-50'
                     "
                     @click="setAdminTab('parapharma')"
@@ -374,7 +374,7 @@ function getPiePath(
                     class="rounded-[10px] px-4 py-2 text-[14px] font-semibold transition-colors"
                     :class="
                         activeTab === 'operations'
-                            ? 'bg-[#0d6efd] text-white'
+                            ? 'bg-[#459cd1] text-white'
                             : 'text-gray-700 hover:bg-gray-50'
                     "
                     @click="setAdminTab('operations')"

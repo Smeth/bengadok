@@ -2,11 +2,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Users, Phone } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
-import ClientsEmptyState from '@/components/clients/ClientsEmptyState.vue';
-import ClientsFilterPanel from '@/components/clients/ClientsFilterPanel.vue';
-import ClientsPagination from '@/components/clients/ClientsPagination.vue';
+import ModuleEmptyState from '@/components/shared/ModuleEmptyState.vue';
+import ModuleFilterPanel from '@/components/shared/ModuleFilterPanel.vue';
+import ModulePagination from '@/components/shared/ModulePagination.vue';
 import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
-import { clientsSelectClass } from '@/components/clients/clientsUi';
+import { moduleCardClass, modulePageClass, modulePaginationWrapperClass, moduleSelectClass } from '@/lib/bengadokUi';
 import { Button } from '@/components/ui/button';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import type { ClientsSectionTab } from '@/components/clients/ClientsSectionNav.vue';
@@ -112,13 +112,11 @@ function nomComplet(c: Client) {
     <Head title="Liste des clients - BengaDok" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div
-            class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
-        >
+        <div :class="modulePageClass">
             <ClientsSectionNav :active="activeSection" />
 
             <div v-if="activeSection === 'liste'" class="space-y-4">
-                <ClientsFilterPanel
+                <ModuleFilterPanel
                     v-model:search="searchQuery"
                     placeholder="Rechercher un client..."
                     :counter="clients.total"
@@ -128,7 +126,7 @@ function nomComplet(c: Client) {
                 >
                     <select
                         :value="filters.tri"
-                        :class="clientsSelectClass"
+                        :class="moduleSelectClass"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -145,7 +143,7 @@ function nomComplet(c: Client) {
                     </select>
                     <select
                         :value="filters.arrondissement || ''"
-                        :class="[clientsSelectClass, 'max-w-[200px]']"
+                        :class="[moduleSelectClass, 'max-w-[200px]']"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -165,7 +163,7 @@ function nomComplet(c: Client) {
                     </select>
                     <select
                         :value="filters.frequence_id || ''"
-                        :class="[clientsSelectClass, 'max-w-[220px]']"
+                        :class="[moduleSelectClass, 'max-w-[220px]']"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -183,7 +181,7 @@ function nomComplet(c: Client) {
                             {{ f.designation }}
                         </option>
                     </select>
-                </ClientsFilterPanel>
+                </ModuleFilterPanel>
 
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div
@@ -286,17 +284,19 @@ function nomComplet(c: Client) {
                     </div>
                 </div>
 
-                <ClientsEmptyState
+                <ModuleEmptyState
                     v-if="!clients.data.length"
                     message="Aucun client avec les filtres actuels."
                 />
 
-                <ClientsPagination
-                    :links="clients.links"
-                    :from="clients.from"
-                    :to="clients.to"
-                    :total="clients.total"
-                />
+                <div :class="modulePaginationWrapperClass">
+                    <ModulePagination
+                        :links="clients.links"
+                        :from="clients.from"
+                        :to="clients.to"
+                        :total="clients.total"
+                    />
+                </div>
             </div>
 
             <ClientsEmptyState

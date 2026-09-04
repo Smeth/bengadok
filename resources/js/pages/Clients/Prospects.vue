@@ -8,12 +8,12 @@ import {
     Sparkles,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
-import ClientsEmptyState from '@/components/clients/ClientsEmptyState.vue';
-import ClientsFilterPanel from '@/components/clients/ClientsFilterPanel.vue';
-import ClientsPagination from '@/components/clients/ClientsPagination.vue';
+import ModuleEmptyState from '@/components/shared/ModuleEmptyState.vue';
+import ModuleFilterPanel from '@/components/shared/ModuleFilterPanel.vue';
+import ModulePagination from '@/components/shared/ModulePagination.vue';
+import ModuleStatCard from '@/components/shared/ModuleStatCard.vue';
 import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
-import ClientsStatCard from '@/components/clients/ClientsStatCard.vue';
-import { clientsSelectClass } from '@/components/clients/clientsUi';
+import { modulePageClass, modulePaginationWrapperClass, moduleSelectClass } from '@/lib/bengadokUi';
 import { Button } from '@/components/ui/button';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -150,36 +150,34 @@ function promouvoir(prospect: ProspectRow) {
     <Head title="Prospects - BengaDok" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div
-            class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
-        >
+        <div :class="modulePageClass">
             <ClientsSectionNav active="prospects" />
 
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <ClientsStatCard
+                <ModuleStatCard
                     label="Total prospects"
                     :value="stats.total"
                     :icon="UserCircle"
                 />
-                <ClientsStatCard
+                <ModuleStatCard
                     label="Avec commandes"
                     :value="stats.avec_commandes"
                     :icon="ShoppingBag"
                 />
-                <ClientsStatCard
+                <ModuleStatCard
                     label="Prêts à promouvoir"
                     :value="stats.eligibles_promotion"
                     :icon="Sparkles"
                     value-class="text-emerald-700"
                 />
-                <ClientsStatCard
+                <ModuleStatCard
                     label="Sans commande"
                     :value="stats.sans_commande"
                     :icon="Users"
                 />
             </div>
 
-            <ClientsFilterPanel
+            <ModuleFilterPanel
                 v-model:search="searchQuery"
                 placeholder="Rechercher (nom, tél., adresse, arrdt.)..."
                 show-submit
@@ -190,7 +188,7 @@ function promouvoir(prospect: ProspectRow) {
             >
                 <select
                     :value="filters.tri || 'recent'"
-                    :class="clientsSelectClass"
+                    :class="moduleSelectClass"
                     @change="
                         (e: Event) =>
                             filtrer(
@@ -205,7 +203,7 @@ function promouvoir(prospect: ProspectRow) {
                 </select>
                 <select
                     :value="filters.arrondissement || ''"
-                    :class="[clientsSelectClass, 'max-w-[200px]']"
+                    :class="[moduleSelectClass, 'max-w-[200px]']"
                     @change="
                         (e: Event) =>
                             filtrer(
@@ -219,7 +217,7 @@ function promouvoir(prospect: ProspectRow) {
                         {{ a }}
                     </option>
                 </select>
-            </ClientsFilterPanel>
+            </ModuleFilterPanel>
 
             <div
                 v-if="prospects.data.length"
@@ -342,17 +340,19 @@ function promouvoir(prospect: ProspectRow) {
                 </table>
             </div>
 
-            <ClientsEmptyState
+            <ModuleEmptyState
                 v-else
                 message="Aucun prospect avec les filtres actuels."
             />
 
-            <ClientsPagination
-                :links="prospects.links"
-                :from="prospects.from"
-                :to="prospects.to"
-                :total="prospects.total"
-            />
+            <div :class="modulePaginationWrapperClass">
+                <ModulePagination
+                    :links="prospects.links"
+                    :from="prospects.from"
+                    :to="prospects.to"
+                    :total="prospects.total"
+                />
+            </div>
         </div>
 
         <FlashToastHost />

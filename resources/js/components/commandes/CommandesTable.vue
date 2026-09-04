@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
 import {
-    ChevronRight,
     Download,
     Eye,
     MoreHorizontal,
     X,
 } from 'lucide-vue-next';
-import { computed } from 'vue';
+import ModulePagination from '@/components/shared/ModulePagination.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -18,12 +16,19 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { formatDateFrLocal } from '@/lib/formatDateLocal';
 import type { CommandeListItem } from '@/types';
-import { STATUTS_COMMANDE } from '@/types';
+import {
+    STATUTS_COMMANDE,
+    commandeStatutBadgeStyle,
+    commandeStatutLabel,
+} from '@/types';
 
 const props = defineProps<{
     commandes: {
         data: CommandeListItem[];
         links: Array<{ url: string | null; label: string; active: boolean }>;
+        from?: number | null;
+        to?: number | null;
+        total?: number;
     };
     stats: Record<string, number>;
     filters: {
@@ -81,48 +86,14 @@ function getMedicamentsText(
 function formatDate(d: string) {
     return formatDateFrLocal(d);
 }
-
-const statutsList = computed(() => props.statuts ?? STATUTS_COMMANDE);
-
-function getStatusLabel(s: string) {
-    if (s === 'a_preparer') return 'Validée';
-    if (s === 'retiree') return 'Livrée';
-    return statutsList.value.find((st) => st.key === s)?.label ?? s;
-}
-
-function getStatusBadgeStyle(s: string) {
-    const key =
-        s === 'a_preparer' ? 'validee' : s === 'retiree' ? 'retiree' : s;
-    const st = statutsList.value.find((x) => x.key === key);
-    if (!st)
-        return { backgroundColor: '#6b7280', color: 'white', border: 'none' };
-    return {
-        backgroundColor: st.color,
-        color: st.textColor,
-        border: (st as { borderColor?: string }).borderColor
-            ? `1px solid ${(st as { borderColor?: string }).borderColor}`
-            : 'none',
-    };
-}
-
-function isNavLink(label: string): boolean {
-    return /Previous|Précédent|Next|Suivant|»|&laquo;|&raquo;/.test(label);
-}
-
-const nextPageUrl = computed(() => {
-    const next = props.commandes.links?.find((l) =>
-        /Next|Suivant|»|&raquo;/.test(l.label),
-    );
-    return next?.url ?? null;
-});
 </script>
 
 <template>
-    <div class="space-y-6">
+    <div class="space-y-6 p-4 sm:p-5">
         <!-- Barre actions groupées -->
         <div
             v-if="someSelected"
-            class="flex flex-wrap items-center gap-3 rounded-lg border border-[#0d6efd]/30 bg-[#0d6efd]/10 px-4 py-3"
+            class="flex flex-wrap items-center gap-3 rounded-lg border border-[#459cd1]/30 bg-[#459cd1]/10 px-4 py-3"
         >
             <span class="font-medium"
                 >{{ selectedIds.size }} commande(s) sélectionnée(s)</span
@@ -203,7 +174,7 @@ const nextPageUrl = computed(() => {
                             />
                         </td>
                         <td
-                            class="max-w-0 py-3 pr-3 align-middle font-mono text-[12px] font-medium whitespace-nowrap text-[#0d6efd]"
+                            class="max-w-0 py-3 pr-3 align-middle font-mono text-[12px] font-medium whitespace-nowrap text-[#459cd1]"
                         >
                             <span class="block truncate" :title="cmd.numero">{{
                                 cmd.numero
@@ -265,10 +236,10 @@ const nextPageUrl = computed(() => {
                         >
                             <span
                                 class="inline-block max-w-full min-w-0 rounded-[10px] px-2 py-1.5 text-center text-[12px] font-bold leading-snug break-words whitespace-normal"
-                                :style="getStatusBadgeStyle(cmd.status)"
-                                :title="getStatusLabel(cmd.status)"
+                                :style="commandeStatutBadgeStyle(cmd.status)"
+                                :title="commandeStatutLabel(cmd.status)"
                             >
-                                {{ getStatusLabel(cmd.status) }}
+                                {{ commandeStatutLabel(cmd.status) }}
                             </span>
                         </td>
                         <td class="py-3 align-middle">
@@ -315,41 +286,13 @@ const nextPageUrl = computed(() => {
             </table>
         </div>
 
-        <!-- Pagination -->
-        <div
-            v-if="commandes.links?.length"
-            class="mt-6 flex flex-wrap items-center justify-between gap-4"
-        >
-            <div class="flex items-center gap-2">
-                <template v-for="(link, i) in commandes.links" :key="i">
-                    <Link
-                        v-if="link.url && !isNavLink(link.label)"
-                        :href="link.url"
-                        class="flex h-[31px] min-w-[31px] shrink-0 items-center justify-center rounded-[10px] px-3 text-[13px] font-bold transition-colors"
-                        :class="
-                            link.active
-                                ? 'bg-[#0d6efd] text-white'
-                                : 'border border-[rgba(102,102,102,0.42)] bg-white text-[rgba(102,102,102,0.6)] hover:bg-gray-50'
-                        "
-                    >
-                        {{ link.label }}
-                    </Link>
-                    <span
-                        v-else-if="!link.url && !isNavLink(link.label)"
-                        class="flex h-[31px] shrink-0 items-center justify-center px-2 text-[13px] text-[rgba(102,102,102,0.35)]"
-                    >
-                        {{ link.label }}
-                    </span>
-                </template>
-            </div>
-            <Link
-                v-if="nextPageUrl"
-                :href="nextPageUrl"
-                class="flex items-center gap-2 text-[14px] font-bold text-[rgba(0,0,0,0.74)] hover:underline"
-            >
-                Page suivante
-                <ChevronRight class="size-4" />
-            </Link>
+        <div class="border-t border-border pt-4">
+            <ModulePagination
+                :links="commandes.links"
+                :from="commandes.from"
+                :to="commandes.to"
+                :total="commandes.total"
+            />
         </div>
     </div>
 </template>

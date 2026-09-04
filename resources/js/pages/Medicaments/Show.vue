@@ -57,7 +57,7 @@ function designationComplete() {
         <div
             class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
         >
-            <MedicamentsSectionNav />
+            <MedicamentsSectionNav active="catalogue" />
 
             <BackLink href="/medicaments">Retour à la liste</BackLink>
 

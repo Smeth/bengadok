@@ -166,7 +166,7 @@ watch(
             >
                 <button
                     type="button"
-                    class="pointer-events-auto flex cursor-pointer flex-col items-center gap-2 rounded-lg border-0 bg-transparent p-3 text-center outline-none focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:ring-offset-2"
+                    class="pointer-events-auto flex cursor-pointer flex-col items-center gap-2 rounded-lg border-0 bg-transparent p-3 text-center outline-none focus-visible:ring-2 focus-visible:ring-[#459cd1] focus-visible:ring-offset-2"
                     @click="openFilePickerFromCard"
                 >
                     <span class="relative inline-flex text-[#94a3b8]">

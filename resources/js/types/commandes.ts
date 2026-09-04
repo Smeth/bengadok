@@ -118,6 +118,9 @@ export type CommandeListItem = {
 export type CommandeListResponse = {
     data: CommandeListItem[];
     links: Array<{ url: string | null; label: string; active: boolean }>;
+    from?: number | null;
+    to?: number | null;
+    total?: number;
 };
 
 export type PharmacieOption = {
@@ -137,7 +140,7 @@ export const STATUTS_COMMANDE = [
         key: 'nouvelle',
         label: 'Nouvelles Commandes',
         statsKey: 'nouvelles',
-        color: '#0d6efd',
+        color: '#459cd1',
         textColor: 'white',
     },
     {
@@ -170,6 +173,72 @@ export const STATUTS_COMMANDE = [
         borderColor: '#016630',
     },
 ] as const;
+
+export type CommandeStatutConfig = (typeof STATUTS_COMMANDE)[number];
+
+/** Couleur d’accent (bordure / texte inactif) pour un statut commande. */
+export function commandeStatutAccentColor(s: CommandeStatutConfig): string {
+    return s.borderColor ?? (s.color === 'white' ? s.textColor : s.color);
+}
+
+/** Style pill filtre statut (actif ou inactif), toujours lisible sur fond clair ou dégradé. */
+export function commandeStatutFilterStyle(
+    s: CommandeStatutConfig,
+    active: boolean,
+): Record<string, string> {
+    const accent = commandeStatutAccentColor(s);
+    if (active) {
+        return {
+            backgroundColor: s.color === 'white' ? '#ffffff' : s.color,
+            color: s.textColor,
+            border: `2px solid ${accent}`,
+        };
+    }
+    return {
+        backgroundColor: '#ffffff',
+        color: accent,
+        border: `1px solid ${accent}`,
+    };
+}
+
+/** Style badge statut dans le tableau. */
+export function commandeStatutBadgeStyle(statusKey: string): Record<string, string> {
+    const key =
+        statusKey === 'a_preparer'
+            ? 'validee'
+            : statusKey === 'retiree'
+              ? 'retiree'
+              : statusKey;
+    const st = STATUTS_COMMANDE.find((x) => x.key === key);
+    if (!st) {
+        return {
+            backgroundColor: '#f3f4f6',
+            color: '#374151',
+            border: '1px solid #d1d5db',
+        };
+    }
+    const accent = commandeStatutAccentColor(st);
+    if (st.key === 'retiree') {
+        return {
+            backgroundColor: '#ecfdf5',
+            color: st.textColor,
+            border: `1px solid ${accent}`,
+        };
+    }
+    return {
+        backgroundColor: st.color,
+        color: st.textColor,
+        border: 'none',
+    };
+}
+
+/** Libellé affiché pour un statut commande. */
+export function commandeStatutLabel(statusKey: string): string {
+    if (statusKey === 'a_preparer') return 'Validée';
+    if (statusKey === 'retiree') return 'Livrée';
+    const st = STATUTS_COMMANDE.find((x) => x.key === statusKey);
+    return st?.label ?? statusKey;
+}
 
 /** Motif d’annulation (données partagées Inertia `motifs_annulation`) */
 export type MotifAnnulationOption = {

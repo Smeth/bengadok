@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import {
-    Search,
     Filter,
     Check,
     Package,
@@ -13,6 +12,8 @@ import {
     CheckCheck,
     TrendingUp,
     Coins,
+    Clock,
+    UserCheck,
 } from 'lucide-vue-next';
 import { ref, watch, computed } from 'vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
@@ -24,8 +25,11 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import ModuleEmptyState from '@/components/shared/ModuleEmptyState.vue';
+import ModuleFilterPanel from '@/components/shared/ModuleFilterPanel.vue';
+import ModuleStatCard from '@/components/shared/ModuleStatCard.vue';
 import MedicamentsSectionNav from '@/components/medicaments/MedicamentsSectionNav.vue';
+import { moduleCardClass, modulePageClass, moduleSelectClass } from '@/lib/bengadokUi';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
@@ -257,9 +261,7 @@ const statutLabels: Record<string, string> = {
     <Head title="Gestion des doublons médicaments - BengaDok" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div
-            class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
-        >
+        <div :class="modulePageClass">
             <div class="flex flex-wrap items-center gap-3">
                 <div
                     class="flex size-9 items-center justify-center gap-1 rounded-full bg-emerald-500 text-white"
@@ -316,152 +318,107 @@ const statutLabels: Record<string, string> = {
                 </div>
             </div>
 
-            <!-- Recherche & filtres -->
-            <div
-                class="rounded-xl border border-white/80 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/95 sm:p-5"
+            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <ModuleStatCard
+                    label="Groupes à traiter"
+                    :value="stats.en_attente"
+                    :icon="Clock"
+                    value-class="text-amber-700"
+                />
+                <ModuleStatCard
+                    label="Groupes vérifiés"
+                    :value="stats.verifies"
+                    :icon="UserCheck"
+                    value-class="text-[#459cd1]"
+                />
+                <ModuleStatCard
+                    label="Fusions effectuées"
+                    :value="stats.fusionnes"
+                    :icon="Merge"
+                    value-class="text-emerald-700"
+                />
+                <ModuleStatCard
+                    label="Produits concernés"
+                    :value="stats.total_produits"
+                    :icon="Package"
+                />
+            </div>
+
+            <ModuleFilterPanel
+                v-model:search="searchQuery"
+                placeholder="Rechercher par désignation, dosage, forme..."
+                show-submit
+                :counter="groupes.length"
+                :counter-icon="Package"
+                @submit="filtrer('search', searchQuery)"
             >
-                <form
-                    class="flex flex-wrap items-center gap-3 sm:gap-4"
-                    @submit.prevent="filtrer('search', searchQuery)"
-                >
-                    <div class="relative min-w-[220px] flex-1">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
-                        />
-                        <Input
-                            v-model="searchQuery"
-                            type="search"
-                            placeholder="Rechercher par désignation, dosage, forme..."
-                            class="h-10 w-full rounded-full border-0 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm ring-1 ring-black/10 placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-[#459cd1]/40"
-                            autocomplete="off"
-                        />
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <Filter class="size-4 shrink-0 text-slate-500" />
-                        <select
-                            :value="filters.tri"
-                            class="flex h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm"
-                            @change="
-                                (e: Event) =>
-                                    filtrer(
-                                        'tri',
-                                        (e.target as HTMLSelectElement).value,
-                                    )
-                            "
-                        >
-                            <option value="">Trier par</option>
-                            <option value="recent">Récent</option>
-                            <option value="ventes">Ventes</option>
-                            <option value="ca">CA</option>
-                        </select>
-                    </div>
+                <div class="flex items-center gap-2">
+                    <Filter class="size-4 shrink-0 text-slate-500" />
                     <select
-                        :value="filters.critere"
-                        class="flex h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm"
+                        :value="filters.tri"
+                        :class="moduleSelectClass"
                         @change="
                             (e: Event) =>
                                 filtrer(
-                                    'critere',
+                                    'tri',
                                     (e.target as HTMLSelectElement).value,
                                 )
                         "
                     >
-                        <option value="">Tous les critères</option>
-                        <option
-                            v-for="(label, cle) in criteresDisponibles || {}"
-                            :key="cle"
-                            :value="cle"
-                        >
-                            {{ label }}
-                        </option>
+                        <option value="">Trier par</option>
+                        <option value="recent">Récent</option>
+                        <option value="ventes">Ventes</option>
+                        <option value="ca">CA</option>
                     </select>
-                    <div class="flex items-center gap-2">
-                        <Check class="size-4 shrink-0 text-slate-500" />
-                        <select
-                            :value="filters.statut"
-                            class="flex h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm"
-                            @change="
-                                (e: Event) =>
-                                    filtrer(
-                                        'statut',
-                                        (e.target as HTMLSelectElement).value,
-                                    )
-                            "
-                        >
-                            <option value="">Tous les statuts</option>
-                            <option value="en_attente">En Attente</option>
-                            <option value="verifie">Vérifiés</option>
-                            <option value="fusionne">Fusionnés</option>
-                            <option value="ignore">Ignorés</option>
-                        </select>
-                    </div>
-                    <Button
-                        type="submit"
-                        class="rounded-lg bg-[#459cd1] px-5 text-white hover:bg-[#3a87b8]"
-                    >
-                        Rechercher
-                    </Button>
-                </form>
-            </div>
-
-            <!-- Stats cards -->
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div
-                    class="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/50 dark:bg-amber-900/20"
-                >
-                    <p
-                        class="text-3xl font-bold text-amber-700 dark:text-amber-400"
-                    >
-                        {{ stats.en_attente }}
-                    </p>
-                    <p class="text-sm text-amber-800 dark:text-amber-300">
-                        Groupes à traiter
-                    </p>
                 </div>
-                <div
-                    class="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800/50 dark:bg-blue-900/20"
+                <select
+                    :value="filters.critere"
+                    :class="moduleSelectClass"
+                    @change="
+                        (e: Event) =>
+                            filtrer(
+                                'critere',
+                                (e.target as HTMLSelectElement).value,
+                            )
+                    "
                 >
-                    <p
-                        class="text-3xl font-bold text-blue-700 dark:text-blue-400"
+                    <option value="">Tous les critères</option>
+                    <option
+                        v-for="(label, cle) in criteresDisponibles || {}"
+                        :key="cle"
+                        :value="cle"
                     >
-                        {{ stats.verifies }}
-                    </p>
-                    <p class="text-sm text-blue-800 dark:text-blue-300">
-                        Groupes vérifiés
-                    </p>
-                </div>
-                <div
-                    class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800/50 dark:bg-emerald-900/20"
-                >
-                    <p
-                        class="text-3xl font-bold text-emerald-700 dark:text-emerald-400"
+                        {{ label }}
+                    </option>
+                </select>
+                <div class="flex items-center gap-2">
+                    <Check class="size-4 shrink-0 text-slate-500" />
+                    <select
+                        :value="filters.statut"
+                        :class="moduleSelectClass"
+                        @change="
+                            (e: Event) =>
+                                filtrer(
+                                    'statut',
+                                    (e.target as HTMLSelectElement).value,
+                                )
+                        "
                     >
-                        {{ stats.fusionnes }}
-                    </p>
-                    <p class="text-sm text-emerald-800 dark:text-emerald-300">
-                        Fusions effectuées
-                    </p>
+                        <option value="">Tous les statuts</option>
+                        <option value="en_attente">En attente</option>
+                        <option value="verifie">Vérifiés</option>
+                        <option value="fusionne">Fusionnés</option>
+                        <option value="ignore">Ignorés</option>
+                    </select>
                 </div>
-                <div
-                    class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-white/5"
-                >
-                    <p
-                        class="text-3xl font-bold text-slate-800 dark:text-slate-200"
-                    >
-                        {{ stats.total_produits }}
-                    </p>
-                    <p class="text-sm text-muted-foreground">
-                        Produits concernés
-                    </p>
-                </div>
-            </div>
+            </ModuleFilterPanel>
 
             <!-- Groupes list -->
             <div class="space-y-6">
                 <div
                     v-for="g in groupes"
                     :key="g.id"
-                    class="rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/95"
+                    :class="[moduleCardClass, 'p-6']"
                 >
                     <div
                         class="mb-4 flex flex-wrap items-start justify-between gap-4"
@@ -627,12 +584,10 @@ const statutLabels: Record<string, string> = {
                     </div>
                 </div>
 
-                <div
+                <ModuleEmptyState
                     v-if="!groupes.length"
-                    class="rounded-xl border border-dashed bg-white/50 py-12 text-center text-muted-foreground dark:border-white/10"
-                >
-                    Aucun groupe de doublons trouvé.
-                </div>
+                    message="Aucun groupe de doublons trouvé."
+                />
             </div>
         </div>
 

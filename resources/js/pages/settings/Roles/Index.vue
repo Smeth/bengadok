@@ -2,7 +2,6 @@
 import { Head, router } from '@inertiajs/vue3';
 import {
     Plus,
-    Search,
     Pencil,
     Trash2,
     ShieldCheck,
@@ -12,6 +11,8 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
+import ModuleFilterPanel from '@/components/shared/ModuleFilterPanel.vue';
+import ModuleInlineTabs from '@/components/shared/ModuleInlineTabs.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -227,50 +228,35 @@ function permissionsApercu(
                     </Button>
                 </div>
 
-                <div class="flex gap-2">
-                    <button
-                        type="button"
-                        class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                        :class="
-                            activeTab === 'backoffice'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted hover:bg-muted/80'
-                        "
-                        @click="
-                            activeTab = 'backoffice';
-                            filtrer();
-                        "
-                    >
-                        Rôles Utilisateurs Backoffice
-                    </button>
-                    <button
-                        type="button"
-                        class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                        :class="
-                            activeTab === 'pharmacie'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted hover:bg-muted/80'
-                        "
-                        @click="
-                            activeTab = 'pharmacie';
-                            filtrer();
-                        "
-                    >
-                        Rôles agents pharmacie
-                    </button>
-                </div>
+                <ModuleInlineTabs
+                    variant="light"
+                    :model-value="activeTab"
+                    :tabs="[
+                        {
+                            id: 'backoffice',
+                            label: 'Rôles Utilisateurs Backoffice',
+                            icon: ShieldCheck,
+                        },
+                        {
+                            id: 'pharmacie',
+                            label: 'Rôles agents pharmacie',
+                            icon: Shield,
+                        },
+                    ]"
+                    @update:model-value="
+                        activeTab = $event as 'backoffice' | 'pharmacie';
+                        filtrer();
+                    "
+                />
 
-                <div class="relative">
-                    <Search
-                        class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                    />
-                    <Input
-                        v-model="searchQuery"
-                        placeholder="Rechercher un rôle"
-                        class="pl-9"
-                        @keyup.enter="filtrer"
-                    />
-                </div>
+                <ModuleFilterPanel
+                    v-model:search="searchQuery"
+                    placeholder="Rechercher un rôle…"
+                    show-submit
+                    :counter="filteredRoles.length"
+                    :counter-icon="Shield"
+                    @submit="filtrer"
+                />
 
                 <div
                     class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"

@@ -108,7 +108,7 @@ onBeforeUnmount(closeViewer);
         class="space-y-3 rounded-xl border border-dashed border-gray-200 bg-white px-4 py-3"
     >
         <p class="flex items-center gap-2 text-[13px] font-bold text-gray-700">
-            <ImagePlus class="size-4 text-[#0d6efd]" />
+            <ImagePlus class="size-4 text-[#459cd1]" />
             Photos jointes
         </p>
 
@@ -179,10 +179,10 @@ onBeforeUnmount(closeViewer);
                 class="h-9 w-full rounded-lg border border-gray-200 px-3 text-[12px]"
             />
             <label
-                class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#93c5fd]/60 bg-[#eff6ff]/40 px-4 py-4 text-center transition-colors hover:border-[#0d6efd]/50 hover:bg-[#eff6ff]/70"
+                class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#459cd1]/40 bg-[#459cd1]/10 px-4 py-4 text-center transition-colors hover:border-[#459cd1]/50 hover:bg-[#459cd1]/15"
             >
-                <ImagePlus class="size-8 text-[#0d6efd]/70" />
-                <span class="text-[12px] font-semibold text-[#0d6efd]"
+                <ImagePlus class="size-8 text-[#459cd1]/70" />
+                <span class="text-[12px] font-semibold text-[#459cd1]"
                     >Choisir une image</span
                 >
                 <input
@@ -213,7 +213,7 @@ onBeforeUnmount(closeViewer);
                 />
                 <button
                     type="button"
-                    class="w-full rounded-lg bg-[#0d6efd] px-4 py-2 text-[12px] font-semibold text-white disabled:opacity-50"
+                    class="w-full rounded-lg bg-[#459cd1] px-4 py-2 text-[12px] font-semibold text-white disabled:opacity-50"
                     :disabled="uploading"
                     @click="upload"
                 >

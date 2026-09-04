@@ -2,7 +2,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     Plus,
-    Search,
     AlertTriangle,
     Truck,
     FileText,
@@ -18,6 +17,9 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import CommandeEnregistrementModal from '@/components/CommandeEnregistrementModal.vue';
 import type { FormEnregPayload } from '@/components/CommandeEnregistrementModal.vue';
 import CommandesTable from '@/components/commandes/CommandesTable.vue';
+import ModuleEmptyState from '@/components/shared/ModuleEmptyState.vue';
+import ModuleFilterPanel from '@/components/shared/ModuleFilterPanel.vue';
+import ModuleInlineTabs from '@/components/shared/ModuleInlineTabs.vue';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import OrdonnanceAnalysisProgressBar from '@/components/OrdonnanceAnalysisProgressBar.vue';
 import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
@@ -48,8 +50,21 @@ import {
     formatDateFrLocal,
 } from '@/lib/formatDateLocal';
 import { normalizeInertiaErrors } from '@/lib/validationErrors';
+import {
+    moduleCardClass,
+    moduleFilterPanelClass,
+    moduleInputDateClass,
+    modulePageClass,
+    modulePrimaryButtonClass,
+    moduleSelectClass,
+} from '@/lib/bengadokUi';
 import { dashboard } from '@/routes';
-import { STATUTS_COMMANDE } from '@/types';
+import {
+    STATUTS_COMMANDE,
+    commandeStatutBadgeStyle,
+    commandeStatutFilterStyle,
+    commandeStatutLabel,
+} from '@/types';
 import type { BreadcrumbItem, CommandeDetail } from '@/types';
 import type { MotifAnnulationOption } from '@/types';
 
@@ -261,6 +276,10 @@ const motifLabelBySlug = computed(() =>
 
 const searchQuery = ref(props.filters.search ?? '');
 const activeTab = ref<'gestion' | 'statistiques'>('gestion');
+const commandeTabs = [
+    { id: 'gestion', label: 'Gestion commandes' },
+    { id: 'statistiques', label: 'Statistiques' },
+] as const;
 const detailCommande = ref<CommandeDetail | null>(null);
 const complementairesForm = ref({ commentaire: '' });
 const savingComplementaires = ref(false);
@@ -365,7 +384,7 @@ function exportSelectedCSV() {
         c.client?.adresse ?? '-',
         getMedicamentsText(c.produits),
         Number(c.prix_total).toLocaleString('fr-FR'),
-        getStatusLabel(c.status),
+        commandeStatutLabel(c.status),
     ]);
     const csv = [
         headers.join(';'),
@@ -447,27 +466,6 @@ function filtrer(key: string, value: string) {
         preserveState: true,
         preserveScroll: true,
     });
-}
-
-function getStatusLabel(s: string) {
-    if (s === 'a_preparer') return 'Validée';
-    if (s === 'retiree') return 'Livrée';
-    return statuts.find((st) => st.key === s)?.label ?? s;
-}
-
-function getStatusBadgeStyle(s: string) {
-    const key =
-        s === 'a_preparer' ? 'validee' : s === 'retiree' ? 'retiree' : s;
-    const st = statuts.find((x) => x.key === key);
-    if (!st)
-        return { backgroundColor: '#6b7280', color: 'white', border: 'none' };
-    return {
-        backgroundColor: st.color,
-        color: st.textColor,
-        border: (st as { borderColor?: string }).borderColor
-            ? `1px solid ${(st as { borderColor?: string }).borderColor}`
-            : 'none',
-    };
 }
 
 function getMedicamentsText(
@@ -1038,203 +1036,125 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
     <Head title="Gestion des commandes - BengaDok" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="relative min-h-full overflow-x-auto rounded-xl p-6 md:p-8">
-            <!-- Carte principale design React -->
-            <div
-                class="relative overflow-hidden rounded-[30px] bg-white p-8 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
-            >
-                <div class="relative z-10">
-                    <!-- Tabs design React -->
-                    <div class="mb-6 flex gap-8 border-b-2 border-transparent">
-                        <button
-                            type="button"
-                            class="relative rounded-md pb-3 text-[16px] font-bold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#0d6efd]/40 focus-visible:ring-offset-2"
-                            :class="
-                                activeTab === 'gestion'
-                                    ? 'text-[#0d6efd]'
-                                    : 'text-gray-600'
-                            "
-                            @click="activeTab = 'gestion'"
-                        >
-                            Gestion commandes
-                            <div
-                                v-if="activeTab === 'gestion'"
-                                class="absolute bottom-0 left-0 right-0 h-[3px] bg-[#0d6efd]"
-                            />
-                        </button>
-                        <button
-                            type="button"
-                            class="relative rounded-md pb-3 text-[16px] font-bold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#0d6efd]/40 focus-visible:ring-offset-2"
-                            :class="
-                                activeTab === 'statistiques'
-                                    ? 'text-[#0d6efd]'
-                                    : 'text-gray-600'
-                            "
-                            @click="activeTab = 'statistiques'"
-                        >
-                            Statistiques
-                            <div
-                                v-if="activeTab === 'statistiques'"
-                                class="absolute bottom-0 left-0 right-0 h-[3px] bg-[#0d6efd]"
-                            />
-                        </button>
-                    </div>
+        <div :class="modulePageClass">
+            <ModuleInlineTabs
+                v-model="activeTab"
+                :tabs="[...commandeTabs]"
+            />
 
-                    <div v-if="activeTab === 'gestion'" class="space-y-6">
-                        <!-- Barre recherche et filtres design React -->
-                        <form
-                            class="mb-6 flex flex-wrap items-center justify-between gap-4"
-                            @submit.prevent="filtrer('search', searchQuery)"
-                        >
-                            <div class="flex flex-wrap items-center gap-4">
-                                <div class="relative">
-                                    <Search
-                                        class="absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-[#5C5959]"
-                                    />
-                                    <input
-                                        v-model="searchQuery"
-                                        type="text"
-                                        placeholder="Recherche commandes (Médicaments, téléphone, Noms,...)"
-                                        title="Recherche par médicaments, téléphone, nom client..."
-                                        class="w-full min-w-[240px] max-w-[420px] rounded-[13px] border-0 bg-white py-2.5 pl-10 pr-4 text-[14px] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3995d2]"
-                                    />
-                                </div>
-                                <span
-                                    class="text-[14px] font-bold text-white/90"
-                                    >Période</span
-                                >
-                                <select
-                                    :value="filters.periode ?? ''"
-                                    class="rounded-[13px] border-0 bg-white px-4 py-2.5 text-[14px] font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3995d2]"
-                                    @change="
-                                        (e: Event) =>
-                                            filtrer(
-                                                'periode',
-                                                (e.target as HTMLSelectElement)
-                                                    .value,
-                                            )
-                                    "
-                                >
-                                    <option value="">Toutes les dates</option>
-                                    <option value="aujourdhui">
-                                        Aujourd'hui
-                                    </option>
-                                    <option value="semaine">
-                                        Cette semaine
-                                    </option>
-                                    <option value="mois">Ce mois</option>
-                                </select>
-                            </div>
-                            <div
-                                class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4"
-                            >
-                                <input
-                                    :value="filters.date ?? ''"
-                                    type="date"
-                                    title="Une date précise remplace le filtre période"
-                                    class="w-[180px] rounded-[13px] border-0 bg-white px-4 py-2.5 text-[14px] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3995d2]"
-                                    @input="
-                                        (e: Event) =>
-                                            filtrer(
-                                                'date',
-                                                (e.target as HTMLInputElement)
-                                                    .value,
-                                            )
-                                    "
-                                />
-                                <span
-                                    class="hidden text-[11px] text-white/70 sm:inline"
-                                    >ou date précise (exclut la période)</span
-                                >
-                                <button
-                                    v-if="canCreateCommande"
-                                    type="button"
-                                    class="flex items-center gap-2 rounded-[11px] bg-[#0d6efd] px-6 py-2.5 text-[16px] font-bold text-white shadow-sm transition-colors hover:bg-[#0b5ed7]"
-                                    @click="openEnregistrementModal"
-                                >
-                                    <Plus class="size-5" />
-                                    Nouvelles Commandes
-                                </button>
-                            </div>
-                        </form>
-
-                        <!-- Filtre statut style Figma -->
-                        <div class="mb-6 flex flex-wrap items-center gap-3">
-                            <button
-                                class="rounded-[13px] px-4 py-2 text-[14px] font-bold transition-all"
-                                :style="{
-                                    backgroundColor: !filters.status
-                                        ? '#0d6efd'
-                                        : 'transparent',
-                                    color: !filters.status
-                                        ? 'white'
-                                        : '#0d6efd',
-                                    border: !filters.status
-                                        ? 'none'
-                                        : '1px solid #0d6efd',
-                                }"
-                                @click="filtrer('status', '')"
-                            >
-                                Toutes
-                            </button>
-                            <button
-                                v-for="s in statuts"
-                                :key="s.key"
-                                class="shrink-0 rounded-[13px] px-4 py-2 text-[14px] font-bold transition-all whitespace-nowrap"
-                                :style="{
-                                    backgroundColor:
-                                        filters.status === s.key
-                                            ? s.color
-                                            : 'transparent',
-                                    color:
-                                        filters.status === s.key
-                                            ? s.textColor
-                                            : ((s as { borderColor?: string })
-                                                  .borderColor ?? s.color),
-                                    border:
-                                        filters.status === s.key
-                                            ? 'none'
-                                            : `1px solid ${(s as { borderColor?: string }).borderColor ?? s.color}`,
-                                }"
-                                @click="
-                                    filtrer(
-                                        'status',
-                                        filters.status === s.key ? '' : s.key,
-                                    )
-                                "
-                            >
-                                {{ s.label }} ({{ stats[s.statsKey] ?? 0 }})
-                            </button>
-                        </div>
-
-                        <CommandesTable
-                            :commandes="commandes"
-                            :stats="stats ?? {}"
-                            :filters="filters ?? {}"
-                            :statuts="statuts"
-                            :selected-ids="selectedIds"
-                            :all-selected="allSelected"
-                            :some-selected="someSelected"
-                            :can-create-commande="canCreateCommande"
-                            @toggle-all="toggleAll"
-                            @toggle-one="toggleOne"
-                            @clear-selection="clearSelection"
-                            @export-csv="exportSelectedCSV"
-                            @open-bulk-annuler-modal="openBulkAnnulerModal"
-                            @open-detail="openDetail"
-                        />
-                    </div>
-
-                    <div
-                        v-else
-                        class="rounded-xl border bg-white p-8 text-center"
+            <div v-if="activeTab === 'gestion'" class="space-y-6">
+                <ModuleFilterPanel
+                    v-model:search="searchQuery"
+                    placeholder="Recherche commandes (médicaments, téléphone, noms…)"
+                    :counter="commandes?.total ?? 0"
+                    @submit="filtrer('search', searchQuery)"
+                >
+                    <span
+                        class="text-sm font-medium text-muted-foreground"
+                        >Période</span
                     >
-                        <p class="text-muted-foreground">
-                            Statistiques – à venir
-                        </p>
+                    <select
+                        :value="filters.periode ?? ''"
+                        :class="moduleSelectClass"
+                        @change="
+                            (e: Event) =>
+                                filtrer(
+                                    'periode',
+                                    (e.target as HTMLSelectElement).value,
+                                )
+                        "
+                    >
+                        <option value="">Toutes les dates</option>
+                        <option value="aujourdhui">Aujourd'hui</option>
+                        <option value="semaine">Cette semaine</option>
+                        <option value="mois">Ce mois</option>
+                    </select>
+                    <input
+                        :value="filters.date ?? ''"
+                        type="date"
+                        title="Une date précise remplace le filtre période"
+                        :class="moduleInputDateClass"
+                        @input="
+                            (e: Event) =>
+                                filtrer(
+                                    'date',
+                                    (e.target as HTMLInputElement).value,
+                                )
+                        "
+                    />
+                    <template #actions>
+                        <Button
+                            v-if="canCreateCommande"
+                            type="button"
+                            :class="[modulePrimaryButtonClass, 'gap-2']"
+                            @click="openEnregistrementModal"
+                        >
+                            <Plus class="size-4" />
+                            Nouvelle commande
+                        </Button>
+                    </template>
+                </ModuleFilterPanel>
+
+                <!-- Filtres statut -->
+                <div :class="moduleFilterPanelClass">
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <button
+                            type="button"
+                            class="rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-all"
+                            :class="
+                                !filters.status
+                                    ? 'bg-[#459cd1] text-white ring-2 ring-[#459cd1]/30'
+                                    : 'border border-[#459cd1] bg-white text-[#459cd1] hover:bg-[#459cd1]/5'
+                            "
+                            @click="filtrer('status', '')"
+                        >
+                            Toutes
+                        </button>
+                        <button
+                            v-for="s in statuts"
+                            :key="s.key"
+                            type="button"
+                            class="shrink-0 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-all whitespace-nowrap hover:opacity-90"
+                            :style="commandeStatutFilterStyle(
+                                s,
+                                filters.status === s.key,
+                            )"
+                            @click="
+                                filtrer(
+                                    'status',
+                                    filters.status === s.key ? '' : s.key,
+                                )
+                            "
+                        >
+                            {{ s.label }} ({{ stats[s.statsKey] ?? 0 }})
+                        </button>
                     </div>
                 </div>
+
+                <div :class="[moduleCardClass, 'overflow-hidden']">
+                    <CommandesTable
+                        :commandes="commandes"
+                        :stats="stats ?? {}"
+                        :filters="filters ?? {}"
+                        :statuts="statuts"
+                        :selected-ids="selectedIds"
+                        :all-selected="allSelected"
+                        :some-selected="someSelected"
+                        :can-create-commande="canCreateCommande"
+                        @toggle-all="toggleAll"
+                        @toggle-one="toggleOne"
+                        @clear-selection="clearSelection"
+                        @export-csv="exportSelectedCSV"
+                        @open-bulk-annuler-modal="openBulkAnnulerModal"
+                        @open-detail="openDetail"
+                    />
+                </div>
             </div>
+
+            <ModuleEmptyState
+                v-else
+                message="Statistiques – à venir"
+            />
         </div>
 
         <!-- Modal Détails -> Remplacée par un Sheet (Tiroir) -->
@@ -1256,7 +1176,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                 >
                     <div class="flex items-center gap-3 text-sm text-muted-foreground">
                         <svg
-                            class="size-5 shrink-0 animate-spin text-[#0d6efd]"
+                            class="size-5 shrink-0 animate-spin text-[#459cd1]"
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"
                             viewBox="0 0 24 24"
@@ -1316,14 +1236,14 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                         >
                             <span
                                 class="rounded-full px-3 py-1 text-[12px] font-bold whitespace-nowrap"
-                                :style="getStatusBadgeStyle(detailCommande.status)"
+                                :style="commandeStatutBadgeStyle(detailCommande.status)"
                             >
-                                {{ getStatusLabel(detailCommande.status) }}
+                                {{ commandeStatutLabel(detailCommande.status) }}
                             </span>
                             <Link
                                 v-if="peutModifierCommandeComplete"
                                 :href="`/commandes/${detailCommande.id}/edit`"
-                                class="inline-flex items-center gap-1.5 rounded-lg border border-[#0d6efd]/30 bg-[#0d6efd]/5 px-3 py-1.5 text-[12px] font-semibold text-[#0d6efd] transition-colors hover:bg-[#0d6efd]/10"
+                                class="inline-flex items-center gap-1.5 rounded-lg border border-[#459cd1]/30 bg-[#459cd1]/5 px-3 py-1.5 text-[12px] font-semibold text-[#459cd1] transition-colors hover:bg-[#459cd1]/10"
                             >
                                 <Pencil class="size-3.5 shrink-0" />
                                 Modifier
@@ -1432,15 +1352,11 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                         >
                                             {{ e.numero }}
                                             <span
-                                                class="ml-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold capitalize"
-                                                :class="
-                                                    e.status === 'en_attente'
-                                                        ? 'bg-amber-100 text-amber-900'
-                                                        : 'bg-gray-100 text-gray-600'
-                                                "
+                                                class="ml-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold"
+                                                :style="commandeStatutBadgeStyle(e.status)"
                                             >
                                                 {{
-                                                    getStatusLabel(e.status)
+                                                    commandeStatutLabel(e.status)
                                                 }}</span
                                             >
                                         </p>
@@ -1465,7 +1381,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                     </div>
                                     <button
                                         type="button"
-                                        class="shrink-0 rounded-lg bg-[#0d6efd]/10 px-3 py-1.5 text-[12px] font-bold text-[#0d6efd] transition-colors hover:bg-[#0d6efd]/20"
+                                        class="shrink-0 rounded-lg bg-[#459cd1]/10 px-3 py-1.5 text-[12px] font-bold text-[#459cd1] transition-colors hover:bg-[#459cd1]/20"
                                         @click="openDetail(e.id)"
                                     >
                                         Ouvrir
@@ -1611,7 +1527,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
 
                         <!-- Ordonnance -->
                         <div
-                            class="rounded-2xl border border-dashed border-gray-300 bg-white p-5 shadow-sm transition-colors hover:border-[#0d6efd]"
+                            class="rounded-2xl border border-dashed border-gray-300 bg-white p-5 shadow-sm transition-colors hover:border-[#459cd1]"
                         >
                             <h3
                                 class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
@@ -1855,7 +1771,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                             v-model="complementairesForm.commentaire"
                                             rows="3"
                                             placeholder="Notes internes, consignes de livraison…"
-                                            class="mt-1 w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-[14px] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                            class="mt-1 w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-[14px] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                         />
                                     </div>
                                     <Button
@@ -2027,7 +1943,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                     !detailCommande.deja_relancee
                                 "
                                 type="button"
-                                class="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#3B82F6] text-[15px] font-bold text-white transition-colors hover:bg-blue-600"
+                                class="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#459cd1] text-[15px] font-bold text-white transition-colors hover:bg-[#3a87b8]"
                                 @click="openRelancerModal"
                             >
                                 <RefreshCw class="size-5" />
@@ -2061,7 +1977,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                     "
                                 >
                                     <select
-                                        class="h-10 min-w-[12rem] max-w-full rounded-xl border border-gray-200 bg-white px-3 text-[13px] font-semibold text-gray-900 focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                        class="h-10 min-w-[12rem] max-w-full rounded-xl border border-gray-200 bg-white px-3 text-[13px] font-semibold text-gray-900 focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                         :value="
                                             detailCommande.mode_paiement?.id ??
                                             ''
@@ -2170,7 +2086,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                             v-for="m in montantsLivraison"
                                             :key="m.id"
                                             type="button"
-                                            class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-[12px] font-bold text-gray-700 transition-colors hover:border-[#0d6efd] hover:bg-blue-50 hover:text-[#0d6efd]"
+                                            class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-[12px] font-bold text-gray-700 transition-colors hover:border-[#459cd1] hover:bg-blue-50 hover:text-[#459cd1]"
                                             @click.stop="
                                                 setMontantLivraison(m.id)
                                             "
@@ -2248,7 +2164,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 >
                                 <select
                                     id="detail-livreur-select"
-                                    class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-[14px] text-gray-900 focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                    class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-[14px] text-gray-900 focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                     :value="detailCommande.livreur?.id ?? ''"
                                     @change="
                                         setLivreurCommande(
@@ -2366,7 +2282,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                             class="flex h-12 w-full items-center justify-center rounded-full text-[15px] font-bold text-white transition-colors"
                                             :class="
                                                 peutValiderCommandeEnAttente
-                                                    ? 'bg-[#0d6efd] hover:bg-blue-700'
+                                                    ? 'bg-[#459cd1] hover:bg-[#3a87b8]'
                                                     : 'cursor-not-allowed bg-gray-400'
                                             "
                                             @click="openValiderModal"
@@ -2413,7 +2329,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 >
                                     <button
                                         type="button"
-                                        class="flex h-12 w-full items-center justify-center rounded-full bg-[#0d6efd] text-[15px] font-bold text-white transition-colors hover:bg-blue-700"
+                                        class="flex h-12 w-full items-center justify-center rounded-full bg-[#459cd1] text-[15px] font-bold text-white transition-colors hover:bg-[#3a87b8]"
                                         @click="showRecuModal = true"
                                     >
                                         <FileText class="mr-2 size-5" />
@@ -2445,9 +2361,9 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                         class="flex items-center gap-2 text-lg font-bold text-gray-900"
                     >
                         <span
-                            class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#0d6efd]/15"
+                            class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#459cd1]/15"
                         >
-                            <CheckCircle2 class="size-6 text-[#0d6efd]" />
+                            <CheckCircle2 class="size-6 text-[#459cd1]" />
                         </span>
                         Valider la commande
                     </DialogTitle>
@@ -2475,7 +2391,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                     </Button>
                     <Button
                         type="button"
-                        class="rounded-[10px] bg-[#0d6efd] font-bold text-white hover:bg-blue-700"
+                        class="rounded-[10px] bg-[#459cd1] font-bold text-white hover:bg-[#3a87b8]"
                         :disabled="!peutValiderCommandeEnAttente"
                         @click="confirmValiderCommande"
                     >
@@ -2564,7 +2480,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 motifAutoriseRelance(motifAnnulation) &&
                                 canCreateCommande
                             "
-                            class="h-9 min-w-[180px] rounded-[10px] bg-[#0d6efd] text-sm font-black text-white hover:bg-blue-700"
+                            class="h-9 min-w-[180px] rounded-[10px] bg-[#459cd1] text-sm font-black text-white hover:bg-[#3a87b8]"
                             :disabled="!motifAnnulation"
                             @click="confirmAnnulerEtRelancer"
                         >

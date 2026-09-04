@@ -107,7 +107,7 @@ onMounted(() => {
             >
                 <!-- Anneaux pulsants concentriques -->
                 <div
-                    class="bengadok-loader-ring-1 pointer-events-none absolute inset-[-8%] rounded-full border-2 border-[#3995d2]/35"
+                    class="bengadok-loader-ring-1 pointer-events-none absolute inset-[-8%] rounded-full border-2 border-[#459cd1]/35"
                     aria-hidden="true"
                 />
                 <div
@@ -115,7 +115,7 @@ onMounted(() => {
                     aria-hidden="true"
                 />
                 <div
-                    class="bengadok-loader-ring-3 pointer-events-none absolute inset-[-28%] rounded-full border border-[#3995d2]/20"
+                    class="bengadok-loader-ring-3 pointer-events-none absolute inset-[-28%] rounded-full border border-[#459cd1]/20"
                     aria-hidden="true"
                 />
 
@@ -133,7 +133,7 @@ onMounted(() => {
                                 x2="100%"
                                 y2="100%"
                             >
-                                <stop offset="0%" stop-color="#3995d2" />
+                                <stop offset="0%" stop-color="#459cd1" />
                                 <stop offset="100%" stop-color="#5bb66e" />
                             </linearGradient>
                         </defs>

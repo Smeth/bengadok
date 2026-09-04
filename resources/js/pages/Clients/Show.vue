@@ -138,7 +138,9 @@ const arrondissementAffiche = computed(() => {
                 Prospect
             </p>
 
-            <ClientsSectionNav />
+            <ClientsSectionNav
+                :active="client.est_prospect ? 'prospects' : 'liste'"
+            />
 
             <!-- En-tête maquette -->
             <div class="flex flex-wrap items-center justify-between gap-4">

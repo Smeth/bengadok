@@ -20,6 +20,7 @@ import {
     ClipboardList,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
+import ModuleInlineTabs from '@/components/shared/ModuleInlineTabs.vue';
 import Heading from '@/components/Heading.vue';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import SettingsPageShell from '@/components/settings/SettingsPageShell.vue';
@@ -865,24 +866,12 @@ function sauverOrdonnanceVerification() {
                     description="Configurez les données de référence utilisées dans l'application."
                 />
 
-            <!-- Onglets -->
-            <div class="flex flex-wrap gap-1 rounded-xl bg-gray-100 p-1">
-                <button
-                    v-for="o in onglets"
-                    :key="o.id"
-                    type="button"
-                    @click="selectOnglet(o.id)"
-                    :class="[
-                        'flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-                        ongletActif === o.id
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-500 hover:text-gray-700',
-                    ]"
-                >
-                    <component :is="o.icon" class="h-3.5 w-3.5" />
-                    {{ o.label }}
-                </button>
-            </div>
+            <ModuleInlineTabs
+                variant="light"
+                :model-value="ongletActif"
+                :tabs="onglets"
+                @update:model-value="selectOnglet($event as OngletId)"
+            />
 
             <!-- ══════════════════ ZONES ══════════════════ -->
             <section

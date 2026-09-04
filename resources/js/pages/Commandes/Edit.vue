@@ -57,9 +57,9 @@ const props = defineProps<{
 }>();
 
 const inputClass =
-    'h-[42px] w-full rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm text-gray-900 placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]';
+    'h-[42px] w-full rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm text-gray-900 placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]';
 const selectClass =
-    'h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm text-gray-900 focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]';
+    'h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm text-gray-900 focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]';
 const sectionTitleClass =
     'text-[20px] font-black italic text-[rgba(92,89,89,0.4)]';
 const labelClass = 'text-sm font-medium text-black';
@@ -287,10 +287,10 @@ function submit() {
                             Retour à la commande
                         </BackLink>
                         <h1
-                            class="flex min-w-0 items-center gap-3 text-xl font-black tracking-wide text-[#3995d2]"
+                            class="flex min-w-0 items-center gap-3 text-xl font-black tracking-wide text-[#459cd1]"
                         >
                             <FileEdit
-                                class="size-5 shrink-0 text-[#3995d2]"
+                                class="size-5 shrink-0 text-[#459cd1]"
                                 aria-hidden="true"
                             />
                             <span class="truncate"
@@ -538,7 +538,7 @@ function submit() {
                                         v-model="commentaire"
                                         rows="3"
                                         placeholder="Commentaire interne…"
-                                        class="min-h-[88px] w-full resize-y rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm text-gray-900 placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                        class="min-h-[88px] w-full resize-y rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm text-gray-900 placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                     />
                                     <InputError
                                         :message="errors.commentaire"
@@ -563,7 +563,7 @@ function submit() {
                             </h2>
                             <button
                                 type="button"
-                                class="flex items-center gap-2 rounded-[10px] bg-[#0d6efd] px-3.5 py-2 text-sm font-black text-white transition-colors hover:bg-blue-700"
+                                class="flex items-center gap-2 rounded-[10px] bg-[#459cd1] px-3.5 py-2 text-sm font-black text-white transition-colors hover:bg-[#3a87b8]"
                                 @click="ajouterProduit"
                             >
                                 <Pill class="size-5" />
@@ -848,7 +848,7 @@ function submit() {
                         </Link>
                         <button
                             type="submit"
-                            class="inline-flex items-center justify-center rounded-[10px] bg-[#0d6efd] px-6 py-2.5 text-sm font-black text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60"
+                            class="inline-flex items-center justify-center rounded-[10px] bg-[#459cd1] px-6 py-2.5 text-sm font-black text-white shadow-sm transition-colors hover:bg-[#3a87b8] disabled:opacity-60"
                             :disabled="enSubmission"
                         >
                             {{

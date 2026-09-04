@@ -9,7 +9,6 @@ import {
     Package,
     Pencil,
     Plus,
-    Search,
     Trash2,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
@@ -23,8 +22,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import ModuleEmptyState from '@/components/shared/ModuleEmptyState.vue';
+import ModuleFilterPanel from '@/components/shared/ModuleFilterPanel.vue';
+import ModulePagination from '@/components/shared/ModulePagination.vue';
 import MedicamentsSectionNav from '@/components/medicaments/MedicamentsSectionNav.vue';
 import type { MedicamentsSectionTab } from '@/components/medicaments/MedicamentsSectionNav.vue';
+import { moduleCardClass, modulePageClass, modulePaginationWrapperClass, moduleSelectClass } from '@/lib/bengadokUi';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
@@ -363,9 +366,7 @@ const badgeTotal = computed(() =>
     <Head title="Médicaments - BengaDok" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div
-            class="relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8"
-        >
+        <div :class="modulePageClass">
             <!-- Badge + onglets -->
             <div
                 class="relative z-10 flex shrink-0 flex-wrap items-center gap-3"
@@ -405,25 +406,18 @@ const badgeTotal = computed(() =>
                     </div>
                 </div>
 
-                <form
-                    class="flex flex-wrap gap-4"
-                    @submit.prevent="filtrer('search', searchQuery)"
+                <ModuleFilterPanel
+                    v-model:search="searchQuery"
+                    placeholder="Rechercher un médicament..."
+                    show-submit
+                    :counter="produits.total"
+                    :counter-icon="Package"
+                    counter-class="bg-emerald-600"
+                    @submit="filtrer('search', searchQuery)"
                 >
-                    <div class="relative min-w-[200px] flex-1">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
-                        />
-                        <Input
-                            v-model="searchQuery"
-                            type="search"
-                            placeholder="Rechercher un médicament..."
-                            class="h-10 w-full rounded-full border-0 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm ring-1 ring-black/10 placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-[#459cd1]/40"
-                            autocomplete="off"
-                        />
-                    </div>
                     <select
                         :value="filters.tri"
-                        class="flex h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm"
+                        :class="moduleSelectClass"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -439,7 +433,7 @@ const badgeTotal = computed(() =>
                     </select>
                     <select
                         :value="filters.type"
-                        class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        :class="moduleSelectClass"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -454,7 +448,7 @@ const badgeTotal = computed(() =>
                     </select>
                     <select
                         :value="filters.pharmacie_id"
-                        class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        :class="[moduleSelectClass, 'max-w-[220px]']"
                         @change="
                             (e: Event) =>
                                 filtrer(
@@ -472,7 +466,6 @@ const badgeTotal = computed(() =>
                             {{ ph.designation }}
                         </option>
                     </select>
-                    <Button type="submit">Rechercher</Button>
                     <div
                         class="flex gap-1 rounded-lg border border-input bg-muted/30 p-1"
                     >
@@ -503,7 +496,7 @@ const badgeTotal = computed(() =>
                             Liste
                         </button>
                     </div>
-                </form>
+                </ModuleFilterPanel>
 
                 <!-- Vue cartes -->
                 <div
@@ -513,7 +506,7 @@ const badgeTotal = computed(() =>
                     <div
                         v-for="p in produits.data"
                         :key="p.id"
-                        class="rounded-xl border border-white/80 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/95"
+                        :class="[moduleCardClass, 'p-5']"
                     >
                         <div class="mb-3 flex items-start justify-between gap-3">
                             <div class="flex min-w-0 flex-1 items-start gap-2">
@@ -619,7 +612,7 @@ const badgeTotal = computed(() =>
                 <!-- Vue liste -->
                 <div
                     v-else
-                    class="overflow-hidden rounded-xl border border-white/80 bg-white shadow-sm dark:border-white/10 dark:bg-white/95"
+                    :class="[moduleCardClass, 'overflow-hidden']"
                 >
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
@@ -732,50 +725,18 @@ const badgeTotal = computed(() =>
                     </div>
                 </div>
 
-                <!-- Pagination -->
-                <div
-                    v-if="produits.links.length > 3"
-                    class="mt-4 flex items-center justify-between px-2"
-                >
-                    <div class="hidden text-sm text-muted-foreground sm:block">
-                        Affichage de
-                        <span class="font-medium text-foreground">{{
-                            produits.from
-                        }}</span>
-                        à
-                        <span class="font-medium text-foreground">{{
-                            produits.to
-                        }}</span>
-                        sur
-                        <span class="font-medium text-foreground">{{
-                            produits.total
-                        }}</span>
-                        résultats
-                    </div>
-                    <div class="flex flex-wrap items-center gap-1">
-                        <template
-                            v-for="(link, pIndex) in produits.links"
-                            :key="pIndex"
-                        >
-                            <div
-                                v-if="link.url === null"
-                                class="flex min-w-9 items-center justify-center rounded-lg border border-transparent px-3 py-1.5 text-sm text-muted-foreground"
-                                v-html="link.label"
-                            />
-                            <Link
-                                v-else
-                                :href="link.url"
-                                class="flex min-w-9 items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted/50"
-                                :class="
-                                    link.active
-                                        ? 'border-[#459cd1] bg-[#459cd1] text-white'
-                                        : 'border-input bg-white text-foreground'
-                                "
-                            >
-                                <span v-html="link.label" />
-                            </Link>
-                        </template>
-                    </div>
+                <ModuleEmptyState
+                    v-if="!produits.data.length"
+                    message="Aucun médicament avec les filtres actuels."
+                />
+
+                <div :class="modulePaginationWrapperClass">
+                    <ModulePagination
+                        :links="produits.links"
+                        :from="produits.from"
+                        :to="produits.to"
+                        :total="produits.total"
+                    />
                 </div>
             </div>
 
@@ -1004,36 +965,14 @@ const badgeTotal = computed(() =>
 
                 <div
                     v-if="dbMedicaments.links.length > 3"
-                    class="flex flex-wrap items-center justify-between gap-2 pt-1"
+                    class="border-t border-border pt-4"
                 >
-                    <p class="text-sm text-muted-foreground">
-                        {{ dbMedicaments.from }}–{{ dbMedicaments.to }} sur
-                        {{ dbMedicaments.total }}
-                    </p>
-                    <div class="flex flex-wrap gap-1">
-                        <template
-                            v-for="(link, i) in dbMedicaments.links"
-                            :key="i"
-                        >
-                            <div
-                                v-if="link.url === null"
-                                class="flex min-w-9 items-center justify-center rounded-lg px-3 py-1.5 text-sm text-muted-foreground"
-                                v-html="link.label"
-                            />
-                            <Link
-                                v-else
-                                :href="link.url"
-                                class="flex min-w-9 items-center justify-center rounded-lg border px-3 py-1.5 text-sm transition-colors"
-                                :class="
-                                    link.active
-                                        ? 'border-[#459cd1] bg-[#459cd1] text-white'
-                                        : 'border-input bg-white'
-                                "
-                            >
-                                <span v-html="link.label" />
-                            </Link>
-                        </template>
-                    </div>
+                    <ModulePagination
+                        :links="dbMedicaments.links"
+                        :from="dbMedicaments.from"
+                        :to="dbMedicaments.to"
+                        :total="dbMedicaments.total"
+                    />
                 </div>
 
                 <Dialog
@@ -1278,20 +1217,10 @@ const badgeTotal = computed(() =>
                         </p>
                     </div>
                 </div>
-                <div
-                    class="rounded-lg border border-dashed border-border py-16 text-center"
-                >
-                    <BarChart3
-                        class="mx-auto mb-3 size-10 text-muted-foreground/50"
-                    />
-                    <p class="text-sm font-medium text-foreground">
-                        Statistiques – à venir
-                    </p>
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Utilisez l’onglet « Catalogue médicaments » pour gérer
-                        les produits en attendant.
-                    </p>
-                </div>
+                <ModuleEmptyState
+                    message="Statistiques – à venir"
+                    hint="Utilisez l’onglet « Catalogue médicaments » pour gérer les produits en attendant."
+                />
             </div>
         </div>
 

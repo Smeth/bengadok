@@ -603,9 +603,9 @@ watch(
                 class="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-t-[15px] border-b border-[#ccc5c5] bg-white px-6 py-4 shadow-[0px_2px_8px_rgba(0,0,0,0.06)]"
             >
                 <h2
-                    class="flex items-center gap-3 text-xl font-black tracking-[2.8px] text-[#3995d2]"
+                    class="flex items-center gap-3 text-xl font-black tracking-[2.8px] text-[#459cd1]"
                 >
-                    <FileEdit class="size-5 shrink-0 text-[#3995d2]" />
+                    <FileEdit class="size-5 shrink-0 text-[#459cd1]" />
                     {{
                         mode === 'relance'
                             ? 'Relancer la commande'
@@ -648,7 +648,7 @@ watch(
                                     v-model="form.client_prenom"
                                     type="text"
                                     placeholder="Ex : Didier"
-                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                     :class="{
                                         'border-[#dc3545]': errors.client_prenom,
                                     }"
@@ -682,7 +682,7 @@ watch(
                                     v-model="form.client_nom"
                                     type="text"
                                     placeholder="Ex : Fofana"
-                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                     :class="{
                                         'border-[#dc3545]': errors.client_nom,
                                     }"
@@ -708,7 +708,7 @@ watch(
                                     ></Label
                                 >
                                 <div
-                                    class="flex h-[42px] overflow-hidden rounded-[10px] border border-[#ccc5c5] focus-within:border-[#0d6efd] focus-within:ring-1 focus-within:ring-[#0d6efd]"
+                                    class="flex h-[42px] overflow-hidden rounded-[10px] border border-[#ccc5c5] focus-within:border-[#459cd1] focus-within:ring-1 focus-within:ring-[#459cd1]"
                                     :class="{
                                         'border-[#dc3545]': errors.client_tel,
                                     }"
@@ -750,7 +750,7 @@ watch(
                                 <div class="relative">
                                     <select
                                         v-model="form.client_sexe"
-                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                     >
                                         <option value="">Non précisé</option>
                                         <option value="M">M (Mr)</option>
@@ -773,7 +773,7 @@ watch(
                                 <div class="relative">
                                     <select
                                         v-model="form.beneficiaire"
-                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                     >
                                         <option value="">
                                             choisir un bénéficiaire
@@ -813,7 +813,7 @@ watch(
                                 <div class="relative">
                                     <select
                                         v-model="form.montant_livraison_id"
-                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                         :class="{
                                             'border-[#dc3545]':
                                                 errors.montant_livraison_id,
@@ -862,7 +862,7 @@ watch(
                                     v-model="form.client_adresse"
                                     type="text"
                                     placeholder="Ex : 20 rue Loby Moungali"
-                                    class="h-[42px] w-full min-w-0 rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                    class="h-[42px] w-full min-w-0 rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                     :class="{
                                         'border-[#dc3545]':
                                             errors.client_adresse,
@@ -892,7 +892,7 @@ watch(
                                 <div class="relative">
                                     <select
                                         v-model="form.client_arrondissement"
-                                        class="h-[42px] w-full min-w-0 appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                        class="h-[42px] w-full min-w-0 appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                         :class="{
                                             'border-[#dc3545]':
                                                 errors.client_arrondissement,
@@ -943,7 +943,7 @@ watch(
                                 v-for="zone in zones"
                                 :key="zone.id"
                                 type="button"
-                                class="flex min-h-[90px] min-w-[110px] flex-col items-center justify-center gap-2 rounded-[10px] border border-[#ccc5c5] p-3 text-center transition-all hover:border-[#0d6efd] hover:bg-blue-50/30"
+                                class="flex min-h-[90px] min-w-[110px] flex-col items-center justify-center gap-2 rounded-[10px] border border-[#ccc5c5] p-3 text-center transition-all hover:border-[#459cd1] hover:bg-[#459cd1]/10"
                                 @click="
                                     zoneEnreg = zone.id;
                                     filtreTypeEnreg = 'tous';
@@ -987,7 +987,7 @@ watch(
                             </div>
                             <div class="flex flex-col gap-3 sm:flex-row">
                                 <div
-                                    class="flex min-w-0 flex-1 items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white pl-3 focus-within:border-[#0d6efd] focus-within:ring-1 focus-within:ring-[#0d6efd]"
+                                    class="flex min-w-0 flex-1 items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white pl-3 focus-within:border-[#459cd1] focus-within:ring-1 focus-within:ring-[#459cd1]"
                                 >
                                     <Search
                                         class="mr-2 size-4 shrink-0 text-[rgba(102,102,102,0.6)]"
@@ -1006,7 +1006,7 @@ watch(
                                         class="rounded-[8px] border border-black px-3 py-1.5 text-[11px] font-medium transition-all"
                                         :class="
                                             filtreTypeEnreg === f.key
-                                                ? 'border-[#0d6efd] bg-[#0d6efd] text-white'
+                                                ? 'border-[#459cd1] bg-[#459cd1] text-white'
                                                 : 'border-black text-black hover:bg-gray-100'
                                         "
                                         @click="filtreTypeEnreg = f.key"
@@ -1143,7 +1143,7 @@ watch(
                             </p>
                             <button
                                 type="button"
-                                class="flex items-center gap-2 rounded-[10px] bg-[#0d6efd] px-3.5 py-2 text-sm font-black text-white hover:bg-blue-700"
+                                class="flex items-center gap-2 rounded-[10px] bg-[#459cd1] px-3.5 py-2 text-sm font-black text-white hover:bg-[#3a87b8]"
                                 @click="addProduit"
                             >
                                 <Pill class="size-5" />
@@ -1176,7 +1176,7 @@ watch(
                                         <input
                                             v-model="p.designation"
                                             placeholder="Ex : 1000"
-                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none"
+                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none"
                                             :class="{
                                                 'border-[#dc3545]':
                                                     getProduitError(
@@ -1210,7 +1210,7 @@ watch(
                                         <input
                                             v-model="p.dosage"
                                             placeholder="Ex : 1000"
-                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none"
+                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none"
                                         />
                                     </div>
                                     <div class="flex min-w-0 flex-col gap-1">
@@ -1220,7 +1220,7 @@ watch(
                                         >
                                         <select
                                             v-model="p.forme"
-                                            class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                            class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                         >
                                             <option value="">
                                                 Choisir la forme
@@ -1246,7 +1246,7 @@ watch(
                                             v-model.number="p.quantite"
                                             type="number"
                                             min="1"
-                                            class="box-border h-[42px] w-full min-w-0 max-w-full rounded-[10px] border border-[#ccc5c5] bg-white px-2 py-2 text-center text-base text-[#5c5959] focus:border-[#0d6efd] focus:outline-none md:max-w-[7.5rem]"
+                                            class="box-border h-[42px] w-full min-w-0 max-w-full rounded-[10px] border border-[#ccc5c5] bg-white px-2 py-2 text-center text-base text-[#5c5959] focus:border-[#459cd1] focus:outline-none md:max-w-[7.5rem]"
                                             :class="{
                                                 'border-[#dc3545]':
                                                     getProduitError(
@@ -1356,7 +1356,7 @@ watch(
                             </p>
                             <button
                                 type="button"
-                                class="flex items-center gap-2 rounded-[10px] bg-[#0d6efd] px-3.5 py-2 text-sm font-black text-white hover:bg-blue-700"
+                                class="flex items-center gap-2 rounded-[10px] bg-[#459cd1] px-3.5 py-2 text-sm font-black text-white hover:bg-[#3a87b8]"
                                 @click="addProduitParapharma"
                             >
                                 <ShoppingBag class="size-5" />
@@ -1382,7 +1382,7 @@ watch(
                                         <input
                                             v-model="p.designation"
                                             placeholder="Ex : 1000"
-                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none"
+                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none"
                                             :class="{
                                                 'border-[#dc3545]':
                                                     getProduitParapharmaError(
@@ -1416,7 +1416,7 @@ watch(
                                         <input
                                             v-model="p.dosage"
                                             placeholder="Ex : 1000"
-                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#0d6efd] focus:outline-none"
+                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none"
                                         />
                                     </div>
                                     <div class="flex min-w-0 flex-col gap-1">
@@ -1426,7 +1426,7 @@ watch(
                                         >
                                         <select
                                             v-model="p.forme"
-                                            class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                            class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                         >
                                             <option value="">
                                                 Choisir la forme
@@ -1452,7 +1452,7 @@ watch(
                                             v-model.number="p.quantite"
                                             type="number"
                                             min="1"
-                                            class="box-border h-[42px] w-full min-w-0 max-w-full rounded-[10px] border border-[#ccc5c5] bg-white px-2 py-2 text-center text-base text-[#5c5959] focus:border-[#0d6efd] focus:outline-none md:max-w-[7.5rem]"
+                                            class="box-border h-[42px] w-full min-w-0 max-w-full rounded-[10px] border border-[#ccc5c5] bg-white px-2 py-2 text-center text-base text-[#5c5959] focus:border-[#459cd1] focus:outline-none md:max-w-[7.5rem]"
                                             :class="{
                                                 'border-[#dc3545]':
                                                     getProduitParapharmaError(
@@ -1617,7 +1617,7 @@ watch(
                                 v-model="form.commentaire"
                                 placeholder="Commentaires ..."
                                 rows="4"
-                                class="min-h-[120px] resize-none rounded-[10px] border border-[#e2e8f0] bg-white p-3 text-sm placeholder:italic placeholder:text-[#94a3b8] focus:border-[#3B82F6] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                                class="min-h-[120px] resize-none rounded-[10px] border border-[#e2e8f0] bg-white p-3 text-sm placeholder:italic placeholder:text-[#94a3b8] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                 :class="{
                                     'border-[#dc3545]': errors.commentaire,
                                 }"
@@ -1632,7 +1632,7 @@ watch(
                     </div>
                 </div>
 
-                <!-- Footer sticky : Annuler #EF4444, Envoyer #3B82F6, rounded 8–10px, padding ~40px -->
+                <!-- Footer sticky : Annuler #EF4444, Envoyer #459cd1, rounded 8–10px, padding ~40px -->
                 <div
                     class="sticky bottom-0 flex justify-center gap-6 border-t border-[#e2e8f0] bg-white px-6 py-5 shadow-[0_-2px_10px_rgba(0,0,0,0.04)]"
                 >
@@ -1645,7 +1645,7 @@ watch(
                     </Button>
                     <Button
                         type="submit"
-                        class="rounded-[10px] bg-[#3B82F6] px-10 py-2.5 text-[15px] font-bold text-white hover:bg-blue-600"
+                        class="rounded-[10px] bg-[#459cd1] px-10 py-2.5 text-[15px] font-bold text-white hover:bg-[#3a87b8]"
                     >
                         Envoyer
                     </Button>
