@@ -57,13 +57,13 @@ class CommandeCreationFields
             'label' => 'Date de commande',
             'default' => false,
             'group' => 'commande',
-            'contexts' => [],
+            'contexts' => ['admin', 'agent'],
         ],
         'heurs' => [
             'label' => 'Heure',
             'default' => false,
             'group' => 'commande',
-            'contexts' => [],
+            'contexts' => ['admin', 'agent'],
         ],
         'ordonnance' => [
             'label' => 'Ordonnance (fichier)',
@@ -81,7 +81,7 @@ class CommandeCreationFields
             'label' => 'Montant de livraison',
             'default' => false,
             'group' => 'commande',
-            'contexts' => [],
+            'contexts' => ['admin', 'agent'],
         ],
         'livreur_id' => [
             'label' => 'Livreur',

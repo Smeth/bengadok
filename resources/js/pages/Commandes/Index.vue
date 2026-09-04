@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     Plus,
     Search,
@@ -11,6 +11,8 @@ import {
     X,
     Check,
     CheckCircle2,
+    Pencil,
+    Paperclip,
 } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import CommandeEnregistrementModal from '@/components/CommandeEnregistrementModal.vue';
@@ -260,6 +262,50 @@ const motifLabelBySlug = computed(() =>
 const searchQuery = ref(props.filters.search ?? '');
 const activeTab = ref<'gestion' | 'statistiques'>('gestion');
 const detailCommande = ref<CommandeDetail | null>(null);
+const complementairesForm = ref({ commentaire: '', beneficiaire: '' });
+const savingComplementaires = ref(false);
+
+const peutModifierCommandeComplete = computed(() => {
+    const c = detailCommande.value;
+    return (
+        props.canManageCommandes &&
+        c &&
+        (c.status === 'nouvelle' || c.status === 'en_attente')
+    );
+});
+
+const peutEditerComplementaires = computed(() => {
+    const c = detailCommande.value;
+    return props.canManageCommandes && c && c.status !== 'annulee';
+});
+
+watch(detailCommande, (c) => {
+    complementairesForm.value = {
+        commentaire: c?.commentaire ?? '',
+        beneficiaire: c?.beneficiaire ?? '',
+    };
+});
+
+function saveComplementaires() {
+    if (!detailCommande.value || !peutEditerComplementaires.value) return;
+    savingComplementaires.value = true;
+    router.patch(
+        `/commandes/${detailCommande.value.id}/complementaires`,
+        {
+            commentaire: complementairesForm.value.commentaire,
+            beneficiaire: complementairesForm.value.beneficiaire,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                void refreshDetailSilently(detailCommande.value!.id);
+            },
+            onFinish: () => {
+                savingComplementaires.value = false;
+            },
+        },
+    );
+}
 const showDetailModal = ref(false);
 const showEnregistrementModal = ref(false);
 const showAnnulerModal = ref(false);
@@ -844,6 +890,15 @@ function appendEnregistrementFields(formData: FormData, payload: FormEnregPayloa
     if (payload.commentaire) {
         formData.append('commentaire', payload.commentaire);
     }
+    if (payload.date) {
+        formData.append('date', payload.date);
+    }
+    if (payload.heurs) {
+        formData.append('heurs', payload.heurs);
+    }
+    if (payload.montant_livraison_id) {
+        formData.append('montant_livraison_id', payload.montant_livraison_id);
+    }
 }
 
 function submitEnregistrementFromModal(payload: FormEnregPayload) {
@@ -875,6 +930,9 @@ function submitEnregistrementFromModal(payload: FormEnregPayload) {
             beneficiaire: payload.beneficiaire || undefined,
             produits: payload.produits,
             commentaire: payload.commentaire || undefined,
+            date: payload.date || undefined,
+            heurs: payload.heurs || undefined,
+            montant_livraison_id: payload.montant_livraison_id || undefined,
         };
         if (payload.client_id) {
             data.client_id = payload.client_id;
@@ -1252,6 +1310,14 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                         >
                             {{ getStatusLabel(detailCommande.status) }}
                         </span>
+                        <Link
+                            v-if="peutModifierCommandeComplete"
+                            :href="`/commandes/${detailCommande.id}/edit`"
+                            class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[#0d6efd]/30 bg-[#0d6efd]/5 px-3 py-1.5 text-[12px] font-semibold text-[#0d6efd] transition-colors hover:bg-[#0d6efd]/10"
+                        >
+                            <Pencil class="size-3.5" />
+                            Modifier
+                        </Link>
                         <button
                             type="button"
                             class="shrink-0 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
@@ -1761,21 +1827,72 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                         <div
                             class="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
                         >
-                            <div>
+                            <div v-if="peutEditerComplementaires">
                                 <h3
                                     class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
                                 >
-                                    Commentaire (back-office)
+                                    Informations complémentaires
                                 </h3>
-                                <p
-                                    class="text-[14px] text-gray-700 whitespace-pre-wrap leading-relaxed"
-                                >
-                                    {{
-                                        detailCommande.commentaire ||
-                                        'Aucun commentaire.'
-                                    }}
-                                </p>
+                                <div class="space-y-3">
+                                    <div>
+                                        <Label
+                                            for="detail-beneficiaire"
+                                            class="text-[13px] text-gray-600"
+                                            >Bénéficiaire</Label
+                                        >
+                                        <input
+                                            id="detail-beneficiaire"
+                                            v-model="complementairesForm.beneficiaire"
+                                            type="text"
+                                            placeholder="Ex. Soi-même, conjoint…"
+                                            class="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-[14px] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label
+                                            for="detail-commentaire"
+                                            class="text-[13px] text-gray-600"
+                                            >Commentaire (back-office)</Label
+                                        >
+                                        <textarea
+                                            id="detail-commentaire"
+                                            v-model="complementairesForm.commentaire"
+                                            rows="3"
+                                            placeholder="Notes internes, consignes de livraison…"
+                                            class="mt-1 w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-[14px] focus:border-[#0d6efd] focus:outline-none focus:ring-1 focus:ring-[#0d6efd]"
+                                        />
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        :disabled="savingComplementaires"
+                                        @click="saveComplementaires"
+                                    >
+                                        {{
+                                            savingComplementaires
+                                                ? 'Enregistrement…'
+                                                : 'Enregistrer les compléments'
+                                        }}
+                                    </Button>
+                                </div>
                             </div>
+                            <template v-else>
+                                <div>
+                                    <h3
+                                        class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
+                                    >
+                                        Commentaire (back-office)
+                                    </h3>
+                                    <p
+                                        class="text-[14px] text-gray-700 whitespace-pre-wrap leading-relaxed"
+                                    >
+                                        {{
+                                            detailCommande.commentaire ||
+                                            'Aucun commentaire.'
+                                        }}
+                                    </p>
+                                </div>
+                            </template>
                             <div
                                 v-if="
                                     (
@@ -1794,6 +1911,49 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 >
                                     {{ detailCommande.commentaire_pharmacie }}
                                 </p>
+                            </div>
+                            <div
+                                v-if="
+                                    detailCommande.pieces_jointes?.length
+                                "
+                            >
+                                <h3
+                                    class="mb-3 flex items-center gap-2 text-[14px] font-bold text-[#b4b4b4]"
+                                >
+                                    <Paperclip class="size-4" />
+                                    Photos (pharmacie)
+                                </h3>
+                                <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                                    <a
+                                        v-for="pj in detailCommande.pieces_jointes"
+                                        :key="pj.id"
+                                        :href="pj.file_url ?? '#'"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="group overflow-hidden rounded-lg border border-gray-100 bg-gray-50"
+                                    >
+                                        <img
+                                            v-if="pj.file_url"
+                                            :src="pj.file_url"
+                                            :alt="
+                                                pj.label ??
+                                                pj.original_name ??
+                                                'Photo'
+                                            "
+                                            class="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]"
+                                            loading="lazy"
+                                        />
+                                        <p
+                                            v-if="pj.label || pj.original_name"
+                                            class="truncate px-1.5 py-1 text-[10px] text-gray-600"
+                                        >
+                                            {{
+                                                pj.label ??
+                                                pj.original_name
+                                            }}
+                                        </p>
+                                    </a>
+                                </div>
                             </div>
                         </div>
 
@@ -2478,6 +2638,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
             :pharmacies="pharmacies"
             :arrondissements="arrondissements"
             :parapharma-produit-types="parapharmaProduitTypes"
+            :montants-livraison="montantsLivraison"
             :api-errors="apiErrorsEnreg"
             @submit="submitEnregistrementFromModal"
         />
@@ -2491,6 +2652,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
             :pharmacies="pharmacies"
             :arrondissements="arrondissements"
             :parapharma-produit-types="parapharmaProduitTypes"
+            :montants-livraison="montantsLivraison"
             :api-errors="errorsRelancer"
             @submit="submitRelancerFromModal"
         />

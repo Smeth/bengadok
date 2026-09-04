@@ -15,6 +15,7 @@ import {
     Search,
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
+import PharmaciePieceJointeSection from '@/components/dok-pharma/PharmaciePieceJointeSection.vue';
 import AppToast from '@/components/AppToast.vue';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import DokPharmaOrdonnanceViewerModal from '@/components/dok-pharma/DokPharmaOrdonnanceViewerModal.vue';
@@ -73,6 +74,14 @@ type Commande = {
     commentaire_pharmacie?: string | null;
     /** Montant médicaments (hors livraison) — seul total visible côté pharmacie */
     prix_medicaments?: number | null;
+    pieces_jointes?: Array<{
+        id: number;
+        label?: string | null;
+        original_name?: string | null;
+        file_url?: string | null;
+        is_pdf?: boolean;
+        created_at?: string | null;
+    }>;
 };
 
 /** Nom client affichable pour l’en-tête de carte (évite « - - BDK… »). */
@@ -429,6 +438,10 @@ function openOrdonnance(cmd: Commande) {
 }
 function closeOrdonnance() {
     ordModal.value.open = false;
+}
+
+function peutAjouterPieceJointe(cmd: Commande): boolean {
+    return cmd.status !== 'annulee';
 }
 </script>
 
@@ -1066,6 +1079,13 @@ function closeOrdonnance() {
                                     class="w-full resize-none rounded-xl border border-[#93c5fd]/80 bg-white px-4 py-3 text-[13px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/35"
                                 />
                             </div>
+
+                            <!-- Photos jointes (images) -->
+                            <PharmaciePieceJointeSection
+                                :commande-id="cmd.id"
+                                :pieces="cmd.pieces_jointes ?? []"
+                                :editable="peutAjouterPieceJointe(cmd)"
+                            />
 
                             <div class="flex items-center justify-between">
                                 <!-- Message d'erreur quantité -->
@@ -1800,6 +1820,10 @@ function closeOrdonnance() {
                                         {{ cmd.commentaire_pharmacie }}
                                     </p>
                                 </div>
+                                <PharmaciePieceJointeSection
+                                    :commande-id="cmd.id"
+                                    :pieces="cmd.pieces_jointes ?? []"
+                                />
                             </div>
                         </div>
                     </div>
@@ -2139,6 +2163,10 @@ function closeOrdonnance() {
                                         {{ cmd.commentaire_pharmacie }}
                                     </p>
                                 </div>
+                                <PharmaciePieceJointeSection
+                                    :commande-id="cmd.id"
+                                    :pieces="cmd.pieces_jointes ?? []"
+                                />
                             </div>
                         </div>
                     </div>

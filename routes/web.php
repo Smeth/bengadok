@@ -4,6 +4,7 @@ use App\Http\Controllers\AgentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ClientDoublonController;
 use App\Http\Controllers\CommandeController;
+use App\Http\Controllers\CommandePieceJointeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DbMedicamentController;
 use App\Http\Controllers\DokPharmaController;
@@ -98,6 +99,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('{commande}/recu', [CommandeController::class, 'recu'])->name('recu');
             Route::get('{commande}/edit', [CommandeController::class, 'edit'])->name('edit')->middleware('role:admin|super_admin|agent_call_center');
             Route::patch('{commande}', [CommandeController::class, 'update'])->name('update')->middleware('role:admin|super_admin|agent_call_center');
+            Route::patch('{commande}/complementaires', [CommandeController::class, 'updateComplementaires'])->name('complementaires')->middleware('role:admin|super_admin|agent_call_center');
             Route::get('{commande}', [CommandeController::class, 'show'])->name('show');
             Route::patch('{commande}/status', [CommandeController::class, 'updateStatus'])->name('update-status');
             Route::patch('{commande}/acceptation-client', [CommandeController::class, 'setAcceptationClient'])->name('acceptation-client');
@@ -127,6 +129,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('ordonnances/{ordonnance}/fichier', [OrdonnanceController::class, 'fichier'])
         ->name('ordonnances.fichier');
 
+    Route::get('commande-pieces-jointes/{pieceJointe}/fichier', [CommandePieceJointeController::class, 'fichier'])
+        ->name('commande-pieces-jointes.fichier');
+
     Route::prefix('dok-pharma')->name('dok-pharma.')->middleware('role:vendeur|gerant')->group(function () {
         Route::get('/', [DokPharmaController::class, 'dashboard'])->name('dashboard');
         Route::post('/commission/payee', [DokPharmaController::class, 'marquerCommissionPayee'])->name('commission.payee');
@@ -134,6 +139,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/commandes', [DokPharmaController::class, 'index'])->name('commandes');
         Route::post('{commande}/valider', [DokPharmaController::class, 'validerDisponibilite'])->name('valider');
         Route::post('{commande}/valider-retrait', [DokPharmaController::class, 'validerRetrait'])->name('valider-retrait');
+        Route::post('{commande}/pieces-jointes', [CommandePieceJointeController::class, 'store'])->name('pieces-jointes.store');
+        Route::delete('{commande}/pieces-jointes/{pieceJointe}', [CommandePieceJointeController::class, 'destroy'])->name('pieces-jointes.destroy');
     });
 });
 

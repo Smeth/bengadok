@@ -31,16 +31,13 @@ class AdminParapharmaDashboardService
         [$debutMois, $finMois] = AppSetting::parapharmaPeriodeBounds($ref);
         [$debut, $finPeriode] = $this->resolvePeriodeBounds($ref, $vuePeriode);
 
-        $inStatutsReussis = $this->inListSql(Commande::STATUTS_REUSSIS);
-        $inStatutsVentes = $this->inListSql(Commande::STATUTS_STATS_VENTES);
-
-        $caParapharma = $this->sommeCaParapharma($debutMois, $finMois, $inStatutsVentes);
-        $caMedicaments = $this->sommeCaMedicaments($debutMois, $finMois, $inStatutsVentes);
+        $caParapharma = $this->sommeCaParapharma($debutMois, $finMois);
+        $caMedicaments = $this->sommeCaMedicaments($debutMois, $finMois);
         $montantCommission = (int) round($caParapharma * $cfg['commission_percent'] / 100);
 
         $periode = $this->syncCommissionPeriode($ref, $montantCommission);
 
-        $nbCommandes = $this->nbCommandesTotal($debutMois, $finMois, $inStatutsVentes);
+        $nbCommandes = $this->nbCommandesTotal($debutMois, $finMois);
 
         $creditsUtilises = $this->nbDeductionsPeriode($debut, $finPeriode);
         $creditsDisponibles = $this->pharmacieId !== null
@@ -52,12 +49,11 @@ class AdminParapharmaDashboardService
         $ventesLignes = $this->ventesParLigne(
             $debutMois,
             $finMois,
-            $inStatutsVentes,
             $cfg['credit_seuil_medicament_xaf']
         );
 
         $ventesParPharmacie = $this->pharmacieId === null
-            ? $this->ventesParPharmacie($debut, $finPeriode, $inStatutsVentes)
+            ? $this->ventesParPharmacie($debut, $finPeriode)
             : [];
 
         $creditsParPharmacie = $this->pharmacieId === null
@@ -67,7 +63,7 @@ class AdminParapharmaDashboardService
         $historique = $this->historiqueCommissions($ref, $cfg);
 
         $commissionsParPharmacie = $this->pharmacieId === null
-            ? $this->commissionsParPharmacie($debutMois, $finMois, $inStatutsVentes, $cfg, $ref)
+            ? $this->commissionsParPharmacie($debutMois, $finMois, $cfg, $ref)
             : [];
 
         $commandesRecentes = $this->commandesRecentes(
@@ -185,8 +181,7 @@ class AdminParapharmaDashboardService
         $ref = Carbon::createFromDate($annee, $mois, 1)->startOfMonth();
         $cfg = $this->config();
         [$debut, $fin] = AppSetting::parapharmaPeriodeBounds($ref);
-        $inStatutsVentes = $this->inListSql(Commande::STATUTS_STATS_VENTES);
-        $ca = $this->sommeCaParapharma($debut, $fin, $inStatutsVentes);
+        $ca = $this->sommeCaParapharma($debut, $fin);
         $montant = (int) round($ca * $cfg['commission_percent'] / 100);
 
         $this->pharmacieId = $pharmacieIdCourant;
@@ -225,7 +220,7 @@ class AdminParapharmaDashboardService
     {
         $seuil ??= $this->config()['credit_seuil_medicament_xaf'];
 
-        return in_array($commande->status, Commande::STATUTS_REUSSIS, true)
+        return $commande->status_pharmacie === Commande::STATUT_PHARMACIE_CA_COMPTABILISE
             && (float) $commande->prix_medicaments >= $seuil;
     }
 
@@ -332,12 +327,11 @@ class AdminParapharmaDashboardService
     private function ventesParPharmacie(
         CarbonInterface $debut,
         CarbonInterface $fin,
-        string $inStatuts,
     ): array {
         $rows = DB::table('commandes')
             ->join('pharmacies', 'pharmacies.id', '=', 'commandes.pharmacie_id')
-            ->whereBetween('commandes.date', [$debut, $fin])
-            ->whereRaw("commandes.status IN ({$inStatuts})")
+            ->whereBetween('commandes.date', [$debut, $fin]);
+        $this->whereCaComptabilise($rows)
             ->groupBy('commandes.date', 'commandes.pharmacie_id', 'pharmacies.designation')
             ->selectRaw(
                 'commandes.date as jour,
@@ -401,17 +395,13 @@ class AdminParapharmaDashboardService
             foreach ($ops as $op) {
                 $qty = abs((int) $op->credits_delta);
                 $coutTotal += (int) ($op->cout_xaf ?: $qty * $prixUnitaire);
-                if ($op->commande && (float) $op->commande->prix_parapharma > 0) {
-                    $creditsParapharmacie += $qty;
-                } else {
-                    $creditsMedicaments += $qty;
-                }
+                $creditsMedicaments += $qty;
             }
 
             $commandesEligibles = Commande::query()
                 ->where('pharmacie_id', $pharmacie->id)
                 ->whereBetween('date', [$debut, $fin])
-                ->whereIn('status', Commande::STATUTS_REUSSIS)
+                ->caComptabilise()
                 ->where('prix_medicaments', '>=', $seuil)
                 ->count();
 
@@ -476,13 +466,12 @@ class AdminParapharmaDashboardService
     private function sommeCaParapharma(
         CarbonInterface $debut,
         CarbonInterface $fin,
-        string $inStatuts,
     ): float {
         $query = DB::table('commande_produit')
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
             ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
-            ->whereBetween('commandes.date', [$debut, $fin])
-            ->whereRaw("commandes.status IN ({$inStatuts})")
+            ->whereBetween('commandes.date', [$debut, $fin]);
+        $this->whereCaComptabilise($query)
             ->where(function ($q) {
                 $q->whereNull('commande_produit.status')
                     ->orWhere('commande_produit.status', '<>', 'indisponible');
@@ -503,13 +492,12 @@ class AdminParapharmaDashboardService
     private function sommeCaMedicaments(
         CarbonInterface $debut,
         CarbonInterface $fin,
-        string $inStatuts,
     ): float {
         $query = DB::table('commande_produit')
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
             ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
-            ->whereBetween('commandes.date', [$debut, $fin])
-            ->whereRaw("commandes.status IN ({$inStatuts})")
+            ->whereBetween('commandes.date', [$debut, $fin]);
+        $this->whereCaComptabilise($query)
             ->where(function ($q) {
                 $q->whereNull('commande_produit.status')
                     ->orWhere('commande_produit.status', '<>', 'indisponible');
@@ -553,11 +541,10 @@ class AdminParapharmaDashboardService
     private function nbCommandesTotal(
         CarbonInterface $debut,
         CarbonInterface $fin,
-        string $inStatuts,
     ): int {
         $query = DB::table('commandes')
-            ->whereBetween('commandes.date', [$debut, $fin])
-            ->whereRaw("commandes.status IN ({$inStatuts})");
+            ->whereBetween('commandes.date', [$debut, $fin]);
+        $this->whereCaComptabilise($query);
 
         if ($this->pharmacieId !== null) {
             $query->where('commandes.pharmacie_id', $this->pharmacieId);
@@ -573,7 +560,7 @@ class AdminParapharmaDashboardService
     ): int {
         $query = Commande::query()
             ->whereBetween('date', [$debut, $fin])
-            ->whereIn('status', Commande::STATUTS_REUSSIS)
+            ->caComptabilise()
             ->where('prix_medicaments', '>=', $seuil);
 
         if ($this->pharmacieId !== null) {
@@ -593,7 +580,6 @@ class AdminParapharmaDashboardService
     private function ventesParLigne(
         CarbonInterface $debut,
         CarbonInterface $fin,
-        string $inStatuts,
         int $seuilCredit,
     ): array {
         $commandeIdsAvecDeduction = $this->commandeIdsAvecDeductionPeriode($debut, $fin);
@@ -601,8 +587,8 @@ class AdminParapharmaDashboardService
         $query = DB::table('commande_produit')
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
             ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
-            ->whereBetween('commandes.date', [$debut, $fin])
-            ->whereRaw("commandes.status IN ({$inStatuts})")
+            ->whereBetween('commandes.date', [$debut, $fin]);
+        $this->whereCaComptabilise($query)
             ->where(function ($q) {
                 $q->whereNull('commande_produit.status')
                     ->orWhere('commande_produit.status', '<>', 'indisponible');
@@ -655,6 +641,7 @@ class AdminParapharmaDashboardService
 
         $query = Commande::query()
             ->whereBetween('date', [$debut, $fin])
+            ->caComptabilise()
             ->with(['client:id,nom,prenom']);
 
         if ($this->pharmacieId !== null) {
@@ -749,7 +736,6 @@ class AdminParapharmaDashboardService
     private function commissionsParPharmacie(
         CarbonInterface $debut,
         CarbonInterface $fin,
-        string $inStatutsVentes,
         array $cfg,
         CarbonInterface $ref,
     ): array {
@@ -759,7 +745,7 @@ class AdminParapharmaDashboardService
         foreach (Pharmacie::query()->orderBy('designation')->get(['id', 'designation']) as $pharmacie) {
             $this->pharmacieId = (int) $pharmacie->id;
 
-            $ca = $this->sommeCaParapharma($debut, $fin, $inStatutsVentes);
+            $ca = $this->sommeCaParapharma($debut, $fin);
             $montant = (int) round($ca * $cfg['commission_percent'] / 100);
             $periode = $this->findCommissionPeriode($ref->year, $ref->month, (int) $pharmacie->id);
             $statut = $periode?->statut ?? CommissionPeriode::STATUT_EN_COURS;
@@ -785,6 +771,19 @@ class AdminParapharmaDashboardService
     private function inListSql(array $values): string
     {
         return collect($values)->map(fn (string $s) => "'".addslashes($s)."'")->implode(',');
+    }
+
+    /**
+     * CA comptabilisé uniquement après retrait confirmé côté pharmacie.
+     *
+     * @param  QueryBuilder|Builder<Commande>  $query
+     * @return QueryBuilder|Builder<Commande>
+     */
+    private function whereCaComptabilise(QueryBuilder|Builder $query, string $commandesAlias = 'commandes'): QueryBuilder|Builder
+    {
+        return $query
+            ->where("{$commandesAlias}.status_pharmacie", Commande::STATUT_PHARMACIE_CA_COMPTABILISE)
+            ->where("{$commandesAlias}.status", '<>', 'annulee');
     }
 
     private function resolveMoisReference(?string $moisParam): CarbonInterface

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\PromoteClientsFromSuccessfulOrdersAction;
 use App\Models\Commande;
+use App\Models\CommandePieceJointe;
 use App\Models\Pharmacie;
 use App\Models\Produit;
 use App\Services\AdminParapharmaDashboardService;
@@ -193,7 +195,7 @@ class DokPharmaController extends Controller
         $onglet = $request->input('onglet', 'nouvelles');
         $search = Str::limit(trim((string) $request->input('search', '')), 100, '');
 
-        $query = Commande::with(['client', 'produits', 'ordonnance'])
+        $query = Commande::with(['client', 'produits', 'ordonnance', 'piecesJointes.uploadedBy'])
             ->where('pharmacie_id', $pharmacieId);
 
         $query
@@ -254,6 +256,10 @@ class DokPharmaController extends Controller
                     'commentaire' => $c->commentaire,
                     'commentaire_pharmacie' => $c->commentaire_pharmacie,
                     'prix_medicaments' => (float) ($c->prix_medicaments ?? 0),
+                    'pieces_jointes' => $c->piecesJointes
+                        ->map(fn (CommandePieceJointe $pj) => $pj->toFrontendArray())
+                        ->values()
+                        ->all(),
                 ];
             });
 
@@ -409,6 +415,10 @@ class DokPharmaController extends Controller
         $commande->update([
             'status_pharmacie' => 'livre',
         ]);
+        $commande->refresh();
+
+        PromoteClientsFromSuccessfulOrdersAction::afterPharmacieRetrait($commande);
+        app(PharmacieCreditService::class)->deduirePourCommande($commande);
 
         return back()->with('status', 'Retrait validé.');
     }

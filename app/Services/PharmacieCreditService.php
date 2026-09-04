@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AppSetting;
 use App\Models\Commande;
+use App\Models\MontantLivraison;
 use App\Models\Pharmacie;
 use App\Models\PharmacieCreditOperation;
 use App\Models\User;
@@ -120,7 +121,7 @@ class PharmacieCreditService
     }
 
     /**
-     * Déduit 1 crédit si la pharmacie a un solde suffisant (appel métier commande livrée).
+     * Déduit 1 crédit si la pharmacie a un solde suffisant (retrait pharmacie confirmé).
      */
     public function deduirePourCommande(Commande $commande): ?PharmacieCreditOperation
     {
@@ -133,24 +134,27 @@ class PharmacieCreditService
             return null;
         }
 
-        if (! in_array($commande->status, Commande::STATUTS_REUSSIS, true)) {
+        if ($commande->status_pharmacie !== Commande::STATUT_PHARMACIE_CA_COMPTABILISE) {
             return null;
         }
+
+        $commande = $this->syncMontantsCommande($commande);
 
         if ((float) $commande->prix_medicaments < $cfg['credit_seuil_medicament_xaf']) {
             return null;
         }
 
-        $deja = PharmacieCreditOperation::query()
-            ->where('commande_id', $commande->id)
-            ->where('type', PharmacieCreditOperation::TYPE_DEDUCTION)
-            ->exists();
-
-        if ($deja) {
-            return null;
-        }
-
         return DB::transaction(function () use ($commande, $cfg) {
+            $deja = PharmacieCreditOperation::query()
+                ->where('commande_id', $commande->id)
+                ->where('type', PharmacieCreditOperation::TYPE_DEDUCTION)
+                ->lockForUpdate()
+                ->exists();
+
+            if ($deja) {
+                return null;
+            }
+
             $pharmacie = Pharmacie::query()->whereKey($commande->pharmacie_id)->lockForUpdate()->first();
             if (! $pharmacie || ! $pharmacie->credits_actif || (int) $pharmacie->credits_solde < 1) {
                 return null;
@@ -170,10 +174,42 @@ class PharmacieCreditService
                 'cout_xaf' => $cfg['credit_prix_unitaire_xaf'],
                 'solde_apres' => $nouveauSolde,
                 'mode_paiement' => null,
-                'description' => "Commande {$numero}",
+                'description' => "Commande médicaments {$numero}",
                 'note' => null,
             ]);
         });
+    }
+
+    /**
+     * Recalcule prix_medicaments / prix_parapharma à partir des lignes confirmées (hors indisponibles).
+     */
+    public function syncMontantsCommande(Commande $commande): Commande
+    {
+        $commande->loadMissing('produits');
+        // Au retrait : inclure les lignes encore « en_attente » (snapshot commande), exclure seulement indisponibles.
+        $montants = CommandeMontantCalculator::fromProduitsRelation(
+            $commande->produits,
+            excludeIndisponible: true,
+            excludeEnAttente: false,
+        );
+
+        $storedLignes = (float) $commande->prix_medicaments + (float) $commande->prix_parapharma;
+        if ($montants['prix_lignes'] <= 0 && $storedLignes > 0) {
+            return $commande;
+        }
+
+        $liv = 0.0;
+        if ($commande->montant_livraison_id) {
+            $liv = (float) (MontantLivraison::query()->find($commande->montant_livraison_id)?->designation ?? 0);
+        }
+
+        $commande->update([
+            'prix_medicaments' => $montants['prix_medicaments'],
+            'prix_parapharma' => $montants['prix_parapharma'],
+            'prix_total' => $montants['prix_lignes'] + $liv,
+        ]);
+
+        return $commande->fresh();
     }
 
     /**

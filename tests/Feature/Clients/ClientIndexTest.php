@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Clients;
 
+use App\Models\Commande;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesMinimalFixtures;
 use Tests\Concerns\SeedsRoles;
@@ -23,8 +24,16 @@ class ClientIndexTest extends TestCase
             'prenom' => 'Alice',
             'promu_client_le' => now(),
         ]);
-        $this->createCommande($promu, $pharmacie, ['status' => 'retiree', 'prix_total' => 10000]);
-        $this->createCommande($promu, $pharmacie, ['status' => 'retiree', 'prix_total' => 5000]);
+        $this->createCommande($promu, $pharmacie, [
+            'status' => 'retiree',
+            'status_pharmacie' => Commande::STATUT_PHARMACIE_CA_COMPTABILISE,
+            'prix_total' => 10000,
+        ]);
+        $this->createCommande($promu, $pharmacie, [
+            'status' => 'retiree',
+            'status_pharmacie' => Commande::STATUT_PHARMACIE_CA_COMPTABILISE,
+            'prix_total' => 5000,
+        ]);
 
         $this->createClient(['promu_client_le' => null]);
 

@@ -6,14 +6,29 @@ use App\Models\Client;
 use App\Models\Commande;
 
 /**
- * Distingue prospects (promu_client_le null) vs clients définitifs : promotion
- * uniquement à la livraison effective (statut admin « livrée », code : retiree).
- * Une commande simplement « validée » peut encore être annulée : on attend donc
- * la livraison — qui rend l'annulation impossible — avant d'enregistrer le client.
+ * Distingue prospects (promu_client_le null) vs clients définitifs.
+ * Promotion au retrait pharmacie confirmé (status_pharmacie = livre) — même règle
+ * que le CA et les ventes comptabilisées.
  */
 final class PromoteClientsFromSuccessfulOrdersAction
 {
-    /** @internal Appel après mise à jour en base du statut admin. */
+    /** @internal Appel après confirmation du retrait côté pharmacie (DokPharma). */
+    public static function afterPharmacieRetrait(Commande $commande): void
+    {
+        $commande->refresh();
+
+        if ($commande->status_pharmacie !== Commande::STATUT_PHARMACIE_CA_COMPTABILISE) {
+            return;
+        }
+
+        self::promoteClientIfProspect($commande);
+    }
+
+    /**
+     * Repli si l'admin marque « Livrée » sans promotion antérieure (données historiques).
+     *
+     * @internal Appel après mise à jour en base du statut admin.
+     */
     public static function afterAdmin(Commande $commande, string $nouveauStatutAdmin): void
     {
         if ($nouveauStatutAdmin !== 'retiree') {
@@ -22,6 +37,15 @@ final class PromoteClientsFromSuccessfulOrdersAction
 
         $commande->refresh();
 
+        if ($commande->status_pharmacie !== Commande::STATUT_PHARMACIE_CA_COMPTABILISE) {
+            return;
+        }
+
+        self::promoteClientIfProspect($commande);
+    }
+
+    private static function promoteClientIfProspect(Commande $commande): void
+    {
         if ($commande->client_id === null) {
             return;
         }

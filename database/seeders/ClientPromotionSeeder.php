@@ -9,15 +9,15 @@ use Illuminate\Database\Seeder;
 class ClientPromotionSeeder extends Seeder
 {
     /**
-     * Clients avec au moins une commande validée / livrée → promu_client_le renseigné.
+     * Clients avec au moins une commande au retrait pharmacie confirmé → promu_client_le renseigné.
      * Les autres restent prospects (promu_client_le null).
      */
     public function run(): void
     {
         $promotedAtByClient = Commande::query()
-            ->whereIn('status', ['validee', 'retiree', 'livree', 'a_preparer'])
+            ->caComptabilise()
             ->whereNotNull('client_id')
-            ->selectRaw('client_id, MIN(COALESCE(validee_admin_at, livree_at, updated_at, created_at)) as promoted_at')
+            ->selectRaw('client_id, MIN(COALESCE(livree_at, validee_admin_at, updated_at, created_at)) as promoted_at')
             ->groupBy('client_id')
             ->pluck('promoted_at', 'client_id');
 

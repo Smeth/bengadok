@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\Commande;
 use App\Models\Livreur;
 use App\Models\ModePaiement;
+use App\Models\MontantLivraison;
 use App\Models\Pharmacie;
 use App\Models\Produit;
 use App\Services\CommandeMontantCalculator;
@@ -28,6 +29,7 @@ class AgentController extends Controller
         return Inertia::render('Agent/NouvelleCommande', [
             'pharmacies' => Pharmacie::with(['zone', 'typePharmacie', 'heurs'])->get(),
             'modesPaiement' => ModePaiement::all(),
+            'montantsLivraison' => MontantLivraison::orderBy('designation')->get(),
             'livreurs' => Livreur::all(),
             'arrondissements' => Client::ARRONDISSEMENTS,
         ]);

@@ -29,7 +29,8 @@ class PharmacieCreditSeeder extends Seeder
             $eligibleMois = Commande::query()
                 ->where('pharmacie_id', $pharmacie->id)
                 ->whereBetween('date', [$debutPeriode, $finPeriode])
-                ->whereIn('status', Commande::STATUTS_REUSSIS)
+                ->where('status_pharmacie', Commande::STATUT_PHARMACIE_CA_COMPTABILISE)
+                ->where('status', '<>', 'annulee')
                 ->where('prix_medicaments', '>=', $seuil)
                 ->orderBy('date')
                 ->orderBy('id')
@@ -100,7 +101,8 @@ class PharmacieCreditSeeder extends Seeder
                 ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
                 ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
                 ->whereBetween('commandes.date', [$debut, $fin])
-                ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+                ->where('commandes.status_pharmacie', Commande::STATUT_PHARMACIE_CA_COMPTABILISE)
+                ->where('commandes.status', '<>', 'annulee')
                 ->where(function ($q) {
                     $q->whereNull('commande_produit.status')
                         ->orWhere('commande_produit.status', '<>', 'indisponible');
@@ -142,7 +144,8 @@ class PharmacieCreditSeeder extends Seeder
                     ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
                     ->where('commandes.pharmacie_id', $pharmacieId)
                     ->whereBetween('commandes.date', [$debut, $fin])
-                    ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+                    ->where('commandes.status_pharmacie', Commande::STATUT_PHARMACIE_CA_COMPTABILISE)
+                    ->where('commandes.status', '<>', 'annulee')
                     ->where(function ($q) {
                         $q->whereNull('commande_produit.status')
                             ->orWhere('commande_produit.status', '<>', 'indisponible');

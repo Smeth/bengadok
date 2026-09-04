@@ -33,7 +33,7 @@ class ClientController extends Controller
 
     /**
      * Prospects : fiches où {@see Client::$promu_client_le} est encore null (aucune commande
-     * encore marquée livrée — statut admin retiree — n'a déclenché la promotion en client).
+     * avec retrait pharmacie confirmé n'a déclenché la promotion en client).
      */
     public function prospects(Request $request): Response
     {
@@ -43,19 +43,21 @@ class ClientController extends Controller
 
         $baseQuery = Client::query()->whereNull('promu_client_le');
 
+        $eligibleCommande = fn ($q) => $q->caComptabilise();
+
         $stats = [
             'total' => (clone $baseQuery)->count(),
             'avec_commandes' => (clone $baseQuery)->has('commandes')->count(),
             'sans_commande' => (clone $baseQuery)->doesntHave('commandes')->count(),
             'eligibles_promotion' => (clone $baseQuery)
-                ->whereHas('commandes', fn ($q) => $q->where('status', 'retiree'))
+                ->whereHas('commandes', $eligibleCommande)
                 ->count(),
         ];
 
         $query = (clone $baseQuery)
             ->withCount([
                 'commandes',
-                'commandes as commandes_reussies_count' => fn ($q) => $q->where('status', 'retiree'),
+                'commandes as commandes_reussies_count' => $eligibleCommande,
             ])
             ->withMax('commandes as derniere_commande_at', 'date');
 
@@ -114,11 +116,11 @@ class ClientController extends Controller
             return back()->with('error', 'Ce contact est déjà un client définitif.');
         }
 
-        $aCommandeLivree = $client->commandes()->where('status', 'retiree')->exists();
+        $aCommandeLivree = $client->commandes()->caComptabilise()->exists();
         if (! $aCommandeLivree) {
             return back()->with(
                 'error',
-                'Promotion impossible : au moins une commande doit être livrée (statut « Livrée »).',
+                'Promotion impossible : au moins une commande doit avoir un retrait pharmacie confirmé.',
             );
         }
 
@@ -164,8 +166,12 @@ class ClientController extends Controller
     {
         $commandes = $client->commandes()->whereIn('status', Commande::STATUTS_COMPTABILISES_CLIENT)->with('produits')->get();
 
-        $totalDepense = $commandes->sum('prix_total');
-        $nbCommandes = $commandes->count();
+        $commandesVentes = $commandes->filter(
+            fn ($c) => $c->status_pharmacie === Commande::STATUT_PHARMACIE_CA_COMPTABILISE && $c->status !== 'annulee',
+        );
+
+        $totalDepense = $commandesVentes->sum('prix_total');
+        $nbCommandes = $commandesVentes->count();
         $panierMoyen = $nbCommandes > 0 ? round($totalDepense / $nbCommandes, 0) : 0;
         $derniereCommande = $commandes->sortByDesc(function ($c) {
             $d = $c->date ?? $c->created_at;
@@ -174,12 +180,12 @@ class ClientController extends Controller
         })->first();
         $clientDepuis = $client->client_depuis ?? $client->created_at;
 
-        $pourSoi = $commandes->filter(fn ($c) => empty($c->beneficiaire) || $c->beneficiaire === 'Soi-même')->count();
-        $pourTiers = $commandes->filter(fn ($c) => ! empty($c->beneficiaire) && $c->beneficiaire !== 'Soi-même')->count();
+        $pourSoi = $commandesVentes->filter(fn ($c) => empty($c->beneficiaire) || $c->beneficiaire === 'Soi-même')->count();
+        $pourTiers = $commandesVentes->filter(fn ($c) => ! empty($c->beneficiaire) && $c->beneficiaire !== 'Soi-même')->count();
         $pctSoi = $nbCommandes > 0 ? round(($pourSoi / $nbCommandes) * 100) : 0;
         $pctTiers = $nbCommandes > 0 ? round(($pourTiers / $nbCommandes) * 100) : 0;
 
-        $beneficiaires = $commandes->pluck('beneficiaire')->filter()->countBy();
+        $beneficiaires = $commandesVentes->pluck('beneficiaire')->filter()->countBy();
         $tiersCountsHorsSoi = $beneficiaires
             ->filter(fn ($count, $label) => $label !== null && $label !== '' && $label !== 'Soi-même')
             ->sortDesc();
@@ -195,7 +201,7 @@ class ClientController extends Controller
             ->values()
             ->toArray();
 
-        $moyenneJours = $this->moyenneJoursEntreCommandes($commandes);
+        $moyenneJours = $this->moyenneJoursEntreCommandes($commandesVentes);
         $frequences = ClientFrequence::query()
             ->orderByDesc('priorite')
             ->orderBy('designation')
@@ -212,7 +218,7 @@ class ClientController extends Controller
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
             ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
             ->where('commandes.client_id', $client->id)
-            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->tap(fn ($q) => Commande::applyVentesComptabilisees($q, 'commandes'))
             ->where(function ($q) {
                 $q->whereNull('commande_produit.status')
                     ->orWhere('commande_produit.status', '<>', 'indisponible');

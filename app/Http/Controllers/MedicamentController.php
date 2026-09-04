@@ -54,7 +54,7 @@ class MedicamentController extends Controller
         $rankingMap = collect(
             DB::table('commande_produit')
                 ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
-                ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+                ->tap(fn ($q) => Commande::applyVentesComptabilisees($q, 'commandes'))
                 ->where(function ($q) {
                     $q->whereNull('commande_produit.status')
                         ->orWhere('commande_produit.status', '<>', 'indisponible');
@@ -145,7 +145,7 @@ class MedicamentController extends Controller
 
         $allProduitsVentes = DB::table('commande_produit')
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
-            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->tap(fn ($q) => Commande::applyVentesComptabilisees($q, 'commandes'))
             ->where(function ($q) {
                 $q->whereNull('commande_produit.status')
                     ->orWhere('commande_produit.status', '<>', 'indisponible');
@@ -167,7 +167,7 @@ class MedicamentController extends Controller
         $ventesParPharmacie = DB::table('commande_produit')
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
             ->where('commande_produit.produit_id', $produit->id)
-            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->tap(fn ($q) => Commande::applyVentesComptabilisees($q, 'commandes'))
             ->where(function ($q) {
                 $q->whereNull('commande_produit.status')
                     ->orWhere('commande_produit.status', '<>', 'indisponible');
@@ -250,11 +250,9 @@ class MedicamentController extends Controller
 
     private function ventesTotalesSubquerySql(): string
     {
-        $in = collect(Commande::STATUTS_STATS_VENTES)
-            ->map(fn (string $s) => "'".addslashes($s)."'")
-            ->implode(',');
+        $statut = addslashes(Commande::STATUT_PHARMACIE_CA_COMPTABILISE);
 
-        return "SELECT COALESCE(SUM(COALESCE(cp.quantite_confirmee, cp.quantite)), 0) FROM commande_produit cp INNER JOIN commandes c ON c.id = cp.commande_id WHERE cp.produit_id = produits.id AND c.status IN ({$in}) AND (cp.status IS NULL OR cp.status <> 'indisponible')";
+        return "SELECT COALESCE(SUM(COALESCE(cp.quantite_confirmee, cp.quantite)), 0) FROM commande_produit cp INNER JOIN commandes c ON c.id = cp.commande_id WHERE cp.produit_id = produits.id AND c.status_pharmacie = '{$statut}' AND c.status <> 'annulee' AND (cp.status IS NULL OR cp.status <> 'indisponible')";
     }
 
     private function ventesProduitValide(int $produitId): int
@@ -262,7 +260,7 @@ class MedicamentController extends Controller
         return (int) (DB::table('commande_produit')
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
             ->where('commande_produit.produit_id', $produitId)
-            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->tap(fn ($q) => Commande::applyVentesComptabilisees($q, 'commandes'))
             ->where(function ($q) {
                 $q->whereNull('commande_produit.status')
                     ->orWhere('commande_produit.status', '<>', 'indisponible');
@@ -276,7 +274,7 @@ class MedicamentController extends Controller
         return (float) (DB::table('commande_produit')
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
             ->where('commande_produit.produit_id', $produitId)
-            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->tap(fn ($q) => Commande::applyVentesComptabilisees($q, 'commandes'))
             ->where(function ($q) {
                 $q->whereNull('commande_produit.status')
                     ->orWhere('commande_produit.status', '<>', 'indisponible');

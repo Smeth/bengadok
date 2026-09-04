@@ -27,7 +27,7 @@ class ClientIndexService
         $frequenceLegacy = (string) $request->input('frequence', '');
         $frequenceId = (string) $request->input('frequence_id', '');
 
-        $statutsKpi = Commande::STATUTS_COMPTABILISES_CLIENT;
+        $statutsKpi = Commande::STATUT_PHARMACIE_CA_COMPTABILISE;
 
         $frequences = ClientFrequence::query()
             ->orderByDesc('priorite')
@@ -46,7 +46,8 @@ class ClientIndexService
             ->select('client_id')
             ->selectRaw('COUNT(*) as nb_commandes')
             ->selectRaw('COALESCE(SUM(prix_total), 0) as total_depense')
-            ->whereIn('status', $statutsKpi)
+            ->where('status_pharmacie', $statutsKpi)
+            ->where('status', '<>', 'annulee')
             ->groupBy('client_id');
 
         $intervalSub = DB::query()
@@ -56,7 +57,8 @@ class ClientIndexService
                     ->selectRaw(
                         'DATEDIFF(`date`, LAG(`date`) OVER (PARTITION BY client_id ORDER BY `date`, created_at)) as diff_jours'
                     )
-                    ->whereIn('status', $statutsKpi)
+                    ->where('status_pharmacie', $statutsKpi)
+                    ->where('status', '<>', 'annulee')
                     ->whereNotNull('date');
             }, 'ordered')
             ->select('client_id')
@@ -186,7 +188,7 @@ class ClientIndexService
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
             ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
             ->whereIn('commandes.client_id', $clientIds)
-            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->tap(fn ($q) => Commande::applyVentesComptabilisees($q, 'commandes'))
             ->where(function ($q) {
                 $q->whereNull('commande_produit.status')
                     ->orWhere('commande_produit.status', '<>', 'indisponible');

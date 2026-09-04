@@ -2,6 +2,7 @@ import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import type { CommandeCreationContext } from '@/lib/commandeCreationFields';
 import {
+    fieldAppliesInContext,
     isCommandeFieldRequired,
     type CommandeCreationFieldDefinition,
     validateCommandeCreationFields,
@@ -55,6 +56,12 @@ export function useCommandeCreationFields(context: CommandeCreationContext) {
         return shared?.length ? shared : FALLBACK_DEFINITIONS;
     });
 
+    function applies(key: string): boolean {
+        const def = definitions.value.find((d) => d.key === key);
+
+        return def ? fieldAppliesInContext(def, context) : false;
+    }
+
     function isRequired(
         key: string,
         options: { sansClientExistant?: boolean } = {},
@@ -94,6 +101,7 @@ export function useCommandeCreationFields(context: CommandeCreationContext) {
         definitions,
         clientFields,
         commandeFields,
+        applies,
         isRequired,
         validate,
     };

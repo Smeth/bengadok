@@ -149,4 +149,27 @@ class CommandeCreationFieldsTest extends TestCase
         $this->assertNotNull($beneficiaire);
         $this->assertSame(['admin'], $beneficiaire['contexts']);
     }
+
+    public function test_commande_store_accepts_optional_client_tel_when_not_required(): void
+    {
+        AppSetting::ensureRowExists()->update([
+            'commande_creation_champs' => [
+                'client_prenom' => true,
+                'client_tel' => false,
+                'client_adresse' => true,
+                'client_arrondissement' => true,
+            ],
+        ]);
+
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+
+        $payload = $this->validCommandePayload($pharmacie->id);
+        unset($payload['client_tel']);
+
+        $this->actingAs($admin)
+            ->post('/commandes', $payload)
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+    }
 }

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Clients;
 
 use App\Actions\PromoteClientsFromSuccessfulOrdersAction;
+use App\Models\Commande;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesMinimalFixtures;
 use Tests\Concerns\SeedsRoles;
@@ -19,7 +20,10 @@ class ProspectPromotionTest extends TestCase
         $admin = $this->userWithRole('admin');
         $pharmacie = $this->createPharmacie();
         $prospect = $this->createClient(['promu_client_le' => null]);
-        $this->createCommande($prospect, $pharmacie, ['status' => 'validee']);
+        $this->createCommande($prospect, $pharmacie, [
+            'status' => 'validee',
+            'status_pharmacie' => 'valide_a_preparer',
+        ]);
 
         $this->actingAs($admin)
             ->get('/clients/prospects')
@@ -30,12 +34,15 @@ class ProspectPromotionTest extends TestCase
             );
     }
 
-    public function test_prospect_with_delivered_order_is_eligible_and_can_be_promoted_manually(): void
+    public function test_prospect_with_pharmacy_pickup_is_eligible_and_can_be_promoted_manually(): void
     {
         $agent = $this->userWithRole('agent_call_center');
         $pharmacie = $this->createPharmacie();
         $prospect = $this->createClient(['promu_client_le' => null]);
-        $this->createCommande($prospect, $pharmacie, ['status' => 'retiree']);
+        $this->createCommande($prospect, $pharmacie, [
+            'status' => 'validee',
+            'status_pharmacie' => Commande::STATUT_PHARMACIE_CA_COMPTABILISE,
+        ]);
 
         $this->actingAs($agent)
             ->get('/clients/prospects')
@@ -52,12 +59,15 @@ class ProspectPromotionTest extends TestCase
         $this->assertNotNull($prospect->promu_client_le);
     }
 
-    public function test_manual_promotion_requires_delivered_order(): void
+    public function test_manual_promotion_requires_pharmacy_pickup(): void
     {
         $admin = $this->userWithRole('admin');
         $pharmacie = $this->createPharmacie();
         $prospect = $this->createClient(['promu_client_le' => null]);
-        $this->createCommande($prospect, $pharmacie, ['status' => 'en_attente']);
+        $this->createCommande($prospect, $pharmacie, [
+            'status' => 'en_attente',
+            'status_pharmacie' => 'attente_confirmation',
+        ]);
 
         $this->actingAs($admin)
             ->from('/clients/prospects')
@@ -68,16 +78,35 @@ class ProspectPromotionTest extends TestCase
         $this->assertNull($prospect->fresh()->promu_client_le);
     }
 
-    public function test_auto_promotion_on_delivered_status_only(): void
+    public function test_auto_promotion_on_pharmacy_pickup_only(): void
     {
         $this->seedRoles();
 
         $pharmacie = $this->createPharmacie();
         $prospect = $this->createClient(['promu_client_le' => null]);
-        $commande = $this->createCommande($prospect, $pharmacie, ['status' => 'validee']);
+        $commande = $this->createCommande($prospect, $pharmacie, [
+            'status' => 'validee',
+            'status_pharmacie' => 'valide_a_preparer',
+        ]);
 
         PromoteClientsFromSuccessfulOrdersAction::afterAdmin($commande, 'validee');
         $this->assertNull($prospect->fresh()->promu_client_le);
+
+        $commande->update(['status_pharmacie' => Commande::STATUT_PHARMACIE_CA_COMPTABILISE]);
+        PromoteClientsFromSuccessfulOrdersAction::afterPharmacieRetrait($commande);
+        $this->assertNotNull($prospect->fresh()->promu_client_le);
+    }
+
+    public function test_auto_promotion_fallback_when_admin_marks_delivered_after_pickup(): void
+    {
+        $this->seedRoles();
+
+        $pharmacie = $this->createPharmacie();
+        $prospect = $this->createClient(['promu_client_le' => null]);
+        $commande = $this->createCommande($prospect, $pharmacie, [
+            'status' => 'validee',
+            'status_pharmacie' => Commande::STATUT_PHARMACIE_CA_COMPTABILISE,
+        ]);
 
         PromoteClientsFromSuccessfulOrdersAction::afterAdmin($commande, 'retiree');
         $this->assertNotNull($prospect->fresh()->promu_client_le);

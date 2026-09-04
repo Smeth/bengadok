@@ -68,6 +68,18 @@ class CommandePolicy
      * ou l'acceptation client — actions déjà réservées au back-office par le middleware
      * de route ; la policy ajoute la même défense en profondeur que sur les autres actions.
      */
+    /**
+     * Commentaire / bénéficiaire sur commande déjà validée (compléments sans refaire la commande).
+     */
+    public function updateComplementaires(User $user, Commande $commande): bool
+    {
+        if (! $user->hasAnyRole(['admin', 'super_admin', 'agent_call_center'])) {
+            return false;
+        }
+
+        return $commande->status !== 'annulee';
+    }
+
     public function manageStatut(User $user, Commande $commande): bool
     {
         if (! $user->hasAnyRole(['admin', 'super_admin', 'agent_call_center'])) {

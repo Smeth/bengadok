@@ -61,39 +61,61 @@ class CommandeService
     {
         if (! empty($data['client_id'])) {
             $client = Client::findOrFail($data['client_id']);
-            if (isset($data['client_nom']) || isset($data['client_prenom'])) {
-                $attrs = [
-                    'nom' => $this->trimOrNull($data['client_nom'] ?? null),
-                    'prenom' => $this->trimOrNull($data['client_prenom'] ?? null),
-                    'tel' => $data['client_tel'],
-                    'adresse' => $data['client_adresse'],
-                ];
-                if (array_key_exists('client_sexe', $data)) {
-                    $attrs['sexe'] = $data['client_sexe'] ?: null;
-                }
-                if (array_key_exists('client_arrondissement', $data) && $data['client_arrondissement'] !== null && $data['client_arrondissement'] !== '') {
-                    $attrs['arrondissement'] = $data['client_arrondissement'];
-                }
+            $attrs = $this->clientAttributesFromPayload($data, onlyPresentKeys: true);
+
+            if ($attrs !== []) {
                 $client->update($attrs);
-            } elseif (array_key_exists('client_sexe', $data)) {
-                $client->update(['sexe' => $data['client_sexe'] ?: null]);
-            } elseif (array_key_exists('client_arrondissement', $data) && $data['client_arrondissement'] !== null && $data['client_arrondissement'] !== '') {
-                $client->update([
-                    'arrondissement' => $data['client_arrondissement'],
-                ]);
             }
 
             return $client;
         }
 
-        return Client::create([
-            'nom' => $this->trimOrNull($data['client_nom'] ?? null),
-            'prenom' => $this->trimOrNull($data['client_prenom'] ?? null),
-            'tel' => $data['client_tel'],
-            'adresse' => $data['client_adresse'],
-            'arrondissement' => $data['client_arrondissement'] ?? null,
-            'sexe' => ! empty($data['client_sexe']) ? $data['client_sexe'] : null,
-        ]);
+        return Client::create($this->clientAttributesFromPayload($data));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function clientAttributesFromPayload(array $data, bool $onlyPresentKeys = false): array
+    {
+        $map = [
+            'client_nom' => 'nom',
+            'client_prenom' => 'prenom',
+            'client_tel' => 'tel',
+            'client_adresse' => 'adresse',
+            'client_arrondissement' => 'arrondissement',
+        ];
+
+        $attrs = [];
+
+        foreach ($map as $inputKey => $column) {
+            if ($onlyPresentKeys && ! array_key_exists($inputKey, $data)) {
+                continue;
+            }
+
+            $value = $this->trimOrNull($data[$inputKey] ?? null);
+
+            if ($column === 'tel' || $column === 'adresse') {
+                if ($value === null && ! $onlyPresentKeys) {
+                    $value = '';
+                }
+                if ($value !== null) {
+                    $attrs[$column] = $value;
+                }
+
+                continue;
+            }
+
+            if ($value !== null || ! $onlyPresentKeys) {
+                $attrs[$column] = $value;
+            }
+        }
+
+        if (! $onlyPresentKeys || array_key_exists('client_sexe', $data)) {
+            $attrs['sexe'] = ! empty($data['client_sexe']) ? $data['client_sexe'] : null;
+        }
+
+        return $attrs;
     }
 
     private function trimOrNull(?string $value): ?string

@@ -12,9 +12,6 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardStatsService
 {
-    /** @var list<string> */
-    public const STATUTS_REUSSIS = ['retiree', 'livree'];
-
     /**
      * @return array{
      *     period: string,
@@ -47,12 +44,12 @@ class DashboardStatsService
 
         $revenuTotal = (float) (clone $baseQuery)
             ->whereBetween('date', [$currentStart, $currentEnd])
-            ->whereIn('status', self::STATUTS_REUSSIS)
+            ->caComptabilise()
             ->sum($colRevenu);
 
         $revenuPrec = (float) (clone $baseQuery)
             ->whereBetween('date', [$prevStart, $prevEnd])
-            ->whereIn('status', self::STATUTS_REUSSIS)
+            ->caComptabilise()
             ->sum($colRevenu);
 
         $nbPharmacies = $pharmacieId ? 1 : Pharmacie::query()->count();
@@ -61,6 +58,7 @@ class DashboardStatsService
             ? 1
             : (int) (clone $baseQuery)
                 ->whereBetween('date', [$currentStart, $currentEnd])
+                ->caComptabilise()
                 ->distinct('pharmacie_id')
                 ->count('pharmacie_id');
 
@@ -68,31 +66,37 @@ class DashboardStatsService
             ? 1
             : (int) Commande::query()
                 ->whereBetween('date', [$prevStart, $prevEnd])
+                ->caComptabilise()
                 ->distinct('pharmacie_id')
                 ->count('pharmacie_id');
 
         $nbCommandes = (int) (clone $baseQuery)
             ->whereBetween('date', [$currentStart, $currentEnd])
+            ->caComptabilise()
             ->count();
 
         $nbCommandesPrec = (int) (clone $baseQuery)
             ->whereBetween('date', [$prevStart, $prevEnd])
+            ->caComptabilise()
+            ->count();
+
+        $nbCommandesDemandes = (int) (clone $baseQuery)
+            ->whereBetween('date', [$currentStart, $currentEnd])
             ->count();
 
         $nbClients = (int) (clone $baseQuery)
             ->whereBetween('date', [$currentStart, $currentEnd])
+            ->caComptabilise()
             ->distinct('client_id')
             ->count('client_id');
 
         $nbClientsPrec = (int) (clone $baseQuery)
             ->whereBetween('date', [$prevStart, $prevEnd])
+            ->caComptabilise()
             ->distinct('client_id')
             ->count('client_id');
 
-        $nbReussies = (int) (clone $baseQuery)
-            ->whereBetween('date', [$currentStart, $currentEnd])
-            ->whereIn('status', self::STATUTS_REUSSIS)
-            ->count();
+        $nbReussies = $nbCommandes;
 
         $nbAnnulees = (int) (clone $baseQuery)
             ->whereBetween('date', [$currentStart, $currentEnd])
@@ -104,18 +108,19 @@ class DashboardStatsService
         $panierMoyen = $nbReussies > 0
             ? round((float) (clone $baseQuery)
                 ->whereBetween('date', [$currentStart, $currentEnd])
-                ->whereIn('status', self::STATUTS_REUSSIS)
+                ->caComptabilise()
                 ->avg($colRevenu), 0)
             : 0;
 
         $panierPrec = (clone $baseQuery)
             ->whereBetween('date', [$prevStart, $prevEnd])
-            ->whereIn('status', self::STATUTS_REUSSIS)
+            ->caComptabilise()
             ->avg($colRevenu);
         $panierPrec = $panierPrec !== null ? round((float) $panierPrec, 0) : 0;
 
         $volumeParPharmacie = (clone $baseQuery)
             ->whereBetween('date', [$currentStart, $currentEnd])
+            ->caComptabilise()
             ->with('pharmacie:id,designation')
             ->get()
             ->groupBy('pharmacie_id')
@@ -130,6 +135,7 @@ class DashboardStatsService
         try {
             $volumeParZone = (clone $baseQuery)
                 ->whereBetween('commandes.date', [$currentStart, $currentEnd])
+                ->caComptabilise()
                 ->join('pharmacies', 'commandes.pharmacie_id', '=', 'pharmacies.id')
                 ->whereNotNull('pharmacies.zone_id')
                 ->join('zones', 'pharmacies.zone_id', '=', 'zones.id')
@@ -159,6 +165,7 @@ class DashboardStatsService
                 'nbPharmacies' => $nbPharmacies,
                 'nbPharmaciesActives' => $nbPharmaciesActives,
                 'nbCommandes' => $nbCommandes,
+                'nbCommandesDemandes' => $nbCommandesDemandes,
                 'nbClients' => $nbClients,
                 'nbReussies' => $nbReussies,
                 'nbAnnulees' => $nbAnnulees,
@@ -176,9 +183,11 @@ class DashboardStatsService
             'tauxCommandes' => [
                 'reussies' => $nbReussies,
                 'annulees' => $nbAnnulees,
-                'autres' => max(0, $nbCommandes - $nbTerminees),
+                'autres' => max(0, $nbCommandesDemandes - $nbTerminees),
                 'taux_reussite' => $nbTerminees > 0 ? round($nbReussies / $nbTerminees * 100, 1) : null,
-                'taux_annulation' => $nbCommandes > 0 ? round($nbAnnulees / $nbCommandes * 100, 1) : null,
+                'taux_annulation' => $nbCommandesDemandes > 0
+                    ? round($nbAnnulees / $nbCommandesDemandes * 100, 1)
+                    : null,
             ],
             'canauxAcquisition' => $canauxAcquisition,
             'topMedicaments' => $topMedicaments,
@@ -276,6 +285,7 @@ class DashboardStatsService
     {
         $clientIds = (clone $baseQuery)
             ->whereBetween('date', [$start, $end])
+            ->caComptabilise()
             ->distinct()
             ->pluck('client_id');
 
@@ -309,15 +319,12 @@ class DashboardStatsService
      */
     private function topMedicaments(CarbonInterface $start, CarbonInterface $end, ?int $pharmacieId = null): array
     {
-        $in = collect(Commande::STATUTS_STATS_VENTES)
-            ->map(fn (string $s) => "'".addslashes($s)."'")
-            ->implode(',');
-
         $query = DB::table('commande_produit')
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
             ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
             ->whereBetween('commandes.date', [$start, $end])
-            ->whereRaw("commandes.status IN ({$in})")
+            ->where('commandes.status_pharmacie', Commande::STATUT_PHARMACIE_CA_COMPTABILISE)
+            ->where('commandes.status', '<>', 'annulee')
             ->where(function ($q) {
                 $q->whereNull('commande_produit.status')
                     ->orWhere('commande_produit.status', '<>', 'indisponible');
@@ -367,7 +374,7 @@ class DashboardStatsService
             ->whereBetween('date', [$start, $end])
             ->whereNotNull('validee_admin_at')
             ->whereNotNull('livree_at')
-            ->whereIn('status', self::STATUTS_REUSSIS)
+            ->caComptabilise()
             ->get(['validee_admin_at', 'livree_at']);
 
         $nbLivraison = $livraisonRows->count();
@@ -405,7 +412,7 @@ class DashboardStatsService
 
         $revenusBruts = (clone $baseQuery)
             ->whereBetween('date', [$jourDebut, $jourFin])
-            ->whereIn('status', self::STATUTS_REUSSIS)
+            ->caComptabilise()
             ->selectRaw('DATE(date) as jour, COALESCE(SUM(prix_medicaments), 0) as total')
             ->groupBy(DB::raw('DATE(date)'))
             ->orderBy('jour')

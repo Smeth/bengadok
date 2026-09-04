@@ -10,6 +10,7 @@ export type CommandeDetail = {
     prix_medicaments?: number;
     prix_parapharma?: number;
     commentaire?: string;
+    beneficiaire?: string | null;
     /** Note saisie par la pharmacie lors de la validation de disponibilité. */
     commentaire_pharmacie?: string | null;
     motif_annulation?: string;
@@ -70,6 +71,15 @@ export type CommandeDetail = {
         } | null;
     } | null;
     acceptation_client?: boolean;
+    pieces_jointes?: Array<{
+        id: number;
+        label?: string | null;
+        original_name?: string | null;
+        file_url?: string | null;
+        is_pdf?: boolean;
+        created_at?: string | null;
+        uploaded_by?: string | null;
+    }>;
     /** Livraisons multiples : ce qui sera validé en bloc avec une commande parente. */
     enfants?: Array<{
         id: number;

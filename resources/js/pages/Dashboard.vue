@@ -104,6 +104,7 @@ const props = defineProps<{
         nbPharmacies?: number;
         nbPharmaciesActives?: number;
         nbCommandes?: number;
+        nbCommandesDemandes?: number;
         nbClients?: number;
         nbReussies?: number;
         nbAnnulees?: number;
@@ -510,7 +511,7 @@ function getPiePath(
                     class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] relative overflow-hidden group hover:shadow-lg transition-shadow"
                 >
                     <h3 class="mb-6 text-[14px] font-extrabold text-[#5c5959]">
-                        Commandes Total
+                        Retraits confirmés
                     </h3>
                     <div class="mb-4 flex items-baseline gap-2">
                         <span class="text-[32px] font-extrabold text-black">{{
@@ -665,7 +666,7 @@ function getPiePath(
                         <span class="text-[28px] font-extrabold text-black">{{
                             kpis.nbReussies
                         }}</span>
-                        <span class="text-[14px] font-bold text-black">/ {{ kpis.nbCommandes }}</span>
+                        <span class="text-[14px] font-bold text-black">/ {{ kpis.nbCommandesDemandes ?? kpis.nbCommandes }}</span>
                     </div>
                     <p class="text-[12px] text-[#5c5959]">
                         Taux de réussite :
@@ -747,7 +748,7 @@ function getPiePath(
                     class="rounded-[20px] bg-[#E1EFE8] backdrop-blur-sm p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.1)] relative transition-transform hover:-translate-y-1"
                 >
                     <h3 class="mb-6 text-[15px] font-bold text-gray-900">
-                        Commande Total
+                        Retraits confirmés
                     </h3>
                     <div class="mb-4 flex items-baseline gap-2">
                         <span class="text-[36px] font-bold text-gray-900">{{

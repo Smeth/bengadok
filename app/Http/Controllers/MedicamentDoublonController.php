@@ -210,7 +210,7 @@ class MedicamentDoublonController extends Controller
     {
         return DB::table('commande_produit')
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
-            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->tap(fn ($q) => Commande::applyVentesComptabilisees($q, 'commandes'))
             ->where(function ($q) {
                 $q->whereNull('commande_produit.status')
                     ->orWhere('commande_produit.status', '<>', 'indisponible');
@@ -225,7 +225,7 @@ class MedicamentDoublonController extends Controller
     {
         return DB::table('commande_produit')
             ->join('commandes', 'commandes.id', '=', 'commande_produit.commande_id')
-            ->whereIn('commandes.status', Commande::STATUTS_STATS_VENTES)
+            ->tap(fn ($q) => Commande::applyVentesComptabilisees($q, 'commandes'))
             ->where(function ($q) {
                 $q->whereNull('commande_produit.status')
                     ->orWhere('commande_produit.status', '<>', 'indisponible');

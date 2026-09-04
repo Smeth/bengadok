@@ -15,7 +15,7 @@ return new class extends Migration
 
         Commande::query()->with('produits')->chunkById(100, function ($commandes) {
             foreach ($commandes as $commande) {
-                $montants = Commande::computeMontantsFromProduits($commande->produits, false);
+                $montants = Commande::computeMontantsFromProduits($commande->produits, false, false);
                 $commande->update([
                     'prix_medicaments' => $montants['prix_medicaments'],
                     'prix_parapharma' => $montants['prix_parapharma'],

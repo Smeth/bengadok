@@ -27,8 +27,8 @@ class PharmacieDashboardService
         $cfg = AppSetting::parapharmaConfig();
         [$debutPeriodeCommission, $finPeriodeCommission] = AppSetting::parapharmaPeriodeBounds();
 
-        $statusRevenu = ['livre', 'valide_a_preparer', 'attente_confirmation'];
-        $statusTraites = ['attente_confirmation', 'indisponible', 'valide_a_preparer', 'livre'];
+        $statusRevenu = [Commande::STATUT_PHARMACIE_CA_COMPTABILISE];
+        $statusTraites = ['attente_confirmation', 'indisponible', 'valide_a_preparer', Commande::STATUT_PHARMACIE_CA_COMPTABILISE];
 
         $baseRevenu = fn () => Commande::query()
             ->where('pharmacie_id', $pharmacieId)
@@ -207,7 +207,7 @@ class PharmacieDashboardService
             ->join('produits', 'produits.id', '=', 'commande_produit.produit_id')
             ->where('commandes.pharmacie_id', $pharmacieId)
             ->whereBetween('commandes.created_at', [$debut, $fin])
-            ->whereIn('commandes.status_pharmacie', ['livre', 'valide_a_preparer', 'attente_confirmation'])
+            ->where('commandes.status_pharmacie', Commande::STATUT_PHARMACIE_CA_COMPTABILISE)
             ->where(function ($q) {
                 $q->whereNull('commande_produit.status')
                     ->orWhere('commande_produit.status', '<>', 'indisponible');

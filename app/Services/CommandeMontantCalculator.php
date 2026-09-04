@@ -22,14 +22,23 @@ final class CommandeMontantCalculator
      * @param  iterable<int, Produit>  $produits
      * @return array{prix_medicaments: float, prix_parapharma: float, prix_lignes: float}
      */
-    public static function fromProduitsRelation(iterable $produits, bool $excludeIndisponible = true): array
-    {
+    public static function fromProduitsRelation(
+        iterable $produits,
+        bool $excludeIndisponible = true,
+        bool $excludeEnAttente = true,
+    ): array {
         $med = 0.0;
         $para = 0.0;
 
         foreach ($produits as $produit) {
             $pivot = $produit->pivot;
-            if ($excludeIndisponible && in_array($pivot->status ?? 'en_attente', ['indisponible', 'en_attente'], true)) {
+            $status = $pivot->status ?? 'en_attente';
+
+            if ($excludeIndisponible && $status === 'indisponible') {
+                continue;
+            }
+
+            if ($excludeEnAttente && $status === 'en_attente') {
                 continue;
             }
 

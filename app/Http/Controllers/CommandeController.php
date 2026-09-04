@@ -141,7 +141,7 @@ class CommandeController extends Controller
         $this->authorize('view', $commande);
         $user = $request->user();
 
-        $relations = ['client', 'pharmacie', 'pharmacieRefusee', 'produits', 'modePaiement', 'livreur', 'montantLivraison', 'enfants.pharmacie', 'enfants.produits', 'enfants.modePaiement', 'enfants.montantLivraison', 'parent'];
+        $relations = ['client', 'pharmacie', 'pharmacieRefusee', 'produits', 'modePaiement', 'livreur', 'montantLivraison', 'piecesJointes.uploadedBy', 'enfants.pharmacie', 'enfants.produits', 'enfants.modePaiement', 'enfants.montantLivraison', 'parent'];
         $relations[] = $this->backofficePeutVoirVerificationOrdonnance($user)
             ? 'ordonnance.verification'
             : 'ordonnance';
@@ -331,6 +331,33 @@ class CommandeController extends Controller
 
         return redirect()->route('commandes.index', ['detail' => $commande->id])
             ->with('status', "Commande {$commande->numero} mise à jour.");
+    }
+
+    public function updateComplementaires(Request $request, Commande $commande): RedirectResponse|\Illuminate\Http\JsonResponse
+    {
+        $this->authorize('updateComplementaires', $commande);
+
+        $validated = $request->validate([
+            'commentaire' => 'nullable|string',
+            'beneficiaire' => 'nullable|string|max:100',
+        ]);
+
+        $commande->update([
+            'commentaire' => isset($validated['commentaire']) && trim((string) $validated['commentaire']) !== ''
+                ? trim((string) $validated['commentaire'])
+                : null,
+            'beneficiaire' => isset($validated['beneficiaire']) && trim((string) $validated['beneficiaire']) !== ''
+                ? trim((string) $validated['beneficiaire'])
+                : null,
+        ]);
+
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
+            $commande->load(['piecesJointes.uploadedBy']);
+
+            return response()->json(['commande' => $commande]);
+        }
+
+        return back()->with('status', 'Informations complémentaires enregistrées.');
     }
 
     public function bulkAnnuler(Request $request): RedirectResponse

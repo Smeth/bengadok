@@ -41,8 +41,8 @@ class Commande extends Model
     ];
 
     /**
-     * Commandes prises en compte pour les KPI client (hors annulées).
-     * Inclut les statuts historiques éventuels en base (livree, a_preparer).
+     * Commandes prises en compte pour l'historique client (hors annulées).
+     * Pour le CA, les ventes et les KPI chiffrés, utiliser {@see applyVentesComptabilisees()}.
      */
     public const STATUTS_COMPTABILISES_CLIENT = [
         'nouvelle',
@@ -54,8 +54,9 @@ class Commande extends Model
     ];
 
     /**
-     * Statuts commande pour lesquels les lignes produit comptent dans les stats de ventes (médicaments, CA).
-     * Exclut nouvelle / en_attente / annulée : la vente n'est comptée qu'après validation admin.
+     * Statuts commande admin historiques — préférer {@see applyVentesComptabilisees()} pour le CA et les ventes.
+     *
+     * @deprecated Utiliser le filtre retrait pharmacie (status_pharmacie = livre).
      */
     public const STATUTS_STATS_VENTES = [
         'validee',
@@ -63,6 +64,41 @@ class Commande extends Model
         'retiree',
         'livree',
     ];
+
+    /** Retrait confirmé côté pharmacie — seul stade où le CA et les ventes sont comptabilisés. */
+    public const STATUT_PHARMACIE_CA_COMPTABILISE = 'livre';
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<Commande>|\Illuminate\Database\Query\Builder  $query
+     */
+    public static function applyVentesComptabilisees($query, string $alias = 'commandes'): void
+    {
+        $query
+            ->where("{$alias}.status_pharmacie", self::STATUT_PHARMACIE_CA_COMPTABILISE)
+            ->where("{$alias}.status", '<>', 'annulee');
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<Commande>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<Commande>
+     */
+    public function scopeCaComptabilise($query)
+    {
+        return $query
+            ->where('status_pharmacie', self::STATUT_PHARMACIE_CA_COMPTABILISE)
+            ->whereNotIn('status', ['annulee']);
+    }
+
+    /**
+     * Alias sémantique identique à {@see scopeCaComptabilise()} pour les requêtes Eloquent.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<Commande>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<Commande>
+     */
+    public function scopeVentesComptabilisees($query)
+    {
+        return $this->scopeCaComptabilise($query);
+    }
 
     // Statuts côté pharmacie
     public const STATUSES_PHARMACIE = [
@@ -138,14 +174,26 @@ class Commande extends Model
             ->withTimestamps();
     }
 
+    public function piecesJointes(): HasMany
+    {
+        return $this->hasMany(CommandePieceJointe::class);
+    }
+
     /**
      * Montant des lignes médicaments / parapharmacie (hors livraison).
      *
      * @return array{prix_medicaments: float, prix_parapharma: float, prix_lignes: float}
      */
-    public static function computeMontantsFromProduits($produits, bool $excludeIndisponible = true): array
-    {
-        return \App\Services\CommandeMontantCalculator::fromProduitsRelation($produits, $excludeIndisponible);
+    public static function computeMontantsFromProduits(
+        $produits,
+        bool $excludeIndisponible = true,
+        bool $excludeEnAttente = true,
+    ): array {
+        return \App\Services\CommandeMontantCalculator::fromProduitsRelation(
+            $produits,
+            $excludeIndisponible,
+            $excludeEnAttente,
+        );
     }
 
     /**
