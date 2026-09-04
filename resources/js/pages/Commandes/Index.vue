@@ -1293,10 +1293,13 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                 <div v-else-if="detailCommande">
                     <!-- En-tête (défile avec le reste) -->
                     <div
-                        class="flex items-center justify-between gap-3 border-b border-gray-100 bg-white px-4 py-4 shadow-sm sm:px-6"
+                        class="flex flex-col gap-3 border-b border-gray-100 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-start sm:justify-between sm:px-6"
                     >
-                        <div class="min-w-0 flex-1">
-                            <p class="text-[18px] font-bold text-gray-800">
+                        <div class="min-w-0 flex-1 overflow-hidden">
+                            <p
+                                class="truncate text-[18px] font-bold text-gray-800"
+                                :title="detailCommande.numero"
+                            >
                                 {{ detailCommande.numero }}
                             </p>
                             <p class="text-[13px] font-medium text-gray-500">
@@ -1304,28 +1307,32 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 {{ formatDateHeureCommande(detailCommande) }}
                             </p>
                         </div>
-                        <span
-                            class="shrink-0 rounded-full px-3 py-1 text-[12px] font-bold"
-                            :style="getStatusBadgeStyle(detailCommande.status)"
+                        <div
+                            class="flex shrink-0 flex-wrap items-center justify-end gap-2"
                         >
-                            {{ getStatusLabel(detailCommande.status) }}
-                        </span>
-                        <Link
-                            v-if="peutModifierCommandeComplete"
-                            :href="`/commandes/${detailCommande.id}/edit`"
-                            class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[#0d6efd]/30 bg-[#0d6efd]/5 px-3 py-1.5 text-[12px] font-semibold text-[#0d6efd] transition-colors hover:bg-[#0d6efd]/10"
-                        >
-                            <Pencil class="size-3.5" />
-                            Modifier
-                        </Link>
-                        <button
-                            type="button"
-                            class="shrink-0 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
-                            aria-label="Fermer le panneau"
-                            @click="closeDetail"
-                        >
-                            <X class="size-5" />
-                        </button>
+                            <span
+                                class="rounded-full px-3 py-1 text-[12px] font-bold whitespace-nowrap"
+                                :style="getStatusBadgeStyle(detailCommande.status)"
+                            >
+                                {{ getStatusLabel(detailCommande.status) }}
+                            </span>
+                            <Link
+                                v-if="peutModifierCommandeComplete"
+                                :href="`/commandes/${detailCommande.id}/edit`"
+                                class="inline-flex items-center gap-1.5 rounded-lg border border-[#0d6efd]/30 bg-[#0d6efd]/5 px-3 py-1.5 text-[12px] font-semibold text-[#0d6efd] transition-colors hover:bg-[#0d6efd]/10"
+                            >
+                                <Pencil class="size-3.5 shrink-0" />
+                                Modifier
+                            </Link>
+                            <button
+                                type="button"
+                                class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                                aria-label="Fermer le panneau"
+                                @click="closeDetail"
+                            >
+                                <X class="size-5" />
+                            </button>
+                        </div>
                     </div>
 
                     <div class="space-y-4 p-6 pb-8">
