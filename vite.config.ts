@@ -7,7 +7,11 @@ import { defineConfig } from 'vite';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/js/app.ts'],
+            input: [
+                'resources/js/app.ts',
+                // Collision de chunk « Index » : entrée explicite pour que @vite retrouve la page en CI.
+                'resources/js/pages/Commandes/Index.vue',
+            ],
             ssr: 'resources/js/ssr.ts',
             refresh: true,
         }),
