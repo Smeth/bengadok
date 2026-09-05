@@ -175,4 +175,98 @@ class CommandeService
 
         return CommandeMontantCalculator::fromInputLines($produits);
     }
+
+    /**
+     * Mise à jour d'une commande « nouvelle » ou « en attente » (édition back-office).
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    public function update(Commande $commande, array $validated, ?UploadedFile $ordonnance = null): Commande
+    {
+        return DB::transaction(function () use ($commande, $validated, $ordonnance) {
+            $client = ! empty($validated['client_id'])
+                ? Client::findOrFail($validated['client_id'])
+                : Client::create([
+                    'nom' => $this->trimOrNull($validated['client_nom'] ?? null),
+                    'prenom' => $this->trimOrNull($validated['client_prenom'] ?? null),
+                    'tel' => $validated['client_tel'],
+                    'adresse' => $validated['client_adresse'],
+                    'arrondissement' => $validated['client_arrondissement'] ?? null,
+                ]);
+
+            if (! empty($validated['client_id'])) {
+                $client->update([
+                    'nom' => $this->trimOrNull($validated['client_nom'] ?? null),
+                    'prenom' => $this->trimOrNull($validated['client_prenom'] ?? null),
+                    'tel' => $validated['client_tel'],
+                    'adresse' => $validated['client_adresse'],
+                    'arrondissement' => $validated['client_arrondissement'] ?? null,
+                ]);
+            }
+
+            $ordonnanceId = $commande->ordonnance_id;
+            if ($ordonnance !== null) {
+                $ordonnanceId = Ordonnance::registerNewUpload($ordonnance)->id;
+            }
+
+            $commande->update([
+                'client_id' => $client->id,
+                'pharmacie_id' => $validated['pharmacie_id'],
+                'ordonnance_id' => $ordonnanceId,
+                'mode_paiement_id' => $validated['mode_paiement_id'] ?? null,
+                'commentaire' => $validated['commentaire'] ?? null,
+                'beneficiaire' => $validated['beneficiaire'] ?? null,
+            ]);
+
+            $this->syncProduitsFromEdition($commande, $validated['produits']);
+
+            $commande->load('produits');
+            $montants = CommandeMontantCalculator::fromProduitsRelation($commande->produits);
+            $montantLivraison = $commande->montant_livraison_id
+                ? (float) (MontantLivraison::find($commande->montant_livraison_id)?->designation ?? 0)
+                : 0.0;
+            $commande->update([
+                'prix_medicaments' => $montants['prix_medicaments'],
+                'prix_parapharma' => $montants['prix_parapharma'],
+                'prix_total' => $montants['prix_lignes'] + $montantLivraison,
+            ]);
+
+            return $commande->fresh();
+        });
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $produits
+     */
+    private function syncProduitsFromEdition(Commande $commande, array $produits): void
+    {
+        $commande->load('produits');
+        $existingByProduitId = $commande->produits->keyBy('id');
+
+        $commande->produits()->detach();
+        foreach ($produits as $p) {
+            $produit = Produit::fromCommandeLine([
+                'designation' => $p['designation'],
+                'dosage' => $p['dosage'] ?? null,
+                'forme' => $p['forme'] ?? null,
+                'prix_unitaire' => $p['prix_unitaire'],
+                'type' => $p['type'] ?? null,
+            ]);
+            $quantite = (int) $p['quantite'];
+            $prixUnitaire = (float) $p['prix_unitaire'];
+            $existing = isset($p['id']) ? $existingByProduitId->get((int) $p['id']) : null;
+
+            $pivotStatus = $existing?->pivot->status ?? 'en_attente';
+            $pivotType = $existing?->pivot->type ?? $produit->type;
+
+            $commande->produits()->attach($produit->id, [
+                'quantite' => $quantite,
+                'quantite_confirmee' => $existing?->pivot->quantite_confirmee,
+                'prix_unitaire' => $prixUnitaire,
+                'status' => $pivotStatus,
+                'type' => $pivotType,
+                'vente_libre' => $existing?->pivot->vente_libre,
+            ]);
+        }
+    }
 }

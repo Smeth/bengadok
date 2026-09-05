@@ -1,4 +1,9 @@
-<script setup lang="ts">
+const fs = require('fs');
+
+const indexPath = 'resources/js/pages/DokPharma/Index.vue';
+const lines = fs.readFileSync(indexPath, 'utf8').split(/\r?\n/);
+
+const newScript = `<script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import { Search, X } from 'lucide-vue-next';
@@ -125,7 +130,7 @@ function confirmerAchat() {
     const id = confirmModal.value.cmd.id;
     confirmModal.value = { open: false, cmd: null };
     router.post(
-        `/dok-pharma/${id}/valider-retrait`,
+        \`/dok-pharma/\${id}/valider-retrait\`,
         {},
         {
             preserveScroll: true,
@@ -139,47 +144,13 @@ function confirmerAchat() {
         },
     );
 }
-</script>
+</script>`;
 
-<template>
-    <Head title="Commandes - BengaDok" />
+// Template: keep lines 451-489 (search), replace tabs and content
+const templateHead = lines.slice(450, 489); // from <template> through search bar end
+const templateTail = lines.slice(2186); // pagination + modals + closing
 
-    <PharmacyLayout>
-        <AppToast
-            v-model:show="dispoSuccessToast.show"
-            :title="dispoSuccessToast.title"
-            :description="dispoSuccessToast.description"
-        />
-        <AppToast
-            v-model:show="retraitSuccessToast.show"
-            :title="retraitSuccessToast.title"
-            :description="retraitSuccessToast.description"
-        />
-        <!-- Même fond et grille que le tableau de bord pharmacie -->
-        <div class="pharmacy-content-shell flex min-h-full flex-1 flex-col">
-            <div class="pharmacy-card mb-4 flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
-                <div class="relative min-w-0 flex-1">
-                    <Search
-                        class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-500"
-                    />
-                    <Input
-                        v-model="searchQuery"
-                        type="search"
-                        placeholder="Rechercher par nom, n° commande ou médicament…"
-                        class="h-10 w-full rounded-xl border border-white/80 bg-white/95 pl-10 pr-10 text-sm shadow-sm placeholder:text-gray-500 dark:border-border dark:bg-input/95 dark:text-foreground dark:placeholder:text-muted-foreground"
-                        autocomplete="off"
-                    />
-                    <button
-                        v-if="searchQuery.trim()"
-                        type="button"
-                        class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-                        aria-label="Effacer la recherche"
-                        @click="searchQuery = ''"
-                    >
-                        <X class="size-4" />
-                    </button>
-                </div>
-            </div>
+let templateMiddle = `
             <DokPharmaCommandesTabs
                 :onglet="onglet"
                 :stats="stats"
@@ -217,34 +188,17 @@ function confirmerAchat() {
                     @open-ordonnance="openOrdonnance"
                 />
             </div>
-            <div
-                v-if="(commandes.links?.length ?? 0) > 3"
-                :class="[modulePaginationWrapperClass, 'mt-2']"
-            >
-                <ModulePagination
-                    :links="commandes.links"
-                    :from="commandes.from"
-                    :to="commandes.to"
-                    :total="commandes.total"
-                />
-            </div>
-        </div>
+`;
 
-        <DokPharmaValiderRetraitModal
-            :open="confirmModal.open"
-            :numero="confirmModal.cmd?.numero"
-            @cancel="annulerConfirm"
-            @confirm="confirmerAchat"
-        />
+// templateHead includes `<template>` and layout start - fix to not duplicate
+const templateStart = templateHead.slice(1); // skip `<template>` line, we'll add it
 
-        <DokPharmaOrdonnanceViewerModal
-            :open="ordModal.open"
-            :url="ordModal.url"
-            :is-pdf="ordModal.isPdf"
-            :numero="ordModal.numero"
-            @close="closeOrdonnance"
-        />
+const out =
+    newScript +
+    '\\n\\n<template>\\n' +
+    templateStart.join('\\n') +
+    templateMiddle +
+    templateTail.join('\\n');
 
-        <FlashToastHost />
-    </PharmacyLayout>
-</template>
+fs.writeFileSync(indexPath, out.replace(/\\n/g, '\n'), 'utf8');
+console.log('Index slimmed to', out.split('\\n').length, 'lines');

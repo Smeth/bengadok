@@ -2,30 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\PromoteClientsFromSuccessfulOrdersAction;
 use App\Models\Commande;
-use App\Models\CommandePieceJointe;
 use App\Models\Pharmacie;
-use App\Models\Produit;
 use App\Services\AdminParapharmaDashboardService;
-use App\Services\CommandeDateFormatter;
-use App\Services\CommandeMontantCalculator;
+use App\Services\DokPharmaCommandeActionService;
+use App\Services\DokPharmaCommandeIndexService;
 use App\Services\PharmacieCreditService;
+use App\Services\PharmacieDashboardContextResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DokPharmaController extends Controller
 {
     public function __construct(
-        private CommandeDateFormatter $commandeDateFormatter,
+        private PharmacieDashboardContextResolver $dashboardContext,
+        private DokPharmaCommandeIndexService $commandeIndexService,
+        private DokPharmaCommandeActionService $commandeActionService,
     ) {}
 
-    /**
-     * Dashboard pharmacie : parapharmacie, commissions, crédits (maquette Figma).
-     */
     public function dashboard(
         Request $request,
         AdminParapharmaDashboardService $parapharmaService,
@@ -35,7 +31,7 @@ class DokPharmaController extends Controller
             return redirect('/dok-pharma/commandes');
         }
 
-        $context = $this->resolvePharmacieDashboardContext($request);
+        $context = $this->dashboardContext->resolve($request);
         $mois = $request->get('mois');
 
         if ($context['pharmacie_id'] === null) {
@@ -91,7 +87,7 @@ class DokPharmaController extends Controller
     ): RedirectResponse {
         abort_unless($request->user()?->hasRole('gerant'), 403);
 
-        $context = $this->resolvePharmacieDashboardContext($request);
+        $context = $this->dashboardContext->resolve($request);
         abort_unless($context['pharmacie_id'] !== null, 403);
 
         $validated = $request->validate([
@@ -115,7 +111,7 @@ class DokPharmaController extends Controller
     ): RedirectResponse {
         abort_unless($request->user()?->hasRole('gerant'), 403);
 
-        $context = $this->resolvePharmacieDashboardContext($request);
+        $context = $this->dashboardContext->resolve($request);
         abort_unless($context['pharmacie_id'] !== null, 403);
 
         $pharmacie = Pharmacie::query()->findOrFail($context['pharmacie_id']);
@@ -143,304 +139,58 @@ class DokPharmaController extends Controller
             ->with('success', 'Demande de recharge enregistrée.');
     }
 
-    /**
-     * @return array{
-     *     pharmacie_id: int|null,
-     *     pharmacies_disponibles: array<int, array{id: int, designation: string}>
-     * }
-     */
-    private function resolvePharmacieDashboardContext(Request $request): array
-    {
-        $user = $request->user();
-        $userPharmacieId = $user?->pharmacie_id;
-
-        if (! $userPharmacieId) {
-            return ['pharmacie_id' => null, 'pharmacies_disponibles' => []];
-        }
-
-        $userPharmacie = Pharmacie::query()->find($userPharmacieId);
-
-        $disponibles = Pharmacie::query()
-            ->where(function ($q) use ($userPharmacie, $userPharmacieId) {
-                $q->where('id', $userPharmacieId);
-                if ($userPharmacie?->proprio_email) {
-                    $q->orWhere('proprio_email', $userPharmacie->proprio_email);
-                }
-            })
-            ->orderBy('designation')
-            ->get(['id', 'designation']);
-
-        $requestedId = $request->integer('pharmacie_id');
-        $activeId = $disponibles->contains('id', $requestedId)
-            ? $requestedId
-            : $userPharmacieId;
-
-        return [
-            'pharmacie_id' => $activeId,
-            'pharmacies_disponibles' => $disponibles
-                ->map(fn (Pharmacie $p) => ['id' => $p->id, 'designation' => $p->designation])
-                ->values()
-                ->all(),
-        ];
-    }
-
     public function index(Request $request): Response|RedirectResponse
     {
-        $pharmacieId = $request->user()?->pharmacie_id;
-        if (! $pharmacieId) {
-            return Inertia::render('DokPharma/Index', [
-                'commandes' => ['data' => [], 'links' => [], 'current_page' => 1, 'last_page' => 1, 'from' => 0, 'to' => 0, 'total' => 0],
-                'stats' => ['nouvelles' => 0, 'en_attente' => 0, 'a_preparer' => 0, 'livrees' => 0],
-                'onglet' => $request->input('onglet', 'nouvelles'),
-                'search' => Str::limit(trim((string) $request->input('search', '')), 100, ''),
-                'canViewHistorique' => ! $this->userIsVendeurSeul($request),
-            ]);
-        }
+        if ($this->commandeIndexService->userIsVendeurSeul($request)
+            && $request->input('onglet', 'nouvelles') === 'livrees') {
+            $search = trim((string) $request->input('search', ''));
 
-        $onglet = $request->input('onglet', 'nouvelles');
-        $search = Str::limit(trim((string) $request->input('search', '')), 100, '');
-
-        if ($this->userIsVendeurSeul($request) && $onglet === 'livrees') {
             return redirect()->route('dok-pharma.commandes', array_filter([
                 'onglet' => 'nouvelles',
                 'search' => $search !== '' ? $search : null,
             ]));
         }
 
-        $query = Commande::with(['client', 'produits', 'ordonnance', 'piecesJointes.uploadedBy'])
-            ->where('pharmacie_id', $pharmacieId);
-
-        $query
-            ->when($onglet === 'nouvelles', fn ($q) => $q->where('status_pharmacie', 'nouvelle'))
-            ->when($onglet === 'en_attente', fn ($q) => $q->whereIn('status_pharmacie', ['attente_confirmation', 'indisponible']))
-            ->when($onglet === 'a_preparer', fn ($q) => $q->where('status_pharmacie', 'valide_a_preparer'))
-            ->when($onglet === 'livrees', fn ($q) => $q->where('status_pharmacie', 'livre'))
-            ->when(! in_array($onglet, ['nouvelles', 'en_attente', 'a_preparer', 'livrees']),
-                fn ($q) => $q->where('status_pharmacie', 'nouvelle'));
-
-        if ($search !== '') {
-            $like = '%'.addcslashes($search, '%_\\').'%';
-            $query->where(function ($q) use ($like) {
-                $q->where('numero', 'like', $like)
-                    ->orWhereHas('client', function ($cq) use ($like) {
-                        $cq->where('nom', 'like', $like)
-                            ->orWhere('prenom', 'like', $like);
-                    })
-                    ->orWhereHas('produits', function ($pq) use ($like) {
-                        $pq->where('designation', 'like', $like);
-                    });
-            });
-        }
-
-        $commandes = $query
-            ->latest('date')
-            ->latest('created_at')
-            ->paginate(20)
-            ->withQueryString()
-            ->through(function ($c) {
-                return [
-                    'id' => $c->id,
-                    'numero' => $c->numero,
-                    'date' => $this->commandeDateFormatter->formatDateHeure($c),
-                    'status' => $c->status,
-                    'status_pharmacie' => $c->status_pharmacie,
-                    'client' => $c->client
-                        ? [
-                            'nom' => $c->client->nom,
-                            'prenom' => $c->client->prenom,
-                            'sexe' => $c->client->sexe,
-                        ]
-                        : null,
-                    'produits' => $c->produits->map(fn ($p) => [
-                        'id' => $p->id,
-                        'designation' => $p->designation,
-                        'pivot' => [
-                            'quantite' => $p->pivot->quantite,
-                            'prix_unitaire' => (float) ($p->pivot->prix_unitaire ?? 0),
-                            'status' => $p->pivot->status ?? 'en_attente',
-                            'quantite_confirmee' => $p->pivot->quantite_confirmee ?? null,
-                            'vente_libre' => (bool) ($p->pivot->vente_libre ?? false),
-                        ],
-                    ])->values(),
-                    'ordonnance_id' => $c->ordonnance_id,
-                    'ordonnance_url' => $c->ordonnance?->file_url,
-                    'ordonnance_is_pdf' => (bool) ($c->ordonnance?->is_pdf ?? false),
-                    'commentaire' => $c->commentaire,
-                    'commentaire_pharmacie' => $c->commentaire_pharmacie,
-                    'prix_medicaments' => (float) ($c->prix_medicaments ?? 0),
-                    'pieces_jointes' => $c->piecesJointes
-                        ->map(fn (CommandePieceJointe $pj) => $pj->toFrontendArray())
-                        ->values()
-                        ->all(),
-                ];
-            });
-
-        $stats = [
-            'nouvelles' => Commande::where('pharmacie_id', $pharmacieId)->where('status_pharmacie', 'nouvelle')->count(),
-            'en_attente' => Commande::where('pharmacie_id', $pharmacieId)->whereIn('status_pharmacie', ['attente_confirmation', 'indisponible'])->count(),
-            'a_preparer' => Commande::where('pharmacie_id', $pharmacieId)->where('status_pharmacie', 'valide_a_preparer')->count(),
-            'livrees' => Commande::where('pharmacie_id', $pharmacieId)->where('status_pharmacie', 'livre')->count(),
-        ];
-
-        return Inertia::render('DokPharma/Index', [
-            'commandes' => $commandes,
-            'stats' => $stats,
-            'onglet' => $onglet,
-            'search' => $search,
-            'canViewHistorique' => ! $this->userIsVendeurSeul($request),
-        ]);
+        return Inertia::render('DokPharma/Index', $this->commandeIndexService->paginatedIndex($request));
     }
 
-    private function userIsVendeurSeul(Request $request): bool
-    {
-        $user = $request->user();
-
-        return $user !== null
-            && $user->hasRole('vendeur')
-            && ! $user->hasRole('gerant');
-    }
-
-    /**
-     * La pharmacie valide la disponibilité + prix des médicaments.
-     */
     public function validerDisponibilite(Request $request, Commande $commande)
     {
         $pharmacieId = $request->user()?->pharmacie_id;
         if (! $pharmacieId || $commande->pharmacie_id != $pharmacieId) {
             abort(403);
         }
-        if (! in_array($commande->status_pharmacie, ['nouvelle', 'attente_confirmation', 'indisponible'], true)) {
-            return back()->with('error', 'Cette commande a déjà été validée par l\'administrateur et ne peut plus être modifiée.');
-        }
-
-        // Charger les produits pour connaître les quantités demandées
-        $commande->load('produits');
-        $produitMap = $commande->produits->keyBy('id');
 
         $lignes = $request->input('lignes', []);
-        $nbDispo = 0;
-        $nbIndispo = 0;
-
-        // Vérification préalable : tout produit disponible doit avoir un prix > 0 et une quantité confirmée >= 1
-        foreach ($lignes as $ligne) {
-            $status = $ligne['status'] ?? 'disponible';
-            $prixUnitaire = isset($ligne['prix_unitaire']) ? (float) $ligne['prix_unitaire'] : 0;
-            if (in_array($status, ['disponible', 'partiel']) && $prixUnitaire <= 0) {
-                return back()->with('error', 'Veuillez saisir le prix pour tous les médicaments disponibles avant d\'envoyer.');
-            }
-            $qteConfirmeeCheck = isset($ligne['quantite_confirmee']) ? (int) $ligne['quantite_confirmee'] : null;
-            if (in_array($status, ['disponible', 'partiel'], true) && $qteConfirmeeCheck !== null && $qteConfirmeeCheck < 1) {
-                return back()->with('error', 'La quantité confirmée doit être d\'au moins 1 pour un médicament disponible. Marquez-le plutôt indisponible.');
-            }
+        if (! is_array($lignes)) {
+            $lignes = [];
         }
 
-        foreach ($lignes as $ligne) {
-            $produitId = (int) ($ligne['produit_id'] ?? 0);
-            $produit = $produitMap->get($produitId);
-            if (! $produit) {
-                continue;
-            }
+        $error = $this->commandeActionService->validerDisponibilite(
+            $commande,
+            $pharmacieId,
+            $lignes,
+            (string) $request->input('commentaire', ''),
+        );
 
-            $qteDemandee = (int) $produit->pivot->quantite;
-            $status = $ligne['status'] ?? 'disponible';
-            $prixUnitaire = isset($ligne['prix_unitaire']) ? (float) $ligne['prix_unitaire'] : null;
-
-            // Sécurité : la quantité confirmée ne peut pas dépasser la quantité demandée
-            // (le plancher à 1 est rejeté en amont plutôt que corrigé silencieusement, voir vérification préalable)
-            $qteConfirmee = isset($ligne['quantite_confirmee']) ? (int) $ligne['quantite_confirmee'] : null;
-            if ($qteConfirmee !== null) {
-                $qteConfirmee = min($qteConfirmee, $qteDemandee);
-            }
-
-            $qteStockee = in_array($status, ['disponible', 'partiel']) && $qteConfirmee !== null
-                ? $qteConfirmee
-                : null;
-
-            $venteLibre = filter_var(
-                $ligne['vente_libre'] ?? false,
-                FILTER_VALIDATE_BOOLEAN,
-                FILTER_NULL_ON_FAILURE,
-            ) ?? false;
-
-            // Type figé sur la ligne de commande : un produit parapharma déjà classé le reste
-            // (peu importe la case "vente libre"), sinon on tranche médicament vente libre / sur ordonnance.
-            // Ce type snapshot sur la ligne évite qu'un changement ultérieur du catalogue produit
-            // (ex: le même produit reclassé sur une autre commande) ne reclasse rétroactivement celle-ci.
-            $typeResolu = CommandeMontantCalculator::isParapharmaType($produit->type)
-                ? $produit->type
-                : ($venteLibre ? 'Vente libre' : 'Sur ordonnance');
-
-            $pivotData = [
-                'status' => $status,
-                'quantite_confirmee' => $qteStockee,
-                'vente_libre' => $venteLibre,
-                'type' => $typeResolu,
-            ];
-            if ($prixUnitaire !== null) {
-                $pivotData['prix_unitaire'] = $prixUnitaire;
-            }
-
-            $commande->produits()->updateExistingPivot($produitId, $pivotData);
-
-            if (
-                in_array($status, ['disponible', 'partiel'], true)
-                && ! CommandeMontantCalculator::isParapharmaType($produit->type)
-            ) {
-                $produit->update([
-                    'type' => $venteLibre ? 'Vente libre' : 'Sur ordonnance',
-                ]);
-            }
-
-            $qteEffective = $status === 'indisponible' ? 0 : ($qteConfirmee ?? 1);
-            if ($qteEffective > 0) {
-                $nbDispo++;
-            } else {
-                $nbIndispo++;
-            }
+        if ($error !== null) {
+            return back()->with('error', $error);
         }
-
-        $commentairePharmacie = trim($request->input('commentaire', ''));
-
-        $commande->load('produits');
-        $montants = Commande::computeMontantsFromProduits($commande->produits);
-        $commande->load('montantLivraison');
-        $liv = (float) ($commande->montantLivraison?->designation ?? 0);
-
-        $commande->update([
-            'status' => 'en_attente',
-            'status_pharmacie' => $nbDispo === 0 ? 'indisponible' : 'attente_confirmation',
-            'pharmacie_refusee_id' => $nbDispo === 0 ? $pharmacieId : null,
-            'prix_medicaments' => $montants['prix_medicaments'],
-            'prix_parapharma' => $montants['prix_parapharma'],
-            'prix_total' => $montants['prix_lignes'] + $liv,
-            'dispo_pharmacie_at' => now(),
-            ...($commentairePharmacie !== '' ? ['commentaire_pharmacie' => $commentairePharmacie] : []),
-        ]);
 
         return back()->with('status', 'Disponibilité envoyée.');
     }
 
-    /**
-     * Le vendeur confirme le retrait / la remise au livreur.
-     */
     public function validerRetrait(Request $request, Commande $commande)
     {
         $pharmacieId = $request->user()?->pharmacie_id;
         if (! $pharmacieId || $commande->pharmacie_id != $pharmacieId) {
             abort(403);
         }
-        if ($commande->status_pharmacie !== 'valide_a_preparer') {
-            return back()->with('error', 'Seules les commandes validées peuvent être remises au livreur.');
+
+        $error = $this->commandeActionService->validerRetrait($commande);
+        if ($error !== null) {
+            return back()->with('error', $error);
         }
-
-        // Seul status_pharmacie change — c'est l'admin qui passera status à 'retiree' quand le livreur confirmera
-        $commande->update([
-            'status_pharmacie' => 'livre',
-        ]);
-        $commande->refresh();
-
-        PromoteClientsFromSuccessfulOrdersAction::afterPharmacieRetrait($commande);
-        app(PharmacieCreditService::class)->deduirePourCommande($commande);
 
         return back()->with('status', 'Retrait validé.');
     }

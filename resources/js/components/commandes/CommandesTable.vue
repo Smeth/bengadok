@@ -15,6 +15,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatDateFrLocal } from '@/lib/formatDateLocal';
+import { getMedicamentsText } from '@/lib/commandeDetailDisplay';
 import {
     modulePrimaryAlertBannerClass,
     modulePrimaryTextClass,
@@ -77,14 +78,11 @@ function getClientDisplayName(
     return civ ? `${civ} ${core}` : core;
 }
 
-function getMedicamentsText(
-    produits: Array<{ designation: string; dosage?: string }> | undefined,
-): string {
-    return (
-        produits
-            ?.map((p) => p.designation + (p.dosage ? ' ' + p.dosage : ''))
-            .join(', ') || '-'
-    );
+function medicamentsListLabel(cmd: CommandeListItem): string {
+    if (cmd.medicaments_resume) {
+        return cmd.medicaments_resume;
+    }
+    return getMedicamentsText(cmd.produits);
 }
 
 function formatDate(d: string) {
@@ -223,9 +221,9 @@ function formatDate(d: string) {
                         <td class="max-w-0 py-3 pr-3 align-middle">
                             <span
                                 class="block min-w-0 truncate text-[11px] text-gray-600"
-                                :title="getMedicamentsText(cmd.produits)"
+                                :title="medicamentsListLabel(cmd)"
                             >
-                                {{ getMedicamentsText(cmd.produits) }}
+                                {{ medicamentsListLabel(cmd) }}
                             </span>
                         </td>
                         <td class="py-3 pr-6 align-middle">

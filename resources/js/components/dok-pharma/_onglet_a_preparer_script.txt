@@ -1,0 +1,46 @@
+<script setup lang="ts">
+import { ChevronDown, ChevronUp, CheckCircle2, Clock, Eye, FileText, ShoppingCart } from 'lucide-vue-next';
+import PharmaciePieceJointeSection from '@/components/dok-pharma/PharmaciePieceJointeSection.vue';
+import { pharmacyOrderCardClass } from '@/lib/bengadokUi';
+import { sousTotalCommandeProduits } from '@/lib/commandeTotals';
+import {
+    classesStatutDisponibiliteLigne,
+    libelleStatutDisponibiliteLigne,
+} from '@/lib/commandeProduitStatus';
+import { clientNomAvecCivilite } from '@/lib/clientDisplayName';
+import {
+    nomCommandeVisible,
+    qteDisponibleAffichee,
+    qteDisponibleNombre,
+    estVenteLibreProduit,
+    peutAjouterPieceJointe,
+    type DokPharmaCommande,
+} from '@/lib/dokPharmaCommande';
+
+defineProps<{
+    commandes: DokPharmaCommande[];
+    expandedCards: Set<number>;
+}>();
+
+const emit = defineEmits<{
+    'toggle-card': [cmd: DokPharmaCommande];
+    'open-ordonnance': [cmd: DokPharmaCommande];
+    'valider-achat': [cmd: DokPharmaCommande];
+}>();
+
+function totalCommandeValidee(cmd: DokPharmaCommande): number {
+    return sousTotalCommandeProduits(cmd.produits);
+}
+
+function toggleCard(cmd: DokPharmaCommande) {
+    emit('toggle-card', cmd);
+}
+
+function openOrdonnance(cmd: DokPharmaCommande) {
+    emit('open-ordonnance', cmd);
+}
+
+function askValiderAchat(cmd: DokPharmaCommande) {
+    emit('valider-achat', cmd);
+}
+</script>

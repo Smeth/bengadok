@@ -97,6 +97,7 @@ export type CommandeListItem = {
     date: string;
     status: string;
     prix_total: number;
+    medicaments_resume: string;
     client: {
         nom: string;
         prenom: string;
@@ -105,12 +106,13 @@ export type CommandeListItem = {
         arrondissement?: string;
         sexe?: string;
     };
-    pharmacie?: { designation: string };
-    produits: Array<{
+    /** @deprecated Présent uniquement sur d'anciennes réponses — préférer medicaments_resume */
+    produits?: Array<{
         designation: string;
         dosage?: string;
         pivot: { quantite: number };
     }>;
+    pharmacie?: { designation: string };
     montant_livraison?: { designation: number };
     mode_paiement?: { id?: number; designation: string };
 };

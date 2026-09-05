@@ -1,0 +1,55 @@
+<script setup lang="ts">
+import { ChevronDown, ChevronUp, Clock, Eye, FileText, ShoppingCart } from 'lucide-vue-next';
+import { toRef } from 'vue';
+import PharmaciePieceJointeSection from '@/components/dok-pharma/PharmaciePieceJointeSection.vue';
+import { useDokPharmaAccordion } from '@/composables/useDokPharmaAccordion';
+import { useDokPharmaNouvellesForm } from '@/composables/useDokPharmaNouvellesForm';
+import { pharmacyOrderCardClass } from '@/lib/bengadokUi';
+import {
+    classesStatutDisponibiliteLigne,
+    libelleStatutDisponibiliteLigne,
+} from '@/lib/commandeProduitStatus';
+import { clientNomAvecCivilite } from '@/lib/clientDisplayName';
+import {
+    nomCommandeVisible,
+    peutAjouterPieceJointe,
+    type DokPharmaCommande,
+} from '@/lib/dokPharmaCommande';
+
+const props = defineProps<{
+    commandes: DokPharmaCommande[];
+}>();
+
+const emit = defineEmits<{
+    'open-ordonnance': [cmd: DokPharmaCommande];
+    'envoi-success': [];
+}>();
+
+const commandesRef = toRef(props, 'commandes');
+
+const { expandedCards, toggleCard, collapseCard } = useDokPharmaAccordion((cmd) =>
+    initForm(cmd),
+);
+
+const {
+    formLignes,
+    formCommentaires,
+    initForm,
+    totalCmd,
+    totalLigne,
+    qteInvalide,
+    toggleDispo,
+    statutDispoForm,
+    peutEnvoyerDisponibilite,
+    envoyer,
+} = useDokPharmaNouvellesForm({
+    commandes: commandesRef,
+    expandedCards,
+    collapseCard,
+    onEnvoiSuccess: () => emit('envoi-success'),
+});
+
+function openOrdonnance(cmd: DokPharmaCommande) {
+    emit('open-ordonnance', cmd);
+}
+</script>

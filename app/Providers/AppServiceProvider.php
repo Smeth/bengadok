@@ -3,8 +3,17 @@
 namespace App\Providers;
 
 use App\Console\Commands\AppResetCommand;
+use App\Models\AppSetting;
 use App\Models\Commande;
+use App\Models\Heur;
+use App\Models\Livreur;
+use App\Models\ModePaiement;
+use App\Models\MontantLivraison;
+use App\Models\Pharmacie;
+use App\Models\TypePharmacie;
+use App\Models\Zone;
 use App\Observers\CommandeObserver;
+use App\Observers\CommandeReferentielsCacheObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +37,17 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->commands([AppResetCommand::class]);
         Commande::observe(CommandeObserver::class);
+
+        $referentielsObserver = CommandeReferentielsCacheObserver::class;
+        Pharmacie::observe($referentielsObserver);
+        Zone::observe($referentielsObserver);
+        Livreur::observe($referentielsObserver);
+        MontantLivraison::observe($referentielsObserver);
+        ModePaiement::observe($referentielsObserver);
+        Heur::observe($referentielsObserver);
+        TypePharmacie::observe($referentielsObserver);
+        AppSetting::observe($referentielsObserver);
+
         $this->configureDefaults();
     }
 

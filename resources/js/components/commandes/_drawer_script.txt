@@ -1,0 +1,156 @@
+<script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
+import {
+    AlertTriangle,
+    Check,
+    CheckCircle2,
+    FileText,
+    Pencil,
+    Paperclip,
+    RefreshCw,
+    Truck,
+    X,
+    XCircle,
+} from 'lucide-vue-next';
+import { computed, toRef } from 'vue';
+import OrdonnanceAnalysisProgressBar from '@/components/OrdonnanceAnalysisProgressBar.vue';
+import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import { useCommandeDetail } from '@/composables/useCommandeDetail';
+import {
+    classesPivotStatusProduit,
+    classesVenteLibrePivot,
+    descriptionDecisionVerification,
+    formatDateHeureCommande,
+    getClientDisplayName,
+    libelleDecisionVerification,
+    libellePivotStatusProduit,
+    libelleVenteLibrePivot,
+} from '@/lib/commandeDetailDisplay';
+import {
+    moduleDetailHeaderClass,
+    moduleDetailPanelClass,
+    modulePrimaryButtonClass,
+    modulePrimaryButtonSolidClass,
+    modulePrimaryTextClass,
+} from '@/lib/bengadokUi';
+import {
+    commandeStatutBadgeStyle,
+    commandeStatutLabel,
+} from '@/types';
+import type { CommandeDetail } from '@/types';
+
+type MotifOption = { key: string; label: string; desc: string };
+
+type ReferentielLivreur = {
+    id: number;
+    nom: string;
+    prenom: string;
+    tel: string;
+};
+
+const props = defineProps<{
+    canManageCommandes: boolean;
+    canCreateCommande: boolean;
+    livreurs: ReferentielLivreur[];
+    montantsLivraison: Array<{ id: number; designation: number }>;
+    modesPaiement: Array<{ id: number; designation: string }>;
+    parapharmaProduitTypes: string[];
+    motifOptions: MotifOption[];
+    motifsRelance: Record<string, boolean>;
+    motifLabelBySlug: Record<string, string>;
+    ensureReferentiels: () => void;
+}>();
+
+const emit = defineEmits<{
+    'open-recu': [commande: CommandeDetail];
+    'open-relancer': [commande: CommandeDetail];
+}>();
+
+const canCreateCommandeRef = computed(() => props.canCreateCommande);
+const canManageCommandesRef = computed(() => props.canManageCommandes);
+const motifOptionsRef = computed(() => props.motifOptions);
+const motifsRelanceRef = computed(() => props.motifsRelance);
+const motifLabelBySlugRef = computed(() => props.motifLabelBySlug);
+
+const {
+    detailCommande,
+    complementairesForm,
+    savingComplementaires,
+    showDetailModal,
+    showAnnulerModal,
+    showValiderModal,
+    loadingDetail,
+    motifAnnulation,
+    noteAnnulation,
+    isAgent,
+    enAttentePharmacieToutIndisponible,
+    peutValiderCommandeEnAttente,
+    enfantEnAttenteSansPaiementComplet,
+    peutModifierCommandeComplete,
+    peutEditerComplementaires,
+    detailSplit,
+    sousTotal,
+    totalDetail,
+    motifAutoriseRelance,
+    getMotifAnnulationLabel,
+    openDetail,
+    closeDetail,
+    saveComplementaires,
+    updateStatus,
+    openValiderModal,
+    confirmValiderCommande,
+    setMontantLivraison,
+    setModePaiementCommande,
+    peutAssignerLivreurDetail,
+    setLivreurCommande,
+    openAnnulerModal,
+    confirmAnnuler,
+    confirmAnnulerEtRelancer,
+} = useCommandeDetail({
+    canManageCommandes: canManageCommandesRef,
+    canCreateCommande: canCreateCommandeRef,
+    parapharmaProduitTypes: toRef(props, 'parapharmaProduitTypes'),
+    montantsLivraison: toRef(props, 'montantsLivraison'),
+    modesPaiement: toRef(props, 'modesPaiement'),
+    livreurs: toRef(props, 'livreurs'),
+    motifOptions: motifOptionsRef,
+    motifsRelance: motifsRelanceRef,
+    motifLabelBySlug: motifLabelBySlugRef,
+    ensureReferentiels: () => props.ensureReferentiels(),
+});
+
+function onAnnulerEtRelancer() {
+    confirmAnnulerEtRelancer(() => {
+        if (detailCommande.value) {
+            emit('open-relancer', detailCommande.value);
+        }
+    });
+}
+
+function emitOpenRecu() {
+    if (detailCommande.value) {
+        emit('open-recu', detailCommande.value);
+    }
+}
+
+defineExpose({
+    openDetail,
+    closeDetail,
+    detailCommande,
+});
+</script>

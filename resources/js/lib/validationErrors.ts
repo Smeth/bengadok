@@ -1,3 +1,20 @@
+/** Erreurs API (axios) ou Inertia après soumission formulaire. */
+export function parseApiValidationErrors(e: unknown): Record<string, string> {
+    if (e && typeof e === 'object' && 'response' in (e as object)) {
+        const data = (
+            e as { response?: { data?: { errors?: Record<string, string[]> } } }
+        )?.response?.data;
+        const err = data?.errors ?? {};
+        return Object.fromEntries(
+            Object.entries(err).map(([k, v]) => [
+                k,
+                Array.isArray(v) ? v[0] : String(v),
+            ]),
+        );
+    }
+    return normalizeInertiaErrors(e as Record<string, unknown>);
+}
+
 /** Erreurs de validation Inertia / Laravel (valeurs string ou tableau). */
 export function normalizeInertiaErrors(
     raw: Record<string, unknown> | undefined | null,
