@@ -7,11 +7,13 @@ use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
+use Tests\Concerns\SeedsRoles;
 use Tests\TestCase;
 
 class EmailVerificationTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsRoles;
 
     public function test_email_verification_screen_can_be_rendered()
     {
@@ -25,6 +27,8 @@ class EmailVerificationTest extends TestCase
     public function test_email_can_be_verified()
     {
         $user = User::factory()->unverified()->create();
+        $this->seedRoles();
+        $user->assignRole('admin');
 
         Event::fake();
 
@@ -41,9 +45,25 @@ class EmailVerificationTest extends TestCase
         $response->assertRedirect(route('dashboard', absolute: false).'?verified=1');
     }
 
+    public function test_user_without_role_is_redirected_to_profile_after_email_verification(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        Event::fake();
+
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->id, 'hash' => sha1($user->email)],
+        );
+
+        $this->actingAs($user)->get($verificationUrl)
+            ->assertRedirect('/settings/profile?verified=1');
+    }
+
     public function test_vendeur_is_redirected_to_pharmacy_after_email_verification(): void
     {
-        $this->seed(\Database\Seeders\RolePermissionSeeder::class);
+        $this->seedRoles();
 
         $user = User::factory()->unverified()->create();
         $user->assignRole('vendeur');
@@ -98,7 +118,7 @@ class EmailVerificationTest extends TestCase
 
     public function test_verified_user_is_redirected_to_dashboard_from_verification_prompt(): void
     {
-        $user = User::factory()->create();
+        $user = $this->userWithRole('admin');
 
         Event::fake();
 
@@ -110,7 +130,7 @@ class EmailVerificationTest extends TestCase
 
     public function test_already_verified_user_visiting_verification_link_is_redirected_without_firing_event_again(): void
     {
-        $user = User::factory()->create();
+        $user = $this->userWithRole('admin');
 
         Event::fake();
 

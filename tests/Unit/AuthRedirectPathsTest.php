@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Support\AuthRedirectPaths;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Tests\Concerns\SeedsRoles;
@@ -63,5 +64,12 @@ class AuthRedirectPathsTest extends TestCase
             '/dok-pharma',
             AuthRedirectPaths::resolveDestination($request, $user),
         );
+    }
+
+    public function test_user_without_role_home_is_profile_settings(): void
+    {
+        $user = User::factory()->create();
+
+        $this->assertSame('/settings/profile', AuthRedirectPaths::homeForUser($user));
     }
 }
