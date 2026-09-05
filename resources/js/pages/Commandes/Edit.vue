@@ -40,10 +40,15 @@ const props = defineProps<{
             id: number;
             designation: string;
             dosage?: string;
-            pivot: { quantite: number; prix_unitaire: number };
+            forme?: string;
+            type?: string | null;
+            pivot: {
+                quantite: number;
+                prix_unitaire: number;
+                type?: string | null;
+            };
         }>;
         mode_paiement?: { id: number; designation: string };
-        montant_livraison?: { id: number; designation: number };
     };
     pharmacies: Array<{
         id: number;
@@ -52,7 +57,6 @@ const props = defineProps<{
         adresse?: string;
     }>;
     modesPaiement: Array<{ id: number; designation: string }>;
-    montantsLivraison: Array<{ id: number; designation: number }>;
     arrondissements: string[];
 }>();
 
@@ -88,7 +92,6 @@ const pharmacieId = ref(props.commande.pharmacie?.id ?? '');
 const beneficiaire = ref(props.commande.beneficiaire ?? '');
 const commentaire = ref(props.commande.commentaire ?? '');
 const modePaiementId = ref(props.commande.mode_paiement?.id ?? '');
-const montantLivraisonId = ref(props.commande.montant_livraison?.id ?? '');
 const ordonnanceFile = ref<File | null>(null);
 const enSubmission = ref(false);
 
@@ -152,6 +155,7 @@ type ProduitLigne = {
     designation: string;
     dosage: string;
     forme: string;
+    type?: string;
     quantite: number;
     prix_unitaire: number;
 };
@@ -178,18 +182,19 @@ watch(
             id: p.id,
             designation: p.designation ?? '',
             dosage: p.dosage ?? '',
-            forme: (p as { forme?: string | null }).forme ?? '',
+            forme: p.forme ?? '',
+            type: p.pivot?.type ?? p.type ?? '',
             quantite: p.pivot?.quantite ?? 1,
-            prix_unitaire: Number(p.pivot?.prix_unitaire) ?? 0,
+            prix_unitaire: Number(p.pivot?.prix_unitaire ?? 0),
         }));
     },
     { immediate: true },
 );
 
 function ligneTotal(p: ProduitLigne): string {
-    return (
-        (Number(p.prix_unitaire) || 0) * (p.quantite || 0)
-    ).toFixed(1);
+    return String(
+        Math.round((Number(p.prix_unitaire) || 0) * (p.quantite || 0)),
+    );
 }
 
 function ajouterProduit() {
@@ -219,6 +224,7 @@ function submit() {
             designation: p.designation.trim(),
             dosage: (p.dosage ?? '').trim() || null,
             forme: (p.forme ?? '').trim() || null,
+            type: (p.type ?? '').trim() || null,
             quantite: p.quantite,
             prix_unitaire: Number(p.prix_unitaire),
         }));
@@ -237,7 +243,6 @@ function submit() {
         beneficiaire: beneficiaire.value.trim(),
         produits: produitsValides,
         mode_paiement_id: modePaiementId.value || undefined,
-        montant_livraison_id: montantLivraisonId.value || undefined,
         commentaire: commentaire.value.trim(),
     };
 
@@ -768,14 +773,14 @@ function submit() {
                         />
                     </section>
 
-                    <!-- Paiement & livraison -->
+                    <!-- Paiement -->
                     <section
                         class="rounded-[10px] border border-[#ccc5c5] p-5"
                     >
                         <h2 :class="[sectionTitleClass, 'mb-4']">
-                            Paiement & livraison
+                            Paiement
                         </h2>
-                        <div class="grid gap-4 md:grid-cols-2">
+                        <div class="max-w-md">
                             <div class="flex flex-col gap-1.5">
                                 <Label :class="labelClass"
                                     >Mode de paiement</Label
@@ -802,38 +807,12 @@ function submit() {
                                     :message="errors.mode_paiement_id"
                                 />
                             </div>
-                            <div class="flex flex-col gap-1.5">
-                                <Label :class="labelClass"
-                                    >Montant livraison</Label
-                                >
-                                <div class="relative">
-                                    <select
-                                        v-model="montantLivraisonId"
-                                        :class="selectClass"
-                                    >
-                                        <option value="">—</option>
-                                        <option
-                                            v-for="m in montantsLivraison"
-                                            :key="m.id"
-                                            :value="m.id"
-                                        >
-                                            {{
-                                                Number(
-                                                    m.designation,
-                                                ).toLocaleString('fr-FR')
-                                            }}
-                                            XAF
-                                        </option>
-                                    </select>
-                                    <ChevronDown
-                                        class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]"
-                                    />
-                                </div>
-                                <InputError
-                                    :message="errors.montant_livraison_id"
-                                />
-                            </div>
                         </div>
+                        <p class="mt-3 text-xs text-muted-foreground">
+                            Les frais de livraison se définissent depuis la
+                            fiche détail de la commande (après retour
+                            pharmacie).
+                        </p>
                     </section>
 
                     <!-- Actions -->

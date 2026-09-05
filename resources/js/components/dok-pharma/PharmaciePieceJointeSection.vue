@@ -2,7 +2,8 @@
 import { router } from '@inertiajs/vue3';
 import { ImagePlus, Trash2, X, ZoomIn } from 'lucide-vue-next';
 import { onBeforeUnmount, ref, watch } from 'vue';
-import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
+import PharmaciePhotosUpload from '@/components/dok-pharma/PharmaciePhotosUpload.vue';
+import { modulePrimaryTextClass } from '@/lib/bengadokUi';
 
 export type PieceJointeImage = {
     id: number;
@@ -25,25 +26,14 @@ const props = withDefaults(
     },
 );
 
-const label = ref('');
-const pendingFile = ref<File | null>(null);
-const uploading = ref(false);
+const uploadingCount = ref(0);
 const viewer = ref<{ open: boolean; url: string; title: string }>({
     open: false,
     url: '',
     title: '',
 });
 
-function onFilePick(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0] ?? null;
-    pendingFile.value = file;
-    input.value = '';
-}
-
-function clearPending() {
-    pendingFile.value = null;
-}
+const isUploading = () => uploadingCount.value > 0;
 
 function openViewer(pj: PieceJointeImage) {
     if (!pj.file_url) return;
@@ -58,26 +48,21 @@ function closeViewer() {
     viewer.value.open = false;
 }
 
-function upload() {
-    if (!pendingFile.value || uploading.value) return;
-
-    const fd = new FormData();
-    fd.append('fichier', pendingFile.value);
-    const trimmed = label.value.trim();
-    if (trimmed) {
-        fd.append('label', trimmed);
+function uploadFile(file: File) {
+    if (uploadingCount.value >= 3) {
+        window.setTimeout(() => uploadFile(file), 400);
+        return;
     }
 
-    uploading.value = true;
+    const fd = new FormData();
+    fd.append('fichier', file);
+
+    uploadingCount.value += 1;
     router.post(`/dok-pharma/${props.commandeId}/pieces-jointes`, fd, {
         forceFormData: true,
         preserveScroll: true,
-        onSuccess: () => {
-            pendingFile.value = null;
-            label.value = '';
-        },
         onFinish: () => {
-            uploading.value = false;
+            uploadingCount.value = Math.max(0, uploadingCount.value - 1);
         },
     });
 }
@@ -94,8 +79,7 @@ function remove(pjId: number) {
 watch(
     () => props.commandeId,
     () => {
-        pendingFile.value = null;
-        label.value = '';
+        uploadingCount.value = 0;
     },
 );
 
@@ -105,11 +89,20 @@ onBeforeUnmount(closeViewer);
 <template>
     <div
         v-if="pieces.length || editable"
-        class="space-y-3 rounded-xl border border-dashed border-gray-200 bg-white px-4 py-3"
+        class="space-y-3"
     >
-        <p class="flex items-center gap-2 text-[13px] font-bold text-gray-700">
-            <ImagePlus class="size-4 text-[#459cd1]" />
+        <p
+            v-if="pieces.length || editable"
+            class="flex items-center gap-2 text-[13px] font-bold text-gray-700"
+        >
+            <ImagePlus class="size-4" :class="modulePrimaryTextClass" />
             Photos jointes
+            <span
+                v-if="isUploading()"
+                class="text-[11px] font-normal text-gray-500"
+            >
+                (envoi en cours…)
+            </span>
         </p>
 
         <div
@@ -119,7 +112,7 @@ onBeforeUnmount(closeViewer);
             <div
                 v-for="pj in pieces"
                 :key="pj.id"
-                class="group relative overflow-hidden rounded-lg border border-gray-100 bg-gray-50"
+                class="group relative overflow-hidden rounded-lg border border-gray-200/80 bg-gray-50/80"
             >
                 <button
                     type="button"
@@ -133,6 +126,12 @@ onBeforeUnmount(closeViewer);
                         class="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]"
                         loading="lazy"
                     />
+                    <div
+                        v-else
+                        class="flex aspect-square items-center justify-center text-[10px] text-gray-400"
+                    >
+                        Photo
+                    </div>
                 </button>
                 <button
                     v-if="editable"
@@ -168,59 +167,11 @@ onBeforeUnmount(closeViewer);
             Aucune photo.
         </p>
 
-        <div v-if="editable" class="space-y-2 border-t border-gray-100 pt-3">
-            <p class="text-[11px] text-gray-500">
-                JPG, PNG, GIF ou WebP — max. 10 Mo
-            </p>
-            <input
-                v-model="label"
-                type="text"
-                placeholder="Libellé (facultatif) — ex. Colis, étiquette…"
-                class="h-9 w-full rounded-lg border border-gray-200 px-3 text-[12px]"
-            />
-            <label
-                class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#459cd1]/40 bg-[#459cd1]/10 px-4 py-4 text-center transition-colors hover:border-[#459cd1]/50 hover:bg-[#459cd1]/15"
-            >
-                <ImagePlus class="size-8 text-[#459cd1]/70" />
-                <span class="text-[12px] font-semibold text-[#459cd1]"
-                    >Choisir une image</span
-                >
-                <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    class="sr-only"
-                    @change="onFilePick"
-                />
-            </label>
-
-            <div v-if="pendingFile" class="space-y-2">
-                <div class="flex items-center justify-between gap-2">
-                    <span class="truncate text-[12px] text-gray-600">{{
-                        pendingFile.name
-                    }}</span>
-                    <button
-                        type="button"
-                        class="shrink-0 text-gray-400 hover:text-gray-700"
-                        aria-label="Retirer"
-                        @click="clearPending"
-                    >
-                        <X class="size-4" />
-                    </button>
-                </div>
-                <OrdonnanceFilePreview
-                    :file="pendingFile"
-                    max-height="8rem"
-                />
-                <button
-                    type="button"
-                    class="w-full rounded-lg bg-[#459cd1] px-4 py-2 text-[12px] font-semibold text-white disabled:opacity-50"
-                    :disabled="uploading"
-                    @click="upload"
-                >
-                    {{ uploading ? 'Envoi…' : 'Joindre la photo' }}
-                </button>
-            </div>
-        </div>
+        <PharmaciePhotosUpload
+            v-if="editable"
+            :disabled="isUploading()"
+            @upload="uploadFile"
+        />
     </div>
 
     <Teleport to="body">

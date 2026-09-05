@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { moduleCardClass, modulePageClass } from '@/lib/bengadokUi';
+import { moduleCardClass, modulePageClass, modulePrimaryButtonSolidClass } from '@/lib/bengadokUi';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -242,7 +242,7 @@ function rechercher() {
             >
                 <template #actions>
                     <Button
-                        class="bg-[#459cd1] text-white hover:bg-[#3a87b8]"
+                        :class="modulePrimaryButtonSolidClass"
                         @click="ouvrirCreate"
                     >
                         <Plus class="size-4" />

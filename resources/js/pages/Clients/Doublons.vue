@@ -29,7 +29,7 @@ import ModuleEmptyState from '@/components/shared/ModuleEmptyState.vue';
 import ModuleFilterPanel from '@/components/shared/ModuleFilterPanel.vue';
 import ModuleStatCard from '@/components/shared/ModuleStatCard.vue';
 import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
-import { moduleCardClass, modulePageClass, moduleSelectClass } from '@/lib/bengadokUi';
+import { moduleCardClass, modulePageClass, modulePrimaryButtonSolidClass, modulePrimarySelectedOptionClass, modulePrimaryTextClass, moduleSelectClass } from '@/lib/bengadokUi';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { clientNomComplet } from '@/lib/clientDisplayName';
@@ -228,7 +228,7 @@ const statutLabels: Record<string, string> = {
                     label="Groupes vérifiés"
                     :value="stats.verifies"
                     :icon="UserCheck"
-                    value-class="text-[#459cd1]"
+                    :value-class="modulePrimaryTextClass"
                 />
                 <ModuleStatCard
                     label="Profils fusionnés"
@@ -332,7 +332,7 @@ const statutLabels: Record<string, string> = {
                             <p class="text-xs text-muted-foreground">
                                 Total si fusion
                             </p>
-                            <p class="font-semibold text-[#459cd1]">
+                            <p class="font-semibold" :class="modulePrimaryTextClass">
                                 {{ g.total_si_fusion.commandes }} Commandes ·
                                 {{
                                     Number(
@@ -431,7 +431,7 @@ const statutLabels: Record<string, string> = {
                             Vérifié – Aucune action nécessaire pour le moment
                         </p>
                         <Button
-                            class="bg-[#459cd1] text-white hover:bg-[#3a8ab8]"
+                            :class="modulePrimaryButtonSolidClass"
                             @click="ouvrirModalFusion(g)"
                         >
                             <Merge class="mr-2 size-4" />
@@ -488,7 +488,8 @@ const statutLabels: Record<string, string> = {
                         class="flex items-center gap-2 text-base font-semibold sm:text-lg"
                     >
                         <UsersRound
-                            class="size-5 shrink-0 text-[#459cd1] sm:size-6"
+                            class="size-5 shrink-0 sm:size-6"
+                            :class="modulePrimaryTextClass"
                         />
                         Fusion des profils clients
                     </DialogTitle>
@@ -535,7 +536,7 @@ const statutLabels: Record<string, string> = {
                                 class="flex cursor-pointer items-start gap-3 rounded-lg border-2 p-3 transition-colors"
                                 :class="
                                     principalIdChoisi === c.id
-                                        ? 'border-[#459cd1] bg-[#459cd1]/10'
+                                        ? modulePrimarySelectedOptionClass
                                         : 'border-slate-200 hover:border-slate-300 dark:border-slate-700'
                                 "
                             >
@@ -558,7 +559,8 @@ const statutLabels: Record<string, string> = {
                                 </div>
                                 <CheckCheck
                                     v-if="principalIdChoisi === c.id"
-                                    class="size-5 shrink-0 text-[#459cd1]"
+                                    class="size-5 shrink-0"
+                                    :class="modulePrimaryTextClass"
                                 />
                             </label>
                         </div>
@@ -768,21 +770,24 @@ const statutLabels: Record<string, string> = {
                                 class="flex items-center gap-2"
                             >
                                 <CheckCheck
-                                    class="size-3.5 shrink-0 text-[#459cd1] sm:size-4"
+                                    class="size-3.5 shrink-0 sm:size-4"
+                                    :class="modulePrimaryTextClass"
                                 />
                                 Profil de référence :
                                 {{ nomComplet(principalPourModal) }}
                             </li>
                             <li class="flex items-start gap-2">
                                 <CheckCheck
-                                    class="size-3.5 shrink-0 text-[#459cd1] sm:size-4"
+                                    class="size-3.5 shrink-0 sm:size-4"
+                                    :class="modulePrimaryTextClass"
                                 />
                                 Ces commandes seront fusionnées sur la même
                                 fiche de référence
                             </li>
                             <li class="flex items-start gap-2">
                                 <CheckCheck
-                                    class="size-3.5 shrink-0 text-[#459cd1] sm:size-4"
+                                    class="size-3.5 shrink-0 sm:size-4"
+                                    :class="modulePrimaryTextClass"
                                 />
                                 Total après fusion :
                                 {{ totalApresFusion.commandes }} commandes,
@@ -809,7 +814,7 @@ const statutLabels: Record<string, string> = {
                         Annuler
                     </Button>
                     <Button
-                        class="h-9 bg-[#459cd1] px-4 text-sm text-white hover:bg-[#3a8ab8]"
+                        :class="['h-9 px-4 text-sm', modulePrimaryButtonSolidClass]"
                         :disabled="!peutFusionner"
                         @click="confirmerFusion"
                     >

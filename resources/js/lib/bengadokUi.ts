@@ -55,6 +55,28 @@ export const moduleTabInactiveClass =
 export const modulePrimaryButtonClass =
     'rounded-lg bg-[#459cd1] text-white hover:bg-[#3a87b8]';
 
+/** Fond / texte / bordure primaires (composants atomiques). */
+export const modulePrimaryBgClass = 'bg-[#459cd1]';
+export const modulePrimaryHoverBgClass = 'hover:bg-[#3a87b8]';
+export const modulePrimaryTextClass = 'text-[#459cd1]';
+export const modulePrimaryBorderClass = 'border-[#459cd1]';
+
+/** Bouton solide sans radius (shadcn Button). */
+export const modulePrimaryButtonSolidClass =
+    'bg-[#459cd1] text-white hover:bg-[#3a87b8]';
+
+/** Carte sélectionnée (rôle, option). */
+export const modulePrimarySelectedCardClass =
+    'border-[#459cd1] bg-sky-50';
+
+/** Option sélectionnée (radio, checkbox). */
+export const modulePrimarySelectedOptionClass =
+    'border-[#459cd1] bg-[#459cd1]/10';
+
+/** Bandeau info / sélection légère. */
+export const modulePrimaryAlertBannerClass =
+    'rounded-lg border border-[#459cd1]/30 bg-[#459cd1]/10';
+
 /** Badge compteur par défaut. */
 export const moduleCounterDefaultClass = 'bg-[#459cd1]';
 

@@ -17,6 +17,10 @@ import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
 import BackLink from '@/components/ui/BackLink.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
+import {
+    modulePrimaryButtonSolidClass,
+    modulePrimaryTextClass,
+} from '@/lib/bengadokUi';
 import { clientNomComplet } from '@/lib/clientDisplayName';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -178,7 +182,8 @@ const arrondissementAffiche = computed(() => {
                     </Button>
                     <Button
                         type="button"
-                        class="rounded-lg bg-[#459cd1] px-5 text-white shadow-sm hover:bg-[#3a87b8]"
+                        class="rounded-lg px-5 text-white shadow-sm"
+                        :class="modulePrimaryButtonSolidClass"
                         @click="enrichModalOpen = true"
                     >
                         <Pencil class="mr-2 size-4" />
@@ -227,7 +232,8 @@ const arrondissementAffiche = computed(() => {
                     <div class="space-y-4 text-sm">
                         <div class="flex gap-3">
                             <Phone
-                                class="mt-0.5 size-4 shrink-0 text-[#459cd1]"
+                                class="mt-0.5 size-4 shrink-0"
+                                :class="modulePrimaryTextClass"
                             />
                             <div>
                                 <p
@@ -249,7 +255,8 @@ const arrondissementAffiche = computed(() => {
                         </div>
                         <div class="flex gap-3">
                             <MapPin
-                                class="mt-0.5 size-4 shrink-0 text-[#459cd1]"
+                                class="mt-0.5 size-4 shrink-0"
+                                :class="modulePrimaryTextClass"
                             />
                             <div>
                                 <p
@@ -264,7 +271,8 @@ const arrondissementAffiche = computed(() => {
                         </div>
                         <div class="flex gap-3">
                             <MapPin
-                                class="mt-0.5 size-4 shrink-0 text-[#459cd1]"
+                                class="mt-0.5 size-4 shrink-0"
+                                :class="modulePrimaryTextClass"
                             />
                             <div>
                                 <p
@@ -272,7 +280,7 @@ const arrondissementAffiche = computed(() => {
                                 >
                                     Arrondissement
                                 </p>
-                                <p class="font-medium text-[#459cd1]">
+                                <p class="font-medium" :class="modulePrimaryTextClass">
                                     {{ arrondissementAffiche }}
                                 </p>
                             </div>
@@ -424,7 +432,7 @@ const arrondissementAffiche = computed(() => {
                         <h3
                             class="mb-5 flex items-center gap-2 text-lg font-bold text-foreground"
                         >
-                            <RefreshCw class="size-5 text-[#459cd1]" />
+                            <RefreshCw class="size-5" :class="modulePrimaryTextClass" />
                             Habitudes de commande
                         </h3>
 
@@ -433,7 +441,8 @@ const arrondissementAffiche = computed(() => {
                                 class="rounded-xl border-2 border-[#459cd1]/40 bg-sky-50/30 p-5 text-center dark:bg-sky-950/20"
                             >
                                 <p
-                                    class="text-3xl font-black tabular-nums text-[#459cd1]"
+                                    class="text-3xl font-black tabular-nums"
+                                    :class="modulePrimaryTextClass"
                                 >
                                     {{ client.pour_soi }}
                                 </p>
@@ -450,7 +459,8 @@ const arrondissementAffiche = computed(() => {
                                 class="rounded-xl border-2 border-[#459cd1]/40 bg-sky-50/30 p-5 text-center dark:bg-sky-950/20"
                             >
                                 <p
-                                    class="text-3xl font-black tabular-nums text-[#459cd1]"
+                                    class="text-3xl font-black tabular-nums"
+                                    :class="modulePrimaryTextClass"
                                 >
                                     {{ client.pour_tiers }}
                                 </p>

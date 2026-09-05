@@ -69,7 +69,7 @@ class CommandeCreationFields
             'label' => 'Montant de livraison',
             'default' => false,
             'group' => 'commande',
-            'contexts' => ['admin', 'agent'],
+            'contexts' => [],
         ],
         'livreur_id' => [
             'label' => 'Livreur',

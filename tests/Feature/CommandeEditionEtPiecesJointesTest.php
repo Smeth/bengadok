@@ -6,7 +6,6 @@ use App\Models\AppSetting;
 use App\Models\Client;
 use App\Models\Commande;
 use App\Models\CommandePieceJointe;
-use App\Models\MontantLivraison;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -90,14 +89,12 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
                 'client_tel' => true,
                 'client_adresse' => true,
                 'client_arrondissement' => true,
-                'montant_livraison_id' => true,
             ],
         ]);
 
         $this->seedRoles();
         $admin = $this->userWithRole('admin');
         $pharmacie = $this->createPharmacie();
-        $montant = MontantLivraison::query()->create(['designation' => 1500]);
 
         $payload = [
             'pharmacie_id' => $pharmacie->id,
@@ -107,7 +104,6 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
             'client_arrondissement' => Client::ARRONDISSEMENTS[0],
             'date' => '2020-01-01',
             'heurs' => '08:00',
-            'montant_livraison_id' => $montant->id,
             'produits' => [
                 [
                     'designation' => 'Vitamine C',
@@ -126,6 +122,42 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
         $this->assertNotNull($commande);
         $this->assertSame(now()->format('Y-m-d'), $commande->date->format('Y-m-d'));
         $this->assertSame('15:45', $commande->heurs);
-        $this->assertSame($montant->id, (int) $commande->montant_livraison_id);
+        $this->assertNull($commande->montant_livraison_id);
+    }
+
+    public function test_admin_show_json_includes_pieces_jointes(): void
+    {
+        Storage::fake('local');
+        $this->seedRoles();
+
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+        $client = $this->createClient();
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'en_attente',
+        ]);
+
+        $gerant = User::factory()->create(['pharmacie_id' => $pharmacie->id]);
+        $gerant->assignRole('gerant');
+
+        $file = UploadedFile::fake()->image('colis.jpg', 400, 400);
+        $this->actingAs($gerant)
+            ->post("/dok-pharma/{$commande->id}/pieces-jointes", [
+                'fichier' => $file,
+                'label' => 'Photo colis',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->getJson("/commandes/{$commande->id}")
+            ->assertOk()
+            ->assertJsonPath('commande.pieces_jointes.0.label', 'Photo colis')
+            ->assertJsonStructure([
+                'commande' => [
+                    'pieces_jointes' => [
+                        ['id', 'file_url', 'label'],
+                    ],
+                ],
+            ]);
     }
 }

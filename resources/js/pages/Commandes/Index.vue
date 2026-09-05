@@ -715,23 +715,50 @@ function confirmValiderCommande() {
     );
 }
 
-function setMontantLivraison(montantId: number) {
+function csrfToken(): string {
+    return (
+        document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute('content') ?? ''
+    );
+}
+
+async function setMontantLivraison(montantId: number) {
     if (!detailCommande.value) return;
     const id = detailCommande.value.id;
-    router.patch(
-        `/commandes/${id}/montant-livraison`,
-        { montant_livraison_id: montantId },
-        {
-            preserveScroll: true,
-            onSuccess: async () => {
-                await refreshDetailSilently(id);
-                router.reload({
-                    only: ['commandes', 'stats'],
-                    preserveState: true,
-                });
+    const montant = montantsLivraison.value.find((m) => m.id === montantId);
+
+    if (montant) {
+        detailCommande.value = {
+            ...detailCommande.value,
+            montant_livraison_id: montantId,
+            montant_livraison: montant,
+        };
+    }
+
+    try {
+        const r = await fetch(`/commandes/${id}/montant-livraison`, {
+            method: 'PATCH',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
             },
-        },
-    );
+            credentials: 'same-origin',
+            body: JSON.stringify({ montant_livraison_id: montantId }),
+        });
+        if (!r.ok) {
+            await refreshDetailSilently(id);
+            return;
+        }
+        const json = (await r.json()) as { commande?: typeof detailCommande.value };
+        if (json.commande && detailCommande.value?.id === id) {
+            detailCommande.value = json.commande;
+        }
+    } catch {
+        await refreshDetailSilently(id);
+    }
 }
 
 function setModePaiementCommande(modePaiementId: number) {

@@ -7,6 +7,7 @@ use App\Http\Requests\StoreCommandeRequest;
 use App\Models\AppSetting;
 use App\Models\Client;
 use App\Models\Commande;
+use App\Models\CommandePieceJointe;
 use App\Models\Livreur;
 use App\Models\ModePaiement;
 use App\Models\MontantLivraison;
@@ -156,7 +157,7 @@ class CommandeController extends Controller
 
         // Requête fetch/AJAX (panneau latéral) : retourner JSON.
         if ($request->wantsJson() && ! $request->header('X-Inertia')) {
-            return response()->json(['commande' => $commande]);
+            return response()->json(['commande' => $this->commandeToDetailPayload($commande)]);
         }
 
         // Navigation plein écran : tout passe par la liste + panneau « Voir détail ».
@@ -210,7 +211,6 @@ class CommandeController extends Controller
             'commande' => $commande,
             'pharmacies' => Pharmacie::with('zone')->get(),
             'modesPaiement' => ModePaiement::all(),
-            'montantsLivraison' => MontantLivraison::all(),
             'arrondissements' => Client::ARRONDISSEMENTS,
         ]);
     }
@@ -293,10 +293,12 @@ class CommandeController extends Controller
             'pharmacie_id' => $validated['pharmacie_id'],
             'ordonnance_id' => $ordonnanceId,
             'mode_paiement_id' => $validated['mode_paiement_id'] ?? null,
-            'montant_livraison_id' => $validated['montant_livraison_id'] ?? null,
             'commentaire' => $validated['commentaire'] ?? null,
             'beneficiaire' => $validated['beneficiaire'] ?? null,
         ]);
+
+        $commande->load('produits');
+        $existingByProduitId = $commande->produits->keyBy('id');
 
         $commande->produits()->detach();
         foreach ($validated['produits'] as $p) {
@@ -309,16 +311,26 @@ class CommandeController extends Controller
             ]);
             $quantite = (int) $p['quantite'];
             $prixUnitaire = (float) $p['prix_unitaire'];
+            $existing = isset($p['id']) ? $existingByProduitId->get((int) $p['id']) : null;
+
+            $pivotStatus = $existing?->pivot->status ?? 'en_attente';
+            $pivotType = $existing?->pivot->type ?? $produit->type;
+
             $commande->produits()->attach($produit->id, [
                 'quantite' => $quantite,
+                'quantite_confirmee' => $existing?->pivot->quantite_confirmee,
                 'prix_unitaire' => $prixUnitaire,
-                'status' => 'en_attente',
-                'type' => $produit->type,
+                'status' => $pivotStatus,
+                'type' => $pivotType,
+                'vente_libre' => $existing?->pivot->vente_libre,
             ]);
         }
 
-        $montants = CommandeMontantCalculator::fromInputLines($validated['produits']);
-        $montantLivraison = $validated['montant_livraison_id'] ? (MontantLivraison::find($validated['montant_livraison_id'])?->designation ?? 0) : 0;
+        $commande->load('produits');
+        $montants = CommandeMontantCalculator::fromProduitsRelation($commande->produits);
+        $montantLivraison = $commande->montant_livraison_id
+            ? (float) (MontantLivraison::find($commande->montant_livraison_id)?->designation ?? 0)
+            : 0.0;
         $commande->update([
             'prix_medicaments' => $montants['prix_medicaments'],
             'prix_parapharma' => $montants['prix_parapharma'],
@@ -346,7 +358,7 @@ class CommandeController extends Controller
         if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             $commande->load(['piecesJointes.uploadedBy']);
 
-            return response()->json(['commande' => $commande]);
+            return response()->json(['commande' => $this->commandeToDetailPayload($commande)]);
         }
 
         return back()->with('status', 'Informations complémentaires enregistrées.');
@@ -566,6 +578,17 @@ class CommandeController extends Controller
             'prix_total' => $montants['prix_lignes'] + (float) $montant->designation,
         ]);
 
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
+            $commande->load([
+                'client', 'pharmacie', 'pharmacieRefusee', 'produits', 'modePaiement',
+                'livreur', 'montantLivraison', 'piecesJointes.uploadedBy',
+                'enfants.pharmacie', 'enfants.produits', 'enfants.modePaiement',
+                'enfants.montantLivraison', 'parent', 'ordonnance',
+            ]);
+
+            return response()->json(['commande' => $this->commandeToDetailPayload($commande)]);
+        }
+
         return back();
     }
 
@@ -644,6 +667,25 @@ class CommandeController extends Controller
             'mois' => $query->whereRaw('COALESCE(commandes.date, DATE(commandes.created_at)) >= ?', [now()->copy()->startOfMonth()->toDateString()]),
             default => null,
         };
+    }
+
+    /**
+     * Payload JSON normalisé pour le panneau détail commande (snake_case pièces jointes).
+     *
+     * @return array<string, mixed>
+     */
+    private function commandeToDetailPayload(Commande $commande): array
+    {
+        $payload = $commande->toArray();
+
+        if ($commande->relationLoaded('piecesJointes')) {
+            $payload['pieces_jointes'] = $commande->piecesJointes
+                ->map(fn (CommandePieceJointe $pj) => $pj->toFrontendArray())
+                ->values()
+                ->all();
+        }
+
+        return $payload;
     }
 
     /**

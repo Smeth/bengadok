@@ -299,7 +299,7 @@ function nomComplet(c: Client) {
                 </div>
             </div>
 
-            <ClientsEmptyState
+            <ModuleEmptyState
                 v-else
                 message="Statistiques – à venir"
             />

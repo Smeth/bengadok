@@ -13,7 +13,7 @@ import ModuleFilterPanel from '@/components/shared/ModuleFilterPanel.vue';
 import ModulePagination from '@/components/shared/ModulePagination.vue';
 import ModuleStatCard from '@/components/shared/ModuleStatCard.vue';
 import ClientsSectionNav from '@/components/clients/ClientsSectionNav.vue';
-import { modulePageClass, modulePaginationWrapperClass, moduleSelectClass } from '@/lib/bengadokUi';
+import { modulePageClass, modulePaginationWrapperClass, modulePrimaryTextClass, moduleSelectClass } from '@/lib/bengadokUi';
 import { Button } from '@/components/ui/button';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -314,7 +314,8 @@ function promouvoir(prospect: ProspectRow) {
                                 >
                                     <Link
                                         :href="`/clients/${p.id}`"
-                                        class="text-[13px] font-semibold text-[#459cd1] hover:underline"
+                                        class="text-[13px] font-semibold hover:underline"
+                                        :class="modulePrimaryTextClass"
                                     >
                                         Fiche
                                     </Link>

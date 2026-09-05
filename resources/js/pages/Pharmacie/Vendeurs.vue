@@ -18,6 +18,11 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+    modulePrimaryButtonSolidClass,
+    modulePrimarySelectedCardClass,
+    modulePrimaryTextClass,
+} from '@/lib/bengadokUi';
 import { Label } from '@/components/ui/label';
 import AppToast from '@/components/AppToast.vue';
 import FlashToastHost from '@/components/FlashToastHost.vue';
@@ -162,7 +167,7 @@ function creerVendeur() {
                     Vendeurs - {{ pharmacie?.designation }}
                 </h1>
                 <Button
-                    class="bg-[#459cd1] text-white hover:bg-[#3a8ab8]"
+                    :class="modulePrimaryButtonSolidClass"
                     @click="ouvrirCreate"
                 >
                     <Users class="mr-2 size-4" />
@@ -218,11 +223,11 @@ function creerVendeur() {
             <DialogContent class="max-w-lg">
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
-                        <Users class="size-5 text-[#459cd1]" />
+                        <Users class="size-5" :class="modulePrimaryTextClass" />
                         Créer un utilisateur
                     </DialogTitle>
                 </DialogHeader>
-                <p class="text-sm text-[#459cd1]">
+                <p class="text-sm" :class="modulePrimaryTextClass">
                     Ajoutez un nouveau membre à une pharmacie
                 </p>
 
@@ -279,11 +284,11 @@ function creerVendeur() {
                                 class="flex flex-1 cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors"
                                 :class="
                                     form.role === 'gerant'
-                                        ? 'border-[#459cd1] bg-sky-50'
+                                        ? modulePrimarySelectedCardClass
                                         : 'border-input hover:bg-muted/30'
                                 "
                             >
-                                <ShieldCheck class="size-8 text-[#459cd1]" />
+                                <ShieldCheck class="size-8" :class="modulePrimaryTextClass" />
                                 <span class="font-semibold">Gérant</span>
                                 <span class="text-xs text-muted-foreground"
                                     >Accès complet</span
@@ -299,11 +304,11 @@ function creerVendeur() {
                                 class="flex flex-1 cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors"
                                 :class="
                                     form.role === 'vendeur'
-                                        ? 'border-[#459cd1] bg-sky-50'
+                                        ? modulePrimarySelectedCardClass
                                         : 'border-input hover:bg-muted/30'
                                 "
                             >
-                                <Shield class="size-8 text-[#459cd1]" />
+                                <Shield class="size-8" :class="modulePrimaryTextClass" />
                                 <span class="font-semibold">Vendeur</span>
                                 <span class="text-xs text-muted-foreground"
                                     >Commandes uniquement</span
@@ -356,7 +361,7 @@ function creerVendeur() {
                                     <RefreshCw class="size-4" />
                                 </Button>
                             </div>
-                            <p class="text-xs text-[#459cd1]">
+                            <p class="text-xs" :class="modulePrimaryTextClass">
                                 L'utilisateur devra changer ce mot de passe à la
                                 première connexion
                             </p>
@@ -381,7 +386,7 @@ function creerVendeur() {
                         </Button>
                         <Button
                             type="submit"
-                            class="bg-[#459cd1] text-white hover:bg-[#3a8ab8]"
+                            :class="modulePrimaryButtonSolidClass"
                         >
                             Créer l'utilisateur
                         </Button>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\AdminParapharmaDashboardService;
 use App\Services\DashboardStatsService;
+use App\Support\AuthRedirectPaths;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;

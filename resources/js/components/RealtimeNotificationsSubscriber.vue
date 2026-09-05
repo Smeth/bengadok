@@ -120,11 +120,15 @@ function reloadPropsAfterCommandeBroadcast() {
     router.reload({ only: ['notifications'], preserveScroll: true });
 }
 
-useEcho(
-    `App.Models.User.${props.userId}`,
-    '.notifications.refresh',
-    reloadPropsAfterCommandeBroadcast,
-);
+const reverbEnabled = Boolean(import.meta.env.VITE_REVERB_APP_KEY);
+
+if (reverbEnabled) {
+    useEcho(
+        `App.Models.User.${props.userId}`,
+        '.notifications.refresh',
+        reloadPropsAfterCommandeBroadcast,
+    );
+}
 
 function onEtatConnexion({ current }: { current: string }) {
     emit('hors_ligne', current === 'unavailable' || current === 'failed');

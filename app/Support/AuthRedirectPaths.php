@@ -31,6 +31,10 @@ final class AuthRedirectPaths
             return '/commandes';
         }
 
+        if ($roles === []) {
+            return '/settings/profile';
+        }
+
         return (string) config('fortify.home', '/dashboard');
     }
 

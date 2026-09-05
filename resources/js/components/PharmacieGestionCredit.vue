@@ -13,6 +13,7 @@ import {
     Settings,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import { modulePrimaryButtonClass } from '@/lib/bengadokUi';
 
 type HistoriqueOp = {
     id: number;
@@ -612,7 +613,7 @@ function submitAlerte() {
                         />
                         <button
                             type="submit"
-                            class="mt-2 rounded-lg bg-[#459cd1] px-3 py-1.5 text-sm font-semibold text-white"
+                            :class="['mt-2 px-3 py-1.5 text-sm font-semibold text-white', modulePrimaryButtonClass]"
                             :disabled="noteForm.processing"
                         >
                             Enregistrer

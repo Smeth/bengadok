@@ -15,6 +15,10 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatDateFrLocal } from '@/lib/formatDateLocal';
+import {
+    modulePrimaryAlertBannerClass,
+    modulePrimaryTextClass,
+} from '@/lib/bengadokUi';
 import type { CommandeListItem } from '@/types';
 import {
     STATUTS_COMMANDE,
@@ -93,7 +97,10 @@ function formatDate(d: string) {
         <!-- Barre actions groupées -->
         <div
             v-if="someSelected"
-            class="flex flex-wrap items-center gap-3 rounded-lg border border-[#459cd1]/30 bg-[#459cd1]/10 px-4 py-3"
+            :class="[
+                modulePrimaryAlertBannerClass,
+                'flex flex-wrap items-center gap-3 px-4 py-3',
+            ]"
         >
             <span class="font-medium"
                 >{{ selectedIds.size }} commande(s) sélectionnée(s)</span
@@ -174,7 +181,8 @@ function formatDate(d: string) {
                             />
                         </td>
                         <td
-                            class="max-w-0 py-3 pr-3 align-middle font-mono text-[12px] font-medium whitespace-nowrap text-[#459cd1]"
+                            class="max-w-0 py-3 pr-3 align-middle font-mono text-[12px] font-medium whitespace-nowrap"
+                            :class="modulePrimaryTextClass"
                         >
                             <span class="block truncate" :title="cmd.numero">{{
                                 cmd.numero

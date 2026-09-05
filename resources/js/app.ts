@@ -7,9 +7,12 @@ import '../css/app.css';
 import { configureEcho } from '@laravel/echo-vue';
 import { initializeTheme } from './composables/useAppearance';
 
-configureEcho({
-    broadcaster: 'reverb',
-});
+/** Sans clé Reverb, ne pas initialiser Echo (évite POST /broadcasting/auth → 403). */
+if (import.meta.env.VITE_REVERB_APP_KEY) {
+    configureEcho({
+        broadcaster: 'reverb',
+    });
+}
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

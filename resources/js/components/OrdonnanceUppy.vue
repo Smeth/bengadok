@@ -6,7 +6,7 @@ import Dashboard from '@uppy/vue/dashboard';
 import { ClipboardList, Pill } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import '@uppy/core/css/style.css';
-import '@uppy/dashboard/css/style.css';
+import { moduleTabFocusClass } from '@/lib/bengadokUi';
 
 const ALLOWED_TYPES = [
     'image/jpeg',
@@ -166,7 +166,10 @@ watch(
             >
                 <button
                     type="button"
-                    class="pointer-events-auto flex cursor-pointer flex-col items-center gap-2 rounded-lg border-0 bg-transparent p-3 text-center outline-none focus-visible:ring-2 focus-visible:ring-[#459cd1] focus-visible:ring-offset-2"
+                    :class="[
+                        'pointer-events-auto flex cursor-pointer flex-col items-center gap-2 rounded-lg border-0 bg-transparent p-3 text-center outline-none',
+                        moduleTabFocusClass,
+                    ]"
                     @click="openFilePickerFromCard"
                 >
                     <span class="relative inline-flex text-[#94a3b8]">
