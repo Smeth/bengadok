@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Support\AuthRedirectPaths;
 use App\Models\User;
+use App\Support\AuthRedirectPaths;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Tests\Concerns\SeedsRoles;
