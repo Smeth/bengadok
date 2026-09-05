@@ -285,7 +285,7 @@ const statutLabels: Record<string, string> = {
 
             <!-- Critères de détection -->
             <div
-                class="rounded-xl border border-white/80 bg-white p-4 dark:border-white/10 dark:bg-white/95"
+                class="rounded-xl border border-white/80 bg-white p-4 dark:border-white/10 dark:bg-card"
             >
                 <p class="mb-2 text-sm font-medium text-foreground">
                     Critères de détection des doublons

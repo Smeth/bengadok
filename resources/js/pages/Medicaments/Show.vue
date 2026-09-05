@@ -67,7 +67,7 @@ function designationComplete() {
                 <!-- Left: Produit card + stats -->
                 <div class="space-y-4 lg:col-span-1">
                     <div
-                        class="rounded-xl border bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/95"
+                        class="rounded-xl border bg-white p-5 shadow-sm dark:border-white/10 dark:bg-card"
                     >
                         <h2 class="mb-3 text-lg font-semibold">
                             {{ designationComplete() }}
@@ -101,7 +101,7 @@ function designationComplete() {
 
                     <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
                         <div
-                            class="rounded-xl border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/95"
+                            class="rounded-xl border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-card"
                         >
                             <p class="text-sm text-muted-foreground">
                                 Ventes totales
@@ -111,7 +111,7 @@ function designationComplete() {
                             </p>
                         </div>
                         <div
-                            class="rounded-xl border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/95"
+                            class="rounded-xl border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-card"
                         >
                             <p class="text-sm text-muted-foreground">
                                 CA généré
@@ -122,7 +122,7 @@ function designationComplete() {
                             </p>
                         </div>
                         <div
-                            class="rounded-xl border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/95"
+                            class="rounded-xl border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-card"
                         >
                             <p class="text-sm text-muted-foreground">
                                 Popularité
@@ -141,7 +141,7 @@ function designationComplete() {
                 <!-- Right: Comparaison des prix -->
                 <div class="lg:col-span-2">
                     <div
-                        class="rounded-xl border bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/95"
+                        class="rounded-xl border bg-white p-5 shadow-sm dark:border-white/10 dark:bg-card"
                     >
                         <h3 class="mb-4 font-semibold">
                             Comparaison des prix par pharmacie

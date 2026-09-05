@@ -21,6 +21,8 @@ import {
     moduleDetailPanelClass,
     moduleDetailPanelLgClass,
     moduleFormInputClass,
+    parapharmaCommissionBannerClass,
+    parapharmaCreditHighlightClass,
 } from '@/lib/bengadokUi';
 import { dashboard } from '@/routes';
 
@@ -261,7 +263,7 @@ function statutBadgeClass(statut: string): string {
                         <Pill class="size-5 text-[#198754]" />
                     </div>
                 </div>
-                <p class="text-3xl font-extrabold text-gray-900">
+                <p class="text-3xl font-extrabold text-gray-900 dark:text-foreground">
                     {{ formatXaf(kpis.ca_medicaments) }}
                     <span class="text-base font-bold">XAF</span>
                 </p>
@@ -288,7 +290,7 @@ function statutBadgeClass(statut: string): string {
                         <BarChart3 class="size-5 text-[#198754]" />
                     </div>
                 </div>
-                <p class="text-3xl font-extrabold text-gray-900">
+                <p class="text-3xl font-extrabold text-gray-900 dark:text-foreground">
                     {{ formatXaf(kpis.ca_parapharma) }}
                     <span class="text-base font-bold">XAF</span>
                 </p>
@@ -315,7 +317,7 @@ function statutBadgeClass(statut: string): string {
                         <Wallet class="size-5 text-[#198754]" />
                     </div>
                 </div>
-                <p class="text-3xl font-extrabold text-gray-900">
+                <p class="text-3xl font-extrabold text-gray-900 dark:text-foreground">
                     {{ formatXaf(kpis.ca_total) }}
                     <span class="text-base font-bold">XAF</span>
                 </p>
@@ -339,7 +341,7 @@ function statutBadgeClass(statut: string): string {
                         <Percent class="size-5 text-[#198754]" />
                     </div>
                 </div>
-                <p class="text-3xl font-extrabold text-gray-900">
+                <p class="text-3xl font-extrabold text-gray-900 dark:text-foreground">
                     {{ formatXaf(kpis.montant_commission) }}
                     <span class="text-base font-bold">XAF</span>
                 </p>
@@ -367,7 +369,7 @@ function statutBadgeClass(statut: string): string {
                         <ShoppingBag class="size-5 text-[#198754]" />
                     </div>
                 </div>
-                <p class="text-3xl font-extrabold text-gray-900">
+                <p class="text-3xl font-extrabold text-gray-900 dark:text-foreground">
                     {{ kpis.nb_commandes }}
                     <span class="text-base font-bold">commandes</span>
                 </p>
@@ -395,7 +397,7 @@ function statutBadgeClass(statut: string): string {
                         <BarChart3 class="size-5 text-[#198754]" />
                     </div>
                 </div>
-                <p class="text-3xl font-extrabold text-gray-900">
+                <p class="text-3xl font-extrabold text-gray-900 dark:text-foreground">
                     {{ formatXaf(kpis.ca_parapharma) }}
                     <span class="text-base font-bold">XAF</span>
                 </p>
@@ -419,7 +421,7 @@ function statutBadgeClass(statut: string): string {
                         <Pill class="size-5 text-[#198754]" />
                     </div>
                 </div>
-                <p class="text-3xl font-extrabold text-gray-900">
+                <p class="text-3xl font-extrabold text-gray-900 dark:text-foreground">
                     {{ formatXaf(kpis.ca_medicaments) }}
                     <span class="text-base font-bold">XAF</span>
                 </p>
@@ -443,7 +445,7 @@ function statutBadgeClass(statut: string): string {
                         <Wallet class="size-5 text-[#198754]" />
                     </div>
                 </div>
-                <p class="text-3xl font-extrabold text-gray-900">
+                <p class="text-3xl font-extrabold text-gray-900 dark:text-foreground">
                     {{ formatXaf(kpis.ca_total) }}
                     <span class="text-base font-bold">XAF</span>
                 </p>
@@ -453,8 +455,8 @@ function statutBadgeClass(statut: string): string {
             </div>
 
             <div
-                v-if="creditsActifs"
-                class="rounded-2xl border-2 border-[#E9D5FF] bg-gradient-to-br from-[#FAF5FF] to-white p-5 shadow-sm"
+            v-if="creditsActifs"
+            :class="[parapharmaCreditHighlightClass, 'p-5']"
             >
                 <div class="mb-3 flex items-start justify-between">
                     <div>
@@ -521,7 +523,7 @@ function statutBadgeClass(statut: string): string {
                         <Percent class="size-5 text-[#198754]" />
                     </div>
                 </div>
-                <p class="text-3xl font-extrabold text-gray-900">
+                <p class="text-3xl font-extrabold text-gray-900 dark:text-foreground">
                     {{ formatXaf(kpis.montant_commission) }}
                     <span class="text-base font-bold">XAF</span>
                 </p>
@@ -534,14 +536,14 @@ function statutBadgeClass(statut: string): string {
         <!-- Bandeau commission -->
         <div
             v-if="creditsActifs"
-            class="rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] p-6 shadow-sm"
+            :class="parapharmaCommissionBannerClass"
         >
             <div
                 class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
             >
                 <div>
                     <h2
-                        class="flex items-center gap-2 text-lg font-bold text-gray-900"
+                        class="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-foreground dark:text-foreground"
                     >
                         <Percent class="size-5 text-[#198754]" />
                         <template v-if="isAdmin">
@@ -558,15 +560,15 @@ function statutBadgeClass(statut: string): string {
                     </h2>
                     <div class="mt-3 grid gap-2 sm:grid-cols-2">
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">
+                            <p class="text-xs font-semibold text-gray-500 dark:text-muted-foreground">
                                 Période
                             </p>
-                            <p class="font-bold text-gray-900">
+                            <p class="font-bold text-gray-900 dark:text-foreground">
                                 {{ commission_courante.periode_label }}
                             </p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">
+                            <p class="text-xs font-semibold text-gray-500 dark:text-muted-foreground">
                                 Échéance
                             </p>
                             <p class="font-bold text-[#FD7E14]">
@@ -631,13 +633,13 @@ function statutBadgeClass(statut: string): string {
                     <div
                         class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                     >
-                        <h3 class="text-lg font-bold text-gray-900">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-foreground">
                             Détail des ventes par pharmacie (médicaments &amp;
                             para)
                         </h3>
                         <div class="flex flex-wrap items-center gap-2">
                             <div
-                                class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5"
+                                class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 dark:border-white/10 dark:bg-white/8"
                             >
                                 <button
                                     type="button"
@@ -645,7 +647,7 @@ function statutBadgeClass(statut: string): string {
                                     :class="
                                         vuePeriode === 'mois'
                                             ? 'bg-[#198754] text-white shadow-sm'
-                                            : 'text-gray-600 hover:text-gray-900'
+                                            : 'text-gray-600 hover:text-gray-900 dark:text-muted-foreground dark:hover:text-foreground'
                                     "
                                     @click="setVuePeriode('mois')"
                                 >
@@ -657,7 +659,7 @@ function statutBadgeClass(statut: string): string {
                                     :class="
                                         vuePeriode === 'semaine'
                                             ? 'bg-[#198754] text-white shadow-sm'
-                                            : 'text-gray-600 hover:text-gray-900'
+                                            : 'text-gray-600 hover:text-gray-900 dark:text-muted-foreground dark:hover:text-foreground'
                                     "
                                     @click="setVuePeriode('semaine')"
                                 >
@@ -700,7 +702,7 @@ function statutBadgeClass(statut: string): string {
                                 class="sticky top-0 z-10 bg-card shadow-[0_1px_0_0_rgb(229,231,235)] dark:shadow-[0_1px_0_0_hsl(0_0%_20%)]"
                             >
                                 <tr
-                                    class="border-b text-xs font-bold text-gray-500"
+                                    class="border-b text-xs font-bold text-gray-500 dark:text-muted-foreground"
                                 >
                                     <th class="pb-3 pr-4 pt-1">Date</th>
                                     <th class="pb-3 pr-4 pt-1">Pharmacie</th>
@@ -732,11 +734,11 @@ function statutBadgeClass(statut: string): string {
                                     :key="`${v.date}-${v.pharmacie}-${i}`"
                                     class="border-b border-gray-50"
                                 >
-                                    <td class="py-3 pr-4 text-gray-700">
+                                    <td class="py-3 pr-4 text-gray-700 dark:text-muted-foreground">
                                         {{ v.date }}
                                     </td>
                                     <td
-                                        class="max-w-[180px] truncate py-3 pr-4 font-medium text-gray-900"
+                                        class="max-w-[180px] truncate py-3 pr-4 font-medium text-gray-900 dark:text-foreground"
                                         :title="v.pharmacie"
                                     >
                                         {{ v.pharmacie }}
@@ -786,7 +788,7 @@ function statutBadgeClass(statut: string): string {
                 </div>
 
                 <div
-                    class="rounded-2xl border-2 border-[#E9D5FF] bg-gradient-to-br from-[#FAF5FF] to-white p-6 shadow-sm"
+                    :class="[parapharmaCreditHighlightClass, 'p-6']"
                 >
                     <div class="mb-6 flex items-center gap-3">
                         <div
@@ -831,12 +833,12 @@ function statutBadgeClass(statut: string): string {
                 <div
                     class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <h3 class="text-lg font-bold text-gray-900">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-foreground">
                         Crédits consommés par pharmacie
                     </h3>
                     <div class="flex flex-wrap items-center gap-2">
                         <div
-                            class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5"
+                            class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 dark:border-white/10 dark:bg-white/8"
                         >
                             <button
                                 type="button"
@@ -844,7 +846,7 @@ function statutBadgeClass(statut: string): string {
                                 :class="
                                     vuePeriode === 'mois'
                                         ? 'bg-[#198754] text-white shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
+                                        : 'text-gray-600 hover:text-gray-900 dark:text-muted-foreground dark:hover:text-foreground'
                                 "
                                 @click="setVuePeriode('mois')"
                             >
@@ -856,7 +858,7 @@ function statutBadgeClass(statut: string): string {
                                 :class="
                                     vuePeriode === 'semaine'
                                         ? 'bg-[#198754] text-white shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
+                                        : 'text-gray-600 hover:text-gray-900 dark:text-muted-foreground dark:hover:text-foreground'
                                 "
                                 @click="setVuePeriode('semaine')"
                             >
@@ -976,7 +978,7 @@ function statutBadgeClass(statut: string): string {
                 :class="['lg:col-span-2', moduleDetailPanelLgClass]"
             >
                 <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-lg font-bold text-gray-900">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-foreground">
                         Détail des ventes (médicaments + parapharmacie)
                     </h3>
                     <div class="relative">
@@ -1092,7 +1094,7 @@ function statutBadgeClass(statut: string): string {
 
             <div class="flex flex-col gap-4">
                 <div
-                    class="rounded-2xl border-2 border-[#E9D5FF] bg-[#FAF5FF] p-5"
+                    class="rounded-2xl border-2 border-[#E9D5FF] bg-[#FAF5FF] p-5 dark:border-violet-900/40 dark:bg-violet-950/35"
                 >
                     <h3 class="mb-4 font-bold text-[#6B21A8]">
                         Consommation des crédits
@@ -1120,7 +1122,7 @@ function statutBadgeClass(statut: string): string {
                     </ul>
                 </div>
                 <div
-                    class="rounded-2xl border border-[#BFDBFE] bg-[#EFF6FF] p-5"
+                    class="rounded-2xl border border-[#BFDBFE] bg-[#EFF6FF] p-5 dark:border-blue-900/40 dark:bg-blue-950/30"
                 >
                     <h3 class="mb-2 flex items-center gap-2 font-bold text-[#1D4ED8]">
                         <Info class="size-4" />
@@ -1142,7 +1144,7 @@ function statutBadgeClass(statut: string): string {
             <div
                     :class="moduleDetailPanelLgClass"
             >
-                <h3 class="mb-4 text-lg font-bold text-gray-900">
+                <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-foreground">
                     Historique des commissions
                 </h3>
                 <div class="overflow-x-auto">
@@ -1197,7 +1199,7 @@ function statutBadgeClass(statut: string): string {
             <div
                     :class="moduleDetailPanelLgClass"
             >
-                <h3 class="mb-4 text-lg font-bold text-gray-900">
+                <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-foreground">
                     Commandes récentes
                 </h3>
                 <div class="overflow-x-auto">
@@ -1272,7 +1274,7 @@ function statutBadgeClass(statut: string): string {
                 class="w-full max-w-md rounded-2xl bg-card p-6 shadow-xl dark:border dark:border-border"
             >
                 <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-lg font-bold text-gray-900">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-foreground">
                         Recharger mes crédits
                     </h3>
                     <button

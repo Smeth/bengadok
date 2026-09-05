@@ -16,6 +16,10 @@ export const colors = {
 export const modulePageClass =
     'relative flex min-h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 md:p-8';
 
+/** Shell blanc sur fond dégradé (catalogue, formulaires inline). */
+export const modulePageShellClass =
+    'space-y-5 rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-card/95';
+
 /** Carte blanche module. */
 export const moduleCardClass =
     'rounded-xl border border-border bg-white shadow-sm dark:border-white/10 dark:bg-card';
@@ -53,11 +57,54 @@ export const pharmacyOrderCardClass =
 
 /** Surface dashboard admin (KPI, panneaux). */
 export const dashboardSurfaceClass =
-    'rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] dark:border dark:border-border dark:bg-card dark:shadow-md';
+    'rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] dark:border dark:border-white/10 dark:bg-card dark:shadow-md';
 
 /** Hero dashboard admin. */
 export const dashboardHeroSurfaceClass =
-    'relative overflow-hidden rounded-[30px] bg-white p-8 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] dark:border dark:border-border dark:bg-card';
+    'relative overflow-hidden rounded-[30px] bg-white p-8 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] dark:border dark:border-white/10 dark:bg-card';
+
+/** Carte graphique dashboard legacy (rounded 30px). */
+export const dashboardChartCardClass =
+    'rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] dark:border dark:border-white/10 dark:bg-card dark:shadow-md';
+
+/** Badge période sur cartes graphiques. */
+export const dashboardPeriodBadgeClass =
+    'rounded-[13px] border border-black/30 bg-gray-50 px-3 py-1 text-[14px] font-semibold text-gray-700 dark:border-white/20 dark:bg-muted dark:text-muted-foreground';
+
+/** Panneau dashboard pharmacie (fond vert clair). */
+export const dashboardPharmaPanelClass =
+    'rounded-[30px] bg-[#E1EFE8] p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.1)] dark:border dark:border-emerald-900/30 dark:bg-emerald-950/35 dark:shadow-md';
+
+/** Sous-carte dans panneau dashboard pharmacie. */
+export const dashboardPharmaInnerCardClass =
+    'rounded-[16px] bg-white/80 p-4 dark:bg-card/80';
+
+/** Contrôle vue segmenté (Liste / Cartes). */
+export const moduleViewSegmentClass =
+    'flex gap-1 rounded-lg border border-input bg-muted/30 p-1 dark:border-white/10 dark:bg-white/8';
+
+export const moduleViewSegmentActiveClass =
+    'bg-white shadow-sm dark:bg-[hsl(0_0%_18%)] dark:text-foreground';
+
+/** Carte pharmacie (vue card). */
+export const pharmacyListingCardClass =
+    'rounded-[20px] bg-white p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md h-full relative dark:border dark:border-white/10 dark:bg-card';
+
+/** Toggle vue pharmacies (Liste / Card / Carte). */
+export const pharmacyViewToggleClass =
+    'flex gap-1 rounded-lg bg-white p-1 shadow-sm ring-1 ring-black/5 dark:bg-white/8 dark:ring-white/10';
+
+/** Bandeau commission parapharma. */
+export const parapharmaCommissionBannerClass =
+    'rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] p-6 shadow-sm dark:border-emerald-800/40 dark:bg-emerald-950/35';
+
+/** Carte accent violet (crédits parapharma). */
+export const parapharmaCreditHighlightClass =
+    'rounded-2xl border-2 border-[#E9D5FF] bg-gradient-to-br from-[#FAF5FF] to-white shadow-sm dark:border-violet-900/40 dark:from-violet-950/45 dark:to-card';
+
+/** Toggle période mois / semaine. */
+export const modulePeriodToggleClass =
+    'inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 dark:border-white/10 dark:bg-white/8';
 
 /** Anneau de focus clavier commun (onglets, boutons module). */
 export const moduleTabFocusClass =

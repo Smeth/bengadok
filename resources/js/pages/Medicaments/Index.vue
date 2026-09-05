@@ -27,7 +27,15 @@ import ModuleFilterPanel from '@/components/shared/ModuleFilterPanel.vue';
 import ModulePagination from '@/components/shared/ModulePagination.vue';
 import MedicamentsSectionNav from '@/components/medicaments/MedicamentsSectionNav.vue';
 import type { MedicamentsSectionTab } from '@/components/medicaments/MedicamentsSectionNav.vue';
-import { moduleCardClass, modulePageClass, modulePaginationWrapperClass, moduleSelectClass } from '@/lib/bengadokUi';
+import {
+    moduleCardClass,
+    modulePageClass,
+    modulePageShellClass,
+    modulePaginationWrapperClass,
+    moduleSelectClass,
+    moduleViewSegmentActiveClass,
+    moduleViewSegmentClass,
+} from '@/lib/bengadokUi';
 import FlashToastHost from '@/components/FlashToastHost.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
@@ -382,7 +390,7 @@ const badgeTotal = computed(() =>
 
             <div
                 v-if="activeSection === 'catalogue'"
-                class="space-y-5 rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/95"
+                :class="modulePageShellClass"
             >
                 <div
                     class="flex flex-col gap-2 border-b border-border pb-5 sm:flex-row sm:items-center sm:justify-between"
@@ -466,15 +474,13 @@ const badgeTotal = computed(() =>
                             {{ ph.designation }}
                         </option>
                     </select>
-                    <div
-                        class="flex gap-1 rounded-lg border border-input bg-muted/30 p-1"
-                    >
+                    <div :class="moduleViewSegmentClass">
                         <button
                             type="button"
                             class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors"
                             :class="
                                 vueMode === 'cartes'
-                                    ? 'bg-white shadow-sm'
+                                    ? moduleViewSegmentActiveClass
                                     : 'text-muted-foreground hover:text-foreground'
                             "
                             @click="vueMode = 'cartes'"
@@ -487,7 +493,7 @@ const badgeTotal = computed(() =>
                             class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors"
                             :class="
                                 vueMode === 'liste'
-                                    ? 'bg-white shadow-sm'
+                                    ? moduleViewSegmentActiveClass
                                     : 'text-muted-foreground hover:text-foreground'
                             "
                             @click="vueMode = 'liste'"
@@ -742,7 +748,7 @@ const badgeTotal = computed(() =>
 
             <div
                 v-else-if="activeSection === 'db_medicament'"
-                class="space-y-5 rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/95"
+                :class="modulePageShellClass"
             >
                 <div
                     class="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-start sm:justify-between"
@@ -1191,7 +1197,7 @@ const badgeTotal = computed(() =>
 
             <div
                 v-else-if="activeSection === 'statistiques'"
-                class="space-y-5 rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/95"
+                :class="modulePageShellClass"
             >
                 <div
                     class="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-start sm:justify-between"

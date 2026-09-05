@@ -37,7 +37,14 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { moduleCardClass, modulePageClass, modulePaginationWrapperClass } from '@/lib/bengadokUi';
+import {
+    moduleCardClass,
+    modulePageClass,
+    modulePageShellClass,
+    modulePaginationWrapperClass,
+    pharmacyListingCardClass,
+    pharmacyViewToggleClass,
+} from '@/lib/bengadokUi';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -462,9 +469,7 @@ watch(
                     }}</span>
                     <ShieldAlert class="size-4" />
                 </div>
-                <div
-                    class="flex gap-1 rounded-lg bg-white p-1 shadow-sm ring-1 ring-black/5"
-                >
+                <div :class="pharmacyViewToggleClass">
                             <Button
                                 :variant="
                                     viewMode === 'liste' ? 'secondary' : 'ghost'
@@ -474,7 +479,7 @@ watch(
                                 :class="
                                     viewMode === 'liste'
                                         ? 'bg-gray-600 text-white hover:bg-gray-700'
-                                        : 'text-gray-600 hover:text-gray-900'
+                                        : 'text-gray-600 hover:text-gray-900 dark:text-muted-foreground dark:hover:text-foreground'
                                 "
                                 @click="viewMode = 'liste'"
                             >
@@ -490,7 +495,7 @@ watch(
                                 :class="
                                     viewMode === 'card'
                                         ? 'bg-gray-600 text-white hover:bg-gray-700'
-                                        : 'text-gray-600 hover:text-gray-900'
+                                        : 'text-gray-600 hover:text-gray-900 dark:text-muted-foreground dark:hover:text-foreground'
                                 "
                                 @click="viewMode = 'card'"
                             >
@@ -506,7 +511,7 @@ watch(
                                 :class="
                                     viewMode === 'carte'
                                         ? 'bg-gray-600 text-white hover:bg-gray-700'
-                                        : 'text-gray-600 hover:text-gray-900'
+                                        : 'text-gray-600 hover:text-gray-900 dark:text-muted-foreground dark:hover:text-foreground'
                                 "
                                 @click="viewMode = 'carte'"
                             >
@@ -548,7 +553,7 @@ watch(
                     </Button>
                 </div>
                 <div
-                    class="overflow-x-auto rounded-[20px] border border-gray-100 bg-white shadow-sm"
+                    class="overflow-x-auto rounded-[20px] border border-gray-100 bg-white shadow-sm dark:border-white/10 dark:bg-card"
                 >
                     <table class="w-full min-w-[920px] table-fixed text-sm">
                         <thead class="bg-muted/50">
@@ -752,7 +757,7 @@ watch(
                 <div
                     v-for="pharmacie in pharmacies.data"
                     :key="pharmacie.id"
-                    class="rounded-[20px] bg-white p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md h-full relative"
+                    :class="pharmacyListingCardClass"
                 >
                     <!-- Header Carte -->
                     <div class="mb-5 flex items-start gap-3">
@@ -779,7 +784,7 @@ watch(
                         </div>
                         <div class="flex-1 min-w-0 pr-16 mt-1">
                             <h3
-                                class="font-extrabold text-[16px] text-gray-900 leading-tight"
+                                class="font-extrabold text-[16px] text-gray-900 leading-tight dark:text-foreground"
                             >
                                 {{ pharmacie.designation }}
                             </h3>
@@ -810,7 +815,7 @@ watch(
 
                     <!-- Infos détaillées -->
                     <div
-                        class="space-y-3 text-[13px] text-gray-500 mb-6 flex-1"
+                        class="space-y-3 text-[13px] text-gray-500 mb-6 flex-1 dark:text-muted-foreground"
                     >
                         <p class="flex items-center gap-3">
                             <MapPin class="size-4 shrink-0 text-gray-400" />
@@ -842,11 +847,11 @@ watch(
                     </div>
 
                     <!-- Bloc Propriétaire -->
-                    <div class="mb-5 rounded-[12px] border border-gray-200 p-3">
+                    <div class="mb-5 rounded-[12px] border border-gray-200 p-3 dark:border-white/10">
                         <p class="text-[11px] font-bold text-gray-400 mb-0.5">
                             Propriétaire
                         </p>
-                        <p class="font-bold text-[13px] text-gray-900 truncate">
+                        <p class="font-bold text-[13px] text-gray-900 truncate dark:text-foreground">
                             {{ pharmacie.proprio_nom || '-' }}
                         </p>
                         <p
@@ -862,7 +867,7 @@ watch(
                     <!-- Pied de carte -->
                     <div class="mt-auto">
                         <div
-                            class="mb-4 rounded-lg bg-gray-50/50 p-2 px-3 border border-gray-100 flex items-center justify-between"
+                            class="mb-4 rounded-lg bg-gray-50/50 p-2 px-3 border border-gray-100 flex items-center justify-between dark:bg-white/5 dark:border-white/10"
                         >
                             <div
                                 class="flex items-center gap-2 text-[12px] text-gray-500"
@@ -870,7 +875,7 @@ watch(
                                 <Users class="size-4" />
                                 <span>Utilisateurs liés</span>
                             </div>
-                            <span class="font-bold text-gray-900 text-[14px]">{{
+                            <span class="font-bold text-gray-900 text-[14px] dark:text-foreground">{{
                                 pharmacie.users_count
                             }}</span>
                         </div>
@@ -982,7 +987,7 @@ watch(
 
                 <div
                     v-else
-                    class="space-y-5 rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/95"
+                    :class="modulePageShellClass"
                 >
                     <div
                         class="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-start sm:justify-between"

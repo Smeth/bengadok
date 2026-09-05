@@ -10,7 +10,14 @@ import {
 import { computed, ref } from 'vue';
 import AdminParapharmaDashboard from '@/components/AdminParapharmaDashboard.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { dashboardHeroSurfaceClass, dashboardSurfaceClass } from '@/lib/bengadokUi';
+import {
+    dashboardChartCardClass,
+    dashboardHeroSurfaceClass,
+    dashboardPeriodBadgeClass,
+    dashboardPharmaInnerCardClass,
+    dashboardPharmaPanelClass,
+    dashboardSurfaceClass,
+} from '@/lib/bengadokUi';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
@@ -829,14 +836,14 @@ function getPiePath(
             >
                 <!-- Volume commandes par pharmacies (bar chart) -->
                 <div
-                    class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                    :class="dashboardChartCardClass"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-bold text-black dark:text-foreground">
+                        <h3 class="text-[20px] font-bold text-gray-900 dark:text-foreground">
                             Volume commandes par pharmacies
                         </h3>
                         <span
-                            class="rounded-[13px] border border-black/30 bg-gray-50 px-3 py-1 text-[14px] font-semibold text-gray-700"
+                            :class="dashboardPeriodBadgeClass"
                         >
                             {{ periodLabel }}
                         </span>
@@ -846,7 +853,7 @@ function getPiePath(
                         style="height: 300px"
                     >
                         <div
-                            class="absolute left-0 top-0 flex flex-col justify-between text-[12px] text-gray-600"
+                            class="absolute left-0 top-0 flex flex-col justify-between text-[12px] text-gray-600 dark:text-muted-foreground"
                             style="bottom: 2rem"
                         >
                             <span
@@ -885,14 +892,14 @@ function getPiePath(
 
                 <!-- Volume commandes par zone (pie chart) -->
                 <div
-                    class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                    :class="dashboardChartCardClass"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-bold text-black dark:text-foreground">
+                        <h3 class="text-[20px] font-bold text-gray-900 dark:text-foreground">
                             Volume commandes par zone
                         </h3>
                         <span
-                            class="rounded-[13px] border border-black/30 bg-gray-50 px-3 py-1 text-[14px] font-semibold text-gray-700"
+                            :class="dashboardPeriodBadgeClass"
                         >
                             {{ periodLabel }}
                         </span>
@@ -988,14 +995,14 @@ function getPiePath(
             >
                 <!-- Annulations par motif -->
                 <div
-                    class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                    :class="dashboardChartCardClass"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-bold text-black dark:text-foreground">
+                        <h3 class="text-[20px] font-bold text-gray-900 dark:text-foreground">
                             Annulations par motif
                         </h3>
                         <span
-                            class="rounded-[13px] border border-black/30 bg-gray-50 px-3 py-1 text-[14px] font-semibold text-gray-700"
+                            :class="dashboardPeriodBadgeClass"
                         >
                             {{ periodLabel }}
                         </span>
@@ -1035,14 +1042,14 @@ function getPiePath(
 
                 <!-- Canaux d'acquisition -->
                 <div
-                    class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                    :class="dashboardChartCardClass"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-bold text-black dark:text-foreground">
+                        <h3 class="text-[20px] font-bold text-gray-900 dark:text-foreground">
                             Canaux d'acquisition
                         </h3>
                         <span
-                            class="rounded-[13px] border border-black/30 bg-gray-50 px-3 py-1 text-[14px] font-semibold text-gray-700"
+                            :class="dashboardPeriodBadgeClass"
                         >
                             {{ periodLabel }}
                         </span>
@@ -1081,14 +1088,14 @@ function getPiePath(
 
                 <!-- Délais moyens -->
                 <div
-                    class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                    :class="dashboardChartCardClass"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-bold text-black dark:text-foreground">
+                        <h3 class="text-[20px] font-bold text-gray-900 dark:text-foreground">
                             Délais moyens
                         </h3>
                         <span
-                            class="rounded-[13px] border border-black/30 bg-gray-50 px-3 py-1 text-[14px] font-semibold text-gray-700"
+                            :class="dashboardPeriodBadgeClass"
                         >
                             {{ periodLabel }}
                         </span>
@@ -1121,14 +1128,14 @@ function getPiePath(
 
                 <!-- Top médicaments -->
                 <div
-                    class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                    :class="dashboardChartCardClass"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-bold text-black dark:text-foreground">
+                        <h3 class="text-[20px] font-bold text-gray-900 dark:text-foreground">
                             Top médicaments
                         </h3>
                         <span
-                            class="rounded-[13px] border border-black/30 bg-gray-50 px-3 py-1 text-[14px] font-semibold text-gray-700"
+                            :class="dashboardPeriodBadgeClass"
                         >
                             {{ periodLabel }}
                         </span>
@@ -1173,7 +1180,7 @@ function getPiePath(
             <!-- Charts Pharmacie -->
             <div v-if="isPharma">
                 <div
-                    class="rounded-[30px] bg-[#E1EFE8] backdrop-blur-sm p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.1)] w-full relative"
+                    :class="[dashboardPharmaPanelClass, 'w-full relative backdrop-blur-sm']"
                 >
                     <div class="mb-6 flex items-center justify-between">
                         <h3 class="text-[20px] font-extrabold text-gray-900 dark:text-foreground">
@@ -1229,7 +1236,7 @@ function getPiePath(
 
                 <!-- Délais pharmacie -->
                 <div
-                    class="mt-6 rounded-[30px] bg-[#E1EFE8] backdrop-blur-sm p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.1)]"
+                    :class="[dashboardPharmaPanelClass, 'mt-6 backdrop-blur-sm']"
                 >
                     <div class="mb-6 flex items-center justify-between">
                         <h3 class="text-[20px] font-extrabold text-gray-900 dark:text-foreground">
@@ -1242,7 +1249,7 @@ function getPiePath(
                         </span>
                     </div>
                     <div class="grid gap-4 sm:grid-cols-2">
-                        <div class="rounded-[16px] bg-white/80 p-4">
+                        <div :class="dashboardPharmaInnerCardClass">
                             <p class="mb-2 text-[13px] font-semibold text-gray-600">
                                 Réponse pharmacie
                             </p>
@@ -1250,7 +1257,7 @@ function getPiePath(
                                 {{ formatDelai(delais.reponse_pharmacie_heures) }}
                             </p>
                         </div>
-                        <div class="rounded-[16px] bg-white/80 p-4">
+                        <div :class="dashboardPharmaInnerCardClass">
                             <p class="mb-2 text-[13px] font-semibold text-gray-600">
                                 Livraison
                             </p>
@@ -1264,7 +1271,7 @@ function getPiePath(
                 <!-- Top médicaments pharmacie -->
                 <div
                     v-if="topMedicaments.length > 0"
-                    class="mt-6 rounded-[30px] bg-[#E1EFE8] backdrop-blur-sm p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.1)]"
+                    :class="[dashboardPharmaPanelClass, 'mt-6 backdrop-blur-sm']"
                 >
                     <div class="mb-6 flex items-center justify-between">
                         <h3 class="text-[20px] font-extrabold text-gray-900 dark:text-foreground">

@@ -484,7 +484,7 @@ function creerUtilisateur() {
 
             <div
                 v-show="ongletActif === 'informations'"
-                class="rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/95"
+                class="rounded-xl border border-white/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-card"
             >
                 <div class="mb-6 flex items-start justify-between">
                     <div class="flex items-center gap-3">
