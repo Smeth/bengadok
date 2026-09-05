@@ -218,168 +218,196 @@ function creerVendeur() {
             </div>
         </div>
 
-        <!-- Modal Créer un utilisateur (design image 2) -->
+        <!-- Modal Créer un utilisateur -->
         <Dialog :open="modalCreate" @update:open="modalCreate = $event">
-            <DialogContent class="max-w-lg">
-                <DialogHeader>
-                    <DialogTitle class="flex items-center gap-2">
+            <DialogContent
+                class="flex max-h-[min(92vh,36rem)] max-w-lg flex-col gap-0 overflow-hidden p-0"
+            >
+                <DialogHeader class="shrink-0 space-y-1 border-b px-5 py-4">
+                    <DialogTitle class="flex items-center gap-2 text-base">
                         <Users class="size-5" :class="modulePrimaryTextClass" />
                         Créer un utilisateur
                     </DialogTitle>
+                    <p class="text-xs text-muted-foreground">
+                        Nouveau membre — {{ pharmacie?.designation }}
+                    </p>
                 </DialogHeader>
-                <p class="text-sm" :class="modulePrimaryTextClass">
-                    Ajoutez un nouveau membre à une pharmacie
-                </p>
 
-                <form class="space-y-6" @submit.prevent="creerVendeur">
-                    <div class="space-y-2">
-                        <Label for="name">Nom complet</Label>
-                        <Input
-                            id="name"
-                            v-model="form.name"
-                            required
-                            placeholder="Ex: Fofana Didier"
-                        />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="vendeur-phone"
-                            >Téléphone (obligatoire — SMS / OTP)</Label
-                        >
-                        <Input
-                            id="vendeur-phone"
-                            v-model="form.phone"
-                            type="tel"
-                            required
-                            autocomplete="tel"
-                            placeholder="Ex: +242 06 123 45 67"
-                        />
-                        <p
-                            v-if="formErrors.phone"
-                            class="text-sm text-red-600"
-                        >
-                            {{ formErrors.phone }}
-                        </p>
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="email">Email (facultatif)</Label>
-                        <Input
-                            id="email"
-                            v-model="form.email"
-                            type="email"
-                            autocomplete="email"
-                            placeholder="Laisser vide si non utilisé"
-                        />
-                        <p
-                            v-if="formErrors.email"
-                            class="text-sm text-red-600"
-                        >
-                            {{ formErrors.email }}
-                        </p>
-                    </div>
-
-                    <div class="space-y-3">
-                        <Label>Définir le rôle de l'utilisateur</Label>
-                        <div class="flex gap-4">
-                            <label
-                                class="flex flex-1 cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors"
-                                :class="
-                                    form.role === 'gerant'
-                                        ? modulePrimarySelectedCardClass
-                                        : 'border-input hover:bg-muted/30'
-                                "
-                            >
-                                <ShieldCheck class="size-8" :class="modulePrimaryTextClass" />
-                                <span class="font-semibold">Gérant</span>
-                                <span class="text-xs text-muted-foreground"
-                                    >Accès complet</span
-                                >
-                                <input
-                                    v-model="form.role"
-                                    type="radio"
-                                    value="gerant"
-                                    class="sr-only"
-                                />
-                            </label>
-                            <label
-                                class="flex flex-1 cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors"
-                                :class="
-                                    form.role === 'vendeur'
-                                        ? modulePrimarySelectedCardClass
-                                        : 'border-input hover:bg-muted/30'
-                                "
-                            >
-                                <Shield class="size-8" :class="modulePrimaryTextClass" />
-                                <span class="font-semibold">Vendeur</span>
-                                <span class="text-xs text-muted-foreground"
-                                    >Commandes uniquement</span
-                                >
-                                <input
-                                    v-model="form.role"
-                                    type="radio"
-                                    value="vendeur"
-                                    class="sr-only"
-                                />
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="rounded-lg bg-muted/50 p-4 space-y-4">
-                        <h4 class="font-medium text-muted-foreground">
-                            Infos propriétaire
-                        </h4>
-                        <div class="space-y-2">
-                            <Label>Identifiant (auto-généré)</Label>
-                            <input
-                                type="text"
-                                readonly
-                                tabindex="-1"
-                                :value="identifiantPreview"
-                                class="flex h-9 w-full min-w-0 rounded-md border border-input bg-muted px-3 py-1 font-mono text-sm shadow-xs outline-none md:text-sm"
+                <form
+                    class="flex min-h-0 flex-1 flex-col"
+                    @submit.prevent="creerVendeur"
+                >
+                    <div class="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+                        <div class="space-y-1.5">
+                            <Label for="name" class="text-sm">Nom complet</Label>
+                            <Input
+                                id="name"
+                                v-model="form.name"
+                                required
+                                class="h-9"
+                                placeholder="Ex: Fofana Didier"
                             />
-                            <p class="text-xs text-muted-foreground">
-                                Aperçu indicatif — l'identifiant exact s'affiche
-                                dans la fenêtre de confirmation après création.
-                            </p>
                         </div>
+
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <div class="space-y-1.5">
+                                <Label for="vendeur-phone" class="text-sm"
+                                    >Téléphone</Label
+                                >
+                                <Input
+                                    id="vendeur-phone"
+                                    v-model="form.phone"
+                                    type="tel"
+                                    required
+                                    autocomplete="tel"
+                                    class="h-9"
+                                    placeholder="+242 06 123 45 67"
+                                />
+                                <p
+                                    v-if="formErrors.phone"
+                                    class="text-xs text-red-600"
+                                >
+                                    {{ formErrors.phone }}
+                                </p>
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label for="email" class="text-sm"
+                                    >Email (facultatif)</Label
+                                >
+                                <Input
+                                    id="email"
+                                    v-model="form.email"
+                                    type="email"
+                                    autocomplete="email"
+                                    class="h-9"
+                                    placeholder="Optionnel"
+                                />
+                                <p
+                                    v-if="formErrors.email"
+                                    class="text-xs text-red-600"
+                                >
+                                    {{ formErrors.email }}
+                                </p>
+                            </div>
+                        </div>
+
                         <div class="space-y-2">
-                            <Label>Mot de passe temporaire</Label>
-                            <div class="flex gap-2">
+                            <Label class="text-sm">Rôle</Label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <label
+                                    class="flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors"
+                                    :class="
+                                        form.role === 'gerant'
+                                            ? modulePrimarySelectedCardClass
+                                            : 'border-input hover:bg-muted/30'
+                                    "
+                                >
+                                    <ShieldCheck
+                                        class="size-5 shrink-0"
+                                        :class="modulePrimaryTextClass"
+                                    />
+                                    <div class="min-w-0">
+                                        <span
+                                            class="block text-sm font-semibold leading-tight"
+                                            >Gérant</span
+                                        >
+                                        <span
+                                            class="block text-[10px] text-muted-foreground"
+                                            >Accès complet</span
+                                        >
+                                    </div>
+                                    <input
+                                        v-model="form.role"
+                                        type="radio"
+                                        value="gerant"
+                                        class="sr-only"
+                                    />
+                                </label>
+                                <label
+                                    class="flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors"
+                                    :class="
+                                        form.role === 'vendeur'
+                                            ? modulePrimarySelectedCardClass
+                                            : 'border-input hover:bg-muted/30'
+                                    "
+                                >
+                                    <Shield
+                                        class="size-5 shrink-0"
+                                        :class="modulePrimaryTextClass"
+                                    />
+                                    <div class="min-w-0">
+                                        <span
+                                            class="block text-sm font-semibold leading-tight"
+                                            >Vendeur</span
+                                        >
+                                        <span
+                                            class="block text-[10px] text-muted-foreground"
+                                            >Commandes</span
+                                        >
+                                    </div>
+                                    <input
+                                        v-model="form.role"
+                                        type="radio"
+                                        value="vendeur"
+                                        class="sr-only"
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        <div
+                            class="space-y-2 rounded-lg border border-border/60 bg-muted/40 p-3"
+                        >
+                            <div class="space-y-1">
+                                <Label class="text-xs text-muted-foreground"
+                                    >Identifiant (aperçu)</Label
+                                >
                                 <input
                                     type="text"
                                     readonly
                                     tabindex="-1"
-                                    :value="form.password"
-                                    class="flex h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-3 py-1 font-mono text-base shadow-xs outline-none md:text-sm"
+                                    :value="identifiantPreview"
+                                    class="flex h-8 w-full rounded-md border border-input bg-muted/80 px-2.5 font-mono text-xs"
                                 />
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    title="Régénérer le mot de passe"
-                                    @click="regeneratePassword"
-                                >
-                                    <RefreshCw class="size-4" />
-                                </Button>
                             </div>
-                            <p class="text-xs" :class="modulePrimaryTextClass">
-                                L'utilisateur devra changer ce mot de passe à la
-                                première connexion
+                            <div class="space-y-1">
+                                <Label class="text-xs text-muted-foreground"
+                                    >Mot de passe temporaire</Label
+                                >
+                                <div class="flex gap-2">
+                                    <input
+                                        type="text"
+                                        readonly
+                                        tabindex="-1"
+                                        :value="form.password"
+                                        class="h-8 min-w-0 flex-1 rounded-md border border-input bg-background px-2.5 font-mono text-xs"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        class="size-8 shrink-0"
+                                        title="Régénérer le mot de passe"
+                                        @click="regeneratePassword"
+                                    >
+                                        <RefreshCw class="size-3.5" />
+                                    </Button>
+                                </div>
+                            </div>
+                            <p class="text-[10px] leading-snug text-muted-foreground">
+                                L'identifiant exact et le mot de passe seront
+                                affichés dans une fenêtre de confirmation après
+                                création.
                             </p>
                         </div>
                     </div>
 
-                    <div class="rounded-lg bg-sky-50 p-4 dark:bg-sky-950/30">
-                        <p class="text-sm text-muted-foreground">
-                            Après validation, une fenêtre affichera l'identifiant
-                            enregistré en base avec le bouton « Copier les
-                            identifiants ».
-                        </p>
-                    </div>
-
-                    <DialogFooter class="gap-2">
+                    <DialogFooter
+                        class="shrink-0 gap-2 border-t bg-background px-5 py-3"
+                    >
                         <Button
                             type="button"
-                            variant="destructive"
+                            variant="outline"
                             @click="modalCreate = false"
                         >
                             Annuler

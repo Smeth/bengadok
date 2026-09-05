@@ -6,6 +6,7 @@ import InputError from '@/components/InputError.vue';
 import OrdonnanceAnalysisProgressBar from '@/components/OrdonnanceAnalysisProgressBar.vue';
 import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
 import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
+import PharmacieSearchPicker from '@/components/PharmacieSearchPicker.vue';
 import BackLink from '@/components/ui/BackLink.vue';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -49,12 +50,19 @@ const props = defineProps<{
             };
         }>;
         mode_paiement?: { id: number; designation: string };
+        ordonnance?: {
+            id: number;
+            file_url?: string | null;
+            is_pdf?: boolean;
+        } | null;
     };
     pharmacies: Array<{
         id: number;
         designation: string;
-        zone?: { designation: string };
+        zone?: { id?: number; designation?: string };
+        zone_id?: number;
         adresse?: string;
+        telephone?: string;
     }>;
     modesPaiement: Array<{ id: number; designation: string }>;
     arrondissements: string[];
@@ -229,6 +237,7 @@ function submit() {
             prix_unitaire: Number(p.prix_unitaire),
         }));
     if (!produitsValides.length) return;
+    if (!pharmacieId.value) return;
 
     enSubmission.value = true;
 
@@ -472,37 +481,11 @@ function submit() {
                                             >*</span
                                         ></Label
                                     >
-                                    <div class="relative">
-                                        <select
-                                            v-model="pharmacieId"
-                                            required
-                                            :class="[
-                                                selectClass,
-                                                {
-                                                    'border-[#dc3545]':
-                                                        fieldHasError(
-                                                            'pharmacie_id',
-                                                        ),
-                                                },
-                                            ]"
-                                        >
-                                            <option value="">
-                                                Choisir une pharmacie
-                                            </option>
-                                            <option
-                                                v-for="p in pharmacies"
-                                                :key="p.id"
-                                                :value="p.id"
-                                            >
-                                                {{ p.designation }} ({{
-                                                    p.zone?.designation
-                                                }}) — {{ p.adresse }}
-                                            </option>
-                                        </select>
-                                        <ChevronDown
-                                            class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]"
-                                        />
-                                    </div>
+                                    <PharmacieSearchPicker
+                                        v-model="pharmacieId"
+                                        :pharmacies="pharmacies"
+                                        :error="errors.pharmacie_id"
+                                    />
                                     <InputError
                                         :message="errors.pharmacie_id"
                                     />
@@ -753,11 +736,36 @@ function submit() {
                         <h2 :class="[sectionTitleClass, 'mb-4']">
                             Ordonnance
                         </h2>
+                        <p class="mb-3 text-sm font-medium text-black">
+                            Nouvelle ordonnance (remplace l'actuelle)
+                        </p>
+                        <p
+                            v-if="
+                                commande.ordonnance?.file_url &&
+                                !ordonnanceFile
+                            "
+                            class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+                        >
+                            Ordonnance déjà enregistrée —
+                            <a
+                                :href="commande.ordonnance.file_url"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="font-medium text-amber-950 underline underline-offset-2 hover:text-amber-800"
+                            >
+                                Ouvrir l'ordonnance
+                            </a>
+                            — ajoutez un fichier ci-dessous pour la remplacer
+                            (facultatif).
+                        </p>
+                        <p
+                            class="mb-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-950"
+                        >
+                            {{ analysisNoticeText }}
+                        </p>
                         <OrdonnanceUppy
                             v-model="ordonnanceFile"
-                            label="Nouvelle ordonnance (remplace l'actuelle)"
-                            show-analysis-notice
-                            :analysis-notice="analysisNoticeText"
+                            variant="card"
                         />
                         <InputError :message="errors.ordonnance" />
                         <OrdonnanceAnalysisProgressBar

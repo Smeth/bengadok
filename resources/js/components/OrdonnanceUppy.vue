@@ -6,6 +6,7 @@ import Dashboard from '@uppy/vue/dashboard';
 import { ClipboardList, Pill } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import '@uppy/core/css/style.css';
+import '@uppy/dashboard/css/style.css';
 import { moduleTabFocusClass } from '@/lib/bengadokUi';
 
 const ALLOWED_TYPES = [

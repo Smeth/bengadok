@@ -2184,7 +2184,10 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                 </template>
             </div>
 
-            <div :class="[modulePaginationWrapperClass, 'mt-2']">
+            <div
+                v-if="(commandes.links?.length ?? 0) > 3"
+                :class="[modulePaginationWrapperClass, 'mt-2']"
+            >
                 <ModulePagination
                     :links="commandes.links"
                     :from="commandes.from"
