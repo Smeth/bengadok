@@ -167,11 +167,11 @@ function logout() {
 </script>
 
 <template>
-    <div class="flex min-h-svh bg-white">
+    <div class="flex min-h-svh bg-background">
         <RealtimeNotificationsListener />
         <PharmacyRealtimeAlerts />
         <aside
-            class="fixed left-0 top-0 z-40 flex h-svh flex-col overflow-x-hidden overflow-y-auto bg-white shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)] transition-[width] duration-200 ease-out"
+            class="pharmacy-sidebar fixed left-0 top-0 z-40 flex h-svh flex-col overflow-x-hidden overflow-y-auto shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)] transition-[width] duration-200 ease-out dark:shadow-black/40"
             :style="{ width: `${asideWidthPx}px` }"
         >
             <!-- En-tête : même logique que AppSidebar (grille 3 col + padding SidebarHeader) -->
@@ -199,7 +199,7 @@ function logout() {
                     </Link>
                     <button
                         type="button"
-                        class="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#f1f5f9] text-[#6b7280] transition-colors hover:bg-[#e2e8f0] hover:text-[#374151]"
+                        class="pharmacy-sidebar-toggle z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors"
                         :aria-expanded="!sidebarCollapsed"
                         aria-label="Replier ou déplier la barre latérale"
                         @click="sidebarCollapsed = !sidebarCollapsed"
@@ -222,7 +222,7 @@ function logout() {
                     <div class="flex justify-end self-end">
                         <button
                             type="button"
-                            class="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#f1f5f9] text-[#6b7280] transition-colors hover:bg-[#e2e8f0] hover:text-[#374151]"
+                            class="pharmacy-sidebar-toggle z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors"
                             :aria-expanded="!sidebarCollapsed"
                             aria-label="Replier ou déplier la barre latérale"
                             @click="sidebarCollapsed = !sidebarCollapsed"
@@ -233,7 +233,7 @@ function logout() {
                 </div>
                 <p
                     v-if="!sidebarCollapsed"
-                    class="mt-3 max-w-full truncate px-2 text-center text-[11px] font-bold leading-tight text-[#5c5959]"
+                    class="pharmacy-sidebar-label mt-3 max-w-full truncate px-2 text-center text-[11px] font-bold leading-tight"
                 >
                     BengaDok Pharmacie
                 </p>
@@ -481,18 +481,18 @@ function logout() {
             :class="[
                 'flex min-h-0 flex-1 flex-col overflow-x-clip overflow-y-auto transition-[margin] duration-200 ease-out sm:overflow-x-visible',
                 isSettingsRoute || variant === 'plain'
-                    ? 'relative isolate bg-[#f8fafc]'
+                    ? 'relative isolate bg-[#f8fafc] dark:bg-background'
                     : 'pharmacy-main-gradient',
             ]"
             :style="{ marginLeft: `${asideWidthPx}px` }"
         >
             <header
-                class="sticky top-0 z-30 flex min-h-[68px] shrink-0 items-center justify-between gap-4 border-b border-gray-100 bg-white/95 px-5 py-3 backdrop-blur-sm sm:px-8"
+                class="sticky top-0 z-30 flex min-h-[68px] shrink-0 items-center justify-between gap-4 border-b border-gray-100 bg-white/95 px-5 py-3 backdrop-blur-sm dark:border-border dark:bg-card/95 sm:px-8"
             >
                 <div class="flex min-w-0 items-center gap-4">
                     <h1
                         v-if="pageTitle"
-                        class="truncate text-lg font-bold text-gray-900 sm:text-xl"
+                        class="truncate text-lg font-bold text-gray-900 dark:text-foreground sm:text-xl"
                     >
                         {{ pageTitle }}
                     </h1>
@@ -502,7 +502,7 @@ function logout() {
                     >
                         <button
                             type="button"
-                            class="flex max-w-[220px] items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                            class="flex max-w-[220px] items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 dark:border-border dark:bg-input dark:text-foreground dark:hover:bg-muted"
                             @click="
                                 pharmacieSelectorOpen = !pharmacieSelectorOpen
                             "
@@ -514,17 +514,17 @@ function logout() {
                         </button>
                         <div
                             v-show="pharmacieSelectorOpen"
-                            class="absolute left-0 top-full z-40 mt-1 min-w-[220px] rounded-lg border bg-white py-1 shadow-lg"
+                            class="absolute left-0 top-full z-40 mt-1 min-w-[220px] rounded-lg border border-border bg-popover py-1 shadow-lg"
                         >
                             <button
                                 v-for="p in pharmaciesDisponibles"
                                 :key="p.id"
                                 type="button"
-                                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+                                class="w-full px-4 py-2 text-left text-sm hover:bg-accent"
                                 :class="
                                     p.id === pharmacieId
-                                        ? 'bg-[#F0FDF4] font-bold text-[#198754]'
-                                        : ''
+                                        ? 'bg-emerald-50 font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                        : 'text-foreground'
                                 "
                                 @click="selectPharmacie(p.id)"
                             >
@@ -538,7 +538,7 @@ function logout() {
                     <DropdownMenuTrigger as-child>
                         <button
                             type="button"
-                            class="relative flex size-[57px] shrink-0 items-center justify-center rounded-full border border-black/[0.08] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#459cd1]/30"
+                            class="relative flex size-[57px] shrink-0 items-center justify-center rounded-full border border-black/[0.08] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#459cd1]/30 dark:border-border dark:bg-card dark:hover:bg-muted"
                             aria-label="Notifications"
                         >
                             <Bell
@@ -603,8 +603,8 @@ function logout() {
                                         class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold"
                                         :class="
                                             item.alert_kind === 'a_preparer'
-                                                ? 'bg-sky-100 text-sky-800'
-                                                : 'bg-amber-100 text-amber-900'
+                                                ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200'
+                                                : 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200'
                                         "
                                     >
                                         {{ item.status_label }}
@@ -642,7 +642,7 @@ function logout() {
                     <DropdownMenuTrigger as-child>
                         <button
                             type="button"
-                            class="flex h-[57px] min-w-0 max-w-[min(100vw-10rem,312px)] cursor-pointer items-center gap-3 rounded-[50px] border border-black/[0.12] bg-white/80 px-4 shadow-sm backdrop-blur-sm transition-colors hover:bg-white/90 focus:outline-none"
+                            class="flex h-[57px] min-w-0 max-w-[min(100vw-10rem,312px)] cursor-pointer items-center gap-3 rounded-[50px] border border-black/[0.12] bg-white/80 px-4 shadow-sm backdrop-blur-sm transition-colors hover:bg-white/90 focus:outline-none dark:border-border dark:bg-card/90 dark:hover:bg-card"
                         >
                             <div
                                 class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#5bb66e]/18"
@@ -661,7 +661,7 @@ function logout() {
                             </div>
                             <div class="min-w-0 flex-1 text-left">
                                 <p
-                                    class="truncate text-[15px] font-black text-black"
+                                    class="truncate text-[15px] font-black text-black dark:text-foreground"
                                 >
                                     {{ user?.name ?? 'Utilisateur' }}
                                 </p>
@@ -672,13 +672,13 @@ function logout() {
                                     {{ roleLabel }}
                                 </p>
                                 <p
-                                    class="truncate text-[12px] font-medium text-black/65"
+                                    class="truncate text-[12px] font-medium text-black/65 dark:text-muted-foreground"
                                 >
                                     {{ pharmacie?.designation ?? 'Pharmacie' }}
                                 </p>
                             </div>
                             <ChevronDown
-                                class="size-5 shrink-0 text-black/40"
+                                class="size-5 shrink-0 text-black/40 dark:text-muted-foreground"
                             />
                         </button>
                     </DropdownMenuTrigger>

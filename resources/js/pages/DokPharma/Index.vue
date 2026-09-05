@@ -23,7 +23,7 @@ import DokPharmaOrdonnanceViewerModal from '@/components/dok-pharma/DokPharmaOrd
 import DokPharmaValiderRetraitModal from '@/components/dok-pharma/DokPharmaValiderRetraitModal.vue';
 import { Input } from '@/components/ui/input';
 import PharmacyLayout from '@/layouts/PharmacyLayout.vue';
-import { modulePaginationWrapperClass } from '@/lib/bengadokUi';
+import { modulePaginationWrapperClass, pharmacyOrderCardClass } from '@/lib/bengadokUi';
 import { sousTotalCommandeProduits } from '@/lib/commandeTotals';
 import {
     classesStatutDisponibiliteLigne,
@@ -473,7 +473,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                         v-model="searchQuery"
                         type="search"
                         placeholder="Rechercher par nom, n° commande ou médicament…"
-                        class="h-10 w-full rounded-xl border border-white/80 bg-white/95 pl-10 pr-10 text-sm shadow-sm placeholder:text-gray-500"
+                        class="h-10 w-full rounded-xl border border-white/80 bg-white/95 pl-10 pr-10 text-sm shadow-sm placeholder:text-gray-500 dark:border-border dark:bg-input/95 dark:text-foreground dark:placeholder:text-muted-foreground"
                         autocomplete="off"
                     />
                     <button
@@ -497,7 +497,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                     :class="
                         onglet === 'nouvelles'
                             ? 'bg-[#459cd1] text-white ring-2 ring-white/40'
-                            : 'bg-white/80 text-gray-800 hover:bg-white'
+                            : 'bg-white/80 text-gray-800 hover:bg-white dark:bg-card/80 dark:text-foreground dark:hover:bg-card'
                     "
                     @click="changeOnglet('nouvelles')"
                 >
@@ -521,7 +521,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                     :class="
                         onglet === 'en_attente'
                             ? 'bg-indigo-600 text-white ring-2 ring-white/40'
-                            : 'bg-white/80 text-gray-800 hover:bg-white'
+                            : 'bg-white/80 text-gray-800 hover:bg-white dark:bg-card/80 dark:text-foreground dark:hover:bg-card'
                     "
                     @click="changeOnglet('en_attente')"
                 >
@@ -545,7 +545,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                     :class="
                         onglet === 'a_preparer'
                             ? 'bg-amber-500 text-white ring-2 ring-white/40'
-                            : 'bg-white/80 text-gray-800 hover:bg-white'
+                            : 'bg-white/80 text-gray-800 hover:bg-white dark:bg-card/80 dark:text-foreground dark:hover:bg-card'
                     "
                     @click="changeOnglet('a_preparer')"
                 >
@@ -570,7 +570,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                     :class="
                         onglet === 'livrees'
                             ? 'bg-[#5bb66e] text-white ring-2 ring-white/40'
-                            : 'bg-white/80 text-gray-800 hover:bg-white'
+                            : 'bg-white/80 text-gray-800 hover:bg-white dark:bg-card/80 dark:text-foreground dark:hover:bg-card'
                     "
                     @click="changeOnglet('livrees')"
                 >
@@ -594,7 +594,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                     <div
                         v-for="cmd in commandes.data"
                         :key="cmd.id"
-                        class="overflow-hidden rounded-2xl bg-white shadow-sm"
+                        :class="pharmacyOrderCardClass"
                     >
                         <!-- En-tête -->
                         <div
@@ -673,7 +673,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                         <!-- Corps développé -->
                         <div
                             v-if="expandedCards.has(cmd.id)"
-                            class="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4"
+                            class="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4 dark:border-border"
                         >
                             <!-- Box ordonnance -->
                             <div
@@ -718,12 +718,12 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                     demandés
                                 </p>
                                 <div
-                                    class="overflow-x-auto rounded-xl border border-gray-100"
+                                    class="overflow-x-auto rounded-xl border border-gray-100 dark:border-border"
                                 >
                                     <table
                                         class="w-full min-w-[820px] text-[13px]"
                                     >
-                                        <thead class="bg-gray-50">
+                                        <thead class="bg-gray-50 dark:bg-muted/40">
                                             <tr>
                                                 <th
                                                     class="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500"
@@ -777,7 +777,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                                 <!-- Nom -->
                                                 <td class="px-4 py-2.5">
                                                     <span
-                                                        class="inline-block rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[13px] text-gray-800"
+                                                        class="inline-block rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[13px] text-gray-800 dark:border-border dark:bg-muted/30 dark:text-foreground"
                                                     >
                                                         {{ p.designation }}
                                                     </span>
@@ -902,7 +902,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                                                     cmd.id,
                                                                     p,
                                                                 )
-                                                                    ? 'text-gray-900'
+                                                                    ? 'text-gray-900 dark:text-foreground'
                                                                     : 'text-gray-300'
                                                             "
                                                         >
@@ -1035,7 +1035,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                     >Total montant commande :</span
                                 >
                                 <span
-                                    class="text-2xl font-bold text-gray-900"
+                                    class="text-2xl font-bold text-gray-900 dark:text-foreground"
                                     >{{ totalCmd(cmd).toFixed(1) }}</span
                                 >
                                 <span class="text-[12px] text-gray-500"
@@ -1045,7 +1045,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
 
                             <!-- Commentaire commande (back-office, lecture seule) -->
                             <div
-                                class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-[13px]"
+                                class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-[13px] dark:border-border dark:bg-muted/30"
                             >
                                 <p
                                     class="mb-1.5 text-[12px] font-bold uppercase tracking-wide text-gray-500"
@@ -1080,7 +1080,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                     v-model="formCommentaires[cmd.id]"
                                     placeholder="Informations utiles pour le back-office (facultatif)…"
                                     rows="3"
-                                    class="w-full resize-none rounded-xl border border-[#93c5fd]/80 bg-white px-4 py-3 text-[13px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/35"
+                                    class="w-full resize-none rounded-xl border border-[#93c5fd]/80 bg-white px-4 py-3 text-[13px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/35 dark:border-border dark:bg-input dark:text-foreground dark:placeholder:text-muted-foreground"
                                 />
                             </div>
 
@@ -1167,7 +1167,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                     <div
                         v-for="cmd in commandes.data"
                         :key="cmd.id"
-                        class="overflow-hidden rounded-2xl bg-white shadow-sm"
+                        :class="pharmacyOrderCardClass"
                     >
                         <div
                             class="flex cursor-pointer items-start justify-between px-5 py-4"
@@ -1256,7 +1256,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                         <!-- Corps développé (lecture seule) -->
                         <div
                             v-if="expandedCards.has(cmd.id)"
-                            class="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4"
+                            class="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4 dark:border-border"
                         >
                             <div
                                 v-if="cmd.ordonnance_id"
@@ -1298,12 +1298,12 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                     demandés
                                 </p>
                                 <div
-                                    class="overflow-x-auto rounded-xl border border-gray-100"
+                                    class="overflow-x-auto rounded-xl border border-gray-100 dark:border-border"
                                 >
                                     <table
                                         class="w-full min-w-[820px] text-[13px]"
                                     >
-                                        <thead class="bg-gray-50">
+                                        <thead class="bg-gray-50 dark:bg-muted/40">
                                             <tr>
                                                 <th
                                                     class="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500"
@@ -1349,7 +1349,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                             >
                                                 <td class="px-4 py-2.5">
                                                     <span
-                                                        class="inline-block rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[13px]"
+                                                        class="inline-block rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[13px] dark:border-border dark:bg-muted/30 dark:text-foreground"
                                                         :class="
                                                             p.pivot.status ===
                                                             'indisponible'
@@ -1377,7 +1377,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                                         class="flex items-center gap-1"
                                                     >
                                                         <span
-                                                            class="text-[13px] font-semibold text-gray-900"
+                                                            class="text-[13px] font-semibold text-gray-900 dark:text-foreground"
                                                             >{{
                                                                 Number(
                                                                     p.pivot
@@ -1398,7 +1398,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                                         class="flex items-center gap-1"
                                                     >
                                                         <span
-                                                            class="text-[13px] font-bold text-gray-900"
+                                                            class="text-[13px] font-bold text-gray-900 dark:text-foreground"
                                                             >{{
                                                                 Number(
                                                                     p.pivot
@@ -1486,7 +1486,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                     <div
                         v-for="cmd in commandes.data"
                         :key="cmd.id"
-                        class="overflow-hidden rounded-2xl bg-white shadow-sm"
+                        :class="pharmacyOrderCardClass"
                     >
                         <div class="flex items-start justify-between px-5 py-4">
                             <div
@@ -1575,7 +1575,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                         <!-- Corps développé (lecture seule) -->
                         <div
                             v-if="expandedCards.has(cmd.id)"
-                            class="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4"
+                            class="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4 dark:border-border"
                         >
                             <div
                                 v-if="cmd.ordonnance_id"
@@ -1617,12 +1617,12 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                     demandés
                                 </p>
                                 <div
-                                    class="overflow-x-auto rounded-xl border border-gray-100"
+                                    class="overflow-x-auto rounded-xl border border-gray-100 dark:border-border"
                                 >
                                     <table
                                         class="w-full min-w-[820px] text-[13px]"
                                     >
-                                        <thead class="bg-gray-50">
+                                        <thead class="bg-gray-50 dark:bg-muted/40">
                                             <tr>
                                                 <th
                                                     class="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500"
@@ -1668,7 +1668,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                             >
                                                 <td class="px-4 py-2.5">
                                                     <span
-                                                        class="inline-block rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[13px] text-gray-800"
+                                                        class="inline-block rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[13px] text-gray-800 dark:border-border dark:bg-muted/30 dark:text-foreground"
                                                         >{{
                                                             p.designation
                                                         }}</span
@@ -1691,7 +1691,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                                         class="flex items-center gap-1"
                                                     >
                                                         <span
-                                                            class="text-[13px] font-semibold text-gray-900"
+                                                            class="text-[13px] font-semibold text-gray-900 dark:text-foreground"
                                                             >{{
                                                                 Number(
                                                                     p.pivot
@@ -1712,7 +1712,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                                         class="flex items-center gap-1"
                                                     >
                                                         <span
-                                                            class="text-[13px] font-bold text-gray-900"
+                                                            class="text-[13px] font-bold text-gray-900 dark:text-foreground"
                                                             >{{
                                                                 Number(
                                                                     p.pivot
@@ -1779,7 +1779,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                     >Total montant commande :</span
                                 >
                                 <span
-                                    class="text-2xl font-bold text-gray-900"
+                                    class="text-2xl font-bold text-gray-900 dark:text-foreground"
                                     >{{ totalCommandeValidee(cmd).toFixed(1) }}</span
                                 >
                                 <span class="text-[12px] text-gray-500"
@@ -1813,7 +1813,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                 </div>
                                 <div
                                     v-if="(cmd.commentaire_pharmacie ?? '').trim()"
-                                    class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700"
+                                    class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 dark:border-border dark:bg-muted/30 dark:text-foreground"
                                 >
                                     <p
                                         class="mb-1 text-[11px] font-bold uppercase tracking-wide text-gray-500"
@@ -1845,7 +1845,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                     <div
                         v-for="cmd in commandes.data"
                         :key="cmd.id"
-                        class="overflow-hidden rounded-2xl bg-white shadow-sm"
+                        :class="pharmacyOrderCardClass"
                     >
                         <!-- En-tête cliquable -->
                         <div
@@ -1910,7 +1910,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                         <!-- Corps développé (lecture seule) -->
                         <div
                             v-if="expandedCards.has(cmd.id)"
-                            class="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4"
+                            class="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4 dark:border-border"
                         >
                             <!-- Ordonnance -->
                             <div
@@ -1955,12 +1955,12 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                     demandés
                                 </p>
                                 <div
-                                    class="overflow-x-auto rounded-xl border border-gray-100"
+                                    class="overflow-x-auto rounded-xl border border-gray-100 dark:border-border"
                                 >
                                     <table
                                         class="w-full min-w-[820px] text-[13px]"
                                     >
-                                        <thead class="bg-gray-50">
+                                        <thead class="bg-gray-50 dark:bg-muted/40">
                                             <tr>
                                                 <th
                                                     class="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500"
@@ -2006,7 +2006,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                             >
                                                 <td class="px-4 py-2.5">
                                                     <span
-                                                        class="inline-block rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[13px]"
+                                                        class="inline-block rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[13px] dark:border-border dark:bg-muted/30 dark:text-foreground"
                                                         :class="
                                                             p.pivot.status ===
                                                             'indisponible'
@@ -2034,7 +2034,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                                         class="flex items-center gap-1"
                                                     >
                                                         <span
-                                                            class="text-[13px] font-semibold text-gray-900"
+                                                            class="text-[13px] font-semibold text-gray-900 dark:text-foreground"
                                                             >{{
                                                                 Number(
                                                                     p.pivot
@@ -2055,7 +2055,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                                         class="flex items-center gap-1"
                                                     >
                                                         <span
-                                                            class="text-[13px] font-bold text-gray-900"
+                                                            class="text-[13px] font-bold text-gray-900 dark:text-foreground"
                                                             >{{
                                                                 Number(
                                                                     p.pivot
@@ -2122,7 +2122,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                     >Total montant commande :</span
                                 >
                                 <span
-                                    class="text-2xl font-bold text-gray-900"
+                                    class="text-2xl font-bold text-gray-900 dark:text-foreground"
                                     >{{ totalCommandeValidee(cmd).toFixed(1) }}</span
                                 >
                                 <span class="text-[12px] text-gray-500"
@@ -2156,7 +2156,7 @@ function peutAjouterPieceJointe(cmd: Commande): boolean {
                                 </div>
                                 <div
                                     v-if="(cmd.commentaire_pharmacie ?? '').trim()"
-                                    class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700"
+                                    class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 dark:border-border dark:bg-muted/30 dark:text-foreground"
                                 >
                                     <p
                                         class="mb-1 text-[11px] font-bold uppercase tracking-wide text-gray-500"

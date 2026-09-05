@@ -52,7 +52,10 @@ import {
 import { normalizeInertiaErrors } from '@/lib/validationErrors';
 import {
     moduleCardClass,
+    moduleDetailHeaderClass,
+    moduleDetailPanelClass,
     moduleFilterPanelClass,
+    moduleFormInputClass,
     moduleInputDateClass,
     modulePageClass,
     modulePrimaryButtonClass,
@@ -1244,7 +1247,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                 <div v-else-if="detailCommande">
                     <!-- En-tête (défile avec le reste) -->
                     <div
-                        class="flex flex-col gap-3 border-b border-gray-100 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-start sm:justify-between sm:px-6"
+                        :class="moduleDetailHeaderClass"
                     >
                         <div class="min-w-0 flex-1 overflow-hidden">
                             <p
@@ -1289,7 +1292,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                     <div class="space-y-4 p-6 pb-8">
                         <!-- Informations du client -->
                         <div
-                            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                            :class="moduleDetailPanelClass"
                         >
                             <h3
                                 class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
@@ -1324,7 +1327,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
 
                         <!-- Pharmacie -->
                         <div
-                            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                            :class="moduleDetailPanelClass"
                         >
                             <h3
                                 class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
@@ -1344,7 +1347,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
 
                         <div
                             v-if="detailCommande.enfants?.length"
-                            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                            :class="moduleDetailPanelClass"
                         >
                             <h3
                                 class="mb-2 text-[14px] font-bold text-[#b4b4b4]"
@@ -1420,7 +1423,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                         <!-- Médicaments -->
                         <div
                             v-if="detailSplit.medicaments.length"
-                            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                            :class="moduleDetailPanelClass"
                         >
                             <h3
                                 class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
@@ -1501,7 +1504,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                         <!-- Parapharmacie -->
                         <div
                             v-if="detailSplit.parapharma.length"
-                            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                            :class="moduleDetailPanelClass"
                         >
                             <h3
                                 class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
@@ -1554,7 +1557,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
 
                         <!-- Ordonnance -->
                         <div
-                            class="rounded-2xl border border-dashed border-gray-300 bg-white p-5 shadow-sm transition-colors hover:border-[#459cd1]"
+                            class="rounded-2xl border border-dashed border-gray-300 bg-white p-5 shadow-sm transition-colors hover:border-[#459cd1] dark:border-border dark:bg-card dark:hover:border-[#459cd1]"
                         >
                             <h3
                                 class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
@@ -1581,7 +1584,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 v-if="
                                     isAgent && detailCommande.ordonnance?.file_url
                                 "
-                                class="mt-4 rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-left text-sm"
+                                class="mt-4 rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-left text-sm dark:border-border dark:bg-muted/30"
                             >
                                 <template
                                     v-if="detailCommande.ordonnance.verification"
@@ -1763,7 +1766,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
 
                         <!-- Commentaires commande / pharmacien -->
                         <div
-                            class="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                            :class="['space-y-4', moduleDetailPanelClass]"
                         >
                             <div v-if="peutEditerComplementaires">
                                 <h3
@@ -1798,7 +1801,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                             v-model="complementairesForm.commentaire"
                                             rows="3"
                                             placeholder="Notes internes, consignes de livraison…"
-                                            class="mt-1 w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-[14px] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                            class="mt-1 w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-[14px] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1] dark:border-border dark:bg-input dark:text-foreground"
                                         />
                                     </div>
                                     <Button
@@ -1933,7 +1936,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 </div>
                             </div>
                             <div
-                                class="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-white/60 p-3"
+                                class="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-white/60 p-3 dark:bg-red-950/20"
                             >
                                 <XCircle
                                     class="mt-0.5 size-5 shrink-0 text-red-600"
@@ -1980,7 +1983,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
 
                         <!-- Informations paiement -->
                         <div
-                            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                            :class="moduleDetailPanelClass"
                         >
                             <h3
                                 class="mb-4 text-[14px] font-bold text-[#b4b4b4]"
@@ -2004,7 +2007,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                     "
                                 >
                                     <select
-                                        class="h-10 min-w-[12rem] max-w-full rounded-xl border border-gray-200 bg-white px-3 text-[13px] font-semibold text-gray-900 focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                        class="h-10 min-w-[12rem] max-w-full rounded-xl border border-gray-200 bg-white px-3 text-[13px] font-semibold text-gray-900 focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1] dark:border-border dark:bg-input dark:text-foreground"
                                         :value="
                                             detailCommande.mode_paiement?.id ??
                                             ''
@@ -2113,7 +2116,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                             v-for="m in montantsLivraison"
                                             :key="m.id"
                                             type="button"
-                                            class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-[12px] font-bold text-gray-700 transition-colors hover:border-[#459cd1] hover:bg-blue-50 hover:text-[#459cd1]"
+                                            class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-[12px] font-bold text-gray-700 transition-colors hover:border-[#459cd1] hover:bg-blue-50 hover:text-[#459cd1] dark:border-border dark:bg-muted dark:text-foreground dark:hover:bg-[#459cd1]/15"
                                             @click.stop="
                                                 setMontantLivraison(m.id)
                                             "
@@ -2169,7 +2172,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                     peutAssignerLivreurDetail() &&
                                     !enAttentePharmacieToutIndisponible)
                             "
-                            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                            :class="moduleDetailPanelClass"
                         >
                             <h3
                                 class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
@@ -2191,7 +2194,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                                 >
                                 <select
                                     id="detail-livreur-select"
-                                    class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-[14px] text-gray-900 focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                    class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-[14px] text-gray-900 focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1] dark:border-border dark:bg-input dark:text-foreground"
                                     :value="detailCommande.livreur?.id ?? ''"
                                     @change="
                                         setLivreurCommande(
@@ -2233,7 +2236,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                         </div>
 
                         <!-- Actions (suite du scroll, pas de barre fixe) -->
-                        <div class="border-t border-gray-200 bg-white pt-5">
+                        <div class="border-t border-gray-200 bg-white pt-5 dark:border-border dark:bg-card">
                             <div class="flex flex-col gap-3">
                                 <template
                                     v-if="
@@ -2451,13 +2454,13 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                         >
                     </DialogTitle>
                 </DialogHeader>
-                <p class="shrink-0 text-[13px] text-black leading-snug">
+                <p class="shrink-0 text-[13px] text-black dark:text-foreground leading-snug">
                     Sélectionner le motif d’annulation. Si les médicaments sont
                     indisponibles ou selon la configuration du motif, vous
                     pouvez relancer la commande avec une autre pharmacie.
                 </p>
                 <div class="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
-                    <p class="text-sm font-black text-black">
+                    <p class="text-sm font-black text-black dark:text-foreground">
                         Motif d'annulation <span class="text-[#e7000b]">*</span>
                     </p>
                     <div
@@ -2477,16 +2480,16 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                         >
                             <Check class="size-3 text-white" stroke-width="3" />
                         </div>
-                        <p class="text-[13px] font-bold text-black">
+                        <p class="text-[13px] font-bold text-black dark:text-foreground">
                             {{ opt.label }}
                         </p>
-                        <p class="mt-0.5 text-[12px] font-light text-black">
+                        <p class="mt-0.5 text-[12px] font-light text-black dark:text-foreground">
                             {{ opt.desc }}
                         </p>
                     </div>
                 </div>
                 <div class="shrink-0 space-y-1">
-                    <p class="text-sm font-black text-black">
+                    <p class="text-sm font-black text-black dark:text-foreground">
                         Note complémentaire
                         <span class="font-normal">(optionnel)</span>
                     </p>
@@ -2494,7 +2497,7 @@ function submitRelancerFromModal(payload: FormEnregPayload) {
                         v-model="noteAnnulation"
                         rows="2"
                         placeholder="Ajouter des détails supplémentaires sur l'annulation..."
-                        class="w-full rounded-[10px] border border-[rgba(92,89,89,0.25)] bg-[rgba(0,0,0,0.11)] px-3 py-1.5 text-[13px] placeholder:text-black/60 focus:outline-none focus:ring-2 focus:ring-[#e7000b]/50"
+                        class="w-full rounded-[10px] border border-[rgba(92,89,89,0.25)] bg-[rgba(0,0,0,0.11)] px-3 py-1.5 text-[13px] placeholder:text-black dark:text-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#e7000b]/50"
                     />
                 </div>
                 <DialogFooter class="shrink-0 block space-y-0 p-0 sm:p-0">

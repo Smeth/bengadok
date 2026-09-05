@@ -42,14 +42,14 @@ defineProps<{
             "
         >
             <div
-                class="w-full max-w-md rounded-2xl border-0 bg-white p-6 shadow-xl md:-ml-6 md:rounded-[22px] md:p-8"
+                class="w-full max-w-md rounded-2xl border-0 bg-white p-6 shadow-xl dark:border dark:border-border dark:bg-card md:-ml-6 md:rounded-[22px] md:p-8"
                 style="
                     box-shadow:
                         0 4px 24px rgba(0, 0, 0, 0.08),
                         0 8px 32px rgba(0, 0, 0, 0.06);
                 "
             >
-                <h1 class="mb-6 text-2xl font-bold text-[#333333] md:text-3xl">
+                <h1 class="mb-6 text-2xl font-bold text-[#333333] dark:text-foreground md:text-3xl">
                     {{ title }}
                 </h1>
                 <p v-if="description" class="mb-6 text-sm text-slate-500">

@@ -12,6 +12,10 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { fieldError, normalizeInertiaErrors } from '@/lib/validationErrors';
 import { formatCommandeDateHeure } from '@/lib/formatDateLocal';
+import {
+    moduleFormInputClass,
+    moduleFormSelectClass,
+} from '@/lib/bengadokUi';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
@@ -68,13 +72,11 @@ const props = defineProps<{
     arrondissements: string[];
 }>();
 
-const inputClass =
-    'h-[42px] w-full rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm text-gray-900 placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]';
-const selectClass =
-    'h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm text-gray-900 focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]';
+const inputClass = moduleFormInputClass;
+const selectClass = moduleFormSelectClass;
 const sectionTitleClass =
     'text-[20px] font-black italic text-[rgba(92,89,89,0.4)]';
-const labelClass = 'text-sm font-medium text-black';
+const labelClass = 'text-sm font-medium text-black dark:text-foreground';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Tableau de bord', href: dashboard() },
@@ -290,7 +292,7 @@ function submit() {
             class="relative min-h-full overflow-x-auto rounded-xl p-6 md:p-8"
         >
             <div
-                class="relative overflow-hidden rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] md:p-8"
+                class="relative overflow-hidden rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] dark:border dark:border-border dark:bg-card md:p-8"
             >
                 <!-- En-tête -->
                 <div
@@ -332,7 +334,7 @@ function submit() {
                     <div class="grid gap-5 lg:grid-cols-2">
                         <!-- Client -->
                         <section
-                            class="rounded-[10px] border border-[#ccc5c5] p-5"
+                            class="rounded-[10px] border border-[#ccc5c5] p-5 dark:border-border"
                         >
                             <h2 :class="[sectionTitleClass, 'mb-4']">
                                 Informations client
@@ -468,7 +470,7 @@ function submit() {
 
                         <!-- Commande -->
                         <section
-                            class="rounded-[10px] border border-[#ccc5c5] p-5"
+                            class="rounded-[10px] border border-[#ccc5c5] p-5 dark:border-border"
                         >
                             <h2 :class="[sectionTitleClass, 'mb-4']">
                                 Détails commande
@@ -538,7 +540,7 @@ function submit() {
 
                     <!-- Médicaments -->
                     <section
-                        class="rounded-[10px] border border-[#ccc5c5] p-5"
+                        class="rounded-[10px] border border-[#ccc5c5] p-5 dark:border-border"
                     >
                         <div
                             class="mb-4 flex flex-wrap items-center justify-between gap-2"
@@ -563,7 +565,7 @@ function submit() {
                         <div
                             v-for="(p, i) in produitsSelection"
                             :key="i"
-                            class="mb-4 rounded-[10px] border border-[#ccc5c5] bg-[#fafafa] p-4 last:mb-0"
+                            class="mb-4 rounded-[10px] border border-[#ccc5c5] bg-[#fafafa] p-4 last:mb-0 dark:border-border dark:bg-muted/30"
                         >
                             <div
                                 class="flex items-start justify-between gap-3"
@@ -731,7 +733,7 @@ function submit() {
 
                     <!-- Ordonnance -->
                     <section
-                        class="rounded-[10px] border border-[#ccc5c5] p-5"
+                        class="rounded-[10px] border border-[#ccc5c5] p-5 dark:border-border"
                     >
                         <h2 :class="[sectionTitleClass, 'mb-4']">
                             Ordonnance
@@ -783,7 +785,7 @@ function submit() {
 
                     <!-- Paiement -->
                     <section
-                        class="rounded-[10px] border border-[#ccc5c5] p-5"
+                        class="rounded-[10px] border border-[#ccc5c5] p-5 dark:border-border"
                     >
                         <h2 :class="[sectionTitleClass, 'mb-4']">
                             Paiement

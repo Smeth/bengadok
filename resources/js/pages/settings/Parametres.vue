@@ -37,6 +37,7 @@ import { Label } from '@/components/ui/label';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { contextLabel } from '@/lib/commandeCreationFields';
 import type { CommandeCreationFieldDefinition } from '@/lib/commandeCreationFields';
+import { settingsSectionClass } from '@/lib/bengadokUi';
 import type { BreadcrumbItem } from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -876,7 +877,7 @@ function sauverOrdonnanceVerification() {
             <!-- ══════════════════ ZONES ══════════════════ -->
             <section
                 v-if="ongletActif === 'zones'"
-                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+                :class="settingsSectionClass"
             >
                 <div
                     class="border-b bg-gray-50 px-5 py-3 flex items-center justify-between"
@@ -1051,7 +1052,7 @@ function sauverOrdonnanceVerification() {
             <!-- ══════════════════ MODES DE PAIEMENT ══════════════════ -->
             <section
                 v-if="ongletActif === 'modesPaiement'"
-                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+                :class="settingsSectionClass"
             >
                 <div
                     class="border-b bg-gray-50 px-5 py-3 flex items-center justify-between"
@@ -1178,7 +1179,7 @@ function sauverOrdonnanceVerification() {
             <!-- ══════════════════ MONTANTS LIVRAISON ══════════════════ -->
             <section
                 v-if="ongletActif === 'montantsLivraison'"
-                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+                :class="settingsSectionClass"
             >
                 <div
                     class="border-b bg-gray-50 px-5 py-3 flex items-center justify-between"
@@ -1324,7 +1325,7 @@ function sauverOrdonnanceVerification() {
             <!-- ══════════════════ LIVREURS ══════════════════ -->
             <section
                 v-if="ongletActif === 'livreurs'"
-                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+                :class="settingsSectionClass"
             >
                 <div
                     class="border-b bg-gray-50 px-5 py-3 flex items-center justify-between"
@@ -1481,7 +1482,7 @@ function sauverOrdonnanceVerification() {
             <!-- ══════════════════ HORAIRES ══════════════════ -->
             <section
                 v-if="ongletActif === 'horaires'"
-                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+                :class="settingsSectionClass"
             >
                 <div
                     class="border-b bg-gray-50 px-5 py-3 flex items-center justify-between"
@@ -1629,7 +1630,7 @@ function sauverOrdonnanceVerification() {
             <!-- ══════════════════ TYPES DE PHARMACIE ══════════════════ -->
             <section
                 v-if="ongletActif === 'typesPharmacie'"
-                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+                :class="settingsSectionClass"
             >
                 <div
                     class="border-b bg-gray-50 px-5 py-3 flex items-center justify-between"
@@ -1795,7 +1796,7 @@ function sauverOrdonnanceVerification() {
             <!-- ══════════════════ FRÉQUENCES CLIENTS ══════════════════ -->
             <section
                 v-if="ongletActif === 'clientFrequences'"
-                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+                :class="settingsSectionClass"
             >
                 <div
                     class="flex flex-wrap items-center justify-between gap-3 border-b bg-gray-50 px-5 py-3"
@@ -2028,7 +2029,7 @@ function sauverOrdonnanceVerification() {
             <!-- ══════════════════ RELANCE COMMANDES ══════════════════ -->
             <section
                 v-if="ongletActif === 'relanceCommande'"
-                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+                :class="settingsSectionClass"
             >
                 <div class="border-b bg-gray-50 px-5 py-3">
                     <h2
@@ -2090,7 +2091,7 @@ function sauverOrdonnanceVerification() {
             <!-- ══════════════════ CRÉATION COMMANDE ══════════════════ -->
             <section
                 v-if="ongletActif === 'commandeCreation'"
-                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+                :class="settingsSectionClass"
             >
                 <div class="border-b bg-gray-50 px-5 py-3">
                     <h2
@@ -2212,7 +2213,7 @@ function sauverOrdonnanceVerification() {
             <!-- ══════════════════ PARAPHARMACIE & CRÉDITS ══════════════════ -->
             <section
                 v-if="ongletActif === 'parapharma'"
-                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+                :class="settingsSectionClass"
             >
                 <div class="border-b bg-gray-50 px-5 py-3">
                     <h2
@@ -2231,7 +2232,7 @@ function sauverOrdonnanceVerification() {
                         l’onglet <span class="font-semibold">Gestion de crédit</span>
                         et les déductions automatiques à la livraison. Tous les
                         champs ci-dessous sont modifiables sans toucher au fichier
-                        <code class="rounded bg-white px-1 text-xs">.env</code>.
+                        <code class="rounded bg-muted px-1 text-xs">.env</code>.
                     </p>
                 </div>
                 <form class="space-y-8 px-5 py-6" @submit.prevent="sauverParapharma">
@@ -2437,7 +2438,7 @@ function sauverOrdonnanceVerification() {
             <!-- ══════════════════ VÉRIFICATION ORDONNANCES (OCR + règles) ══════════════════ -->
             <section
                 v-if="ongletActif === 'ordonnanceVerification'"
-                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+                :class="settingsSectionClass"
             >
                 <div class="border-b bg-gray-50 px-5 py-3">
                     <h2
@@ -2661,7 +2662,7 @@ function sauverOrdonnanceVerification() {
             <!-- ══════════════════ MOTIFS D'ANNULATION ══════════════════ -->
             <section
                 v-if="ongletActif === 'motifsAnnulation'"
-                class="rounded-xl border border-gray-200 bg-white overflow-hidden"
+                :class="settingsSectionClass"
             >
                 <div
                     class="border-b bg-gray-50 px-5 py-3 flex items-center justify-between"
@@ -2679,7 +2680,7 @@ function sauverOrdonnanceVerification() {
                 <div class="border-b px-5 py-4 bg-blue-50/40">
                     <p class="text-sm text-gray-600 leading-relaxed">
                         Le <span class="font-semibold">code</span> (ex.
-                        <code class="rounded bg-white/80 px-1 text-xs"
+                        <code class="rounded bg-muted/80 px-1 text-xs"
                             >medicaments_indisponibles</code
                         >) est stocké sur les commandes : ne le changez que si
                         aucune commande ne l’utilise encore. La

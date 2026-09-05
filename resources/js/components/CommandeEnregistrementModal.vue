@@ -19,6 +19,16 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { isParapharmaType } from '@/lib/commandeTotals';
+import {
+    commandeModalHeaderClass,
+    commandeModalShellClass,
+    moduleFormProductCardClass,
+    moduleFormSectionClass,
+    moduleLabelClass,
+    moduleLabelLightClass,
+    moduleNativeInputClass,
+    moduleNativeSelectClass,
+} from '@/lib/bengadokUi';
 import { useCommandeCreationFields } from '@/composables/useCommandeCreationFields';
 
 export type ProduitEnreg = {
@@ -595,12 +605,12 @@ watch(
 <template>
     <Dialog :open="open" @update:open="emit('update:open', $event)">
         <DialogContent
-            class="!left-[50%] !top-[50%] !w-[650px] !max-w-[95vw] !-translate-x-1/2 !-translate-y-1/2 !max-h-[80vh] !overflow-hidden !rounded-[15px] !border !border-[#ccc5c5] !bg-white !p-0 !shadow-xl"
+            :class="commandeModalShellClass"
             :show-close-button="false"
         >
             <!-- Header sticky : rounded-t pour épouser le parent (clip par overflow-hidden) -->
             <div
-                class="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-t-[15px] border-b border-[#ccc5c5] bg-white px-6 py-4 shadow-[0px_2px_8px_rgba(0,0,0,0.06)]"
+                :class="commandeModalHeaderClass"
             >
                 <h2
                     class="flex items-center gap-3 text-xl font-black tracking-[2.8px] text-[#459cd1]"
@@ -632,7 +642,7 @@ watch(
                     <div class="space-y-4">
                         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                             <div class="flex flex-col gap-1.5">
-                                <Label class="text-sm font-medium text-black"
+                                <Label :class="moduleLabelClass"
                                     >Prénom du client
                                     <span
                                         v-if="
@@ -648,7 +658,7 @@ watch(
                                     v-model="form.client_prenom"
                                     type="text"
                                     placeholder="Ex : Didier"
-                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] dark:border-border px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                     :class="{
                                         'border-[#dc3545]': errors.client_prenom,
                                     }"
@@ -661,7 +671,7 @@ watch(
                                 </p>
                             </div>
                             <div class="flex flex-col gap-1.5">
-                                <Label class="text-sm font-medium text-black"
+                                <Label :class="moduleLabelClass"
                                     >Nom du client
                                     <span
                                         v-if="
@@ -682,7 +692,7 @@ watch(
                                     v-model="form.client_nom"
                                     type="text"
                                     placeholder="Ex : Fofana"
-                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                    class="h-[42px] rounded-[10px] border border-[#ccc5c5] dark:border-border px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                     :class="{
                                         'border-[#dc3545]': errors.client_nom,
                                     }"
@@ -695,7 +705,7 @@ watch(
                                 </p>
                             </div>
                             <div class="flex flex-col gap-1.5">
-                                <Label class="text-sm font-medium text-black"
+                                <Label :class="moduleLabelClass"
                                     >Téléphone
                                     <span
                                         v-if="
@@ -708,13 +718,13 @@ watch(
                                     ></Label
                                 >
                                 <div
-                                    class="flex h-[42px] overflow-hidden rounded-[10px] border border-[#ccc5c5] focus-within:border-[#459cd1] focus-within:ring-1 focus-within:ring-[#459cd1]"
+                                    class="flex h-[42px] overflow-hidden rounded-[10px] border border-[#ccc5c5] dark:border-border focus-within:border-[#459cd1] focus-within:ring-1 focus-within:ring-[#459cd1]"
                                     :class="{
                                         'border-[#dc3545]': errors.client_tel,
                                     }"
                                 >
                                     <span
-                                        class="flex items-center gap-1.5 border-r border-[#ccc5c5] bg-white pl-3 pr-2 text-sm text-[rgba(92,89,89,0.4)]"
+                                        class="flex items-center gap-1.5 border-r border-[#ccc5c5] bg-white dark:bg-input pl-3 pr-2 text-sm text-[rgba(92,89,89,0.4)]"
                                     >
                                         <Phone class="size-5 shrink-0" />
                                     </span>
@@ -735,7 +745,7 @@ watch(
                         </div>
                         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div class="flex flex-col gap-1.5">
-                                <Label class="text-sm font-medium text-black"
+                                <Label :class="moduleLabelClass"
                                     >Genre
                                     <span
                                         v-if="
@@ -750,7 +760,7 @@ watch(
                                 <div class="relative">
                                     <select
                                         v-model="form.client_sexe"
-                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input px-3 py-2 pr-10 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                     >
                                         <option value="">Non précisé</option>
                                         <option value="M">M (Mr)</option>
@@ -762,7 +772,7 @@ watch(
                                 </div>
                             </div>
                             <div class="flex flex-col gap-1.5">
-                                <Label class="text-sm font-medium text-black"
+                                <Label :class="moduleLabelClass"
                                     >Bénéficiaire
                                     <span
                                         v-if="isFieldRequired('beneficiaire')"
@@ -773,7 +783,7 @@ watch(
                                 <div class="relative">
                                     <select
                                         v-model="form.beneficiaire"
-                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input px-3 py-2 pr-10 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                     >
                                         <option value="">
                                             choisir un bénéficiaire
@@ -800,7 +810,7 @@ watch(
                                 v-if="fieldApplies('montant_livraison_id')"
                                 class="flex flex-col gap-1.5"
                             >
-                                <Label class="text-sm font-medium text-black"
+                                <Label :class="moduleLabelClass"
                                     >Montant livraison
                                     <span
                                         v-if="
@@ -813,7 +823,7 @@ watch(
                                 <div class="relative">
                                     <select
                                         v-model="form.montant_livraison_id"
-                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input px-3 py-2 pr-10 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                         :class="{
                                             'border-[#dc3545]':
                                                 errors.montant_livraison_id,
@@ -846,7 +856,7 @@ watch(
                             class="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start"
                         >
                             <div class="flex min-w-0 flex-col gap-1.5">
-                                <Label class="text-sm font-medium text-black"
+                                <Label :class="moduleLabelClass"
                                     >Adresse
                                     <span
                                         v-if="
@@ -862,7 +872,7 @@ watch(
                                     v-model="form.client_adresse"
                                     type="text"
                                     placeholder="Ex : 20 rue Loby Moungali"
-                                    class="h-[42px] w-full min-w-0 rounded-[10px] border border-[#ccc5c5] px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                    class="h-[42px] w-full min-w-0 rounded-[10px] border border-[#ccc5c5] dark:border-border px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                     :class="{
                                         'border-[#dc3545]':
                                             errors.client_adresse,
@@ -876,7 +886,7 @@ watch(
                                 </p>
                             </div>
                             <div class="flex min-w-0 flex-col gap-1.5">
-                                <Label class="text-sm font-medium text-black"
+                                <Label :class="moduleLabelClass"
                                     >Arrondissement
                                     <span
                                         v-if="
@@ -892,7 +902,7 @@ watch(
                                 <div class="relative">
                                     <select
                                         v-model="form.client_arrondissement"
-                                        class="h-[42px] w-full min-w-0 appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                        class="h-[42px] w-full min-w-0 appearance-none rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input px-3 py-2 pr-10 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                         :class="{
                                             'border-[#dc3545]':
                                                 errors.client_arrondissement,
@@ -924,13 +934,13 @@ watch(
                     </div>
 
                     <!-- Section 2 — Pharmacie Partenaire (Figma: border #ccc5c5, cartes sélectionnées vertes) -->
-                    <div class="rounded-[10px] border border-[#ccc5c5] p-5">
+                    <div :class="moduleFormSectionClass">
                         <p
                             class="mb-1 text-[21px] font-black italic text-[rgba(92,89,89,0.4)]"
                         >
                             Pharmacie Partenaire
                         </p>
-                        <p class="mb-4 text-base text-black">
+                        <p class="mb-4 text-base text-black dark:text-foreground">
                             Sélectionner une pharmacie
                             <span class="text-[#dc3545]">*</span>
                         </p>
@@ -943,7 +953,7 @@ watch(
                                 v-for="zone in zones"
                                 :key="zone.id"
                                 type="button"
-                                class="flex min-h-[90px] min-w-[110px] flex-col items-center justify-center gap-2 rounded-[10px] border border-[#ccc5c5] p-3 text-center transition-all hover:border-[#459cd1] hover:bg-[#459cd1]/10"
+                                class="flex min-h-[90px] min-w-[110px] flex-col items-center justify-center gap-2 rounded-[10px] border border-[#ccc5c5] dark:border-border p-3 text-center transition-all hover:border-[#459cd1] hover:bg-[#459cd1]/10"
                                 @click="
                                     zoneEnreg = zone.id;
                                     filtreTypeEnreg = 'tous';
@@ -951,14 +961,14 @@ watch(
                                 "
                             >
                                 <Building2
-                                    class="size-8 text-black"
+                                    class="size-8 text-black dark:text-foreground"
                                     stroke-width="1.5"
                                 />
                                 <span
-                                    class="text-[13px] font-bold text-black"
+                                    class="text-[13px] font-bold text-black dark:text-foreground"
                                     >{{ zone.designation }}</span
                                 >
-                                <span class="text-[11px] text-black"
+                                <span class="text-[11px] text-black dark:text-foreground"
                                     >{{
                                         zone.pharmacies_count
                                     }}
@@ -971,7 +981,7 @@ watch(
                             <div class="flex items-center gap-2">
                                 <button
                                     type="button"
-                                    class="flex shrink-0 items-center gap-1.5 rounded-[8px] border border-black px-2 py-1.5 text-xs font-medium text-black hover:bg-gray-100"
+                                    class="flex shrink-0 items-center gap-1.5 rounded-[8px] border border-black px-2 py-1.5 text-xs font-medium text-black dark:text-foreground hover:bg-gray-100 dark:hover:bg-muted"
                                     @click="
                                         form.pharmacie_id = '';
                                         zoneEnreg = '';
@@ -980,14 +990,14 @@ watch(
                                     <ChevronLeft class="size-4" />
                                     Retour
                                 </button>
-                                <span class="text-base text-black"
+                                <span class="text-base text-black dark:text-foreground"
                                     >Sélectionner une pharmacie
                                     <span class="text-[#dc3545]">*</span></span
                                 >
                             </div>
                             <div class="flex flex-col gap-3 sm:flex-row">
                                 <div
-                                    class="flex min-w-0 flex-1 items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white pl-3 focus-within:border-[#459cd1] focus-within:ring-1 focus-within:ring-[#459cd1]"
+                                    class="flex min-w-0 flex-1 items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input pl-3 focus-within:border-[#459cd1] focus-within:ring-1 focus-within:ring-[#459cd1]"
                                 >
                                     <Search
                                         class="mr-2 size-4 shrink-0 text-[rgba(102,102,102,0.6)]"
@@ -1007,7 +1017,7 @@ watch(
                                         :class="
                                             filtreTypeEnreg === f.key
                                                 ? 'border-[#459cd1] bg-[#459cd1] text-white'
-                                                : 'border-black text-black hover:bg-gray-100'
+                                                : 'border-black text-black dark:text-foreground hover:bg-gray-100 dark:hover:bg-muted'
                                         "
                                         @click="filtreTypeEnreg = f.key"
                                     >
@@ -1087,7 +1097,7 @@ watch(
                                             :class="
                                                 form.pharmacie_id ===
                                                 String(p.id)
-                                                    ? 'border-[#016630] bg-white'
+                                                    ? 'border-[#016630] bg-white dark:bg-input'
                                                     : 'border-[#ccc5c5]'
                                             "
                                         >
@@ -1108,7 +1118,7 @@ watch(
                                             v-else-if="
                                                 isOuverte(p.heurs) === true
                                             "
-                                            class="rounded border border-[#016630] bg-white px-2 py-0.5 text-[7px] font-bold text-[#016630]"
+                                            class="rounded border border-[#016630] bg-white dark:bg-input px-2 py-0.5 text-[7px] font-bold text-[#016630]"
                                             >Ouvert</span
                                         >
                                         <span
@@ -1131,7 +1141,7 @@ watch(
                     </div>
 
                     <!-- Section 3 — Médicaments : ligne 1 (Nom | Dosage | Forme | Qté), ligne 2 (Prix unitaire | Total) -->
-                    <div class="rounded-[10px] border border-[#ccc5c5] p-5">
+                    <div :class="moduleFormSectionClass">
                         <div
                             class="mb-4 flex flex-wrap items-center justify-between gap-2"
                         >
@@ -1160,7 +1170,7 @@ watch(
                         <div
                             v-for="(p, i) in form.produits"
                             :key="i"
-                            class="mb-4 flex flex-col gap-3 rounded-[10px] border border-[#ccc5c5] bg-white p-4 last:mb-0"
+                            :class="moduleFormProductCardClass"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div
@@ -1169,14 +1179,14 @@ watch(
                                     <!-- Ligne 1 — colonnes inégales pour éviter que « Nom Médicament » empiète sur Dosage -->
                                     <div class="flex min-w-0 flex-col gap-1 pr-0.5">
                                         <Label
-                                            class="whitespace-nowrap text-base font-light text-black"
+                                            :class="moduleLabelLightClass"
                                             >Nom Médicament
                                             <span class="text-[#dc3545]">*</span></Label
                                         >
                                         <input
                                             v-model="p.designation"
                                             placeholder="Ex : 1000"
-                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none"
+                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none"
                                             :class="{
                                                 'border-[#dc3545]':
                                                     getProduitError(
@@ -1204,23 +1214,23 @@ watch(
                                     </div>
                                     <div class="flex min-w-0 flex-col gap-1 pl-0.5">
                                         <Label
-                                            class="whitespace-nowrap text-base font-light text-black"
+                                            :class="moduleLabelLightClass"
                                             >Dosage</Label
                                         >
                                         <input
                                             v-model="p.dosage"
                                             placeholder="Ex : 1000"
-                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none"
+                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none"
                                         />
                                     </div>
                                     <div class="flex min-w-0 flex-col gap-1">
                                         <Label
-                                            class="text-base font-light text-black"
+                                            :class="moduleLabelLightClass"
                                             >Forme</Label
                                         >
                                         <select
                                             v-model="p.forme"
-                                            class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                            class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input px-3 py-2 pr-8 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                         >
                                             <option value="">
                                                 Choisir la forme
@@ -1238,7 +1248,7 @@ watch(
                                         class="flex min-w-0 flex-col gap-1 md:min-w-[7.25rem]"
                                     >
                                         <Label
-                                            class="text-base font-light text-black"
+                                            :class="moduleLabelLightClass"
                                             >Quantité
                                             <span class="text-[#dc3545]">*</span></Label
                                         >
@@ -1246,7 +1256,7 @@ watch(
                                             v-model.number="p.quantite"
                                             type="number"
                                             min="1"
-                                            class="box-border h-[42px] w-full min-w-0 max-w-full rounded-[10px] border border-[#ccc5c5] bg-white px-2 py-2 text-center text-base text-[#5c5959] focus:border-[#459cd1] focus:outline-none md:max-w-[7.5rem]"
+                                            class="box-border h-[42px] w-full min-w-0 max-w-full rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input px-2 py-2 text-center text-base text-[#5c5959] focus:border-[#459cd1] focus:outline-none md:max-w-[7.5rem]"
                                             :class="{
                                                 'border-[#dc3545]':
                                                     getProduitError(
@@ -1267,12 +1277,12 @@ watch(
                                     <!-- Ligne 2 : sous Nom + Dosage (2 premières colonnes en md+) -->
                                     <div class="flex min-w-0 flex-col gap-1">
                                         <Label
-                                            class="text-base font-light text-black"
+                                            :class="moduleLabelLightClass"
                                             >Prix unitaire
                                             <span class="text-[#dc3545]">*</span></Label
                                         >
                                         <div
-                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white"
+                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input"
                                         >
                                             <input
                                                 v-model.number="p.prix_unitaire"
@@ -1290,7 +1300,7 @@ watch(
                                                 }"
                                             />
                                             <span
-                                                class="pr-3 text-base font-medium text-black"
+                                                class="pr-3 text-base font-medium text-black dark:text-foreground"
                                                 >xaf</span
                                             >
                                         </div>
@@ -1313,11 +1323,11 @@ watch(
                                     </div>
                                     <div class="flex min-w-0 flex-col gap-1">
                                         <Label
-                                            class="text-base font-light text-black"
+                                            :class="moduleLabelLightClass"
                                             >Total</Label
                                         >
                                         <div
-                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-[#f8fafc] px-3 text-sm text-black"
+                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] dark:border-border bg-[#f8fafc] px-3 text-sm text-black dark:text-foreground"
                                         >
                                             <span class="min-w-0 flex-1 font-medium tabular-nums">{{
                                                 (
@@ -1327,7 +1337,7 @@ watch(
                                                 ).toFixed(1)
                                             }}</span>
                                             <span
-                                                class="pl-1 text-base font-medium text-black"
+                                                class="pl-1 text-base font-medium text-black dark:text-foreground"
                                                 >xaf</span
                                             >
                                         </div>
@@ -1345,7 +1355,7 @@ watch(
                     </div>
 
                     <!-- Section 4 — Parapharmacie : même grille que Médicaments -->
-                    <div class="rounded-[10px] border border-[#ccc5c5] p-5">
+                    <div :class="moduleFormSectionClass">
                         <div
                             class="mb-4 flex flex-wrap items-center justify-between gap-2"
                         >
@@ -1367,7 +1377,7 @@ watch(
                         <div
                             v-for="(p, i) in form.produitsParapharma"
                             :key="`para-${i}`"
-                            class="mb-4 flex flex-col gap-3 rounded-[10px] border border-[#ccc5c5] bg-white p-4 last:mb-0"
+                            :class="moduleFormProductCardClass"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div
@@ -1375,14 +1385,14 @@ watch(
                                 >
                                     <div class="flex min-w-0 flex-col gap-1 pr-0.5">
                                         <Label
-                                            class="whitespace-nowrap text-base font-light text-black"
+                                            :class="moduleLabelLightClass"
                                             >Nom produit
                                             <span class="text-[#dc3545]">*</span></Label
                                         >
                                         <input
                                             v-model="p.designation"
                                             placeholder="Ex : 1000"
-                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none"
+                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none"
                                             :class="{
                                                 'border-[#dc3545]':
                                                     getProduitParapharmaError(
@@ -1410,23 +1420,23 @@ watch(
                                     </div>
                                     <div class="flex min-w-0 flex-col gap-1 pl-0.5">
                                         <Label
-                                            class="whitespace-nowrap text-base font-light text-black"
+                                            :class="moduleLabelLightClass"
                                             >Dosage</Label
                                         >
                                         <input
                                             v-model="p.dosage"
                                             placeholder="Ex : 1000"
-                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none"
+                                            class="h-[42px] rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input px-3 py-2 text-sm placeholder:italic placeholder:text-[rgba(92,89,89,0.4)] focus:border-[#459cd1] focus:outline-none"
                                         />
                                     </div>
                                     <div class="flex min-w-0 flex-col gap-1">
                                         <Label
-                                            class="text-base font-light text-black"
+                                            :class="moduleLabelLightClass"
                                             >Forme</Label
                                         >
                                         <select
                                             v-model="p.forme"
-                                            class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                            class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input px-3 py-2 pr-8 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                         >
                                             <option value="">
                                                 Choisir la forme
@@ -1444,7 +1454,7 @@ watch(
                                         class="flex min-w-0 flex-col gap-1 md:min-w-[7.25rem]"
                                     >
                                         <Label
-                                            class="text-base font-light text-black"
+                                            :class="moduleLabelLightClass"
                                             >Quantité
                                             <span class="text-[#dc3545]">*</span></Label
                                         >
@@ -1452,7 +1462,7 @@ watch(
                                             v-model.number="p.quantite"
                                             type="number"
                                             min="1"
-                                            class="box-border h-[42px] w-full min-w-0 max-w-full rounded-[10px] border border-[#ccc5c5] bg-white px-2 py-2 text-center text-base text-[#5c5959] focus:border-[#459cd1] focus:outline-none md:max-w-[7.5rem]"
+                                            class="box-border h-[42px] w-full min-w-0 max-w-full rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input px-2 py-2 text-center text-base text-[#5c5959] focus:border-[#459cd1] focus:outline-none md:max-w-[7.5rem]"
                                             :class="{
                                                 'border-[#dc3545]':
                                                     getProduitParapharmaError(
@@ -1480,12 +1490,12 @@ watch(
                                     </div>
                                     <div class="flex min-w-0 flex-col gap-1">
                                         <Label
-                                            class="text-base font-light text-black"
+                                            :class="moduleLabelLightClass"
                                             >Prix unitaire
                                             <span class="text-[#dc3545]">*</span></Label
                                         >
                                         <div
-                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white"
+                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] dark:border-border bg-white dark:bg-input"
                                         >
                                             <input
                                                 v-model.number="p.prix_unitaire"
@@ -1503,7 +1513,7 @@ watch(
                                                 }"
                                             />
                                             <span
-                                                class="pr-3 text-base font-medium text-black"
+                                                class="pr-3 text-base font-medium text-black dark:text-foreground"
                                                 >xaf</span
                                             >
                                         </div>
@@ -1526,11 +1536,11 @@ watch(
                                     </div>
                                     <div class="flex min-w-0 flex-col gap-1">
                                         <Label
-                                            class="text-base font-light text-black"
+                                            :class="moduleLabelLightClass"
                                             >Total</Label
                                         >
                                         <div
-                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-[#f8fafc] px-3 text-sm text-black"
+                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] dark:border-border bg-[#f8fafc] px-3 text-sm text-black dark:text-foreground"
                                         >
                                             <span class="min-w-0 flex-1 font-medium tabular-nums">{{
                                                 (
@@ -1540,7 +1550,7 @@ watch(
                                                 ).toFixed(1)
                                             }}</span>
                                             <span
-                                                class="pl-1 text-base font-medium text-black"
+                                                class="pl-1 text-base font-medium text-black dark:text-foreground"
                                                 >xaf</span
                                             >
                                         </div>
@@ -1560,7 +1570,7 @@ watch(
                     <!-- Ordonnance (dashed #e2e8f0) + Commentaires (solid #e2e8f0) : deux blocs égaux côte à côte -->
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div class="flex flex-col gap-2">
-                            <Label class="text-sm font-medium text-black"
+                            <Label class="text-sm font-medium text-black dark:text-foreground"
                                 >Ordonnance
                                 <span
                                     v-if="
@@ -1605,7 +1615,7 @@ watch(
                             </p>
                         </div>
                         <div class="flex flex-col">
-                            <Label class="mb-1.5 text-sm font-medium text-black"
+                            <Label class="mb-1.5 text-sm font-medium text-black dark:text-foreground"
                                 >Commentaires
                                 <span
                                     v-if="isFieldRequired('commentaire')"
@@ -1617,7 +1627,7 @@ watch(
                                 v-model="form.commentaire"
                                 placeholder="Commentaires ..."
                                 rows="4"
-                                class="min-h-[120px] resize-none rounded-[10px] border border-[#e2e8f0] bg-white p-3 text-sm placeholder:italic placeholder:text-[#94a3b8] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                class="min-h-[120px] resize-none rounded-[10px] border border-[#e2e8f0] bg-white dark:bg-input p-3 text-sm placeholder:italic placeholder:text-[#94a3b8] focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
                                 :class="{
                                     'border-[#dc3545]': errors.commentaire,
                                 }"
@@ -1634,7 +1644,7 @@ watch(
 
                 <!-- Footer sticky : Annuler #EF4444, Envoyer #459cd1, rounded 8–10px, padding ~40px -->
                 <div
-                    class="sticky bottom-0 flex justify-center gap-6 border-t border-[#e2e8f0] bg-white px-6 py-5 shadow-[0_-2px_10px_rgba(0,0,0,0.04)]"
+                    class="sticky bottom-0 flex justify-center gap-6 border-t border-[#e2e8f0] bg-white px-6 py-5 shadow-[0_-2px_10px_rgba(0,0,0,0.04)] dark:border-border dark:bg-card"
                 >
                     <Button
                         type="button"

@@ -17,6 +17,11 @@ import {
     X,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import {
+    moduleDetailPanelClass,
+    moduleDetailPanelLgClass,
+    moduleFormInputClass,
+} from '@/lib/bengadokUi';
 import { dashboard } from '@/routes';
 
 type MoisOption = { value: string; label: string };
@@ -239,7 +244,7 @@ function statutBadgeClass(statut: string): string {
         <!-- KPIs : vue admin (toutes pharmacies) -->
         <div v-if="isAdmin" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div
-                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+                :class="moduleDetailPanelClass"
             >
                 <div class="mb-3 flex items-start justify-between">
                     <div>
@@ -266,7 +271,7 @@ function statutBadgeClass(statut: string): string {
             </div>
 
             <div
-                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+                :class="moduleDetailPanelClass"
             >
                 <div class="mb-3 flex items-start justify-between">
                     <div>
@@ -293,7 +298,7 @@ function statutBadgeClass(statut: string): string {
             </div>
 
             <div
-                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+                :class="moduleDetailPanelClass"
             >
                 <div class="mb-3 flex items-start justify-between">
                     <div>
@@ -320,7 +325,7 @@ function statutBadgeClass(statut: string): string {
             </div>
 
             <div
-                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+                :class="moduleDetailPanelClass"
             >
                 <div class="mb-3 flex items-start justify-between">
                     <div>
@@ -347,7 +352,7 @@ function statutBadgeClass(statut: string): string {
         <!-- KPIs : vue pharmacie (un seul établissement) -->
         <div v-else class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div
-                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+                :class="moduleDetailPanelClass"
             >
                 <div class="mb-3 flex items-start justify-between">
                     <div>
@@ -375,7 +380,7 @@ function statutBadgeClass(statut: string): string {
             </div>
 
             <div
-                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+                :class="moduleDetailPanelClass"
             >
                 <div class="mb-3 flex items-start justify-between">
                     <div>
@@ -400,7 +405,7 @@ function statutBadgeClass(statut: string): string {
             </div>
 
             <div
-                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+                :class="moduleDetailPanelClass"
             >
                 <div class="mb-3 flex items-start justify-between">
                     <div>
@@ -424,7 +429,7 @@ function statutBadgeClass(statut: string): string {
             </div>
 
             <div
-                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+                :class="moduleDetailPanelClass"
             >
                 <div class="mb-3 flex items-start justify-between">
                     <div>
@@ -502,7 +507,7 @@ function statutBadgeClass(statut: string): string {
 
             <div
                 v-if="creditsActifs"
-                class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+                :class="moduleDetailPanelClass"
             >
                 <div class="mb-3 flex items-start justify-between">
                     <div>
@@ -597,7 +602,7 @@ function statutBadgeClass(statut: string): string {
                     <div class="flex flex-wrap gap-2">
                         <button
                             type="button"
-                            class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                            class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 dark:border-border dark:bg-input dark:text-foreground dark:hover:bg-muted"
                         >
                             <Eye class="size-4" />
                             Voir détails
@@ -621,7 +626,7 @@ function statutBadgeClass(statut: string): string {
         <template v-if="isAdmin">
             <div class="grid gap-6 lg:grid-cols-3">
                 <div
-                    class="lg:col-span-2 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+                    :class="['lg:col-span-2', moduleDetailPanelLgClass]"
                 >
                     <div
                         class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
@@ -662,7 +667,7 @@ function statutBadgeClass(statut: string): string {
                             <div class="relative">
                                 <button
                                     type="button"
-                                    class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold"
+                                    class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold dark:border-border dark:bg-input dark:text-foreground"
                                     @click="
                                         moisDropdownOpen = !moisDropdownOpen
                                     "
@@ -672,7 +677,7 @@ function statutBadgeClass(statut: string): string {
                                 </button>
                                 <div
                                     v-show="moisDropdownOpen"
-                                    class="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border bg-white py-1 shadow-lg"
+                                    class="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border border-border bg-popover py-1 shadow-lg"
                                 >
                                     <button
                                         v-for="opt in mois_options"
@@ -692,7 +697,7 @@ function statutBadgeClass(statut: string): string {
                     >
                         <table class="w-full min-w-[720px] text-left text-sm">
                             <thead
-                                class="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgb(229,231,235)]"
+                                class="sticky top-0 z-10 bg-card shadow-[0_1px_0_0_rgb(229,231,235)] dark:shadow-[0_1px_0_0_hsl(0_0%_20%)]"
                             >
                                 <tr
                                     class="border-b text-xs font-bold text-gray-500"
@@ -821,7 +826,7 @@ function statutBadgeClass(statut: string): string {
             </div>
 
             <div
-                class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+                    :class="moduleDetailPanelLgClass"
             >
                 <div
                     class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
@@ -861,7 +866,7 @@ function statutBadgeClass(statut: string): string {
                         <div class="relative">
                             <button
                                 type="button"
-                                class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold"
+                                class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold dark:border-border dark:bg-input dark:text-foreground"
                                 @click="moisDropdownOpen = !moisDropdownOpen"
                             >
                                 {{ mois_label }}
@@ -869,7 +874,7 @@ function statutBadgeClass(statut: string): string {
                             </button>
                             <div
                                 v-show="moisDropdownOpen"
-                                class="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border bg-white py-1 shadow-lg"
+                                class="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border border-border bg-popover py-1 shadow-lg"
                             >
                                 <button
                                     v-for="opt in mois_options"
@@ -968,7 +973,7 @@ function statutBadgeClass(statut: string): string {
         <!-- Pharmacie : ventes détaillées + sidebar crédits -->
         <div v-else class="grid gap-6 lg:grid-cols-3">
             <div
-                class="lg:col-span-2 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+                :class="['lg:col-span-2', moduleDetailPanelLgClass]"
             >
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-bold text-gray-900">
@@ -977,7 +982,7 @@ function statutBadgeClass(statut: string): string {
                     <div class="relative">
                         <button
                             type="button"
-                            class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold"
+                            class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold dark:border-border dark:bg-input dark:text-foreground"
                             @click="moisDropdownOpen = !moisDropdownOpen"
                         >
                             Afficher : {{ mois_label }}
@@ -1003,7 +1008,7 @@ function statutBadgeClass(statut: string): string {
                     class="max-h-[min(380px,50vh)] overflow-auto rounded-lg border border-gray-100"
                 >
                     <table class="w-full min-w-[640px] text-left text-sm">
-                        <thead class="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgb(229,231,235)]">
+                        <thead class="sticky top-0 z-10 bg-card shadow-[0_1px_0_0_rgb(229,231,235)] dark:shadow-[0_1px_0_0_hsl(0_0%_20%)]">
                             <tr class="border-b text-xs font-bold text-gray-500">
                                 <th class="pb-3 pr-4 pt-1">Date</th>
                                 <th class="pb-3 pr-4 pt-1">Produit</th>
@@ -1135,7 +1140,7 @@ function statutBadgeClass(statut: string): string {
         <!-- Historique + commandes récentes (pharmacie uniquement) -->
         <div v-if="isPharmacie" class="grid gap-6 lg:grid-cols-2">
             <div
-                class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+                    :class="moduleDetailPanelLgClass"
             >
                 <h3 class="mb-4 text-lg font-bold text-gray-900">
                     Historique des commissions
@@ -1190,7 +1195,7 @@ function statutBadgeClass(statut: string): string {
             </div>
 
             <div
-                class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+                    :class="moduleDetailPanelLgClass"
             >
                 <h3 class="mb-4 text-lg font-bold text-gray-900">
                     Commandes récentes
@@ -1264,7 +1269,7 @@ function statutBadgeClass(statut: string): string {
             @click.self="rechargeModalOpen = false"
         >
             <div
-                class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+                class="w-full max-w-md rounded-2xl bg-card p-6 shadow-xl dark:border dark:border-border"
             >
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-bold text-gray-900">

@@ -52,7 +52,7 @@ const showPassword = ref(false);
                     :tabindex="1"
                     autocomplete="username"
                     placeholder="Ex: centrale_gerant_misgs233"
-                    class="login-input rounded-lg border border-[#d1d5db] bg-white text-[#333333] placeholder:italic placeholder:text-gray-500"
+                    class="login-input rounded-lg border border-[#d1d5db] bg-white text-[#333333] placeholder:italic placeholder:text-gray-500 dark:border-border dark:bg-input dark:text-foreground dark:placeholder:text-muted-foreground"
                 />
                 <InputError :message="errors.email" />
             </div>
@@ -70,7 +70,7 @@ const showPassword = ref(false);
                         :tabindex="2"
                         autocomplete="current-password"
                         placeholder="••••••••"
-                        class="login-input rounded-lg border border-[#d1d5db] bg-white pr-10 text-[#333333] placeholder:text-gray-500"
+                        class="login-input rounded-lg border border-[#d1d5db] bg-white pr-10 text-[#333333] placeholder:text-gray-500 dark:border-border dark:bg-input dark:text-foreground dark:placeholder:text-muted-foreground"
                     />
                     <button
                         type="button"
@@ -136,24 +136,20 @@ const showPassword = ref(false);
 </template>
 
 <style scoped>
-/* Maquette : champs blancs à fine bordure grise (sans fond jaune autofill) */
-/* Texte toujours sombre pour rester lisible sur fond blanc (mode clair ou sombre) */
-.login-input {
-    background-color: #fff !important;
-    color: #1f2937 !important;
-    -webkit-text-fill-color: #1f2937 !important;
-    caret-color: #1f2937 !important;
-}
-.login-input::placeholder {
-    color: #6b7280 !important;
-    -webkit-text-fill-color: #6b7280 !important;
-}
+/* Champs login : autofill sans fond jaune */
 .login-input:-webkit-autofill,
 .login-input:-webkit-autofill:hover,
 .login-input:-webkit-autofill:focus {
     -webkit-box-shadow: 0 0 0 30px white inset !important;
     box-shadow: 0 0 0 30px white inset !important;
     -webkit-text-fill-color: #1f2937 !important;
+}
+:global(.dark) .login-input:-webkit-autofill,
+:global(.dark) .login-input:-webkit-autofill:hover,
+:global(.dark) .login-input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 30px hsl(0 0% 14.9%) inset !important;
+    box-shadow: 0 0 0 30px hsl(0 0% 14.9%) inset !important;
+    -webkit-text-fill-color: hsl(0 0% 98%) !important;
 }
 /* Bouton bleu-vert (teal) comme sur la maquette */
 .login-btn {

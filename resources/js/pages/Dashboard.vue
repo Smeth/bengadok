@@ -10,6 +10,7 @@ import {
 import { computed, ref } from 'vue';
 import AdminParapharmaDashboard from '@/components/AdminParapharmaDashboard.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { dashboardHeroSurfaceClass, dashboardSurfaceClass } from '@/lib/bengadokUi';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
@@ -355,7 +356,7 @@ function getPiePath(
             <!-- Onglets admin : Pharmacie / Opérations -->
             <div
                 v-if="isAdminDashboard"
-                class="mb-6 flex w-fit gap-1 rounded-[13px] border border-gray-200 bg-white p-1 shadow-sm"
+                class="mb-6 flex w-fit gap-1 rounded-[13px] border border-gray-200 bg-white p-1 shadow-sm dark:border-border dark:bg-card"
             >
                 <button
                     type="button"
@@ -363,7 +364,7 @@ function getPiePath(
                     :class="
                         activeTab === 'parapharma'
                             ? 'bg-[#459cd1] text-white'
-                            : 'text-gray-700 hover:bg-gray-50'
+                            : 'text-gray-700 hover:bg-gray-50 dark:text-muted-foreground dark:hover:bg-muted'
                     "
                     @click="setAdminTab('parapharma')"
                 >
@@ -375,7 +376,7 @@ function getPiePath(
                     :class="
                         activeTab === 'operations'
                             ? 'bg-[#459cd1] text-white'
-                            : 'text-gray-700 hover:bg-gray-50'
+                            : 'text-gray-700 hover:bg-gray-50 dark:text-muted-foreground dark:hover:bg-muted'
                     "
                     @click="setAdminTab('operations')"
                 >
@@ -401,7 +402,7 @@ function getPiePath(
             <!-- Hero section Pharma -->
             <div
                 v-if="isPharma"
-                class="relative mb-6 overflow-hidden rounded-[30px] bg-white p-8 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] flex items-center justify-between min-h-[220px]"
+                :class="[dashboardHeroSurfaceClass, 'mb-6 flex items-center justify-between min-h-[220px]']"
             >
                 <h1
                     class="relative z-10 max-w-[450px] text-[40px] font-bold leading-tight text-[#5c5959] md:text-[44px]"
@@ -432,7 +433,7 @@ function getPiePath(
             >
                 <div class="relative">
                     <button
-                        class="flex items-center gap-2 rounded-[13px] border border-gray-300 bg-white px-4 py-2 text-[14px] font-semibold text-gray-800 shadow-sm hover:bg-gray-50"
+                        class="flex items-center gap-2 rounded-[13px] border border-gray-300 bg-white px-4 py-2 text-[14px] font-semibold text-gray-800 shadow-sm hover:bg-gray-50 dark:border-border dark:bg-input dark:text-foreground dark:hover:bg-muted"
                         @click="periodDropdownOpen = !periodDropdownOpen"
                     >
                         {{ periodLabel }}
@@ -440,7 +441,7 @@ function getPiePath(
                     </button>
                     <div
                         v-show="periodDropdownOpen"
-                        class="absolute right-0 top-full z-20 mt-1 min-w-[160px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+                        class="absolute right-0 top-full z-20 mt-1 min-w-[160px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-border dark:bg-popover"
                     >
                         <button
                             class="w-full px-4 py-2 text-left text-[14px] hover:bg-gray-100"
@@ -470,16 +471,16 @@ function getPiePath(
                 class="mb-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
             >
                 <div
-                    class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] relative overflow-hidden group hover:shadow-lg transition-shadow"
+                    :class="[dashboardSurfaceClass, 'relative overflow-hidden group hover:shadow-lg transition-shadow']"
                 >
                     <h3 class="mb-6 text-[14px] font-extrabold text-[#5c5959]">
                         Pharmacies partenaires
                     </h3>
                     <div class="mb-4 flex items-baseline gap-2">
-                        <span class="text-[32px] font-extrabold text-black">{{
+                        <span class="text-[32px] font-extrabold text-black dark:text-foreground">{{
                             kpis.nbPharmacies
                         }}</span>
-                        <span class="text-[14px] font-bold text-black"
+                        <span class="text-[14px] font-bold text-black dark:text-foreground"
                             >dont {{ kpis.nbPharmaciesActives }} actives</span
                         >
                     </div>
@@ -490,7 +491,7 @@ function getPiePath(
                             class="flex items-center gap-1 rounded-full border border-black/20 px-2 py-1"
                             :class="
                                 kpis.evolutionPharmaciesActives >= 0
-                                    ? 'text-black'
+                                    ? 'text-black dark:text-foreground'
                                     : 'text-red-600'
                             "
                         >
@@ -508,16 +509,16 @@ function getPiePath(
                 </div>
 
                 <div
-                    class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] relative overflow-hidden group hover:shadow-lg transition-shadow"
+                    :class="[dashboardSurfaceClass, 'relative overflow-hidden group hover:shadow-lg transition-shadow']"
                 >
                     <h3 class="mb-6 text-[14px] font-extrabold text-[#5c5959]">
                         Retraits confirmés
                     </h3>
                     <div class="mb-4 flex items-baseline gap-2">
-                        <span class="text-[32px] font-extrabold text-black">{{
+                        <span class="text-[32px] font-extrabold text-black dark:text-foreground">{{
                             kpis.nbCommandes
                         }}</span>
-                        <span class="text-[14px] font-bold text-black"
+                        <span class="text-[14px] font-bold text-black dark:text-foreground"
                             >cmd</span
                         >
                     </div>
@@ -528,7 +529,7 @@ function getPiePath(
                             class="flex items-center gap-1 rounded-full border border-black/20 px-2 py-1"
                             :class="
                                 kpis.evolutionCommandes >= 0
-                                    ? 'text-black'
+                                    ? 'text-black dark:text-foreground'
                                     : 'text-red-600'
                             "
                         >
@@ -546,13 +547,13 @@ function getPiePath(
                 </div>
 
                 <div
-                    class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] relative overflow-hidden group hover:shadow-lg transition-shadow"
+                    :class="[dashboardSurfaceClass, 'relative overflow-hidden group hover:shadow-lg transition-shadow']"
                 >
                     <h3 class="mb-6 text-[14px] font-extrabold text-[#5c5959]">
                         Patientèles uniques
                     </h3>
                     <div class="mb-4 flex items-baseline gap-2">
-                        <span class="text-[32px] font-extrabold text-black">{{
+                        <span class="text-[32px] font-extrabold text-black dark:text-foreground">{{
                             kpis.nbClients
                         }}</span>
                     </div>
@@ -563,7 +564,7 @@ function getPiePath(
                             class="flex items-center gap-1 rounded-full border border-black/20 px-2 py-1"
                             :class="
                                 kpis.evolutionClients >= 0
-                                    ? 'text-black'
+                                    ? 'text-black dark:text-foreground'
                                     : 'text-red-600'
                             "
                         >
@@ -581,16 +582,16 @@ function getPiePath(
                 </div>
 
                 <div
-                    class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)] relative overflow-hidden group hover:shadow-lg transition-shadow"
+                    :class="[dashboardSurfaceClass, 'relative overflow-hidden group hover:shadow-lg transition-shadow']"
                 >
                     <h3 class="mb-6 text-[14px] font-extrabold text-[#5c5959]">
                         CA total
                     </h3>
                     <div class="mb-4 flex items-baseline gap-2">
-                        <span class="text-[32px] font-extrabold text-black">{{
+                        <span class="text-[32px] font-extrabold text-black dark:text-foreground">{{
                             Number(kpis.revenuTotal).toLocaleString('fr-FR')
                         }}</span>
-                        <span class="text-[14px] font-bold text-black"
+                        <span class="text-[14px] font-bold text-black dark:text-foreground"
                             >XAF</span
                         >
                     </div>
@@ -601,7 +602,7 @@ function getPiePath(
                             class="flex items-center gap-1 rounded-full border border-black/20 px-2 py-1"
                             :class="
                                 kpis.evolutionRevenu >= 0
-                                    ? 'text-black'
+                                    ? 'text-black dark:text-foreground'
                                     : 'text-red-600'
                             "
                         >
@@ -625,23 +626,23 @@ function getPiePath(
                 class="mb-6 grid gap-4 grid-cols-1 sm:grid-cols-3"
             >
                 <div
-                    class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                    :class="dashboardSurfaceClass"
                 >
                     <h3 class="mb-4 text-[14px] font-extrabold text-[#5c5959]">
                         Panier moyen
                     </h3>
                     <div class="mb-3 flex items-baseline gap-2">
-                        <span class="text-[28px] font-extrabold text-black">{{
+                        <span class="text-[28px] font-extrabold text-black dark:text-foreground">{{
                             Number(kpis.panierMoyen).toLocaleString('fr-FR')
                         }}</span>
-                        <span class="text-[14px] font-bold text-black">XAF</span>
+                        <span class="text-[14px] font-bold text-black dark:text-foreground">XAF</span>
                     </div>
                     <div class="flex items-center gap-2 text-[11px] font-semibold">
                         <span
                             class="flex items-center gap-1 rounded-full border border-black/20 px-2 py-1"
                             :class="
                                 kpis.evolutionPanierMoyen >= 0
-                                    ? 'text-black'
+                                    ? 'text-black dark:text-foreground'
                                     : 'text-red-600'
                             "
                         >
@@ -657,20 +658,20 @@ function getPiePath(
                 </div>
 
                 <div
-                    class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                    :class="dashboardSurfaceClass"
                 >
                     <h3 class="mb-4 text-[14px] font-extrabold text-[#5c5959]">
                         Commandes réussies
                     </h3>
                     <div class="mb-3 flex items-baseline gap-2">
-                        <span class="text-[28px] font-extrabold text-black">{{
+                        <span class="text-[28px] font-extrabold text-black dark:text-foreground">{{
                             kpis.nbReussies
                         }}</span>
-                        <span class="text-[14px] font-bold text-black">/ {{ kpis.nbCommandesDemandes ?? kpis.nbCommandes }}</span>
+                        <span class="text-[14px] font-bold text-black dark:text-foreground">/ {{ kpis.nbCommandesDemandes ?? kpis.nbCommandes }}</span>
                     </div>
                     <p class="text-[12px] text-[#5c5959]">
                         Taux de réussite :
-                        <span class="font-bold text-black">{{
+                        <span class="font-bold text-black dark:text-foreground">{{
                             tauxCommandes.taux_reussite !== null
                                 ? `${tauxCommandes.taux_reussite}%`
                                 : '—'
@@ -679,20 +680,20 @@ function getPiePath(
                 </div>
 
                 <div
-                    class="rounded-[23px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
+                    :class="dashboardSurfaceClass"
                 >
                     <h3 class="mb-4 text-[14px] font-extrabold text-[#5c5959]">
                         Annulations
                     </h3>
                     <div class="mb-3 flex items-baseline gap-2">
-                        <span class="text-[28px] font-extrabold text-black">{{
+                        <span class="text-[28px] font-extrabold text-black dark:text-foreground">{{
                             kpis.nbAnnulees
                         }}</span>
-                        <span class="text-[14px] font-bold text-black">cmd</span>
+                        <span class="text-[14px] font-bold text-black dark:text-foreground">cmd</span>
                     </div>
                     <p class="text-[12px] text-[#5c5959]">
                         Taux d'annulation :
-                        <span class="font-bold text-black">{{
+                        <span class="font-bold text-black dark:text-foreground">{{
                             tauxCommandes.taux_annulation !== null
                                 ? `${tauxCommandes.taux_annulation}%`
                                 : '—'
@@ -709,14 +710,14 @@ function getPiePath(
                 <div
                     class="rounded-[20px] bg-[#E1EFE8] backdrop-blur-sm p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.1)] relative transition-transform hover:-translate-y-1"
                 >
-                    <h3 class="mb-6 text-[15px] font-bold text-gray-900">
+                    <h3 class="mb-6 text-[15px] font-bold text-gray-900 dark:text-foreground">
                         Revenue Total
                     </h3>
                     <div class="mb-4 flex items-baseline gap-2">
-                        <span class="text-[36px] font-bold text-gray-900">{{
+                        <span class="text-[36px] font-bold text-gray-900 dark:text-foreground">{{
                             Number(kpis.revenuTotal).toLocaleString('fr-FR')
                         }}</span>
-                        <span class="text-[14px] font-bold text-gray-900"
+                        <span class="text-[14px] font-bold text-gray-900 dark:text-foreground"
                             >XAF</span
                         >
                     </div>
@@ -727,7 +728,7 @@ function getPiePath(
                             class="flex items-center gap-1 bg-white rounded-full px-2 py-1 shadow-sm"
                             :class="
                                 kpis.evolutionRevenu >= 0
-                                    ? 'text-black'
+                                    ? 'text-black dark:text-foreground'
                                     : 'text-red-600'
                             "
                         >
@@ -747,14 +748,14 @@ function getPiePath(
                 <div
                     class="rounded-[20px] bg-[#E1EFE8] backdrop-blur-sm p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.1)] relative transition-transform hover:-translate-y-1"
                 >
-                    <h3 class="mb-6 text-[15px] font-bold text-gray-900">
+                    <h3 class="mb-6 text-[15px] font-bold text-gray-900 dark:text-foreground">
                         Retraits confirmés
                     </h3>
                     <div class="mb-4 flex items-baseline gap-2">
-                        <span class="text-[36px] font-bold text-gray-900">{{
+                        <span class="text-[36px] font-bold text-gray-900 dark:text-foreground">{{
                             kpis.nbCommandes
                         }}</span>
-                        <span class="text-[14px] font-bold text-gray-900"
+                        <span class="text-[14px] font-bold text-gray-900 dark:text-foreground"
                             >Cmd</span
                         >
                     </div>
@@ -765,7 +766,7 @@ function getPiePath(
                             class="flex items-center gap-1 bg-white rounded-full px-2 py-1 shadow-sm"
                             :class="
                                 kpis.evolutionCommandes >= 0
-                                    ? 'text-black'
+                                    ? 'text-black dark:text-foreground'
                                     : 'text-red-600'
                             "
                         >
@@ -785,14 +786,14 @@ function getPiePath(
                 <div
                     class="rounded-[20px] bg-[#E1EFE8] backdrop-blur-sm p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.1)] relative transition-transform hover:-translate-y-1"
                 >
-                    <h3 class="mb-6 text-[15px] font-bold text-gray-900">
+                    <h3 class="mb-6 text-[15px] font-bold text-gray-900 dark:text-foreground">
                         Client Total
                     </h3>
                     <div class="mb-4 flex items-baseline gap-2">
-                        <span class="text-[36px] font-bold text-gray-900">{{
+                        <span class="text-[36px] font-bold text-gray-900 dark:text-foreground">{{
                             kpis.nbClients
                         }}</span>
-                        <span class="text-[14px] font-bold text-gray-900"
+                        <span class="text-[14px] font-bold text-gray-900 dark:text-foreground"
                             >Clients</span
                         >
                     </div>
@@ -803,7 +804,7 @@ function getPiePath(
                             class="flex items-center gap-1 bg-white rounded-full px-2 py-1 shadow-sm"
                             :class="
                                 kpis.evolutionClients >= 0
-                                    ? 'text-black'
+                                    ? 'text-black dark:text-foreground'
                                     : 'text-red-600'
                             "
                         >
@@ -831,7 +832,7 @@ function getPiePath(
                     class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-bold text-black">
+                        <h3 class="text-[20px] font-bold text-black dark:text-foreground">
                             Volume commandes par pharmacies
                         </h3>
                         <span
@@ -887,7 +888,7 @@ function getPiePath(
                     class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-bold text-black">
+                        <h3 class="text-[20px] font-bold text-black dark:text-foreground">
                             Volume commandes par zone
                         </h3>
                         <span
@@ -990,7 +991,7 @@ function getPiePath(
                     class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-bold text-black">
+                        <h3 class="text-[20px] font-bold text-black dark:text-foreground">
                             Annulations par motif
                         </h3>
                         <span
@@ -1037,7 +1038,7 @@ function getPiePath(
                     class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-bold text-black">
+                        <h3 class="text-[20px] font-bold text-black dark:text-foreground">
                             Canaux d'acquisition
                         </h3>
                         <span
@@ -1083,7 +1084,7 @@ function getPiePath(
                     class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-bold text-black">
+                        <h3 class="text-[20px] font-bold text-black dark:text-foreground">
                             Délais moyens
                         </h3>
                         <span
@@ -1097,7 +1098,7 @@ function getPiePath(
                             <p class="mb-2 text-[13px] font-semibold text-gray-600">
                                 Réponse pharmacie
                             </p>
-                            <p class="text-[28px] font-extrabold text-black">
+                            <p class="text-[28px] font-extrabold text-black dark:text-foreground">
                                 {{ formatDelai(delais.reponse_pharmacie_heures) }}
                             </p>
                             <p class="mt-1 text-[11px] text-gray-500">
@@ -1108,7 +1109,7 @@ function getPiePath(
                             <p class="mb-2 text-[13px] font-semibold text-gray-600">
                                 Livraison (validation → livrée)
                             </p>
-                            <p class="text-[28px] font-extrabold text-black">
+                            <p class="text-[28px] font-extrabold text-black dark:text-foreground">
                                 {{ formatDelai(delais.livraison_heures) }}
                             </p>
                             <p class="mt-1 text-[11px] text-gray-500">
@@ -1123,7 +1124,7 @@ function getPiePath(
                     class="rounded-[30px] bg-white p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.25)]"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-bold text-black">
+                        <h3 class="text-[20px] font-bold text-black dark:text-foreground">
                             Top médicaments
                         </h3>
                         <span
@@ -1175,11 +1176,11 @@ function getPiePath(
                     class="rounded-[30px] bg-[#E1EFE8] backdrop-blur-sm p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.1)] w-full relative"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-extrabold text-gray-900">
+                        <h3 class="text-[20px] font-extrabold text-gray-900 dark:text-foreground">
                             Analyse revenues
                         </h3>
                         <span
-                            class="rounded-full border border-gray-400 bg-white/80 px-4 py-1.5 text-[13px] font-bold text-gray-900"
+                            class="rounded-full border border-gray-400 bg-white/80 px-4 py-1.5 text-[13px] font-bold text-gray-900 dark:text-foreground"
                         >
                             {{ periodLabel }}
                         </span>
@@ -1231,11 +1232,11 @@ function getPiePath(
                     class="mt-6 rounded-[30px] bg-[#E1EFE8] backdrop-blur-sm p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.1)]"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-extrabold text-gray-900">
+                        <h3 class="text-[20px] font-extrabold text-gray-900 dark:text-foreground">
                             Délais moyens
                         </h3>
                         <span
-                            class="rounded-full border border-gray-400 bg-white/80 px-4 py-1.5 text-[13px] font-bold text-gray-900"
+                            class="rounded-full border border-gray-400 bg-white/80 px-4 py-1.5 text-[13px] font-bold text-gray-900 dark:text-foreground"
                         >
                             {{ periodLabel }}
                         </span>
@@ -1245,7 +1246,7 @@ function getPiePath(
                             <p class="mb-2 text-[13px] font-semibold text-gray-600">
                                 Réponse pharmacie
                             </p>
-                            <p class="text-[28px] font-extrabold text-gray-900">
+                            <p class="text-[28px] font-extrabold text-gray-900 dark:text-foreground">
                                 {{ formatDelai(delais.reponse_pharmacie_heures) }}
                             </p>
                         </div>
@@ -1253,7 +1254,7 @@ function getPiePath(
                             <p class="mb-2 text-[13px] font-semibold text-gray-600">
                                 Livraison
                             </p>
-                            <p class="text-[28px] font-extrabold text-gray-900">
+                            <p class="text-[28px] font-extrabold text-gray-900 dark:text-foreground">
                                 {{ formatDelai(delais.livraison_heures) }}
                             </p>
                         </div>
@@ -1266,11 +1267,11 @@ function getPiePath(
                     class="mt-6 rounded-[30px] bg-[#E1EFE8] backdrop-blur-sm p-6 shadow-[0px_4px_10px_rgba(0,0,0,0.1)]"
                 >
                     <div class="mb-6 flex items-center justify-between">
-                        <h3 class="text-[20px] font-extrabold text-gray-900">
+                        <h3 class="text-[20px] font-extrabold text-gray-900 dark:text-foreground">
                             Top médicaments
                         </h3>
                         <span
-                            class="rounded-full border border-gray-400 bg-white/80 px-4 py-1.5 text-[13px] font-bold text-gray-900"
+                            class="rounded-full border border-gray-400 bg-white/80 px-4 py-1.5 text-[13px] font-bold text-gray-900 dark:text-foreground"
                         >
                             {{ periodLabel }}
                         </span>

@@ -13,7 +13,7 @@ import {
     Settings,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
-import { modulePrimaryButtonClass } from '@/lib/bengadokUi';
+import { moduleDetailPanelClass, moduleFormInputClass, modulePrimaryButtonClass } from '@/lib/bengadokUi';
 
 type HistoriqueOp = {
     id: number;
@@ -137,7 +137,7 @@ function submitAlerte() {
     <div class="space-y-6">
         <!-- En-tête pharmacie + KPIs -->
         <div
-            class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+            :class="moduleDetailPanelClass"
         >
             <div
                 class="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-gray-100 pb-5"
@@ -270,7 +270,7 @@ function submitAlerte() {
             <div class="space-y-6 lg:col-span-2">
                 <!-- Recharge -->
                 <div
-                    class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+                    :class="moduleDetailPanelClass"
                 >
                     <h3 class="mb-4 text-lg font-bold text-gray-900">
                         Ajouter / Recharger des crédits
@@ -292,10 +292,10 @@ function submitAlerte() {
                                         min="1"
                                         placeholder="Ex: 50"
                                         required
-                                        class="w-full rounded-l-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                        class="w-full rounded-l-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:border-border dark:bg-input dark:text-foreground"
                                     />
                                     <span
-                                        class="flex items-center rounded-r-lg border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600"
+                                        class="flex items-center rounded-r-lg border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600 dark:border-border dark:bg-muted dark:text-muted-foreground"
                                         >crédits</span
                                     >
                                 </div>
@@ -331,7 +331,7 @@ function submitAlerte() {
                             >
                             <select
                                 v-model="rechargeForm.mode_paiement"
-                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:border-border dark:bg-input dark:text-foreground"
                             >
                                 <option
                                     v-for="m in creditGestion.modes_paiement"
@@ -365,14 +365,14 @@ function submitAlerte() {
                                 v-model="rechargeForm.note"
                                 rows="2"
                                 placeholder="Ex: Recharge mensuelle"
-                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:border-border dark:bg-input dark:text-foreground"
                             />
                         </div>
 
                         <div class="flex justify-end gap-2">
                             <button
                                 type="button"
-                                class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                                class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-border dark:text-foreground dark:hover:bg-muted"
                                 @click="
                                     rechargeForm.reset();
                                     rechargeForm.mode_paiement =
@@ -395,7 +395,7 @@ function submitAlerte() {
 
                 <!-- Historique -->
                 <div
-                    class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+                    :class="moduleDetailPanelClass"
                 >
                     <h3 class="mb-4 text-lg font-bold text-gray-900">
                         Historique des opérations de crédits
@@ -501,7 +501,7 @@ function submitAlerte() {
             <!-- Sidebar -->
             <div class="space-y-4">
                 <div
-                    class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+                    :class="moduleDetailPanelClass"
                 >
                     <h3 class="mb-4 font-bold text-gray-900">
                         Configuration des crédits
@@ -561,7 +561,7 @@ function submitAlerte() {
                     </ul>
                     <Link
                         href="/settings/parametres?onglet=parapharma"
-                        class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                        class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 dark:border-border dark:text-foreground dark:hover:bg-muted"
                     >
                         <Settings class="size-4" />
                         Modifier les paramètres
@@ -590,7 +590,7 @@ function submitAlerte() {
                 </div>
 
                 <div
-                    class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+                    :class="moduleDetailPanelClass"
                 >
                     <div class="mb-3 flex items-center justify-between">
                         <h3 class="font-bold text-gray-900">
@@ -608,7 +608,7 @@ function submitAlerte() {
                         <textarea
                             v-model="noteForm.note_interne"
                             rows="4"
-                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-border dark:bg-input dark:text-foreground"
                             placeholder="Ex: Client régulier, préfère être contacté le matin..."
                         />
                         <button
@@ -645,7 +645,7 @@ function submitAlerte() {
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
             @click.self="showAlerteModal = false"
         >
-            <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <div class="w-full max-w-md rounded-xl bg-card p-6 shadow-xl dark:border dark:border-border">
                 <h3 class="mb-4 font-bold text-gray-900">
                     Seuil d'alerte crédits faibles
                 </h3>
