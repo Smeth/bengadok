@@ -109,7 +109,7 @@ function fermer() {
                         </button>
                         <button
                             type="button"
-                            class="flex h-9 items-center justify-center rounded-[10px] border border-[#459cd1] bg-white px-4 text-[14px] font-bold text-[#459cd1] transition-colors hover:bg-[#459cd1]/10"
+                            class="flex h-9 items-center justify-center rounded-[10px] border border-[#459cd1] bg-white px-4 text-[14px] font-bold text-[#459cd1] transition-colors hover:bg-[#459cd1]/10 dark:border-[#459cd1] dark:bg-input dark:text-[#459cd1] dark:hover:bg-[#459cd1]/15"
                             @click="telecharger"
                         >
                             Télécharger

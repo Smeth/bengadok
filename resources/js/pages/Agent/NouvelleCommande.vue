@@ -26,7 +26,15 @@ import {
     normalizeInertiaErrors,
 } from '@/lib/validationErrors';
 import { useCommandeCreationFields } from '@/composables/useCommandeCreationFields';
+import {
+    moduleAgentSectionClass,
+    moduleModalSurfaceClass,
+    moduleRoundedInputClass,
+} from '@/lib/bengadokUi';
 import type { BreadcrumbItem } from '@/types';
+
+const agentInputClass = `w-full ${moduleRoundedInputClass}`;
+const agentInputMtClass = `mt-1 ${agentInputClass}`;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -421,7 +429,7 @@ function annuler() {
             "
         >
             <!-- Modal card -->
-            <div class="w-full max-w-2xl rounded-2xl bg-white shadow-2xl my-2">
+            <div :class="['w-full max-w-2xl my-2', moduleModalSurfaceClass]">
                 <!-- ── En-tête ── -->
                 <div
                     class="flex items-center justify-between border-b px-6 py-4"
@@ -468,7 +476,7 @@ function annuler() {
                             <input
                                 v-model="clientPrenom"
                                 placeholder="Ex : Didier"
-                                class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                :class="agentInputMtClass"
                             />
                             <InputError :message="errors.client_prenom" />
                         </div>
@@ -489,7 +497,7 @@ function annuler() {
                             <input
                                 v-model="clientNom"
                                 placeholder="Ex : Fofana"
-                                class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                :class="agentInputMtClass"
                             />
                             <InputError :message="errors.client_nom" />
                         </div>
@@ -505,7 +513,7 @@ function annuler() {
                             <input
                                 v-model="clientAdresse"
                                 placeholder="Ex : 20 rue Loby Moungali"
-                                class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                :class="agentInputMtClass"
                             />
                             <InputError :message="errors.client_adresse" />
                         </div>
@@ -531,7 +539,7 @@ function annuler() {
                         <div class="relative mt-1">
                             <select
                                 v-model="clientArrondissement"
-                                class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                :class="agentInputClass"
                             >
                                 <option value="">
                                     Choisir un arrondissement…
@@ -567,7 +575,7 @@ function annuler() {
                             <div class="relative mt-1">
                                 <select
                                     v-model="beneficiaireId"
-                                    class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    :class="agentInputClass"
                                 >
                                     <option value="">
                                         choisir un bénéficiaire
@@ -602,7 +610,7 @@ function annuler() {
                                 <input
                                     v-model="clientTel"
                                     placeholder="+242 06 800 8008"
-                                    class="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    :class="['pl-9 pr-3 py-2', agentInputClass]"
                                 />
                             </div>
                             <InputError :message="errors.client_tel" />
@@ -622,7 +630,7 @@ function annuler() {
                         <div class="relative mt-1">
                             <select
                                 v-model="montantLivraisonId"
-                                class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                :class="agentInputClass"
                             >
                                 <option value="">Choisir…</option>
                                 <option
@@ -641,7 +649,7 @@ function annuler() {
                     </div>
 
                     <!-- ── Section Pharmacie Partenaire ── -->
-                    <div class="rounded-xl border border-gray-200 p-4">
+                    <div :class="moduleAgentSectionClass">
                         <h2 class="mb-3 text-sm font-semibold text-gray-400">
                             Pharmacie Partenaire
                             <span class="text-red-600">*</span>
@@ -659,7 +667,7 @@ function annuler() {
                                     :key="zone.id"
                                     type="button"
                                     @click="selectionnerZone(zone)"
-                                    class="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 p-3 transition-colors hover:border-blue-400 hover:bg-blue-50 cursor-pointer"
+                                    class="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 p-3 transition-colors hover:border-blue-400 hover:bg-blue-50 cursor-pointer dark:border-border dark:hover:border-[#459cd1] dark:hover:bg-[#459cd1]/10"
                                 >
                                     <Building2 class="h-8 w-8 text-gray-500" />
                                     <span
@@ -679,7 +687,7 @@ function annuler() {
                                 <button
                                     type="button"
                                     @click="retourZones"
-                                    class="flex items-center gap-1 rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 transition-colors"
+                                    class="flex items-center gap-1 rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 transition-colors dark:border-border dark:text-muted-foreground dark:hover:bg-muted"
                                 >
                                     <ChevronLeft class="h-3 w-3" /> Retour
                                 </button>
@@ -697,7 +705,7 @@ function annuler() {
                                     <input
                                         v-model="recherchePharmacieTexte"
                                         placeholder="Recherche une pharmacie"
-                                        class="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                        :class="['pl-9 pr-3 py-2', agentInputClass]"
                                     />
                                 </div>
                                 <div class="flex gap-1.5">
@@ -710,7 +718,7 @@ function annuler() {
                                             'flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
                                             filtreType === f.value
                                                 ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                                : 'border-gray-300 text-gray-600 hover:bg-gray-50',
+                                                : 'border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-border dark:text-muted-foreground dark:hover:bg-muted',
                                         ]"
                                     >
                                         <component
@@ -734,7 +742,7 @@ function annuler() {
                                         'flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors',
                                         pharmacieId === p.id
                                             ? 'border-green-500 bg-green-50'
-                                            : 'border-gray-200 hover:border-green-300 hover:bg-green-50/40',
+                                            : 'border-gray-200 hover:border-green-300 hover:bg-green-50/40 dark:border-border dark:hover:border-emerald-600/50 dark:hover:bg-emerald-950/20',
                                     ]"
                                 >
                                     <div
@@ -801,7 +809,7 @@ function annuler() {
                     </div>
 
                     <!-- ── Section Médicaments ── -->
-                    <div class="rounded-xl border border-gray-200 p-4">
+                    <div :class="moduleAgentSectionClass">
                         <div class="mb-3 flex items-center justify-between">
                             <h2 class="text-sm font-semibold text-gray-400">
                                 Médicaments
@@ -845,7 +853,7 @@ function annuler() {
                                     <input
                                         v-model="m.designation"
                                         placeholder="Ex : 1000"
-                                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                        :class="agentInputClass"
                                     />
                                     <InputError
                                         :message="produitErr(i, 'designation')"
@@ -855,7 +863,7 @@ function annuler() {
                                     <input
                                         v-model="m.dosage"
                                         placeholder="Ex : 1000"
-                                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                        :class="agentInputClass"
                                     />
                                     <InputError
                                         :message="produitErr(i, 'dosage')"
@@ -865,7 +873,7 @@ function annuler() {
                                     <div class="relative">
                                         <select
                                             v-model="m.forme"
-                                            class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                            :class="['w-full appearance-none', agentInputClass]"
                                         >
                                             <option value="">
                                                 Choisir la forme
@@ -891,7 +899,7 @@ function annuler() {
                                         v-model.number="m.quantite"
                                         type="number"
                                         min="1"
-                                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                        :class="agentInputClass"
                                     />
                                     <InputError
                                         :message="produitErr(i, 'quantite')"
@@ -913,7 +921,7 @@ function annuler() {
                                             type="number"
                                             min="0"
                                             placeholder="Ex : 1000"
-                                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                            :class="agentInputClass"
                                         />
                                         <span
                                             class="shrink-0 text-xs text-gray-400"
@@ -933,7 +941,7 @@ function annuler() {
                                         <input
                                             :value="totalLigne(m).toFixed(0)"
                                             readonly
-                                            class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600"
+                                            class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:border-border dark:bg-muted/30 dark:text-muted-foreground"
                                         />
                                         <span
                                             class="shrink-0 text-xs text-gray-400"
@@ -969,7 +977,7 @@ function annuler() {
                     </div>
 
                     <!-- ── Section Informations paiement ── -->
-                    <div class="rounded-xl border border-gray-200 p-4">
+                    <div :class="moduleAgentSectionClass">
                         <h2 class="mb-3 text-sm font-semibold text-gray-400">
                             Informations paiement
                         </h2>
@@ -989,7 +997,7 @@ function annuler() {
                                 <div class="relative flex-1">
                                     <select
                                         v-model="modePaiementId"
-                                        class="w-full appearance-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        :class="agentInputClass"
                                     >
                                         <option value="">
                                             choisir le mode de paiement
@@ -1051,7 +1059,7 @@ function annuler() {
                                 v-model="commentaire"
                                 placeholder="Commentaires ..."
                                 rows="5"
-                                class="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                class="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:border-border dark:bg-input dark:text-foreground dark:placeholder:text-muted-foreground"
                             />
                             <InputError :message="errors.commentaire" />
                         </div>

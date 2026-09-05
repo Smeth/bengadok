@@ -195,8 +195,8 @@ const formatDate = (iso?: string) => {
                                     class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold"
                                     :class="
                                         item.alert_kind === 'nouvelle'
-                                            ? 'bg-sky-100 text-sky-800'
-                                            : 'bg-amber-100 text-amber-900'
+                                            ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200'
+                                            : 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200'
                                     "
                                 >
                                     {{ item.status_label }}

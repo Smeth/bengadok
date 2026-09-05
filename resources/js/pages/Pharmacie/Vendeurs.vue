@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
+    moduleCardClass,
     modulePrimaryButtonSolidClass,
     modulePrimarySelectedCardClass,
     modulePrimaryTextClass,
@@ -175,7 +176,7 @@ function creerVendeur() {
                 </Button>
             </div>
 
-            <div class="rounded-xl border bg-white shadow-sm">
+            <div :class="moduleCardClass">
                 <table class="w-full text-sm">
                     <thead class="border-b bg-muted/50">
                         <tr>

@@ -68,7 +68,7 @@ onMounted(() => {
     <Head title="Chargement — BengaDok" />
 
     <div
-        class="relative isolate flex min-h-svh w-full flex-col items-center justify-center overflow-hidden bg-white"
+        class="relative isolate flex min-h-svh w-full flex-col items-center justify-center overflow-hidden bg-white dark:bg-background"
         data-page="post-login-loading"
     >
         <!-- Halo dégradé bas (Figma : blur fort, bleu → vert) -->
@@ -153,7 +153,7 @@ onMounted(() => {
 
                 <!-- Cercle blanc Figma + ombre — logo sidebar-logo-benga.png -->
                 <div
-                    class="bengadok-loader-logo-in relative flex aspect-square w-[min(75vw,300px)] flex-col items-center justify-center gap-2 rounded-full bg-white px-4 py-6 opacity-0 shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)]"
+                    class="bengadok-loader-logo-in relative flex aspect-square w-[min(75vw,300px)] flex-col items-center justify-center gap-2 rounded-full bg-white px-4 py-6 opacity-0 shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)] dark:bg-card"
                 >
                     <img
                         src="/images/figma-assets/sidebar-logo-benga.png"

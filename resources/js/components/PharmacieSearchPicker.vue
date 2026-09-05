@@ -2,6 +2,8 @@
 import { Check, Search } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
+import { moduleFormSelectClass, moduleModalSurfaceClass } from '@/lib/bengadokUi';
+
 export type PharmacieOption = {
     id: number;
     designation: string;
@@ -107,7 +109,7 @@ function selectPharmacie(id: number) {
 
         <div class="flex flex-col gap-2 sm:flex-row">
             <div
-                class="flex min-w-0 flex-1 items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white pl-3 focus-within:border-[#459cd1] focus-within:ring-1 focus-within:ring-[#459cd1]"
+                class="flex min-w-0 flex-1 items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white pl-3 focus-within:border-[#459cd1] focus-within:ring-1 focus-within:ring-[#459cd1] dark:border-border dark:bg-input"
                 :class="{ 'border-[#dc3545]': error }"
             >
                 <Search
@@ -128,7 +130,7 @@ function selectPharmacie(id: number) {
             >
                 <select
                     v-model="zoneFilter"
-                    class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-8 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                    :class="moduleFormSelectClass"
                 >
                     <option value="">Toutes les zones</option>
                     <option

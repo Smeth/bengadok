@@ -3,7 +3,7 @@ import { router } from '@inertiajs/vue3';
 import { ImagePlus, Trash2, X, ZoomIn } from 'lucide-vue-next';
 import { onBeforeUnmount, ref, watch } from 'vue';
 import PharmaciePhotosUpload from '@/components/dok-pharma/PharmaciePhotosUpload.vue';
-import { modulePrimaryTextClass } from '@/lib/bengadokUi';
+import { moduleModalSurfaceClass, modulePrimaryTextClass } from '@/lib/bengadokUi';
 
 export type PieceJointeImage = {
     id: number;
@@ -181,7 +181,7 @@ onBeforeUnmount(closeViewer);
             @click.self="closeViewer"
         >
             <div
-                class="relative max-h-[90vh] max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl"
+                :class="['relative max-h-[90vh] max-w-lg', moduleModalSurfaceClass]"
             >
                 <div
                     class="flex items-center justify-between border-b px-4 py-3"

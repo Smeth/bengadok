@@ -121,7 +121,7 @@ function logout() {
     <Sidebar
         collapsible="icon"
         variant="inset"
-        class="border-r-0 bg-white shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)]"
+        class="border-r-0 bg-[var(--sidebar-bengadok-bg)] shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)] dark:shadow-black/40"
     >
         <SidebarHeader
             class="relative shrink-0 border-b-0 border-sidebar-border px-3 pb-4 pt-2 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-3"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ShoppingCart } from 'lucide-vue-next';
+import { moduleModalSurfaceClass } from '@/lib/bengadokUi';
 
 defineProps<{
     open: boolean;
@@ -21,7 +22,7 @@ const emit = defineEmits<{
             @click.self="emit('cancel')"
         >
             <div
-                class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+                :class="['w-full max-w-md', moduleModalSurfaceClass]"
             >
                 <div
                     class="flex items-center gap-3 border-b border-[#FCD34D] bg-[#FFFBEB] px-6 py-4"
@@ -32,7 +33,7 @@ const emit = defineEmits<{
                         <ShoppingCart class="size-5 text-[#F59E0B]" />
                     </div>
                     <div>
-                        <p class="text-[15px] font-extrabold text-gray-900">
+                        <p class="text-[15px] font-extrabold text-gray-900 dark:text-foreground">
                             Confirmer le retrait de la commande
                         </p>
                         <p v-if="numero" class="text-[12px] text-gray-500">
@@ -41,7 +42,7 @@ const emit = defineEmits<{
                     </div>
                 </div>
                 <div class="px-6 py-5">
-                    <p class="text-[14px] text-gray-700">
+                    <p class="text-[14px] text-gray-700 dark:text-muted-foreground">
                         Vous confirmez que la commande a bien été retirée par le
                         livreur en pharmacie.
                     </p>
@@ -53,11 +54,11 @@ const emit = defineEmits<{
                     </p>
                 </div>
                 <div
-                    class="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4"
+                    class="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-border"
                 >
                     <button
                         type="button"
-                        class="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-[13px] font-bold text-gray-700 transition-colors hover:bg-gray-50"
+                        class="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-[13px] font-bold text-gray-700 transition-colors hover:bg-gray-50 dark:border-border dark:bg-input dark:text-foreground dark:hover:bg-muted"
                         @click="emit('cancel')"
                     >
                         Annuler

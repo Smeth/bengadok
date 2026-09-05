@@ -15,6 +15,7 @@ import {
 import { ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { moduleFormSectionClass } from '@/lib/bengadokUi';
 
 const NICHE_OPTIONS = [
     { id: 'parent', label: 'Parent', icon: Baby },
@@ -107,11 +108,11 @@ function submit() {
     <Dialog :open="open" @update:open="emit('update:open', $event)">
         <DialogContent
             :show-close-button="false"
-            class="max-h-[min(90vh,760px)] gap-0 overflow-hidden rounded-[15px] border-[#ccc5c5] p-0 sm:max-w-[min(897px,calc(100vw-2rem))]"
+            class="max-h-[min(90vh,760px)] gap-0 overflow-hidden rounded-[15px] border-[#ccc5c5] p-0 dark:border-border sm:max-w-[min(897px,calc(100vw-2rem))]"
         >
             <!-- En-tête Figma : titre bleu + fermeture -->
             <div
-                class="relative flex shrink-0 items-center gap-3 border-b border-[#e8e4e4] bg-gradient-to-r from-[#459cd1]/12 via-white to-[#5bb66e]/10 px-5 py-3 pr-14 sm:px-6"
+                class="relative flex shrink-0 items-center gap-3 border-b border-[#e8e4e4] bg-gradient-to-r from-[#459cd1]/12 via-white to-[#5bb66e]/10 px-5 py-3 pr-14 dark:border-border dark:via-card dark:to-[#5bb66e]/15 sm:px-6"
             >
                 <div
                     class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[rgba(69,156,209,0.13)] text-[#459cd1]"
@@ -138,7 +139,7 @@ function submit() {
             >
                 <!-- Niches -->
                 <div
-                    class="rounded-[10px] border border-[#ccc5c5] bg-white p-4 sm:p-5"
+                    :class="moduleFormSectionClass"
                 >
                     <h3
                         class="text-base font-black text-[rgba(92,89,89,0.55)] sm:text-lg"
@@ -157,7 +158,7 @@ function submit() {
                             v-for="opt in NICHE_OPTIONS"
                             :key="opt.id"
                             type="button"
-                            class="flex h-[63px] w-[73px] shrink-0 flex-col items-center justify-between rounded-[9px] border border-[rgba(92,89,89,0.4)] bg-white py-1.5 text-center transition-all hover:bg-slate-50/80"
+                            class="flex h-[63px] w-[73px] shrink-0 flex-col items-center justify-between rounded-[9px] border border-[rgba(92,89,89,0.4)] bg-white py-1.5 text-center transition-all hover:bg-slate-50/80 dark:bg-input dark:hover:bg-muted/50"
                             :class="
                                 selectedNiches.includes(opt.id)
                                     ? 'ring-2 ring-[#459cd1] ring-offset-1 ring-offset-background'
@@ -180,7 +181,7 @@ function submit() {
                                 />
                             </div>
                             <span
-                                class="px-0.5 text-[8px] font-bold leading-tight text-black sm:text-[9px]"
+                                class="px-0.5 text-[8px] font-bold leading-tight text-black dark:text-foreground sm:text-[9px]"
                             >
                                 {{ opt.label }}
                             </span>
@@ -190,7 +191,7 @@ function submit() {
 
                 <!-- Canal -->
                 <div
-                    class="mt-4 rounded-[10px] border border-[#ccc5c5] bg-white p-4 sm:mt-5 sm:p-5"
+                    class="mt-4 rounded-[10px] border border-[#ccc5c5] bg-white p-4 dark:border-border dark:bg-card sm:mt-5 sm:p-5"
                 >
                     <h3
                         class="text-base font-black text-[rgba(92,89,89,0.55)] sm:text-lg"
@@ -207,7 +208,7 @@ function submit() {
                             v-for="opt in CANAL_OPTIONS"
                             :key="opt.id"
                             type="button"
-                            class="flex h-[63px] w-[73px] shrink-0 flex-col items-center justify-between rounded-[9px] border border-[rgba(92,89,89,0.4)] bg-white py-1.5 text-center transition-all hover:bg-slate-50/80"
+                            class="flex h-[63px] w-[73px] shrink-0 flex-col items-center justify-between rounded-[9px] border border-[rgba(92,89,89,0.4)] bg-white py-1.5 text-center transition-all hover:bg-slate-50/80 dark:bg-input dark:hover:bg-muted/50"
                             :class="
                                 selectedCanal === opt.id
                                     ? 'ring-2 ring-[#459cd1] ring-offset-1 ring-offset-background'
@@ -242,7 +243,7 @@ function submit() {
                                 </svg>
                             </div>
                             <span
-                                class="px-0.5 text-[8px] font-bold leading-tight text-black sm:text-[9px]"
+                                class="px-0.5 text-[8px] font-bold leading-tight text-black dark:text-foreground sm:text-[9px]"
                             >
                                 {{ opt.label }}
                             </span>

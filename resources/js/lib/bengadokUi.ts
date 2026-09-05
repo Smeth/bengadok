@@ -159,7 +159,19 @@ export const moduleLabelClass =
 export const moduleLabelLightClass =
     'text-base font-light text-black dark:text-foreground';
 
-/** Dialog shell modale commande. */
+/** Dialog shell modale (agent, dok-pharma…). */
+export const moduleModalSurfaceClass =
+    'overflow-hidden rounded-2xl bg-white shadow-2xl dark:border dark:border-border dark:bg-card';
+
+/** Section formulaire agent (bordure gray-200). */
+export const moduleAgentSectionClass =
+    'rounded-xl border border-gray-200 p-4 dark:border-border';
+
+/** Input rounded-lg générique. */
+export const moduleRoundedInputClass =
+    'rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#459cd1]/40 dark:border-border dark:bg-input dark:text-foreground';
+
+/** Dialog shell modale commande (positionnement Uppy/Dialog). */
 export const commandeModalShellClass =
     '!left-[50%] !top-[50%] !w-[650px] !max-w-[95vw] !-translate-x-1/2 !-translate-y-1/2 !max-h-[80vh] !overflow-hidden !rounded-[15px] !border !border-[#ccc5c5] !bg-white !p-0 !shadow-xl dark:!border-border dark:!bg-card';
 
