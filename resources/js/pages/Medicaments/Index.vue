@@ -736,14 +736,13 @@ const badgeTotal = computed(() =>
                     message="Aucun médicament avec les filtres actuels."
                 />
 
-                <div :class="modulePaginationWrapperClass">
-                    <ModulePagination
-                        :links="produits.links"
-                        :from="produits.from"
-                        :to="produits.to"
-                        :total="produits.total"
-                    />
-                </div>
+                <ModulePagination
+                    :wrapper-class="modulePaginationWrapperClass"
+                    :links="produits.links"
+                    :from="produits.from"
+                    :to="produits.to"
+                    :total="produits.total"
+                />
             </div>
 
             <div
@@ -969,17 +968,13 @@ const badgeTotal = computed(() =>
                     la première fiche.
                 </p>
 
-                <div
-                    v-if="dbMedicaments.links.length > 3"
-                    class="border-t border-border pt-4"
-                >
-                    <ModulePagination
-                        :links="dbMedicaments.links"
-                        :from="dbMedicaments.from"
-                        :to="dbMedicaments.to"
-                        :total="dbMedicaments.total"
-                    />
-                </div>
+                <ModulePagination
+                    wrapper-class="border-t border-border pt-4"
+                    :links="dbMedicaments.links"
+                    :from="dbMedicaments.from"
+                    :to="dbMedicaments.to"
+                    :total="dbMedicaments.total"
+                />
 
                 <Dialog
                     :open="medModalOpen"

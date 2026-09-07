@@ -217,17 +217,13 @@ function confirmerAchat() {
                     @open-ordonnance="openOrdonnance"
                 />
             </div>
-            <div
-                v-if="(commandes.links?.length ?? 0) > 3"
-                :class="[modulePaginationWrapperClass, 'mt-2']"
-            >
-                <ModulePagination
-                    :links="commandes.links"
-                    :from="commandes.from"
-                    :to="commandes.to"
-                    :total="commandes.total"
-                />
-            </div>
+            <ModulePagination
+                :wrapper-class="`${modulePaginationWrapperClass} mt-2`"
+                :links="commandes.links"
+                :from="commandes.from"
+                :to="commandes.to"
+                :total="commandes.total"
+            />
         </div>
 
         <DokPharmaValiderRetraitModal

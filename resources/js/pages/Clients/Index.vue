@@ -289,14 +289,13 @@ function nomComplet(c: Client) {
                     message="Aucun client avec les filtres actuels."
                 />
 
-                <div :class="modulePaginationWrapperClass">
-                    <ModulePagination
-                        :links="clients.links"
-                        :from="clients.from"
-                        :to="clients.to"
-                        :total="clients.total"
-                    />
-                </div>
+                <ModulePagination
+                    :wrapper-class="modulePaginationWrapperClass"
+                    :links="clients.links"
+                    :from="clients.from"
+                    :to="clients.to"
+                    :total="clients.total"
+                />
             </div>
 
             <ModuleEmptyState

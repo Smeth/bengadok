@@ -292,13 +292,12 @@ function formatDate(d: string) {
             </table>
         </div>
 
-        <div class="border-t border-border pt-4">
-            <ModulePagination
-                :links="commandes.links"
-                :from="commandes.from"
-                :to="commandes.to"
-                :total="commandes.total"
-            />
-        </div>
+        <ModulePagination
+            wrapper-class="border-t border-border pt-4"
+            :links="commandes.links"
+            :from="commandes.from"
+            :to="commandes.to"
+            :total="commandes.total"
+        />
     </div>
 </template>

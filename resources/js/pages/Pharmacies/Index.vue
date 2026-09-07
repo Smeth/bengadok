@@ -953,17 +953,14 @@ watch(
                 title="Carte des pharmacies BengaDok"
             />
 
-            <div
+            <ModulePagination
                 v-if="viewMode === 'liste' || viewMode === 'card'"
-                :class="modulePaginationWrapperClass"
-            >
-                <ModulePagination
-                    :links="pharmacies.links"
-                    :from="pharmacies.from"
-                    :to="pharmacies.to"
-                    :total="pharmacies.total"
-                />
-            </div>
+                :wrapper-class="modulePaginationWrapperClass"
+                :links="pharmacies.links"
+                :from="pharmacies.from"
+                :to="pharmacies.to"
+                :total="pharmacies.total"
+            />
             </template>
 
             <!-- Onglet : gestion de crédit (module) -->

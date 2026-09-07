@@ -346,14 +346,13 @@ function promouvoir(prospect: ProspectRow) {
                 message="Aucun prospect avec les filtres actuels."
             />
 
-            <div :class="modulePaginationWrapperClass">
-                <ModulePagination
-                    :links="prospects.links"
-                    :from="prospects.from"
-                    :to="prospects.to"
-                    :total="prospects.total"
-                />
-            </div>
+            <ModulePagination
+                :wrapper-class="modulePaginationWrapperClass"
+                :links="prospects.links"
+                :from="prospects.from"
+                :to="prospects.to"
+                :total="prospects.total"
+            />
         </div>
 
         <FlashToastHost />
