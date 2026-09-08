@@ -184,10 +184,10 @@ function openDetail(id: number) {
 
 watch(
     () => [
-        modals.showEnregistrementModal.value,
-        modals.showRelancerModal.value,
-        modals.showRecuModal.value,
-        modals.showBulkAnnulerModal.value,
+        modals.showEnregistrementModal,
+        modals.showRelancerModal,
+        modals.showRecuModal,
+        modals.showBulkAnnulerModal,
     ],
     (flags) => {
         if (flags.some(Boolean)) {
@@ -433,7 +433,7 @@ function filtrer(key: string, value: string) {
 
             <CommandeEnregistrementModal
                 v-model:open="modals.showEnregistrementModal"
-                :zones="modals.zones ?? []"
+                :zones="modals.zones"
                 :pharmacies="modals.pharmacies"
                 :arrondissements="modals.arrondissements"
                 :parapharma-produit-types="modals.parapharmaProduitTypes"
@@ -446,7 +446,7 @@ function filtrer(key: string, value: string) {
                 v-model:open="modals.showRelancerModal"
                 mode="relance"
                 :commande="modals.relancerCommande ?? undefined"
-                :zones="modals.zones ?? []"
+                :zones="modals.zones"
                 :pharmacies="modals.pharmacies"
                 :arrondissements="modals.arrondissements"
                 :parapharma-produit-types="modals.parapharmaProduitTypes"

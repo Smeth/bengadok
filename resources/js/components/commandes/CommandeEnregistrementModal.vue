@@ -13,7 +13,7 @@ import {
     ShoppingBag,
     X,
 } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, unref, watch } from 'vue';
 import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -89,8 +89,27 @@ const emit = defineEmits<{
     submit: [payload: FormEnregPayload];
 }>();
 
+/** Props parfois reçues comme Ref (lazy-load) — normalise en tableaux plats. */
+function asArray<T>(value: unknown): T[] {
+    const resolved = unref(value);
+    return Array.isArray(resolved) ? resolved : [];
+}
+
+const zonesList = computed(() => asArray<Zone>(props.zones));
+const pharmaciesList = computed(() => asArray<Pharmacie>(props.pharmacies));
+const arrondissementsList = computed(() => asArray<string>(props.arrondissements));
+const montantsLivraisonList = computed(
+    () =>
+        asArray<{ id: number; designation: number | string }>(
+            props.montantsLivraison,
+        ),
+);
+const parapharmaTypesList = computed(() =>
+    asArray<string>(props.parapharmaProduitTypes),
+);
+
 const defaultParapharmaType = computed(
-    () => props.parapharmaProduitTypes?.[0] ?? 'Parapharmacie',
+    () => parapharmaTypesList.value[0] ?? 'Parapharmacie',
 );
 
 const page = usePage();
@@ -205,7 +224,7 @@ const searchPharmacieEnreg = ref('');
 const pharmaciesZoneEnreg = computed(() => {
     if (!zoneEnreg.value) return [];
     const zoneId = Number(zoneEnreg.value);
-    let list = (props.pharmacies ?? []).filter(
+    let list = pharmaciesList.value.filter(
         (p) => (p.zone_id ?? (p.zone as { id?: number })?.id) === zoneId,
     );
     if (filtreTypeEnreg.value !== 'tous') {
@@ -298,7 +317,7 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
             quantite: p.pivot?.quantite ?? 1,
             prix_unitaire: Number(p.pivot?.prix_unitaire) ?? 0,
         };
-        if (isParapharmaType(p.type, props.parapharmaProduitTypes ?? [])) {
+        if (isParapharmaType(p.type, parapharmaTypesList.value)) {
             parapharma.push(base);
         } else {
             medicaments.push(base);
@@ -326,10 +345,10 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
     };
     ordonnanceUrlExistante.value = cmd.ordonnance?.file_url?.trim() || null;
     const ph = cmd.pharmacie;
-    if (ph?.id && props.pharmacies?.length) {
+    if (ph?.id && pharmaciesList.value.length) {
         let zoneId = ph.zone_id ?? ph.zone?.id;
         if (!zoneId) {
-            const found = props.pharmacies.find((p) => p.id === ph.id);
+            const found = pharmaciesList.value.find((p) => p.id === ph.id);
             zoneId = found?.zone_id ?? (found?.zone as { id?: number })?.id;
         }
         if (zoneId) {
@@ -372,8 +391,14 @@ function resetForm() {
 }
 
 function close() {
-    emit('update:open', false);
-    resetForm();
+    onDialogOpenChange(false);
+}
+
+function onDialogOpenChange(open: boolean) {
+    emit('update:open', open);
+    if (!open) {
+        resetForm();
+    }
 }
 
 function onSubmit() {
@@ -530,29 +555,32 @@ watch(
 
 watch(
     () => props.open,
-    (v) => {
+    (v, wasOpen) => {
         if (v) {
             if (props.mode === 'relance' && props.commande) {
                 fillFromCommande(props.commande);
             } else {
                 resetForm();
             }
+        } else if (wasOpen) {
+            resetForm();
         }
     },
 );
 
 watch(
-    () => props.apiErrors,
+    () => unref(props.apiErrors),
     (v) => {
-        if (v && Object.keys(v).length)
+        if (v && Object.keys(v).length) {
             errors.value = { ...errors.value, ...v };
+        }
     },
     { deep: true },
 );
 </script>
 
 <template>
-    <Dialog :open="open" @update:open="emit('update:open', $event)">
+    <Dialog :open="open" @update:open="onDialogOpenChange">
         <DialogContent
             :class="commandeModalShellClass"
             :show-close-button="false"
@@ -782,7 +810,7 @@ watch(
                                             Choisir un montant
                                         </option>
                                         <option
-                                            v-for="m in montantsLivraison"
+                                            v-for="m in montantsLivraisonList"
                                             :key="m.id"
                                             :value="String(m.id)"
                                         >
@@ -861,7 +889,7 @@ watch(
                                             Choisir un arrondissement…
                                         </option>
                                         <option
-                                            v-for="a in arrondissements"
+                                            v-for="a in arrondissementsList"
                                             :key="a"
                                             :value="a"
                                         >
@@ -899,7 +927,7 @@ watch(
                             class="grid grid-cols-2 gap-3 sm:grid-cols-4"
                         >
                             <button
-                                v-for="zone in zones"
+                                v-for="zone in zonesList"
                                 :key="zone.id"
                                 type="button"
                                 class="flex min-h-[90px] min-w-[110px] flex-col items-center justify-center gap-2 rounded-[10px] border border-[#ccc5c5] dark:border-border p-3 text-center transition-all hover:border-[#459cd1] hover:bg-[#459cd1]/10"

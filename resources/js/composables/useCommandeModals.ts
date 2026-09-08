@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/vue3';
-import { type ComputedRef, type Ref, ref } from 'vue';
+import { type ComputedRef, type Ref, reactive, ref, watch } from 'vue';
 import { useCommandeReferentiels } from '@/composables/useCommandeReferentiels';
 import type { FormEnregPayload } from '@/lib/commandeEnregistrementTypes';
 import {
@@ -98,7 +98,19 @@ export function useCommandeModals(options: {
         });
     }
 
-    return {
+    watch(showEnregistrementModal, (open) => {
+        if (!open) {
+            apiErrorsEnreg.value = {};
+        }
+    });
+
+    watch(showRelancerModal, (open) => {
+        if (!open) {
+            errorsRelancer.value = {};
+        }
+    });
+
+    return reactive({
         ...referentiels,
         relancerCommande,
         recuCommande,
@@ -116,7 +128,7 @@ export function useCommandeModals(options: {
         confirmBulkAnnuler,
         submitEnregistrementFromModal,
         submitRelancerFromModal,
-    };
+    });
 }
 
 export type { MotifOption };
