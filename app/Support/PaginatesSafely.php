@@ -12,8 +12,6 @@ final class PaginatesSafely
     /**
      * Paginate en revenant à la page 1 si la page demandée est hors limites
      * (ex. ?page=2 alors qu'il ne reste qu'un résultat).
-     *
-     * @param  Builder|QueryBuilder  $query
      */
     public static function paginate(
         Builder|QueryBuilder $query,

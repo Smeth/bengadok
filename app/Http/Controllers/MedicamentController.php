@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Support\PaginatesSafely;
 use App\Models\Commande;
 use App\Models\DbMedicament;
 use App\Models\Pharmacie;
 use App\Models\Produit;
+use App\Support\PaginatesSafely;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -113,17 +113,17 @@ class MedicamentController extends Controller
                 15,
                 'db_page',
             )->through(fn (DbMedicament $m) => [
-                    'id' => $m->id,
-                    'designation' => $m->designation,
-                    'dosage' => $m->dosage,
-                    'forme' => $m->forme,
-                    'prix' => $m->prix !== null ? (float) $m->prix : null,
-                    'laboratoire' => $m->laboratoire,
-                    'type' => $m->type,
-                    'code_article' => $m->code_article,
-                    'notes' => $m->notes,
-                    'created_at' => $m->created_at?->format('d/m/Y H:i'),
-                ])
+                'id' => $m->id,
+                'designation' => $m->designation,
+                'dosage' => $m->dosage,
+                'forme' => $m->forme,
+                'prix' => $m->prix !== null ? (float) $m->prix : null,
+                'laboratoire' => $m->laboratoire,
+                'type' => $m->type,
+                'code_article' => $m->code_article,
+                'notes' => $m->notes,
+                'created_at' => $m->created_at?->format('d/m/Y H:i'),
+            ])
             : new LengthAwarePaginator([], 0, 15, 1, [
                 'path' => $request->url(),
                 'query' => $request->query(),
