@@ -18,6 +18,7 @@ import {
 
 const props = defineProps<{
     commandes: DokPharmaCommande[];
+    search?: string;
 }>();
 
 const emit = defineEmits<{
@@ -61,6 +62,7 @@ function openOrdonnance(cmd: DokPharmaCommande) {
 </script>
 
 <template>
+    <div class="space-y-3">
     <div
         v-for="cmd in commandes"
         :key="cmd.id"
@@ -616,6 +618,12 @@ function openOrdonnance(cmd: DokPharmaCommande) {
         v-if="!commandes?.length"
         class="rounded-2xl bg-white/20 py-14 text-center text-[14px] font-medium text-white"
     >
-        Aucune nouvelle commande.
+        <template v-if="search?.trim()">
+            Aucune nouvelle commande ne correspond à « {{ search.trim() }} ».
+        </template>
+        <template v-else>
+            Aucune nouvelle commande.
+        </template>
     </p>
+    </div>
 </template>

@@ -83,7 +83,8 @@ export function useDokPharmaNouvellesForm(options: {
     watch(
         () => options.commandes.value,
         () => {
-            for (const cmd of options.commandes.value) {
+            const list = options.commandes.value ?? [];
+            for (const cmd of list) {
                 if (options.expandedCards.value.has(cmd.id)) {
                     initForm(cmd);
                 }

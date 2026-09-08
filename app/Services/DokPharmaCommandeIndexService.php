@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Commande;
 use App\Models\CommandePieceJointe;
+use App\Support\PaginatesSafely;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -69,12 +70,7 @@ class DokPharmaCommandeIndexService
             });
         }
 
-        $commandes = $query
-            ->latest('date')
-            ->latest('created_at')
-            ->paginate(20)
-            ->withQueryString()
-            ->through(fn ($c) => $this->mapCommandeRow($c));
+        $commandes = $this->paginateCommandes($query, $request);
 
         $stats = $this->statsForPharmacie($pharmacieId);
 
@@ -94,6 +90,18 @@ class DokPharmaCommandeIndexService
         return $user !== null
             && $user->hasRole('vendeur')
             && ! $user->hasRole('gerant');
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<Commande>  $query
+     * @return LengthAwarePaginator<int, array<string, mixed>>
+     */
+    private function paginateCommandes($query, Request $request): LengthAwarePaginator
+    {
+        $ordered = (clone $query)->latest('date')->latest('created_at');
+
+        return PaginatesSafely::paginate($ordered, $request, 20)
+            ->through(fn ($c) => $this->mapCommandeRow($c));
     }
 
     /**

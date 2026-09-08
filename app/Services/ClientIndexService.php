@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Client;
 use App\Models\ClientFrequence;
 use App\Models\Commande;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Support\PaginatesSafely;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -105,9 +105,7 @@ class ClientIndexService
             default => $query->orderBy('clients.prenom')->orderBy('clients.nom'),
         };
 
-        $paginator = $query
-            ->paginate(15)
-            ->withQueryString();
+        $paginator = PaginatesSafely::paginate($query, $request, 15);
 
         $clientIds = collect($paginator->items())->pluck('id')->all();
         $medicamentsParClient = $this->medicamentsFrequentsPourClients($clientIds);

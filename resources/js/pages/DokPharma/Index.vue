@@ -2,7 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import { Search, X } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import DokPharmaCommandesTabs from '@/components/dok-pharma/DokPharmaCommandesTabs.vue';
 import DokPharmaOngletAPreparer from '@/components/dok-pharma/DokPharmaOngletAPreparer.vue';
 import DokPharmaOngletEnAttente from '@/components/dok-pharma/DokPharmaOngletEnAttente.vue';
@@ -47,9 +47,12 @@ function commandesQueryParams(onglet: string) {
     const q = searchQuery.value.trim();
     return {
         onglet,
+        page: 1,
         ...(q ? { search: q } : {}),
     };
 }
+
+const commandesList = computed(() => props.commandes?.data ?? []);
 
 watchDebounced(
     searchQuery,
@@ -197,20 +200,21 @@ function confirmerAchat() {
             <div class="flex-1 space-y-3 pb-6">
                 <DokPharmaOngletNouvelles
                     v-if="onglet === 'nouvelles'"
-                    :commandes="commandes.data"
+                    :commandes="commandesList"
+                    :search="search"
                     @open-ordonnance="openOrdonnance"
                     @envoi-success="onEnvoiSuccess"
                 />
                 <DokPharmaOngletEnAttente
                     v-else-if="onglet === 'en_attente'"
-                    :commandes="commandes.data"
+                    :commandes="commandesList"
                     :expanded-cards="expandedCards"
                     @toggle-card="toggleCard"
                     @open-ordonnance="openOrdonnance"
                 />
                 <DokPharmaOngletAPreparer
                     v-else-if="onglet === 'a_preparer'"
-                    :commandes="commandes.data"
+                    :commandes="commandesList"
                     :expanded-cards="expandedCards"
                     @toggle-card="toggleCard"
                     @open-ordonnance="openOrdonnance"
@@ -218,7 +222,7 @@ function confirmerAchat() {
                 />
                 <DokPharmaOngletLivrees
                     v-else-if="onglet === 'livrees'"
-                    :commandes="commandes.data"
+                    :commandes="commandesList"
                     :expanded-cards="expandedCards"
                     @toggle-card="toggleCard"
                     @open-ordonnance="openOrdonnance"

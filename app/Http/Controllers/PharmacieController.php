@@ -7,7 +7,7 @@ use App\Models\Pharmacie;
 use App\Models\TypePharmacie;
 use App\Models\User;
 use App\Models\Zone;
-use App\Services\PharmacieCreditService;
+use App\Support\PaginatesSafely;
 use App\Services\PharmacieUsernameGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,7 +35,7 @@ class PharmacieController extends Controller
                 ->orWhere('telephone', 'like', "%{$search}%"))
             ->orderByDesc('created_at');
 
-        $pharmacies = $query->paginate(8)->withQueryString()->through(function ($p) {
+        $pharmacies = PaginatesSafely::paginate($query, $request, 8)->through(function ($p) {
             $lat = $p->latitude ?? ($p->zone?->latitude ? (float) $p->zone->latitude + ($p->id * 0.001) : -4.2694 + ($p->id % 6) * 0.01);
             $lng = $p->longitude ?? ($p->zone?->longitude ? (float) $p->zone->longitude + ($p->id * 0.0005) : 15.2712 + ($p->id % 6) * 0.01);
 

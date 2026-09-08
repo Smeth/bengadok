@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Commande;
 use App\Models\User;
 use App\Support\CommandeMedicamentsResume;
+use App\Support\PaginatesSafely;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -39,11 +40,11 @@ class CommandeIndexService
 
         $this->applyTemporalFilters($query, $request);
 
-        $commandes = $query
+        $query
             ->orderByRaw('COALESCE(commandes.date, DATE(commandes.created_at)) DESC')
-            ->orderByDesc('commandes.created_at')
-            ->paginate(15)
-            ->withQueryString()
+            ->orderByDesc('commandes.created_at');
+
+        $commandes = PaginatesSafely::paginate($query, $request, 15)
             ->through(fn (Commande $commande): array => $this->mapListRow($commande));
 
         $statsBase = $this->baseQuery($user);

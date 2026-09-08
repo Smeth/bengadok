@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Commande;
+use App\Support\PaginatesSafely;
 use App\Models\DbMedicament;
 use App\Models\Pharmacie;
 use App\Models\Produit;
@@ -69,7 +69,7 @@ class MedicamentController extends Controller
             ->flip()
             ->map(fn ($i) => $i + 1);
 
-        $produits = $query->paginate(15)->withQueryString()->through(function ($p) use ($rankingMap) {
+        $produits = PaginatesSafely::paginate($query, $request, 15)->through(function ($p) use ($rankingMap) {
             $prixPharmacy = $p->pharmacies->map(fn ($ph) => (float) ($ph->pivot->prix ?? $p->pu))->filter(fn ($v) => $v > 0)->values();
             $prixMin = $prixPharmacy->isEmpty() ? (float) $p->pu : $prixPharmacy->min();
             $prixMax = $prixPharmacy->isEmpty() ? (float) $p->pu : $prixPharmacy->max();
@@ -106,11 +106,12 @@ class MedicamentController extends Controller
         $pharmacies = Pharmacie::orderBy('designation')->get(['id', 'designation']);
 
         $dbMedicaments = $onglet === 'db_medicament'
-            ? DbMedicament::query()
-                ->orderBy('designation')
-                ->paginate(15, ['*'], 'db_page')
-                ->withQueryString()
-                ->through(fn (DbMedicament $m) => [
+            ? PaginatesSafely::paginate(
+                DbMedicament::query()->orderBy('designation'),
+                $request,
+                15,
+                'db_page',
+            )->through(fn (DbMedicament $m) => [
                     'id' => $m->id,
                     'designation' => $m->designation,
                     'dosage' => $m->dosage,

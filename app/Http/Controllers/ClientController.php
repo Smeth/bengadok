@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\ClientFrequence;
 use App\Models\Commande;
-use App\Services\ClientIndexService;
+use App\Support\PaginatesSafely;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -82,9 +82,7 @@ class ClientController extends Controller
             default => $query->orderByDesc('updated_at'),
         };
 
-        $prospects = $query
-            ->paginate(15)
-            ->withQueryString()
+        $prospects = PaginatesSafely::paginate($query, $request, 15)
             ->through(fn (Client $c) => [
                 'id' => $c->id,
                 'nom' => $c->nom,
