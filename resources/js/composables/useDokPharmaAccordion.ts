@@ -4,13 +4,17 @@ import type { DokPharmaCommande } from '@/lib/dokPharmaCommande';
 export function useDokPharmaAccordion(onExpand?: (cmd: DokPharmaCommande) => void) {
     const expandedCards = ref<Set<number>>(new Set());
 
+    function isExpanded(id: number): boolean {
+        return expandedCards.value.has(id);
+    }
+
     function toggleCard(cmd: DokPharmaCommande) {
         const next = new Set(expandedCards.value);
         if (next.has(cmd.id)) {
             next.delete(cmd.id);
         } else {
-            next.add(cmd.id);
             onExpand?.(cmd);
+            next.add(cmd.id);
         }
         expandedCards.value = next;
     }
@@ -21,5 +25,5 @@ export function useDokPharmaAccordion(onExpand?: (cmd: DokPharmaCommande) => voi
         expandedCards.value = next;
     }
 
-    return { expandedCards, toggleCard, collapseCard };
+    return { expandedCards, isExpanded, toggleCard, collapseCard };
 }

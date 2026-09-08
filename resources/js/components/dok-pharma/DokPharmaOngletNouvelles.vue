@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronUp, Clock, Eye, FileText, ShoppingCart } from 'lucide-vue-next';
+import { AlertCircle, ChevronDown, ChevronUp, Clock, Eye, FileText, Paperclip, ShoppingCart } from 'lucide-vue-next';
 import { toRef } from 'vue';
 import PharmaciePieceJointeSection from '@/components/dok-pharma/PharmaciePieceJointeSection.vue';
 import { useDokPharmaAccordion } from '@/composables/useDokPharmaAccordion';
@@ -27,9 +27,10 @@ const emit = defineEmits<{
 
 const commandesRef = toRef(props, 'commandes');
 
-const { expandedCards, toggleCard, collapseCard } = useDokPharmaAccordion((cmd) =>
-    initForm(cmd),
-);
+let initFormOnExpand: (cmd: DokPharmaCommande) => void = () => {};
+
+const { expandedCards, isExpanded, toggleCard, collapseCard } =
+    useDokPharmaAccordion((cmd) => initFormOnExpand(cmd));
 
 const {
     formLignes,
@@ -38,6 +39,9 @@ const {
     totalCmd,
     totalLigne,
     qteInvalide,
+    hasQteError,
+    hasPrixError,
+    hasUnresolvedDispo,
     toggleDispo,
     statutDispoForm,
     peutEnvoyerDisponibilite,
@@ -48,6 +52,8 @@ const {
     collapseCard,
     onEnvoiSuccess: () => emit('envoi-success'),
 });
+
+initFormOnExpand = initForm;
 
 function openOrdonnance(cmd: DokPharmaCommande) {
     emit('open-ordonnance', cmd);
@@ -126,7 +132,7 @@ function openOrdonnance(cmd: DokPharmaCommande) {
             </div>
             <component
                 :is="
-                    expandedCards.has(cmd.id)
+                    isExpanded(cmd.id)
                         ? ChevronUp
                         : ChevronDown
                 "
@@ -136,7 +142,7 @@ function openOrdonnance(cmd: DokPharmaCommande) {
 
         <!-- Corps développé -->
         <div
-            v-if="expandedCards.has(cmd.id)"
+            v-if="isExpanded(cmd.id)"
             class="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4 dark:border-border"
         >
             <!-- Box ordonnance -->
@@ -227,9 +233,12 @@ function openOrdonnance(cmd: DokPharmaCommande) {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-50">
-                            <tr
+                            <template
                                 v-for="p in cmd.produits"
                                 :key="p.id"
+                            >
+                            <tr
+                                v-if="formLignes[cmd.id]?.[p.id]"
                                 class="transition-opacity"
                                 :class="
                                     formLignes[cmd.id]?.[p.id]
@@ -487,6 +496,7 @@ function openOrdonnance(cmd: DokPharmaCommande) {
                                     </button>
                                 </td>
                             </tr>
+                            </template>
                         </tbody>
                     </table>
                 </div>

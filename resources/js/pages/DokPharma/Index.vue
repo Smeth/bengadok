@@ -73,6 +73,13 @@ function changeOnglet(o: string) {
 
 const { expandedCards, toggleCard } = useDokPharmaAccordion();
 
+watch(
+    () => props.onglet,
+    () => {
+        expandedCards.value = new Set();
+    },
+);
+
 const confirmModal = ref<{ open: boolean; cmd: DokPharmaCommande | null }>({
     open: false,
     cmd: null,

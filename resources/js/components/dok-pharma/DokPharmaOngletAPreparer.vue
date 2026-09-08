@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronUp, CheckCircle2, Clock, Eye, FileText, ShoppingCart } from 'lucide-vue-next';
+import { ChevronDown, ChevronUp, CheckCircle2, Clock, Eye, FileText, Paperclip, ShoppingCart } from 'lucide-vue-next';
 import PharmaciePieceJointeSection from '@/components/dok-pharma/PharmaciePieceJointeSection.vue';
 import { pharmacyOrderCardClass } from '@/lib/bengadokUi';
+import { isIdInExpandedSet } from '@/lib/expandedCardSet';
 import { sousTotalCommandeProduits } from '@/lib/commandeTotals';
 import {
     classesStatutDisponibiliteLigne,
@@ -17,10 +18,14 @@ import {
     type DokPharmaCommande,
 } from '@/lib/dokPharmaCommande';
 
-defineProps<{
+const props = defineProps<{
     commandes: DokPharmaCommande[];
     expandedCards: Set<number>;
 }>();
+
+function isExpanded(id: number): boolean {
+    return isIdInExpandedSet(props.expandedCards, id);
+}
 
 const emit = defineEmits<{
     'toggle-card': [cmd: DokPharmaCommande];
@@ -138,7 +143,7 @@ function askValiderAchat(cmd: DokPharmaCommande) {
                 <button @click="toggleCard(cmd)">
                     <component
                         :is="
-                            expandedCards.has(cmd.id)
+                            isExpanded(cmd.id)
                                 ? ChevronUp
                                 : ChevronDown
                         "
@@ -150,7 +155,7 @@ function askValiderAchat(cmd: DokPharmaCommande) {
 
         <!-- Corps développé (lecture seule) -->
         <div
-            v-if="expandedCards.has(cmd.id)"
+            v-if="isExpanded(cmd.id)"
             class="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4 dark:border-border"
         >
             <div
