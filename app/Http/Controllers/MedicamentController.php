@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\PaginatesSafely;
+use App\Models\Commande;
 use App\Models\DbMedicament;
 use App\Models\Pharmacie;
 use App\Models\Produit;

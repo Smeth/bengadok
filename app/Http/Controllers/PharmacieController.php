@@ -8,6 +8,7 @@ use App\Models\TypePharmacie;
 use App\Models\User;
 use App\Models\Zone;
 use App\Support\PaginatesSafely;
+use App\Services\PharmacieCreditService;
 use App\Services\PharmacieUsernameGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

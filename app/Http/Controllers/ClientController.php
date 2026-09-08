@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\ClientFrequence;
 use App\Models\Commande;
+use App\Services\ClientIndexService;
 use App\Support\PaginatesSafely;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
