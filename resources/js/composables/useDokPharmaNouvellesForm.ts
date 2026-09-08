@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/vue3';
 import { ref, watch, type Ref } from 'vue';
 import type { DokPharmaCommande, DokPharmaProduit } from '@/lib/dokPharmaCommande';
-import { estVenteLibreProduit } from '@/lib/dokPharmaCommande';
+import { estVenteLibreProduit, produitsCommande } from '@/lib/dokPharmaCommande';
 import { normaliserStatutDisponibiliteLigne } from '@/lib/commandeProduitStatus';
 
 export type LigneForm = {
@@ -54,17 +54,23 @@ export function useDokPharmaNouvellesForm(options: {
             formLignes.value[cmd.id] = {};
         }
         const map = formLignes.value[cmd.id];
-        cmd.produits.forEach((p) => {
-            if (map[p.id]) return;
-            const qDem = Number(p.pivot.quantite) || 1;
-            const st = normaliserStatutDisponibiliteLigne(p.pivot.status);
+        for (const p of produitsCommande(cmd)) {
+            if (!p?.id || map[p.id]) continue;
+            const pivot = p.pivot ?? {
+                quantite: 1,
+                prix_unitaire: 0,
+                status: 'en_attente',
+                quantite_confirmee: null,
+            };
+            const qDem = Number(pivot.quantite) || 1;
+            const st = normaliserStatutDisponibiliteLigne(pivot.status);
             map[p.id] = {
                 prix:
-                    p.pivot.prix_unitaire > 0
-                        ? String(p.pivot.prix_unitaire)
+                    Number(pivot.prix_unitaire) > 0
+                        ? String(pivot.prix_unitaire)
                         : '',
                 quantite: String(
-                    p.pivot.quantite_confirmee ?? p.pivot.quantite ?? qDem,
+                    pivot.quantite_confirmee ?? pivot.quantite ?? qDem,
                 ),
                 dispo:
                     st === 'disponible' || st === 'partiel'
@@ -74,7 +80,7 @@ export function useDokPharmaNouvellesForm(options: {
                           : null,
                 venteLibre: estVenteLibreProduit(p),
             };
-        });
+        }
         if (formCommentaires.value[cmd.id] === undefined) {
             formCommentaires.value[cmd.id] = cmd.commentaire_pharmacie ?? '';
         }
@@ -96,7 +102,7 @@ export function useDokPharmaNouvellesForm(options: {
     function totalCmd(cmd: DokPharmaCommande): number {
         const lignes = formLignes.value[cmd.id];
         if (!lignes) return 0;
-        return cmd.produits.reduce((sum, p) => {
+        return produitsCommande(cmd).reduce((sum, p) => {
             const l = lignes[p.id];
             if (l?.dispo !== true) return sum;
             const prix = parseNombreFr(l.prix);
@@ -127,15 +133,15 @@ export function useDokPharmaNouvellesForm(options: {
         if (ligne?.dispo !== true) return false;
         const qte = qteConfirmeeParsee(ligne);
         if (!Number.isFinite(qte)) return true;
-        return qte > produit.pivot.quantite || qte < 1;
+        return qte > (produit.pivot?.quantite ?? 0) || qte < 1;
     }
 
     function hasQteError(cmd: DokPharmaCommande): boolean {
-        return cmd.produits.some((p) => qteInvalide(cmd.id, p));
+        return produitsCommande(cmd).some((p) => qteInvalide(cmd.id, p));
     }
 
     function hasPrixError(cmd: DokPharmaCommande): boolean {
-        return cmd.produits.some((p) => {
+        return produitsCommande(cmd).some((p) => {
             const ligne = formLignes.value[cmd.id]?.[p.id];
             if (ligne?.dispo !== true) return false;
             const px = parseNombreFr(ligne.prix);
@@ -144,7 +150,7 @@ export function useDokPharmaNouvellesForm(options: {
     }
 
     function hasUnresolvedDispo(cmd: DokPharmaCommande): boolean {
-        return cmd.produits.some(
+        return produitsCommande(cmd).some(
             (p) => formLignes.value[cmd.id]?.[p.id]?.dispo === null,
         );
     }
@@ -181,7 +187,7 @@ export function useDokPharmaNouvellesForm(options: {
 
     function envoyer(cmd: DokPharmaCommande) {
         if (!peutEnvoyerDisponibilite(cmd)) return;
-        const lignes = cmd.produits.map((p) => {
+        const lignes = produitsCommande(cmd).map((p) => {
             const ligne = formLignes.value[cmd.id]?.[p.id];
             const qte = qteConfirmeeParsee(ligne);
             const pxBrut = ligne?.dispo === true ? parseNombreFr(ligne.prix) : 0;
@@ -190,7 +196,7 @@ export function useDokPharmaNouvellesForm(options: {
                 produit_id: p.id,
                 status: ligne?.dispo === true ? 'disponible' : 'indisponible',
                 prix_unitaire: prixUnitaire,
-                quantite_confirmee: Number.isFinite(qte) ? qte : p.pivot.quantite,
+                quantite_confirmee: Number.isFinite(qte) ? qte : (p.pivot?.quantite ?? 1),
                 vente_libre: ligne?.venteLibre ?? false,
             };
         });

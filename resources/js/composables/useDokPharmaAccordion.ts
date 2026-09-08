@@ -1,8 +1,11 @@
-import { ref } from 'vue';
+import { ref, type Ref } from 'vue';
 import type { DokPharmaCommande } from '@/lib/dokPharmaCommande';
 
-export function useDokPharmaAccordion(onExpand?: (cmd: DokPharmaCommande) => void) {
-    const expandedCards = ref<Set<number>>(new Set());
+export function useDokPharmaAccordion(
+    onExpand?: (cmd: DokPharmaCommande) => void,
+    externalExpandedCards?: Ref<Set<number>>,
+) {
+    const expandedCards = externalExpandedCards ?? ref<Set<number>>(new Set());
 
     function isExpanded(id: number): boolean {
         return expandedCards.value.has(id);
@@ -13,7 +16,12 @@ export function useDokPharmaAccordion(onExpand?: (cmd: DokPharmaCommande) => voi
         if (next.has(cmd.id)) {
             next.delete(cmd.id);
         } else {
-            onExpand?.(cmd);
+            try {
+                onExpand?.(cmd);
+            } catch (error) {
+                console.error('[DokPharma] Erreur initialisation formulaire', error);
+                return;
+            }
             next.add(cmd.id);
         }
         expandedCards.value = next;

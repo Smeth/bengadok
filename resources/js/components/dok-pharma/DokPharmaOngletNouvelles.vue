@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AlertCircle, ChevronDown, ChevronUp, Clock, Eye, FileText, Paperclip, ShoppingCart } from 'lucide-vue-next';
-import { toRef } from 'vue';
+import { toRef, ref } from 'vue';
 import PharmaciePieceJointeSection from '@/components/dok-pharma/PharmaciePieceJointeSection.vue';
 import { useDokPharmaAccordion } from '@/composables/useDokPharmaAccordion';
 import { useDokPharmaNouvellesForm } from '@/composables/useDokPharmaNouvellesForm';
@@ -13,6 +13,7 @@ import { clientNomAvecCivilite } from '@/lib/clientDisplayName';
 import {
     nomCommandeVisible,
     peutAjouterPieceJointe,
+    produitsCommande,
     type DokPharmaCommande,
 } from '@/lib/dokPharmaCommande';
 
@@ -27,11 +28,7 @@ const emit = defineEmits<{
 }>();
 
 const commandesRef = toRef(props, 'commandes');
-
-let initFormOnExpand: (cmd: DokPharmaCommande) => void = () => {};
-
-const { expandedCards, isExpanded, toggleCard, collapseCard } =
-    useDokPharmaAccordion((cmd) => initFormOnExpand(cmd));
+const expandedCards = ref<Set<number>>(new Set());
 
 const {
     formLignes,
@@ -50,11 +47,18 @@ const {
 } = useDokPharmaNouvellesForm({
     commandes: commandesRef,
     expandedCards,
-    collapseCard,
+    collapseCard: (cmdId) => {
+        const next = new Set(expandedCards.value);
+        next.delete(cmdId);
+        expandedCards.value = next;
+    },
     onEnvoiSuccess: () => emit('envoi-success'),
 });
 
-initFormOnExpand = initForm;
+const { isExpanded, toggleCard } = useDokPharmaAccordion(
+    initForm,
+    expandedCards,
+);
 
 function openOrdonnance(cmd: DokPharmaCommande) {
     emit('open-ordonnance', cmd);
@@ -236,7 +240,7 @@ function openOrdonnance(cmd: DokPharmaCommande) {
                         </thead>
                         <tbody class="divide-y divide-gray-50">
                             <template
-                                v-for="p in cmd.produits"
+                                v-for="p in produitsCommande(cmd)"
                                 :key="p.id"
                             >
                             <tr

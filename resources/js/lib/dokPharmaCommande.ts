@@ -56,7 +56,11 @@ export function qteDisponibleNombre(p: DokPharmaProduit): number {
 }
 
 export function estVenteLibreProduit(p: DokPharmaProduit): boolean {
-    return Boolean(p.pivot.vente_libre);
+    return Boolean(p.pivot?.vente_libre);
+}
+
+export function produitsCommande(cmd: DokPharmaCommande): DokPharmaProduit[] {
+    return Array.isArray(cmd.produits) ? cmd.produits : [];
 }
 
 export function qteDisponibleAffichee(p: DokPharmaProduit): string {

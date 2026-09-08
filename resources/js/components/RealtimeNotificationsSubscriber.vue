@@ -90,6 +90,7 @@ function reloadPropsAfterCommandeBroadcast() {
                   ]
                 : ['notifications', 'pharmacyStats'],
             preserveScroll: true,
+            preserveState: true,
             onSuccess,
         });
         return;
