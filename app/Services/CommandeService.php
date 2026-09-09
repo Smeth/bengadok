@@ -223,7 +223,13 @@ class CommandeService
             $this->syncProduitsFromEdition($commande, $validated['produits']);
 
             $commande->load('produits');
-            $montants = CommandeMontantCalculator::fromProduitsRelation($commande->produits);
+            // Édition réservée aux statuts nouvelle / en_attente : les lignes sont souvent
+            // encore « en_attente » (comme à la création) et doivent compter dans le panier.
+            $montants = CommandeMontantCalculator::fromProduitsRelation(
+                $commande->produits,
+                excludeIndisponible: true,
+                excludeEnAttente: false,
+            );
             $montantLivraison = $commande->montant_livraison_id
                 ? (float) (MontantLivraison::find($commande->montant_livraison_id)?->designation ?? 0)
                 : 0.0;

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { ImagePlus, Trash2, X, ZoomIn } from 'lucide-vue-next';
+import { ImagePlus, RefreshCw, Trash2, X, ZoomIn, ZoomOut } from 'lucide-vue-next';
 import { onBeforeUnmount, ref, watch } from 'vue';
 import PharmaciePhotosUpload from '@/components/dok-pharma/PharmaciePhotosUpload.vue';
+import { useImageZoomPan } from '@/composables/useImageZoomPan';
 import { moduleModalSurfaceClass, modulePrimaryTextClass } from '@/lib/bengadokUi';
 
 export type PieceJointeImage = {
@@ -33,10 +34,25 @@ const viewer = ref<{ open: boolean; url: string; title: string }>({
     title: '',
 });
 
+const {
+    zoomPercent,
+    dragging,
+    canPan,
+    imageTransform,
+    resetView,
+    zoomIn,
+    zoomOut,
+    handleWheel,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+} = useImageZoomPan({ max: 2 });
+
 const isUploading = () => uploadingCount.value > 0;
 
 function openViewer(pj: PieceJointeImage) {
     if (!pj.file_url) return;
+    resetView();
     viewer.value = {
         open: true,
         url: pj.file_url,
@@ -46,6 +62,7 @@ function openViewer(pj: PieceJointeImage) {
 
 function closeViewer() {
     viewer.value.open = false;
+    resetView();
 }
 
 function uploadFile(file: File) {
@@ -177,32 +194,99 @@ onBeforeUnmount(closeViewer);
     <Teleport to="body">
         <div
             v-if="viewer.open"
-            class="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4"
+            class="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            style="background: rgba(0, 0, 0, 0.55)"
             @click.self="closeViewer"
         >
             <div
-                :class="['relative max-h-[90vh] max-w-lg', moduleModalSurfaceClass]"
+                :class="[
+                    'relative flex max-h-[90vh] w-full max-w-[500px] flex-col',
+                    moduleModalSurfaceClass,
+                ]"
             >
                 <div
-                    class="flex items-center justify-between border-b px-4 py-3"
+                    class="flex items-center gap-3 border-b border-gray-100 px-5 py-4 dark:border-border"
                 >
-                    <p class="truncate text-[14px] font-bold text-gray-900">
+                    <p
+                        class="min-w-0 flex-1 truncate text-[14px] font-extrabold text-gray-900 dark:text-foreground"
+                    >
                         {{ viewer.title }}
                     </p>
                     <button
                         type="button"
-                        class="rounded-full p-1.5 text-gray-500 hover:bg-gray-100"
+                        class="flex size-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 dark:bg-muted dark:text-muted-foreground dark:hover:bg-muted/80"
                         @click="closeViewer"
                     >
-                        <X class="size-5" />
+                        <X class="size-4" />
                     </button>
                 </div>
-                <div class="max-h-[75vh] overflow-auto p-3">
-                    <img
-                        :src="viewer.url"
-                        :alt="viewer.title"
-                        class="mx-auto max-h-[70vh] w-auto max-w-full object-contain"
-                    />
+                <div
+                    class="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-2 dark:border-border dark:bg-muted/40"
+                >
+                    <button
+                        type="button"
+                        class="flex size-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 dark:border-border dark:bg-input dark:text-foreground dark:hover:bg-muted"
+                        @click="zoomOut"
+                    >
+                        <ZoomOut class="size-3.5" />
+                    </button>
+                    <span
+                        class="min-w-[40px] text-center text-[12px] font-semibold text-gray-700 dark:text-foreground"
+                        >{{ zoomPercent }}%</span
+                    >
+                    <button
+                        type="button"
+                        class="flex size-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 dark:border-border dark:bg-input dark:text-foreground dark:hover:bg-muted"
+                        @click="zoomIn"
+                    >
+                        <ZoomIn class="size-3.5" />
+                    </button>
+                    <button
+                        type="button"
+                        class="flex size-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 dark:border-border dark:bg-input dark:text-foreground dark:hover:bg-muted"
+                        aria-label="Réinitialiser le zoom"
+                        @click="resetView"
+                    >
+                        <RefreshCw class="size-3.5" />
+                    </button>
+                </div>
+                <div
+                    class="relative h-[min(70vh,520px)] w-full overflow-hidden bg-gray-100 dark:bg-muted/30"
+                    :class="
+                        canPan
+                            ? dragging
+                                ? 'cursor-grabbing'
+                                : 'cursor-grab'
+                            : 'cursor-default'
+                    "
+                    @wheel.prevent="handleWheel"
+                    @pointerdown="onPointerDown"
+                    @pointermove="onPointerMove"
+                    @pointerup="onPointerUp"
+                    @pointercancel="onPointerUp"
+                    @pointerleave="onPointerUp"
+                >
+                    <div
+                        class="flex h-full w-full items-center justify-center p-4"
+                    >
+                        <img
+                            :src="viewer.url"
+                            :alt="viewer.title"
+                            class="max-h-full max-w-full select-none rounded-lg object-contain shadow"
+                            :style="{
+                                transform: imageTransform,
+                                transformOrigin: 'center center',
+                            }"
+                            draggable="false"
+                            @click.stop
+                        />
+                    </div>
+                    <p
+                        v-if="canPan"
+                        class="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs text-white"
+                    >
+                        Glissez pour déplacer l’image
+                    </p>
                 </div>
             </div>
         </div>

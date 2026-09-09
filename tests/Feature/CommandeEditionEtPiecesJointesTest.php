@@ -6,6 +6,7 @@ use App\Models\AppSetting;
 use App\Models\Client;
 use App\Models\Commande;
 use App\Models\CommandePieceJointe;
+use App\Models\Produit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -162,6 +163,79 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
 
         $this->assertSame('F', $client->sexe);
         $this->assertSame('Sa mère', $commande->beneficiaire);
+        $this->assertSame(1500.0, (float) $commande->prix_medicaments);
+        $this->assertSame(1500.0, (float) $commande->prix_total);
+    }
+
+    public function test_update_commande_preserves_montants_when_lines_still_en_attente(): void
+    {
+        $this->seedRoles();
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+        $client = $this->createClient();
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'nouvelle',
+            'prix_medicaments' => 6000,
+            'prix_parapharma' => 2000,
+            'prix_total' => 8000,
+        ]);
+
+        $med = Produit::query()->create([
+            'designation' => 'Stilnox',
+            'dosage' => '10mg',
+            'forme' => 'Comprimé',
+        ]);
+        $para = Produit::query()->create([
+            'designation' => 'Lait Cerave',
+            'type' => 'Parapharmacie',
+        ]);
+
+        $commande->produits()->attach($med->id, [
+            'quantite' => 1,
+            'prix_unitaire' => 6000,
+            'status' => 'en_attente',
+        ]);
+        $commande->produits()->attach($para->id, [
+            'quantite' => 1,
+            'prix_unitaire' => 2000,
+            'status' => 'en_attente',
+            'type' => 'Parapharmacie',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch("/commandes/{$commande->id}", [
+                'client_id' => $client->id,
+                'client_nom' => $client->nom,
+                'client_prenom' => $client->prenom,
+                'client_tel' => $client->tel,
+                'client_adresse' => $client->adresse,
+                'pharmacie_id' => $pharmacie->id,
+                'produits' => [
+                    [
+                        'id' => $med->id,
+                        'designation' => 'Stilnox',
+                        'dosage' => '10mg',
+                        'forme' => 'Comprimé',
+                        'quantite' => 1,
+                        'prix_unitaire' => 6000,
+                    ],
+                    [
+                        'id' => $para->id,
+                        'designation' => 'Lait Cerave',
+                        'type' => 'Parapharmacie',
+                        'quantite' => 1,
+                        'prix_unitaire' => 2000,
+                    ],
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $commande->refresh();
+
+        $this->assertSame(6000.0, (float) $commande->prix_medicaments);
+        $this->assertSame(2000.0, (float) $commande->prix_parapharma);
+        $this->assertSame(8000.0, (float) $commande->prix_total);
     }
 
     public function test_recu_is_available_for_delivered_commande(): void
