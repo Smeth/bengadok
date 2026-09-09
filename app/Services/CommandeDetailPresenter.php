@@ -41,6 +41,12 @@ class CommandeDetailPresenter
     {
         $payload = $commande->toArray();
 
+        // Date métier = jour calendaire (Y-m-d). Évite le décalage J-1
+        // quand Laravel sérialise minuit WAT en ISO UTC (…T23:00:00Z).
+        if ($commande->date) {
+            $payload['date'] = $commande->date->format('Y-m-d');
+        }
+
         if ($commande->relationLoaded('piecesJointes')) {
             $payload['pieces_jointes'] = $commande->piecesJointes
                 ->map(fn (CommandePieceJointe $pj) => $pj->toFrontendArray())

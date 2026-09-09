@@ -4,22 +4,10 @@
  */
 export function formatDateFrLocal(d: string | null | undefined): string {
     if (d == null || String(d).trim() === '') return '-';
-    const s = String(d).trim();
-    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
-    if (m) {
-        const dt = new Date(
-            Number(m[1]),
-            Number(m[2]) - 1,
-            Number(m[3]),
-        );
-        if (Number.isNaN(dt.getTime())) return '-';
-        return dt.toLocaleDateString('fr-FR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-        });
-    }
-    const dt = new Date(s);
+    const parts = parseDatePartLocal(d);
+    if (!parts) return '-';
+    const [y, mo, day] = parts;
+    const dt = new Date(y, mo - 1, day);
     if (Number.isNaN(dt.getTime())) return '-';
     return dt.toLocaleDateString('fr-FR', {
         day: '2-digit',
@@ -56,7 +44,26 @@ export function formatCommandeDateHeure(
     createdAt?: string | null,
     timeZone: string = DEFAULT_TZ,
 ): string {
-    const datePart = parseDatePartLocal(date);
+    // Déjà formaté côté serveur (ex. DokPharma) : "dd/mm/yyyy HH:mm"
+    const already =
+        typeof date === 'string'
+            ? /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{1,2}:\d{2}))?/.exec(
+                  date.trim(),
+              )
+            : null;
+    if (already) {
+        if (already[4]) {
+            const [hh, mm] = already[4].split(':');
+            return `${already[1]}/${already[2]}/${already[3]} ${String(Number(hh)).padStart(2, '0')}:${String(Number(mm)).padStart(2, '0')}`;
+        }
+        const time =
+            extractHeureCommande(heurs) ??
+            extractTimeFromIso(createdAt, timeZone) ??
+            '00:00';
+        return `${already[1]}/${already[2]}/${already[3]} ${time}`;
+    }
+
+    const datePart = parseDatePartLocal(date, timeZone);
     if (datePart) {
         const time =
             extractHeureCommande(heurs) ??
@@ -88,13 +95,36 @@ export function formatCommandeDateHeure(
 
 function parseDatePartLocal(
     date: string | null | undefined,
+    timeZone: string = DEFAULT_TZ,
 ): [number, number, number] | null {
     if (date == null || String(date).trim() === '') return null;
-    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(date).trim());
-    if (m) {
-        return [Number(m[1]), Number(m[2]), Number(m[3])];
+    const s = String(date).trim();
+
+    // Jour calendaire pur (sans heure) — ne pas interpréter en UTC.
+    const dayOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (dayOnly) {
+        return [Number(dayOnly[1]), Number(dayOnly[2]), Number(dayOnly[3])];
     }
-    const dt = new Date(String(date));
+
+    // ISO datetime : prendre le jour dans le fuseau métier (ex. WAT),
+    // pas le préfixe UTC (minuit WAT → veille en Z).
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+        const dt = new Date(s);
+        if (Number.isNaN(dt.getTime())) return null;
+        const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        }).formatToParts(dt);
+        const y = Number(parts.find((p) => p.type === 'year')?.value);
+        const mo = Number(parts.find((p) => p.type === 'month')?.value);
+        const d = Number(parts.find((p) => p.type === 'day')?.value);
+        if (!y || !mo || !d) return null;
+        return [y, mo, d];
+    }
+
+    const dt = new Date(s);
     if (Number.isNaN(dt.getTime())) return null;
     return [dt.getFullYear(), dt.getMonth() + 1, dt.getDate()];
 }

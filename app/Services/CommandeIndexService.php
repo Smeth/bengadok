@@ -93,7 +93,7 @@ class CommandeIndexService
         return [
             'id' => $commande->id,
             'numero' => $commande->numero,
-            'date' => $commande->date,
+            'date' => $commande->date?->format('Y-m-d'),
             'status' => $commande->status,
             'prix_total' => (float) $commande->prix_total,
             'medicaments_resume' => CommandeMedicamentsResume::fromCollection($commande->produits),
