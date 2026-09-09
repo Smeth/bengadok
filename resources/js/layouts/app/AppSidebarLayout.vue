@@ -25,13 +25,15 @@ const isCommandes = computed(() => page.url.startsWith('/commandes'));
 const isPharmacies = computed(() => page.url.startsWith('/pharmacies'));
 const isMedicaments = computed(() => page.url.startsWith('/medicaments'));
 const isClients = computed(() => page.url.startsWith('/clients'));
+const isUtilisateurs = computed(() => page.url.startsWith('/utilisateurs'));
 const hasGradientBg = computed(
     () =>
         isDashboard.value ||
         isCommandes.value ||
         isPharmacies.value ||
         isMedicaments.value ||
-        isClients.value,
+        isClients.value ||
+        isUtilisateurs.value,
 );
 </script>
 

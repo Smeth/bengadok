@@ -115,7 +115,7 @@ class ParametresController extends Controller
         $row = AppSetting::ensureRowExists();
         $row->update(['commande_creation_champs' => $current]);
 
-        return back()->with('status', 'Champs obligatoires (création commande) enregistrés.');
+        return back()->with('status', 'Champs obligatoires (commandes) enregistrés.');
     }
 
     public function updateParapharma(Request $request)

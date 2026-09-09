@@ -766,13 +766,6 @@ const badgeTotal = computed(() =>
                             </h2>
                         </div>
                         <p
-                            class="max-w-2xl text-sm leading-relaxed text-muted-foreground"
-                        >
-                            Référentiel local indépendant du catalogue et des
-                            commandes. Utilisez le bouton ci-contre pour saisir
-                            une fiche complète (prix, laboratoire, etc.).
-                        </p>
-                        <p
                             class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800/50 dark:bg-amber-900/20 dark:text-amber-200"
                         >
                             <strong>Module isolé :</strong> Les médicaments

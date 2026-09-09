@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Check, Search } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { Check, ChevronLeft, ChevronRight, Search } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 
-import { moduleFormSelectClass, moduleModalSurfaceClass } from '@/lib/bengadokUi';
+import { moduleFormSelectClass } from '@/lib/bengadokUi';
 
 export type PharmacieOption = {
     id: number;
@@ -12,6 +12,9 @@ export type PharmacieOption = {
     zone?: { id?: number; designation?: string } | null;
     zone_id?: number | null;
 };
+
+/** Cartes par ligne (une seule rangée, pagination au-delà). */
+const PAGE_SIZE = 2;
 
 const props = withDefaults(
     defineProps<{
@@ -30,6 +33,7 @@ const emit = defineEmits<{
 
 const search = ref('');
 const zoneFilter = ref<number | ''>('');
+const currentPage = ref(1);
 
 const zones = computed(() => {
     const map = new Map<number, string>();
@@ -71,17 +75,80 @@ const filteredPharmacies = computed(() => {
     );
 });
 
+const totalFiltered = computed(() => filteredPharmacies.value.length);
+
+const totalPages = computed(() =>
+    Math.max(1, Math.ceil(totalFiltered.value / PAGE_SIZE)),
+);
+
+const showPagination = computed(() => totalFiltered.value > PAGE_SIZE);
+
+const paginatedPharmacies = computed(() => {
+    const start = (currentPage.value - 1) * PAGE_SIZE;
+    return filteredPharmacies.value.slice(start, start + PAGE_SIZE);
+});
+
+const rangeLabel = computed(() => {
+    if (!totalFiltered.value) {
+        return '';
+    }
+
+    const from = (currentPage.value - 1) * PAGE_SIZE + 1;
+    const to = Math.min(currentPage.value * PAGE_SIZE, totalFiltered.value);
+
+    return `${from}–${to} sur ${totalFiltered.value}`;
+});
+
 const selectedPharmacie = computed(() =>
     props.pharmacies.find((p) => String(p.id) === String(props.modelValue)),
 );
 
+watch([search, zoneFilter], () => {
+    currentPage.value = 1;
+});
+
+watch(totalPages, (pages) => {
+    if (currentPage.value > pages) {
+        currentPage.value = pages;
+    }
+});
+
+function ensureSelectedVisible(): void {
+    if (!props.modelValue || !filteredPharmacies.value.length) {
+        return;
+    }
+
+    const index = filteredPharmacies.value.findIndex(
+        (p) => String(p.id) === String(props.modelValue),
+    );
+
+    if (index >= 0) {
+        currentPage.value = Math.floor(index / PAGE_SIZE) + 1;
+    }
+}
+
+watch(() => props.modelValue, ensureSelectedVisible, { immediate: true });
+watch(filteredPharmacies, ensureSelectedVisible);
+
 function selectPharmacie(id: number) {
     emit('update:modelValue', id);
+}
+
+function goToPreviousPage() {
+    if (currentPage.value > 1) {
+        currentPage.value -= 1;
+    }
+}
+
+function goToNextPage() {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value += 1;
+    }
 }
 </script>
 
 <template>
-    <div class="space-y-3">
+    <div class="min-w-0 max-w-full space-y-3">
         <div
             v-if="selectedPharmacie"
             class="flex items-start gap-3 rounded-[10px] border border-[rgba(91,182,110,0.45)] bg-[rgba(91,182,110,0.12)] px-3 py-2.5"
@@ -107,7 +174,7 @@ function selectPharmacie(id: number) {
             </div>
         </div>
 
-        <div class="flex flex-col gap-2 sm:flex-row">
+        <div class="flex min-w-0 flex-col gap-2 sm:flex-row">
             <div
                 class="flex min-w-0 flex-1 items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white pl-3 focus-within:border-[#459cd1] focus-within:ring-1 focus-within:ring-[#459cd1] dark:border-border dark:bg-input"
                 :class="{ 'border-[#dc3545]': error }"
@@ -126,7 +193,7 @@ function selectPharmacie(id: number) {
             </div>
             <div
                 v-if="zones.length > 1"
-                class="relative shrink-0 sm:w-48"
+                class="relative min-w-0 shrink-0 sm:w-48"
             >
                 <select
                     v-model="zoneFilter"
@@ -144,52 +211,97 @@ function selectPharmacie(id: number) {
             </div>
         </div>
 
-        <div
-            class="grid max-h-52 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2"
-            role="listbox"
-            aria-label="Liste des pharmacies"
+        <p
+            v-if="showPagination && !search.trim()"
+            class="text-xs text-[rgba(92,89,89,0.65)]"
         >
+            {{ totalFiltered }} pharmacies — utilisez la recherche ou parcourez
+            les pages pour affiner.
+        </p>
+
+        <div class="min-w-0 space-y-2">
             <p
                 v-if="!filteredPharmacies.length"
-                class="col-span-full py-8 text-center text-sm text-[rgba(92,89,89,0.5)]"
+                class="py-8 text-center text-sm text-[rgba(92,89,89,0.5)]"
             >
                 Aucune pharmacie ne correspond à votre recherche.
             </p>
-            <button
-                v-for="p in filteredPharmacies"
-                :key="p.id"
-                type="button"
-                role="option"
-                :aria-selected="String(modelValue) === String(p.id)"
-                class="flex min-h-[88px] items-center justify-between gap-2 rounded-[10px] border p-3 text-left transition-all"
-                :class="
-                    String(modelValue) === String(p.id)
-                        ? 'border-[rgba(92,89,89,0.25)] bg-[rgba(91,182,110,0.18)] ring-1 ring-[rgba(91,182,110,0.35)]'
-                        : 'border-[rgba(92,89,89,0.25)] hover:bg-[rgba(91,182,110,0.08)]'
-                "
-                @click="selectPharmacie(p.id)"
+            <div
+                v-else
+                class="grid min-w-0 grid-cols-2 gap-2"
+                role="listbox"
+                aria-label="Liste des pharmacies"
             >
-                <div class="min-w-0 flex-1">
-                    <p class="truncate text-[13px] font-bold text-[#374151]">
-                        {{ p.designation }}
-                    </p>
-                    <p class="truncate text-[11px] text-[#94a3b8]">
-                        <template v-if="p.zone?.designation">
-                            {{ p.zone.designation }}
-                            <span v-if="p.adresse"> • </span>
-                        </template>
-                        {{ p.adresse }}
-                        <template v-if="p.telephone">
-                            • {{ p.telephone }}
-                        </template>
-                    </p>
-                </div>
-                <Check
-                    v-if="String(modelValue) === String(p.id)"
-                    class="size-4 shrink-0 text-[#2d8a47]"
-                    aria-hidden="true"
-                />
-            </button>
+                <button
+                    v-for="p in paginatedPharmacies"
+                    :key="p.id"
+                    type="button"
+                    role="option"
+                    :aria-selected="String(modelValue) === String(p.id)"
+                    class="flex min-h-[88px] min-w-0 items-center justify-between gap-2 rounded-[10px] border p-3 text-left transition-all"
+                    :class="
+                        String(modelValue) === String(p.id)
+                            ? 'border-[rgba(92,89,89,0.25)] bg-[rgba(91,182,110,0.18)] ring-1 ring-[rgba(91,182,110,0.35)]'
+                            : 'border-[rgba(92,89,89,0.25)] hover:bg-[rgba(91,182,110,0.08)]'
+                    "
+                    @click="selectPharmacie(p.id)"
+                >
+                    <div class="min-w-0 flex-1">
+                        <p
+                            class="truncate text-[13px] font-bold text-[#374151]"
+                        >
+                            {{ p.designation }}
+                        </p>
+                        <p class="truncate text-[11px] text-[#94a3b8]">
+                            <template v-if="p.zone?.designation">
+                                {{ p.zone.designation }}
+                                <span v-if="p.adresse"> • </span>
+                            </template>
+                            {{ p.adresse }}
+                            <template v-if="p.telephone">
+                                • {{ p.telephone }}
+                            </template>
+                        </p>
+                    </div>
+                    <Check
+                        v-if="String(modelValue) === String(p.id)"
+                        class="size-4 shrink-0 text-[#2d8a47]"
+                        aria-hidden="true"
+                    />
+                </button>
+            </div>
+        </div>
+
+        <div
+            v-if="showPagination"
+            class="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-[#e5e7eb] pt-2 dark:border-border"
+        >
+            <p class="text-xs text-[rgba(92,89,89,0.7)]">
+                Affichage {{ rangeLabel }}
+            </p>
+            <div class="flex items-center gap-1.5">
+                <button
+                    type="button"
+                    class="inline-flex items-center gap-1 rounded-[8px] border border-[#ccc5c5] px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-border dark:text-foreground dark:hover:bg-muted"
+                    :disabled="currentPage <= 1"
+                    @click="goToPreviousPage"
+                >
+                    <ChevronLeft class="size-3.5" />
+                    Préc.
+                </button>
+                <span class="px-1 text-xs tabular-nums text-[rgba(92,89,89,0.7)]">
+                    {{ currentPage }} / {{ totalPages }}
+                </span>
+                <button
+                    type="button"
+                    class="inline-flex items-center gap-1 rounded-[8px] border border-[#ccc5c5] px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-border dark:text-foreground dark:hover:bg-muted"
+                    :disabled="currentPage >= totalPages"
+                    @click="goToNextPage"
+                >
+                    Suiv.
+                    <ChevronRight class="size-3.5" />
+                </button>
+            </div>
         </div>
     </div>
 </template>

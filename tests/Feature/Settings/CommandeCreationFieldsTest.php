@@ -4,6 +4,8 @@ namespace Tests\Feature\Settings;
 
 use App\Models\AppSetting;
 use App\Models\Client;
+use App\Models\Commande;
+use App\Models\Produit;
 use App\Support\CommandeCreationFields;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesMinimalFixtures;
@@ -148,6 +150,108 @@ class CommandeCreationFieldsTest extends TestCase
         $beneficiaire = collect($definitions)->firstWhere('key', 'beneficiaire');
         $this->assertNotNull($beneficiaire);
         $this->assertSame(['admin'], $beneficiaire['contexts']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validCommandeUpdatePayload(
+        Commande $commande,
+        Produit $produit,
+    ): array {
+        return [
+            'client_id' => $commande->client_id,
+            'client_prenom' => $commande->client?->prenom,
+            'client_tel' => $commande->client?->tel,
+            'client_adresse' => $commande->client?->adresse,
+            'pharmacie_id' => $commande->pharmacie_id,
+            'produits' => [
+                [
+                    'id' => $produit->id,
+                    'designation' => $produit->designation,
+                    'quantite' => 1,
+                    'prix_unitaire' => 1000,
+                ],
+            ],
+        ];
+    }
+
+    public function test_commande_update_requires_commentaire_when_marked_obligatory(): void
+    {
+        AppSetting::ensureRowExists()->update([
+            'commande_creation_champs' => [
+                'commentaire' => true,
+            ],
+        ]);
+
+        $this->seedRoles();
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+        $client = $this->createClient();
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'nouvelle',
+            'commentaire' => null,
+        ]);
+        $produit = Produit::query()->create([
+            'designation' => 'Paracétamol',
+            'dosage' => '500 mg',
+            'forme' => 'Comprimé',
+        ]);
+        $commande->produits()->attach($produit->id, [
+            'quantite' => 1,
+            'prix_unitaire' => 1000,
+            'status' => 'en_attente',
+        ]);
+
+        $payload = $this->validCommandeUpdatePayload($commande->fresh(['client']), $produit);
+        $payload['commentaire'] = '';
+
+        $this->actingAs($admin)
+            ->patch("/commandes/{$commande->id}", $payload)
+            ->assertSessionHasErrors('commentaire');
+
+        $payload['commentaire'] = 'Commentaire obligatoire';
+
+        $this->actingAs($admin)
+            ->patch("/commandes/{$commande->id}", $payload)
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+    }
+
+    public function test_commande_update_accepts_optional_commentaire_when_not_required(): void
+    {
+        AppSetting::ensureRowExists()->update([
+            'commande_creation_champs' => [
+                'commentaire' => false,
+            ],
+        ]);
+
+        $this->seedRoles();
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+        $client = $this->createClient();
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'en_attente',
+            'commentaire' => null,
+        ]);
+        $produit = Produit::query()->create([
+            'designation' => 'Ibuprofène',
+            'dosage' => '400 mg',
+            'forme' => 'Comprimé',
+        ]);
+        $commande->produits()->attach($produit->id, [
+            'quantite' => 1,
+            'prix_unitaire' => 500,
+            'status' => 'en_attente',
+        ]);
+
+        $payload = $this->validCommandeUpdatePayload($commande->fresh(['client']), $produit);
+        unset($payload['commentaire']);
+
+        $this->actingAs($admin)
+            ->patch("/commandes/{$commande->id}", $payload)
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
     }
 
     public function test_commande_store_accepts_optional_client_tel_when_not_required(): void

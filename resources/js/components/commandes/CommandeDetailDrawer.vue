@@ -757,7 +757,7 @@ defineExpose({
                                 <Label
                                     for="detail-commentaire"
                                     class="text-[13px] text-gray-600"
-                                    >Commentaire (back-office)</Label
+                                    >Commentaire (ADMIN)</Label
                                 >
                                 <textarea
                                     id="detail-commentaire"
@@ -776,7 +776,7 @@ defineExpose({
                                 {{
                                     savingComplementaires
                                         ? 'Enregistrement…'
-                                        : 'Enregistrer les compléments'
+                                        : 'Enregistrer'
                                 }}
                             </Button>
                         </div>
@@ -801,7 +801,7 @@ defineExpose({
                             <h3
                                 class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
                             >
-                                Commentaire (back-office)
+                                Commentaire (ADMIN)
                             </h3>
                             <p
                                 class="text-[14px] text-gray-700 whitespace-pre-wrap leading-relaxed"

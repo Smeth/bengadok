@@ -226,12 +226,6 @@ function rechercher() {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div :class="modulePageClass">
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <h1 class="text-2xl font-semibold tracking-tight">
-                    Utilisateurs Backoffice
-                </h1>
-            </div>
-
             <ModuleFilterPanel
                 v-model:search="searchQuery"
                 placeholder="Rechercher un utilisateur..."

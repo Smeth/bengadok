@@ -136,6 +136,29 @@ class CommandeCreationFields
      */
     public static function validationRules(FormRequest $request): array
     {
+        return self::baseValidationRules($request);
+    }
+
+    /**
+     * Règles de validation modification commande (back-office).
+     *
+     * @return array<string, mixed>
+     */
+    public static function updateValidationRules(FormRequest $request): array
+    {
+        $rules = self::baseValidationRules($request);
+        $rules['produits.*.id'] = 'nullable|integer|exists:produits,id';
+        $rules['ordonnance'] = 'nullable|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240';
+        unset($rules['reutiliser_ordonnance_commande_id']);
+
+        return $rules;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function baseValidationRules(FormRequest $request): array
+    {
         $sansClientExistant = ! $request->filled('client_id');
 
         $stringRequired = static fn (string $field): array => self::isRequiredForRequest($field, $request) && $sansClientExistant
@@ -202,11 +225,11 @@ class CommandeCreationFields
             return in_array('agent', $contexts, true);
         }
 
-        if ($request->routeIs('commandes.store')) {
+        if ($request->routeIs('commandes.store', 'commandes.update')) {
             return in_array('admin', $contexts, true);
         }
 
-        return true;
+        return false;
     }
 
     private static function existsTableFor(string $field): string

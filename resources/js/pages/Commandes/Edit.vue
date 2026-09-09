@@ -10,6 +10,7 @@ import PharmacieSearchPicker from '@/components/PharmacieSearchPicker.vue';
 import BackLink from '@/components/ui/BackLink.vue';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { useCommandeCreationFields } from '@/composables/useCommandeCreationFields';
 import { fieldError, normalizeInertiaErrors } from '@/lib/validationErrors';
 import { formatCommandeDateHeure } from '@/lib/formatDateLocal';
 import {
@@ -106,17 +107,31 @@ const ordonnanceFile = ref<File | null>(null);
 const enSubmission = ref(false);
 
 const dateHeureAffichee = computed(() =>
-    formatCommandeDateHeure({
-        date: props.commande.date,
-        heurs: props.commande.heurs,
-    }),
+    formatCommandeDateHeure(
+        props.commande.date,
+        props.commande.heurs,
+    ),
 );
 
 const page = usePage();
+const localErrors = ref<Record<string, string>>({});
+const {
+    isRequired: isFieldRequired,
+    validate: validateCreationFields,
+} = useCommandeCreationFields('admin');
+
+const sansClientExistant = computed(() => !clientId.value);
+
+const skipOrdonnanceIfExisting = computed(
+    () =>
+        Boolean(props.commande.ordonnance?.id) && ordonnanceFile.value === null,
+);
+
 const errors = computed(() =>
-    normalizeInertiaErrors(
-        (page.props as { errors?: Record<string, unknown> }).errors,
-    ),
+    normalizeInertiaErrors({
+        ...((page.props as { errors?: Record<string, unknown> }).errors ?? {}),
+        ...localErrors.value,
+    }),
 );
 function produitErr(i: number, field: string): string | undefined {
     return fieldError(errors.value, `produits.${i}.${field}`);
@@ -241,6 +256,28 @@ function submit() {
     if (!produitsValides.length) return;
     if (!pharmacieId.value) return;
 
+    localErrors.value = validateCreationFields(
+        {
+            client_nom: clientNom.value,
+            client_prenom: clientPrenom.value,
+            client_tel: clientTel.value,
+            client_adresse: clientAdresse.value,
+            client_arrondissement: clientArrondissement.value,
+            beneficiaire: beneficiaire.value,
+            ordonnance: ordonnanceFile.value,
+            mode_paiement_id: modePaiementId.value || undefined,
+            commentaire: commentaire.value,
+        },
+        {
+            sansClientExistant: sansClientExistant.value,
+            skipOrdonnanceIfReused: skipOrdonnanceIfExisting.value,
+        },
+    );
+
+    if (Object.keys(localErrors.value).length > 0) {
+        return;
+    }
+
     enSubmission.value = true;
 
     const payload: Record<string, unknown> = {
@@ -344,8 +381,22 @@ function submit() {
                                     <div class="flex flex-col gap-1.5">
                                         <Label :class="labelClass"
                                             >Prénom
-                                            <span class="text-[#dc3545]"
+                                            <span
+                                                v-if="
+                                                    isFieldRequired(
+                                                        'client_prenom',
+                                                        {
+                                                            sansClientExistant,
+                                                        },
+                                                    )
+                                                "
+                                                class="text-[#dc3545]"
                                                 >*</span
+                                            >
+                                            <span
+                                                v-else
+                                                class="text-xs font-normal text-[rgba(92,89,89,0.6)]"
+                                                >(facultatif)</span
                                             ></Label
                                         >
                                         <input
@@ -370,6 +421,19 @@ function submit() {
                                         <Label :class="labelClass"
                                             >Nom
                                             <span
+                                                v-if="
+                                                    isFieldRequired(
+                                                        'client_nom',
+                                                        {
+                                                            sansClientExistant,
+                                                        },
+                                                    )
+                                                "
+                                                class="text-[#dc3545]"
+                                                >*</span
+                                            >
+                                            <span
+                                                v-else
                                                 class="text-xs font-normal text-[rgba(92,89,89,0.6)]"
                                                 >(facultatif)</span
                                             ></Label
@@ -388,14 +452,24 @@ function submit() {
                                 <div class="flex flex-col gap-1.5">
                                     <Label :class="labelClass"
                                         >Téléphone
-                                        <span class="text-[#dc3545]"
+                                        <span
+                                            v-if="
+                                                isFieldRequired('client_tel', {
+                                                    sansClientExistant,
+                                                })
+                                            "
+                                            class="text-[#dc3545]"
                                             >*</span
+                                        >
+                                        <span
+                                            v-else
+                                            class="text-xs font-normal text-[rgba(92,89,89,0.6)]"
+                                            >(facultatif)</span
                                         ></Label
                                     >
                                     <input
                                         v-model="clientTel"
                                         type="text"
-                                        required
                                         placeholder="Ex : 068544242"
                                         :class="[
                                             inputClass,
@@ -414,14 +488,27 @@ function submit() {
                                 <div class="flex flex-col gap-1.5">
                                     <Label :class="labelClass"
                                         >Adresse
-                                        <span class="text-[#dc3545]"
+                                        <span
+                                            v-if="
+                                                isFieldRequired(
+                                                    'client_adresse',
+                                                    {
+                                                        sansClientExistant,
+                                                    },
+                                                )
+                                            "
+                                            class="text-[#dc3545]"
                                             >*</span
+                                        >
+                                        <span
+                                            v-else
+                                            class="text-xs font-normal text-[rgba(92,89,89,0.6)]"
+                                            >(facultatif)</span
                                         ></Label
                                     >
                                     <input
                                         v-model="clientAdresse"
                                         type="text"
-                                        required
                                         placeholder="Ex : La Glacière"
                                         :class="[
                                             inputClass,
@@ -439,7 +526,24 @@ function submit() {
                                 </div>
                                 <div class="flex flex-col gap-1.5">
                                     <Label :class="labelClass"
-                                        >Arrondissement</Label
+                                        >Arrondissement
+                                        <span
+                                            v-if="
+                                                isFieldRequired(
+                                                    'client_arrondissement',
+                                                    {
+                                                        sansClientExistant,
+                                                    },
+                                                )
+                                            "
+                                            class="text-[#dc3545]"
+                                            >*</span
+                                        >
+                                        <span
+                                            v-else
+                                            class="text-xs font-normal text-[rgba(92,89,89,0.6)]"
+                                            >(facultatif)</span
+                                        ></Label
                                     >
                                     <div class="relative">
                                         <select
@@ -476,7 +580,7 @@ function submit() {
                                 Détails commande
                             </h2>
                             <div class="space-y-4">
-                                <div class="flex flex-col gap-1.5">
+                                <div class="flex min-w-0 flex-col gap-1.5">
                                     <Label :class="labelClass"
                                         >Pharmacie
                                         <span class="text-[#dc3545]"
@@ -492,23 +596,41 @@ function submit() {
                                         :message="errors.pharmacie_id"
                                     />
                                 </div>
-                                <div class="flex flex-col gap-1.5">
-                                    <Label :class="labelClass"
-                                        >Date et heure</Label
-                                    >
+                                <div
+                                    class="rounded-[10px] border border-dashed border-[#ccc5c5] bg-[#f8fafc]/80 px-3 py-2.5 dark:border-border dark:bg-muted/20"
+                                >
                                     <p
-                                        class="flex h-[42px] items-center rounded-[10px] border border-[#ccc5c5] bg-[#f8fafc] px-3 text-sm text-gray-700"
+                                        class="text-[11px] font-semibold uppercase tracking-wide text-[rgba(92,89,89,0.55)]"
+                                    >
+                                        Date et heure (création)
+                                    </p>
+                                    <p
+                                        class="mt-0.5 text-sm font-semibold tabular-nums text-gray-800 dark:text-foreground"
                                     >
                                         {{ dateHeureAffichee }}
                                     </p>
-                                    <p class="text-xs text-[rgba(92,89,89,0.6)]">
-                                        Fixées automatiquement à la création de
-                                        la commande.
+                                    <p
+                                        class="mt-1 text-[11px] text-[rgba(92,89,89,0.6)]"
+                                    >
+                                        Non modifiable — fixées à
+                                        l’enregistrement initial.
                                     </p>
                                 </div>
                                 <div class="flex flex-col gap-1.5">
                                     <Label :class="labelClass"
-                                        >Bénéficiaire</Label
+                                        >Bénéficiaire
+                                        <span
+                                            v-if="
+                                                isFieldRequired('beneficiaire')
+                                            "
+                                            class="text-[#dc3545]"
+                                            >*</span
+                                        >
+                                        <span
+                                            v-else
+                                            class="text-xs font-normal text-[rgba(92,89,89,0.6)]"
+                                            >(facultatif)</span
+                                        ></Label
                                     >
                                     <input
                                         v-model="beneficiaire"
@@ -522,7 +644,19 @@ function submit() {
                                 </div>
                                 <div class="flex flex-col gap-1.5">
                                     <Label :class="labelClass"
-                                        >Commentaire</Label
+                                        >Commentaire
+                                        <span
+                                            v-if="
+                                                isFieldRequired('commentaire')
+                                            "
+                                            class="text-[#dc3545]"
+                                            >*</span
+                                        >
+                                        <span
+                                            v-else
+                                            class="text-xs font-normal text-[rgba(92,89,89,0.6)]"
+                                            >(facultatif)</span
+                                        ></Label
                                     >
                                     <textarea
                                         v-model="commentaire"
@@ -737,9 +871,26 @@ function submit() {
                     >
                         <h2 :class="[sectionTitleClass, 'mb-4']">
                             Ordonnance
+                            <span
+                                v-if="
+                                    isFieldRequired('ordonnance') &&
+                                    !skipOrdonnanceIfExisting
+                                "
+                                class="text-[#dc3545] not-italic"
+                                >*</span
+                            >
                         </h2>
                         <p class="mb-3 text-sm font-medium text-black">
                             Nouvelle ordonnance (remplace l'actuelle)
+                            <span
+                                v-if="
+                                    !isFieldRequired('ordonnance') ||
+                                    skipOrdonnanceIfExisting
+                                "
+                                class="text-xs font-normal text-[rgba(92,89,89,0.6)]"
+                            >
+                                — facultatif
+                            </span>
                         </p>
                         <p
                             v-if="

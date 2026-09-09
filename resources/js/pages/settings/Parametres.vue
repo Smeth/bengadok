@@ -2098,7 +2098,7 @@ function sauverOrdonnanceVerification() {
                         class="font-semibold text-gray-700 flex items-center gap-2"
                     >
                         <ClipboardList class="h-4 w-4 text-sky-600" />
-                        Champs obligatoires — création de commande
+                        Champs obligatoires — commandes
                     </h2>
                 </div>
                 <div
@@ -2107,9 +2107,10 @@ function sauverOrdonnanceVerification() {
                     <p class="text-sm leading-relaxed text-gray-600">
                         Cochez les champs à rendre
                         <span class="font-semibold">obligatoires</span> lors de
-                        l’enregistrement d’une nouvelle commande (back-office et
-                        espace agent). Les champs non cochés restent facultatifs.
-                        La validation serveur suit ces réglages.
+                        la création ou de la modification d’une commande
+                        (back-office et espace agent). Les champs non cochés
+                        restent facultatifs. La validation serveur suit ces
+                        réglages.
                     </p>
                 </div>
                 <form
