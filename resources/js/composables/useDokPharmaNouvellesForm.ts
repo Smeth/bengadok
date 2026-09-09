@@ -222,6 +222,7 @@ export function useDokPharmaNouvellesForm(options: {
         qteInvalide,
         hasQteError,
         hasPrixError,
+        hasUnresolvedDispo,
         toggleDispo,
         statutDispoForm,
         peutEnvoyerDisponibilite,
