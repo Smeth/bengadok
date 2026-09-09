@@ -100,6 +100,26 @@ class Commande extends Model
         return $this->scopeCaComptabilise($query);
     }
 
+    /**
+     * Montant panier (médicaments + parapharmacie, hors livraison).
+     */
+    public function montantPanier(): float
+    {
+        return (float) $this->prix_medicaments + (float) $this->prix_parapharma;
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<Commande>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<Commande>
+     */
+    public function scopePanierMin($query, int|float $seuil)
+    {
+        return $query->whereRaw(
+            'COALESCE(prix_medicaments, 0) + COALESCE(prix_parapharma, 0) >= ?',
+            [$seuil]
+        );
+    }
+
     // Statuts côté pharmacie
     public const STATUSES_PHARMACIE = [
         'nouvelle' => 'Nouvelle commande',

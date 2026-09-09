@@ -192,6 +192,7 @@ class CommandeService
                     'tel' => $validated['client_tel'],
                     'adresse' => $validated['client_adresse'],
                     'arrondissement' => $validated['client_arrondissement'] ?? null,
+                    'sexe' => ! empty($validated['client_sexe']) ? $validated['client_sexe'] : null,
                 ]);
 
             if (! empty($validated['client_id'])) {
@@ -201,6 +202,7 @@ class CommandeService
                     'tel' => $validated['client_tel'],
                     'adresse' => $validated['client_adresse'],
                     'arrondissement' => $validated['client_arrondissement'] ?? null,
+                    'sexe' => ! empty($validated['client_sexe']) ? $validated['client_sexe'] : null,
                 ]);
             }
 
@@ -265,7 +267,7 @@ class CommandeService
                 'prix_unitaire' => $prixUnitaire,
                 'status' => $pivotStatus,
                 'type' => $pivotType,
-                'vente_libre' => $existing?->pivot->vente_libre,
+                'vente_libre' => $existing?->pivot->vente_libre ?? false,
             ]);
         }
     }

@@ -214,14 +214,14 @@ class AdminParapharmaDashboardService
     }
 
     /**
-     * Commande éligible à la consommation d’un crédit : commande médicaments via BengaDok, montant médicaments ≥ seuil, livrée avec succès.
+     * Commande éligible à la consommation d’un crédit : montant panier (médicaments + parapharmacie) ≥ seuil, retrait pharmacie confirmé.
      */
     public function commandeEligibleCredit(Commande $commande, ?int $seuil = null): bool
     {
         $seuil ??= $this->config()['credit_seuil_medicament_xaf'];
 
         return $commande->status_pharmacie === Commande::STATUT_PHARMACIE_CA_COMPTABILISE
-            && (float) $commande->prix_medicaments >= $seuil;
+            && $commande->montantPanier() >= $seuil;
     }
 
     private function totalRecharges(): int
@@ -403,7 +403,7 @@ class AdminParapharmaDashboardService
                 ->where('pharmacie_id', $pharmacie->id)
                 ->whereBetween('date', [$debut, $fin])
                 ->caComptabilise()
-                ->where('prix_medicaments', '>=', $seuil)
+                ->panierMin($seuil)
                 ->count();
 
             $items[] = [
@@ -562,7 +562,7 @@ class AdminParapharmaDashboardService
         $query = Commande::query()
             ->whereBetween('date', [$debut, $fin])
             ->caComptabilise()
-            ->where('prix_medicaments', '>=', $seuil);
+            ->panierMin($seuil);
 
         if ($this->pharmacieId !== null) {
             $query->where('pharmacie_id', $this->pharmacieId);
@@ -603,7 +603,7 @@ class AdminParapharmaDashboardService
             ->select(
                 'commandes.id as commande_id',
                 'commandes.date',
-                'commandes.prix_medicaments as commande_montant_medicaments',
+                DB::raw('COALESCE(commandes.prix_medicaments, 0) + COALESCE(commandes.prix_parapharma, 0) as commande_montant_panier'),
                 'produits.designation',
                 'produits.dosage',
                 'produits.forme',
@@ -616,7 +616,7 @@ class AdminParapharmaDashboardService
 
         return $rows->map(function ($r) use ($seuilCredit, $commandeIdsAvecDeduction) {
             $produit = trim($r->designation.' '.($r->dosage ?? '').' '.($r->forme ?? ''));
-            $commandeEligibleCredit = (float) $r->commande_montant_medicaments >= $seuilCredit;
+            $commandeEligibleCredit = (float) $r->commande_montant_panier >= $seuilCredit;
             $creditDeduit = $this->commandeCreditDeduit((int) $r->commande_id, $commandeIdsAvecDeduction);
 
             return [

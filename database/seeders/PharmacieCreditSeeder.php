@@ -31,7 +31,7 @@ class PharmacieCreditSeeder extends Seeder
                 ->whereBetween('date', [$debutPeriode, $finPeriode])
                 ->where('status_pharmacie', Commande::STATUT_PHARMACIE_CA_COMPTABILISE)
                 ->where('status', '<>', 'annulee')
-                ->where('prix_medicaments', '>=', $seuil)
+                ->panierMin($seuil)
                 ->orderBy('date')
                 ->orderBy('id')
                 ->get();

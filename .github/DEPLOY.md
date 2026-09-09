@@ -332,7 +332,81 @@ ssh root@TON_VPS
 
 ---
 
-## 6. Environnement GitHub (optionnel mais recommandé)
+## 6. Sauvegardes automatiques (production)
+
+Les sauvegardes utilisent [Spatie Laravel Backup](https://github.com/spatie/laravel-backup) : base MySQL + fichiers (`storage/app/private`, `storage/app/public`).
+
+### Prérequis VPS
+
+```bash
+# Client MySQL (mysqldump + mysql pour restauration)
+apt install mysql-client
+
+mysqldump --version
+mysql --version
+
+# Dossier dédié (recommandé, hors du dépôt git)
+mkdir -p /var/backups/bengadok
+chmod 700 /var/backups/bengadok
+chown root:www-data /var/backups/bengadok
+```
+
+### Variables `.env` production
+
+```env
+BACKUP_DISK=backups
+BACKUP_PATH=/var/backups/bengadok
+BACKUP_NAME=BengaDok
+BACKUP_MAX_AGE_DAYS=2
+BACKUP_MAX_STORAGE_MB=5000
+BACKUP_NOTIFICATION_MAIL=admin@votre-domaine.com
+BACKUP_LOG_CHANNEL=daily
+ALLOW_BACKUP_RESTORE=true
+```
+
+> **Alertes** : si `BACKUP_NOTIFICATION_MAIL` est défini, un e-mail part en cas d’échec de sauvegarde, de nettoyage ou si aucune archive récente n’est détectée (`backup:monitor`).
+
+### Cron Laravel (obligatoire)
+
+Sans cette ligne, **aucune sauvegarde automatique** ne s’exécute :
+
+```bash
+crontab -e
+```
+
+```cron
+* * * * * cd /var/www/bengadok/bengadok && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Planification interne :
+
+| Heure | Commande | Rôle |
+|-------|----------|------|
+| 01:30 | `backup:clean` | Rotation / suppression des vieilles archives |
+| 03:00 | `backup:run` | Sauvegarde complète |
+| 04:00 | `backup:monitor` | Contrôle santé + alerte e-mail si problème |
+
+### Vérifications après déploiement
+
+```bash
+php artisan schedule:list
+php artisan backup:run --disable-notifications
+php artisan backup:list
+php artisan backup:monitor
+```
+
+Interface admin : **Réglages → Sauvegardes** (`/settings/backups`, super_admin).
+
+### Bonnes pratiques
+
+- Exporter régulièrement une archive ZIP hors du serveur (bouton **Exporter**).
+- Surveiller l’espace disque du volume `BACKUP_PATH`.
+- Conserver `mysqldump` et `mysql` à jour avec le serveur MySQL.
+- Tester une restauration sur un environnement de recette avant la production.
+
+---
+
+## 7. Environnement GitHub (optionnel mais recommandé)
 
 Créer un environnement `production` dans **GitHub → Settings → Environments** :
 - Ajouter une règle de protection : seule la branche `main` peut déployer

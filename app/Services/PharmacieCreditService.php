@@ -140,7 +140,7 @@ class PharmacieCreditService
 
         $commande = $this->syncMontantsCommande($commande);
 
-        if ((float) $commande->prix_medicaments < $cfg['credit_seuil_medicament_xaf']) {
+        if ($commande->montantPanier() < $cfg['credit_seuil_medicament_xaf']) {
             return null;
         }
 
@@ -174,7 +174,7 @@ class PharmacieCreditService
                 'cout_xaf' => $cfg['credit_prix_unitaire_xaf'],
                 'solde_apres' => $nouveauSolde,
                 'mode_paiement' => null,
-                'description' => "Commande médicaments {$numero}",
+                'description' => "Commande {$numero}",
                 'note' => null,
             ]);
         });

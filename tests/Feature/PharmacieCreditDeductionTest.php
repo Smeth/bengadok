@@ -87,7 +87,7 @@ class PharmacieCreditDeductionTest extends TestCase
         $this->assertSame(2000.0, (float) $commande->prix_parapharma);
     }
 
-    public function test_no_credit_when_medicaments_below_threshold_despite_parapharma(): void
+    public function test_credit_deducted_when_parapharma_only_above_threshold(): void
     {
         AppSetting::ensureRowExists()->update([
             'parapharma_credit_deduction_auto' => true,
@@ -125,6 +125,32 @@ class PharmacieCreditDeductionTest extends TestCase
         ]);
 
         $commande->update(['status_pharmacie' => Commande::STATUT_PHARMACIE_CA_COMPTABILISE]);
+        $op = app(PharmacieCreditService::class)->deduirePourCommande($commande->fresh());
+
+        $this->assertNotNull($op);
+        $this->assertSame(4, (int) $pharmacie->fresh()->credits_solde);
+    }
+
+    public function test_no_credit_when_panier_below_threshold(): void
+    {
+        AppSetting::ensureRowExists()->update([
+            'parapharma_credit_deduction_auto' => true,
+            'parapharma_credit_seuil_medicament_xaf' => 5000,
+        ]);
+
+        $pharmacie = $this->createPharmacie(null, [
+            'credits_solde' => 5,
+            'credits_actif' => true,
+        ]);
+        $client = $this->createClient();
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'validee',
+            'status_pharmacie' => Commande::STATUT_PHARMACIE_CA_COMPTABILISE,
+            'prix_medicaments' => 2000,
+            'prix_parapharma' => 2000,
+            'prix_total' => 4000,
+        ]);
+
         $op = app(PharmacieCreditService::class)->deduirePourCommande($commande->fresh());
 
         $this->assertNull($op);

@@ -475,7 +475,7 @@ function statutBadgeClass(statut: string): string {
                     <span class="text-base font-bold">crédits</span>
                 </p>
                 <p class="mt-1 text-xs text-gray-600">
-                    1 crédit = 1 commande médicaments ≥
+                    1 crédit = 1 commande panier ≥
                     {{ formatXaf(config.credit_seuil_medicament_xaf) }} XAF
                 </p>
                 <p class="text-xs text-gray-600">
@@ -1130,7 +1130,8 @@ function statutBadgeClass(statut: string): string {
                     </h3>
                     <p class="text-sm text-gray-700">
                         Un crédit est utilisé pour chaque commande dont le
-                        montant médicaments est supérieur ou égal à
+                        montant du panier (médicaments + parapharmacie) est
+                        supérieur ou égal à
                         {{ formatXaf(config.credit_seuil_medicament_xaf) }}
                         XAF. Chaque crédit correspond à une commission de
                         {{ formatXaf(config.credit_prix_unitaire_xaf) }} XAF.

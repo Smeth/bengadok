@@ -97,6 +97,8 @@ class HandleInertiaRequests extends Middleware
             },
             /** Réinitialisations destructives (page /settings/reset) */
             'allowPharmacyReset' => fn () => PharmacyDataResetService::isAllowed(),
+            /** Restauration depuis une sauvegarde (page /settings/backups) */
+            'allowBackupRestore' => fn () => \App\Services\BackupRestoreService::isAllowed(),
             /** Réinitialisation « base neuve » (local uniquement) */
             'allowLocalAppReset' => fn () => config('app.env') === 'local',
         ];

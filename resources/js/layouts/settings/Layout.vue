@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3';
 import { usePage } from '@inertiajs/vue3';
 import {
     Bell,
+    HardDrive,
     Key,
     Palette,
     RotateCcw,
@@ -78,6 +79,11 @@ const sidebarNavItems = computed<NavItem[]>(() => {
             title: 'Gestion des rôles',
             href: '/settings/roles',
             icon: ShieldCheck,
+        });
+        items.push({
+            title: 'Sauvegardes',
+            href: '/settings/backups',
+            icon: HardDrive,
         });
         items.push({
             title: "Réinitialiser l'application",

@@ -1015,7 +1015,7 @@ watch(
                             >
                                 Tarif :
                                 {{ formatXaf(creditsConfig.prix_unitaire_xaf) }}
-                                XAF / crédit · Seuil commande médicaments :
+                                XAF / crédit · Seuil montant panier :
                                 {{ formatXaf(creditsConfig.seuil_medicament_xaf) }}
                                 XAF · Achat minimum :
                                 {{ creditsConfig.minimum_achat }} crédits

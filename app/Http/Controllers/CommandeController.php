@@ -83,7 +83,7 @@ class CommandeController extends Controller
     public function recu(Request $request, Commande $commande, CommandeDateFormatter $dateFormatter)
     {
         $this->authorize('view', $commande);
-        if ($commande->status !== 'retiree') {
+        if (! in_array($commande->status, Commande::STATUTS_REUSSIS, true)) {
             return redirect()->route('commandes.index', ['detail' => $commande->id])
                 ->with('error', 'Le reçu n\'est disponible que pour les commandes livrées.');
         }

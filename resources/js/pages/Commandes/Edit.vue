@@ -33,6 +33,7 @@ const props = defineProps<{
             nom: string;
             prenom: string;
             tel: string;
+            sexe?: string | null;
             adresse?: string;
             arrondissement?: string | null;
         };
@@ -95,12 +96,34 @@ const clientId = ref(props.commande.client?.id ?? '');
 const clientNom = ref(props.commande.client?.nom ?? '');
 const clientPrenom = ref(props.commande.client?.prenom ?? '');
 const clientTel = ref(props.commande.client?.tel ?? '');
+const clientSexe = ref<'M' | 'F' | ''>(
+    props.commande.client?.sexe === 'M' || props.commande.client?.sexe === 'F'
+        ? props.commande.client.sexe
+        : '',
+);
 const clientAdresse = ref(props.commande.client?.adresse ?? '');
 const clientArrondissement = ref(
     props.commande.client?.arrondissement ?? '',
 );
 const pharmacieId = ref(props.commande.pharmacie?.id ?? '');
+const beneficiaires = [
+    'Soi-même',
+    'Sa mère',
+    'Son père',
+    'Son enfant',
+    'Autre',
+] as const;
+
 const beneficiaire = ref(props.commande.beneficiaire ?? '');
+
+const beneficiaireOptions = computed(() => {
+    const current = beneficiaire.value.trim();
+    if (current && !beneficiaires.includes(current as (typeof beneficiaires)[number])) {
+        return [...beneficiaires, current];
+    }
+
+    return [...beneficiaires];
+});
 const commentaire = ref(props.commande.commentaire ?? '');
 const modePaiementId = ref(props.commande.mode_paiement?.id ?? '');
 const ordonnanceFile = ref<File | null>(null);
@@ -261,6 +284,7 @@ function submit() {
             client_nom: clientNom.value,
             client_prenom: clientPrenom.value,
             client_tel: clientTel.value,
+            client_sexe: clientSexe.value,
             client_adresse: clientAdresse.value,
             client_arrondissement: clientArrondissement.value,
             beneficiaire: beneficiaire.value,
@@ -285,6 +309,7 @@ function submit() {
         client_nom: clientNom.value.trim(),
         client_prenom: clientPrenom.value.trim(),
         client_tel: clientTel.value.trim(),
+        client_sexe: clientSexe.value || undefined,
         client_adresse: clientAdresse.value.trim(),
         client_arrondissement: clientArrondissement.value || undefined,
         pharmacie_id: pharmacieId.value || undefined,
@@ -487,6 +512,43 @@ function submit() {
                                 </div>
                                 <div class="flex flex-col gap-1.5">
                                     <Label :class="labelClass"
+                                        >Genre
+                                        <span
+                                            v-if="
+                                                isFieldRequired('client_sexe', {
+                                                    sansClientExistant,
+                                                })
+                                            "
+                                            class="text-[#dc3545]"
+                                            >*</span
+                                        >
+                                        <span
+                                            v-else
+                                            class="text-xs font-normal text-[rgba(92,89,89,0.6)]"
+                                            >(facultatif)</span
+                                        ></Label
+                                    >
+                                    <div class="relative">
+                                        <select
+                                            v-model="clientSexe"
+                                            :class="selectClass"
+                                        >
+                                            <option value="">
+                                                Non précisé
+                                            </option>
+                                            <option value="M">M (Mr)</option>
+                                            <option value="F">F (Mme)</option>
+                                        </select>
+                                        <ChevronDown
+                                            class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]"
+                                        />
+                                    </div>
+                                    <InputError
+                                        :message="errors.client_sexe"
+                                    />
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <Label :class="labelClass"
                                         >Adresse
                                         <span
                                             v-if="
@@ -632,12 +694,26 @@ function submit() {
                                             >(facultatif)</span
                                         ></Label
                                     >
-                                    <input
-                                        v-model="beneficiaire"
-                                        type="text"
-                                        placeholder="Ex : Soi-même"
-                                        :class="inputClass"
-                                    />
+                                    <div class="relative">
+                                        <select
+                                            v-model="beneficiaire"
+                                            :class="selectClass"
+                                        >
+                                            <option value="">
+                                                Choisir un bénéficiaire
+                                            </option>
+                                            <option
+                                                v-for="b in beneficiaireOptions"
+                                                :key="b"
+                                                :value="b"
+                                            >
+                                                {{ b }}
+                                            </option>
+                                        </select>
+                                        <ChevronDown
+                                            class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]"
+                                        />
+                                    </div>
                                     <InputError
                                         :message="errors.beneficiaire"
                                     />

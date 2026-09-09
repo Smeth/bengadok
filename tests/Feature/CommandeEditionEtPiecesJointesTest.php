@@ -125,6 +125,60 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
         $this->assertNull($commande->montant_livraison_id);
     }
 
+    public function test_update_commande_persists_client_sexe_and_beneficiaire(): void
+    {
+        $this->seedRoles();
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+        $client = $this->createClient(['sexe' => null]);
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'nouvelle',
+            'beneficiaire' => null,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch("/commandes/{$commande->id}", [
+                'client_id' => $client->id,
+                'client_nom' => $client->nom,
+                'client_prenom' => $client->prenom,
+                'client_tel' => $client->tel,
+                'client_adresse' => $client->adresse,
+                'client_sexe' => 'F',
+                'pharmacie_id' => $pharmacie->id,
+                'beneficiaire' => 'Sa mère',
+                'produits' => [
+                    [
+                        'designation' => 'Paracétamol',
+                        'quantite' => 1,
+                        'prix_unitaire' => 1500,
+                    ],
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $client->refresh();
+        $commande->refresh();
+
+        $this->assertSame('F', $client->sexe);
+        $this->assertSame('Sa mère', $commande->beneficiaire);
+    }
+
+    public function test_recu_is_available_for_delivered_commande(): void
+    {
+        $this->seedRoles();
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+        $client = $this->createClient();
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'retiree',
+        ]);
+
+        $this->actingAs($admin)
+            ->get("/commandes/{$commande->id}/recu")
+            ->assertOk();
+    }
+
     public function test_admin_show_json_includes_pieces_jointes(): void
     {
         Storage::fake('local');

@@ -134,4 +134,15 @@ return [
 
     'allow_pharmacy_reset' => (bool) env('ALLOW_PHARMACY_RESET', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Restauration depuis une sauvegarde (super_admin)
+    |--------------------------------------------------------------------------
+    |
+    | Activé si true, ou implicitement en APP_ENV=local.
+    |
+    */
+
+    'allow_backup_restore' => (bool) env('ALLOW_BACKUP_RESTORE', false),
+
 ];

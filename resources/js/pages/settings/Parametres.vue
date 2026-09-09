@@ -2306,7 +2306,7 @@ function sauverOrdonnanceVerification() {
                         <h3
                             class="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500"
                         >
-                            Crédits (commandes médicaments)
+                            Crédits (commandes éligibles)
                         </h3>
                         <div
                             class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
@@ -2315,7 +2315,7 @@ function sauverOrdonnanceVerification() {
                                 <label
                                     class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400"
                                 >
-                                    Seuil commande médicaments (XAF)
+                                    Seuil montant panier (XAF)
                                 </label>
                                 <input
                                     v-model="
@@ -2327,8 +2327,9 @@ function sauverOrdonnanceVerification() {
                                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                                 />
                                 <p class="mt-1 text-xs text-gray-500">
-                                    1 crédit consommé par commande ≥
-                                    ce montant (médicaments).
+                                    1 crédit consommé par commande dont le
+                                    panier (médicaments + parapharmacie) ≥
+                                    ce montant.
                                 </p>
                             </div>
                             <div>
@@ -2397,7 +2398,7 @@ function sauverOrdonnanceVerification() {
                                         class="size-4 rounded border-gray-300"
                                     />
                                     Déduction automatique à chaque commande
-                                    médicaments éligible livrée
+                                    éligible (retrait pharmacie confirmé)
                                 </label>
                             </div>
                         </div>

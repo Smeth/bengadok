@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ClientFrequenceController;
+use App\Http\Controllers\Settings\BackupController;
 use App\Http\Controllers\Settings\ParametresController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
@@ -38,6 +39,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('{role}', [RoleController::class, 'update'])->name('update');
         Route::delete('{role}', [RoleController::class, 'destroy'])->name('destroy');
     });
+
+    Route::get('settings/backups', [BackupController::class, 'index'])
+        ->middleware('role:super_admin')
+        ->name('settings.backups.index');
+
+    Route::post('settings/backups', [BackupController::class, 'store'])
+        ->middleware('role:super_admin')
+        ->name('settings.backups.store');
+
+    Route::get('settings/backups/{backup}/download', [BackupController::class, 'download'])
+        ->middleware('role:super_admin')
+        ->name('settings.backups.download');
+
+    Route::post('settings/backups/{backup}/restore', [BackupController::class, 'restore'])
+        ->middleware('role:super_admin')
+        ->name('settings.backups.restore');
+
+    Route::post('settings/backups/import', [BackupController::class, 'import'])
+        ->middleware('role:super_admin')
+        ->name('settings.backups.import');
+
+    Route::delete('settings/backups/{backup}', [BackupController::class, 'destroy'])
+        ->middleware('role:super_admin')
+        ->name('settings.backups.destroy');
 
     Route::inertia('settings/reset', 'settings/Reset')
         ->middleware('role:super_admin')

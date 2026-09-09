@@ -142,6 +142,12 @@ function onAnnulerEtRelancer() {
     });
 }
 
+function emitOpenRecu() {
+    if (detailCommande.value) {
+        emit('open-recu', detailCommande.value);
+    }
+}
+
 defineExpose({
     openDetail,
     closeDetail,
@@ -843,36 +849,28 @@ defineExpose({
                             <Paperclip class="size-4" />
                             Photos (pharmacie)
                         </h3>
-                        <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                            <a
+                        <div class="space-y-4">
+                            <div
                                 v-for="pj in detailCommande.pieces_jointes"
                                 :key="pj.id"
-                                :href="pj.file_url ?? '#'"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="group overflow-hidden rounded-lg border border-gray-100 bg-gray-50"
+                                class="rounded-lg border border-gray-100 bg-gray-50 p-2"
                             >
-                                <img
-                                    v-if="pj.file_url"
-                                    :src="pj.file_url"
-                                    :alt="
-                                        pj.label ??
-                                        pj.original_name ??
-                                        'Photo'
-                                    "
-                                    class="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]"
-                                    loading="lazy"
-                                />
                                 <p
                                     v-if="pj.label || pj.original_name"
-                                    class="truncate px-1.5 py-1 text-[10px] text-gray-600"
+                                    class="mb-2 truncate px-1 text-[11px] font-medium text-gray-600"
                                 >
                                     {{
                                         pj.label ??
                                         pj.original_name
                                     }}
                                 </p>
-                            </a>
+                                <OrdonnanceViewer
+                                    v-if="pj.file_url"
+                                    :file-url="pj.file_url"
+                                    :is-pdf="false"
+                                    max-height="10rem"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1317,7 +1315,8 @@ defineExpose({
 
                         <template
                             v-else-if="
-                                detailCommande.status === 'retiree'
+                                detailCommande.status === 'retiree' ||
+                                detailCommande.status === 'livree'
                             "
                         >
                             <button

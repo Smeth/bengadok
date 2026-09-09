@@ -348,7 +348,7 @@ function submitAlerte() {
                         >
                             <Info class="mt-0.5 size-4 shrink-0" />
                             <span>
-                                1 crédit = 1 commande médicaments ≥
+                                1 crédit = 1 commande panier ≥
                                 {{ formatXaf(creditGestion.config.seuil_medicament_xaf) }}
                                 XAF | Coût :
                                 {{ formatXaf(creditGestion.config.prix_unitaire_xaf) }}
