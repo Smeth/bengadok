@@ -151,7 +151,6 @@ const showPassword = ref(false);
     box-shadow: 0 0 0 30px hsl(0 0% 14.9%) inset !important;
     -webkit-text-fill-color: hsl(0 0% 98%) !important;
 }
-/* Bouton bleu-vert (teal) comme sur la maquette */
 .login-btn {
     background-color: #0d9488;
 }

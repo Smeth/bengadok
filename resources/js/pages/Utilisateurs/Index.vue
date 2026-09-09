@@ -464,7 +464,7 @@ function rechercher() {
                         </div>
                     </div>
 
-                    <DialogFooter class="flex gap-2 sm:gap-0">
+                    <DialogFooter class="gap-3">
                         <Button
                             type="button"
                             variant="outline"

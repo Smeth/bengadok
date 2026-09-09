@@ -101,9 +101,9 @@ onMounted(() => {
         />
 
         <!-- Zone logo + effets -->
-        <div class="relative z-10 flex flex-col items-center px-4">
+        <div class="relative z-10 flex w-full max-w-sm flex-col items-center px-4">
             <div
-                class="relative flex size-[min(82vw,300px)] items-center justify-center"
+                class="relative flex size-[min(68vw,220px)] items-center justify-center"
             >
                 <!-- Anneaux pulsants concentriques -->
                 <div
@@ -153,18 +153,18 @@ onMounted(() => {
 
                 <!-- Cercle blanc Figma + ombre — logo sidebar-logo-benga.png -->
                 <div
-                    class="bengadok-loader-logo-in relative flex aspect-square w-[min(75vw,300px)] flex-col items-center justify-center gap-2 rounded-full bg-white px-4 py-6 opacity-0 shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)] dark:bg-card"
+                    class="bengadok-loader-logo-in relative flex aspect-square w-[min(62vw,220px)] flex-col items-center justify-center gap-2 rounded-full bg-white px-4 py-5 opacity-0 shadow-[5px_0px_10px_0px_rgba(0,0,0,0.25)] dark:bg-card"
                 >
                     <img
                         src="/images/figma-assets/sidebar-logo-benga.png"
                         alt="BengaDok"
-                        class="h-[100px] w-auto max-w-[220px] object-contain sm:h-[125px] sm:max-w-[275px]"
+                        class="h-[72px] w-auto max-w-[160px] object-contain sm:h-[84px] sm:max-w-[180px]"
                     />
                 </div>
             </div>
 
             <p
-                class="mt-8 text-sm font-medium text-[#64748b]"
+                class="mt-5 w-full text-center text-sm font-semibold tracking-wide text-[#459cd1]"
                 role="status"
                 aria-live="polite"
             >
