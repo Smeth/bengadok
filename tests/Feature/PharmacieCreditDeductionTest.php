@@ -196,4 +196,43 @@ class PharmacieCreditDeductionTest extends TestCase
         $commande->refresh();
         $this->assertSame(6000.0, (float) $commande->prix_medicaments);
     }
+
+    public function test_no_credit_deduction_for_non_partner_pharmacy(): void
+    {
+        AppSetting::ensureRowExists()->update([
+            'parapharma_credit_deduction_auto' => true,
+            'parapharma_credit_seuil_medicament_xaf' => 3000,
+        ]);
+
+        $pharmacie = $this->createPharmacie(null, [
+            'est_partenaire' => false,
+            'credits_solde' => 5,
+            'credits_actif' => true,
+        ]);
+        $client = $this->createClient();
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'validee',
+            'status_pharmacie' => Commande::STATUT_PHARMACIE_CA_COMPTABILISE,
+            'prix_medicaments' => 6000,
+            'prix_total' => 6000,
+        ]);
+
+        $op = app(PharmacieCreditService::class)->deduirePourCommande($commande->fresh());
+
+        $this->assertNull($op);
+        $this->assertSame(5, (int) $pharmacie->fresh()->credits_solde);
+    }
+
+    public function test_recharge_rejected_for_non_partner_pharmacy(): void
+    {
+        $pharmacie = $this->createPharmacie(null, ['est_partenaire' => false]);
+        $admin = $this->userWithRole('admin');
+
+        $response = $this->actingAs($admin)->post(route('pharmacies.credits.recharge', $pharmacie), [
+            'nombre_credits' => 10,
+            'mode_paiement' => 'especes',
+        ]);
+
+        $response->assertForbidden();
+    }
 }

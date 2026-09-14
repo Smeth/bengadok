@@ -167,6 +167,41 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
         $this->assertSame(1500.0, (float) $commande->prix_total);
     }
 
+    public function test_update_commande_en_attente_accepts_empty_client_tel_and_adresse(): void
+    {
+        $this->seedRoles();
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+        $client = $this->createClient(['tel' => '0612345678']);
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'en_attente',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch("/commandes/{$commande->id}", [
+                'client_id' => $client->id,
+                'client_nom' => $client->nom,
+                'client_prenom' => $client->prenom,
+                'client_tel' => '',
+                'client_adresse' => '',
+                'client_arrondissement' => $client->arrondissement,
+                'pharmacie_id' => $pharmacie->id,
+                'produits' => [
+                    [
+                        'designation' => 'Paracétamol',
+                        'quantite' => 1,
+                        'prix_unitaire' => 1500,
+                    ],
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $client->refresh();
+        $this->assertSame('', $client->tel);
+        $this->assertSame('', $client->adresse);
+    }
+
     public function test_update_commande_preserves_montants_when_lines_still_en_attente(): void
     {
         $this->seedRoles();

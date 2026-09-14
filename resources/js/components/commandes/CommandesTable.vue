@@ -3,8 +3,10 @@ import {
     Download,
     Eye,
     MoreHorizontal,
+    Trash2,
     X,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
 import ModulePagination from '@/components/shared/ModulePagination.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -47,6 +49,12 @@ const props = defineProps<{
     allSelected: boolean;
     someSelected: boolean;
     canCreateCommande: boolean;
+    /** Affiche « Supprimer » dans la barre de sélection (hub DB commande). */
+    canDeleteCommandes?: boolean;
+    /** Affiche « Annuler » dans la barre de sélection (module Commandes). */
+    showBulkAnnuler?: boolean;
+    /** Affiche « Exporter CSV » dans la barre de sélection. */
+    showExportCsv?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -55,9 +63,24 @@ const emit = defineEmits<{
     clearSelection: [];
     exportCsv: [];
     openBulkAnnulerModal: [];
+    deleteSelected: [];
+    deleteOne: [id: number];
     openDetail: [id: number];
     filtrer: [key: string, value: string];
 }>();
+
+const showAnnuler = computed(
+    () => props.showBulkAnnuler !== false && props.canCreateCommande,
+);
+const showDelete = computed(() => props.canDeleteCommandes === true);
+const showExportCsvButton = computed(() => props.showExportCsv !== false);
+
+/** reka-ui Checkbox : modelValue boolean | 'indeterminate' (pas checked/indeterminate séparés). */
+const headerCheckboxState = computed(() => {
+    if (props.allSelected) return true;
+    if (props.someSelected) return 'indeterminate' as const;
+    return false;
+});
 
 function civiliteFromSexe(sexe?: string | null): string {
     if (sexe === 'F') return 'Mme';
@@ -106,17 +129,32 @@ function formatDate(d: string) {
             <Button variant="outline" size="sm" @click="emit('clearSelection')"
                 >Tout désélectionner</Button
             >
-            <Button variant="outline" size="sm" @click="emit('exportCsv')">
+            <Button
+                v-if="showExportCsvButton"
+                variant="outline"
+                size="sm"
+                @click="emit('exportCsv')"
+            >
                 <Download class="mr-2 size-4" />
                 Exporter CSV
             </Button>
             <Button
+                v-if="showAnnuler"
                 variant="destructive"
                 size="sm"
                 @click="emit('openBulkAnnulerModal')"
             >
                 <X class="mr-2 size-4" />
                 Annuler
+            </Button>
+            <Button
+                v-if="showDelete"
+                variant="destructive"
+                size="sm"
+                @click="emit('deleteSelected')"
+            >
+                <Trash2 class="mr-2 size-4" />
+                Supprimer
             </Button>
         </div>
 
@@ -147,9 +185,8 @@ function formatDate(d: string) {
                     >
                         <th class="pb-3 pr-3 text-left font-bold">
                             <Checkbox
-                                :checked="allSelected"
-                                :indeterminate="someSelected && !allSelected"
-                                @update:checked="emit('toggleAll')"
+                                :model-value="headerCheckboxState"
+                                @update:model-value="emit('toggleAll')"
                             />
                         </th>
                         <th class="pb-3 pr-3 text-left font-bold">ID Cmd</th>
@@ -174,8 +211,8 @@ function formatDate(d: string) {
                     >
                         <td class="py-3 pr-3 align-middle">
                             <Checkbox
-                                :checked="selectedIds.has(cmd.id)"
-                                @update:checked="emit('toggleOne', cmd.id)"
+                                :model-value="selectedIds.has(cmd.id)"
+                                @update:model-value="emit('toggleOne', cmd.id)"
                             />
                         </td>
                         <td
@@ -274,6 +311,13 @@ function formatDate(d: string) {
                                             @click="emit('openDetail', cmd.id)"
                                         >
                                             Voir détails
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            v-if="showDelete"
+                                            class="text-destructive focus:text-destructive"
+                                            @click="emit('deleteOne', cmd.id)"
+                                        >
+                                            Supprimer
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>

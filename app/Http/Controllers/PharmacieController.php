@@ -7,6 +7,7 @@ use App\Models\Pharmacie;
 use App\Models\TypePharmacie;
 use App\Models\User;
 use App\Models\Zone;
+use App\Services\CommandeReferentielsService;
 use App\Services\PharmacieCreditService;
 use App\Services\PharmacieUsernameGenerator;
 use App\Support\PaginatesSafely;
@@ -30,10 +31,14 @@ class PharmacieController extends Controller
         $ongletActif = ($onglet === 'credits' && $peutGererCredits) ? 'credits' : 'liste';
 
         $search = $request->query('search', '');
+        $partenaire = (string) $request->query('partenaire', '');
+
         $query = Pharmacie::with(['zone', 'typePharmacie', 'heurs', 'users'])
             ->when($search, fn ($q) => $q->where('designation', 'like', "%{$search}%")
                 ->orWhere('adresse', 'like', "%{$search}%")
                 ->orWhere('telephone', 'like', "%{$search}%"))
+            ->when($partenaire === '1', fn ($q) => $q->where('est_partenaire', true))
+            ->when($partenaire === '0', fn ($q) => $q->where('est_partenaire', false))
             ->orderByDesc('created_at');
 
         $pharmacies = PaginatesSafely::paginate($query, $request, 8)->through(function ($p) {
@@ -49,6 +54,7 @@ class PharmacieController extends Controller
                 'latitude' => $lat,
                 'longitude' => $lng,
                 'de_garde' => $p->de_garde,
+                'est_partenaire' => (bool) $p->est_partenaire,
                 'proprio_nom' => $p->proprio_nom,
                 'proprio_tel' => $p->proprio_tel,
                 'zone' => $p->zone,
@@ -91,7 +97,7 @@ class PharmacieController extends Controller
             $pharmacieCreditsId = (int) $request->query('pharmacie_id', 0);
             if ($ongletActif === 'credits' && $pharmacieCreditsId > 0) {
                 $pharmacieCredits = Pharmacie::query()->find($pharmacieCreditsId);
-                if ($pharmacieCredits) {
+                if ($pharmacieCredits?->est_partenaire) {
                     $creditGestion = $creditService->buildGestionPayload($pharmacieCredits);
                     $pharmacieCreditsSelection = [
                         'id' => $pharmacieCredits->id,
@@ -110,7 +116,10 @@ class PharmacieController extends Controller
             'pharmacies' => $pharmacies,
             'googleMyMapsEmbedUrl' => $googleMyMapsEmbedUrl,
             'googleMyMapsViewerUrl' => $googleMyMapsViewerUrl,
-            'filters' => ['search' => $search],
+            'filters' => [
+                'search' => $search,
+                'partenaire' => $partenaire,
+            ],
             'stats' => [
                 'de_garde' => $nbDeGarde,
                 'total' => $nbTotal,
@@ -132,11 +141,13 @@ class PharmacieController extends Controller
         $user = $request->user();
         $peutGererCredits = $user?->hasAnyRole(['admin', 'super_admin']) ?? false;
         $onglet = request()->query('onglet');
-        $ongletActif = ($onglet === 'credits' && $peutGererCredits) ? 'credits' : 'informations';
+        $peutGererCreditsPharmacie = $peutGererCredits && $pharmacie->est_partenaire;
+        $ongletActif = ($onglet === 'credits' && $peutGererCreditsPharmacie) ? 'credits' : 'informations';
 
         return Inertia::render('Pharmacies/Show', [
             'onglet' => $ongletActif,
-            'creditGestion' => $peutGererCredits
+            'creditsIndisponible' => $onglet === 'credits' && $peutGererCredits && ! $pharmacie->est_partenaire,
+            'creditGestion' => $peutGererCreditsPharmacie
                 ? $creditService->buildGestionPayload($pharmacie)
                 : null,
             'nextUserId' => $nextUserId,
@@ -147,6 +158,7 @@ class PharmacieController extends Controller
                 'telephone' => $pharmacie->telephone,
                 'email' => $pharmacie->email,
                 'de_garde' => $pharmacie->de_garde,
+                'est_partenaire' => (bool) $pharmacie->est_partenaire,
                 'proprio_nom' => $pharmacie->proprio_nom,
                 'proprio_tel' => $pharmacie->proprio_tel,
                 'proprio_email' => $pharmacie->proprio_email,
@@ -202,6 +214,7 @@ class PharmacieController extends Controller
                 'type_pharmacie_id' => $validated['type_pharmacie_id'],
                 'heurs_id' => $heur->id,
                 'designation' => $validated['designation'],
+                'est_partenaire' => true,
                 'adresse' => $validated['adresse'],
                 'telephone' => $validated['telephone'],
                 'email' => $validated['email'] ?? null,
@@ -263,10 +276,10 @@ class PharmacieController extends Controller
             'proprio_tel' => 'nullable|string|max:20',
         ];
 
-        // Réglage crédits/commission réservé à l'admin, comme les autres routes credits.*
-        $peutGererCredits = $request->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
-        if ($peutGererCredits) {
+        $peutGererAdmin = $request->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
+        if ($peutGererAdmin) {
             $rules['credits_actif'] = 'sometimes|boolean';
+            $rules['est_partenaire'] = 'sometimes|boolean';
         }
 
         $validated = $request->validate($rules);
@@ -276,7 +289,7 @@ class PharmacieController extends Controller
         );
 
         $updatePayload = [
-            'zone_id' => $validated['zone_id'] ?? null,
+            'zone_id' => $validated['zone_id'] ?? $pharmacie->zone_id,
             'type_pharmacie_id' => $validated['type_pharmacie_id'],
             'heurs_id' => $heur->id,
             'designation' => $validated['designation'],
@@ -287,13 +300,43 @@ class PharmacieController extends Controller
             'proprio_tel' => $validated['proprio_tel'] ?? null,
             'proprio_email' => $validated['proprio_email'] ?? null,
         ];
-        if ($peutGererCredits && array_key_exists('credits_actif', $validated)) {
+        if ($peutGererAdmin && array_key_exists('credits_actif', $validated)) {
             $updatePayload['credits_actif'] = $validated['credits_actif'];
+        }
+        if ($peutGererAdmin && $request->exists('est_partenaire')) {
+            $updatePayload['est_partenaire'] = $request->boolean('est_partenaire');
+        }
+
+        $seraPartenaire = array_key_exists('est_partenaire', $updatePayload)
+            ? (bool) $updatePayload['est_partenaire']
+            : (bool) $pharmacie->est_partenaire;
+        if (! $seraPartenaire) {
+            $updatePayload['credits_actif'] = false;
         }
 
         $pharmacie->update($updatePayload);
 
         return back()->with('status', 'Pharmacie mise à jour.');
+    }
+
+    public function promotePartenaire(Request $request, Pharmacie $pharmacie): RedirectResponse
+    {
+        abort_unless($request->user()?->hasAnyRole(['admin', 'super_admin']), 403);
+
+        if ($pharmacie->est_partenaire) {
+            return back()->with('status', 'Cette pharmacie est déjà partenaire.');
+        }
+
+        $pharmacie->update([
+            'est_partenaire' => true,
+            'credits_actif' => false,
+        ]);
+        CommandeReferentielsService::invalidateCache();
+
+        return back()->with(
+            'status',
+            'Pharmacie promue en partenaire. Activez manuellement les crédits/commission depuis la fiche si besoin.',
+        );
     }
 
     public function toggleGarde(Pharmacie $pharmacie): RedirectResponse

@@ -49,6 +49,27 @@ class AppServiceProvider extends ServiceProvider
         AppSetting::observe($referentielsObserver);
 
         $this->configureDefaults();
+        $this->sanitizeViteHotFile();
+    }
+
+    /**
+     * Évite les pages blanches quand public/hot pointe vers [::1]:5173 (Firefox/Windows).
+     */
+    private function sanitizeViteHotFile(): void
+    {
+        if (! $this->app->environment('local')) {
+            return;
+        }
+
+        $hotPath = public_path('hot');
+        if (! is_file($hotPath)) {
+            return;
+        }
+
+        $url = trim((string) file_get_contents($hotPath));
+        if ($url !== '' && str_contains($url, '[::1]')) {
+            @unlink($hotPath);
+        }
     }
 
     /**

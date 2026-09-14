@@ -14,6 +14,7 @@ class BengaDokSeeder extends Seeder
             HeurSeeder::class,
             TypePharmacieSeeder::class,
             PharmacieSeeder::class,
+            ImportPharmacieSeeder::class,
             ProduitSeeder::class,
             ModePaiementSeeder::class,
             MontantLivraisonSeeder::class,

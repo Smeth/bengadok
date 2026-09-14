@@ -191,7 +191,7 @@ class CommandeCreationFields
             'client_sexe' => self::isRequiredForRequest('client_sexe', $request) && $sansClientExistant
                 ? ['required', 'in:M,F']
                 : ['nullable', 'in:M,F'],
-            'pharmacie_id' => 'required|exists:pharmacies,id',
+            'pharmacie_id' => PharmaciePartenaireRules::pharmacieIdRules($request),
             'beneficiaire' => array_merge($stringRequiredAnyClient('beneficiaire'), ['max:100']),
             'produits' => 'required|array|min:1',
             'produits.*.designation' => 'required|string|max:255',

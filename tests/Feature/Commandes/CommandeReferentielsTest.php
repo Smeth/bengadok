@@ -5,11 +5,13 @@ namespace Tests\Feature\Commandes;
 use App\Services\CommandeReferentielsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Tests\Concerns\CreatesMinimalFixtures;
 use Tests\Concerns\SeedsRoles;
 use Tests\TestCase;
 
 class CommandeReferentielsTest extends TestCase
 {
+    use CreatesMinimalFixtures;
     use RefreshDatabase;
     use SeedsRoles;
 
@@ -40,11 +42,49 @@ class CommandeReferentielsTest extends TestCase
     public function test_referentiels_are_cached_after_first_load(): void
     {
         Cache::flush();
-        $this->assertFalse(Cache::has(CommandeReferentielsService::CACHE_KEY));
+        $key = CommandeReferentielsService::CACHE_KEY.'.partenaires';
+        $this->assertFalse(Cache::has($key));
 
         app(CommandeReferentielsService::class)->all();
 
-        $this->assertTrue(Cache::has(CommandeReferentielsService::CACHE_KEY));
+        $this->assertTrue(Cache::has($key));
+    }
+
+    public function test_referentiels_default_excludes_non_partner_pharmacies(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $partenaire = $this->createPharmacie(null, [
+            'designation' => 'Pharmacie Partenaire',
+            'est_partenaire' => true,
+        ]);
+        $nonPartenaire = $this->createPharmacie(null, [
+            'designation' => 'Pharmacie Import',
+            'est_partenaire' => false,
+        ]);
+        CommandeReferentielsService::invalidateCache();
+
+        $response = $this->actingAs($admin)
+            ->getJson('/commandes/referentiels')
+            ->assertOk();
+
+        $ids = collect($response->json('pharmacies'))->pluck('id')->all();
+        $this->assertContains($partenaire->id, $ids);
+        $this->assertNotContains($nonPartenaire->id, $ids);
+    }
+
+    public function test_referentiels_toutes_includes_non_partner_pharmacies(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $nonPartenaire = $this->createPharmacie(null, [
+            'designation' => 'Pharmacie Import',
+            'est_partenaire' => false,
+        ]);
+        CommandeReferentielsService::invalidateCache();
+
+        $this->actingAs($admin)
+            ->getJson('/commandes/referentiels?pharmacies=toutes')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $nonPartenaire->id]);
     }
 
     public function test_vendeur_cannot_load_commande_referentiels(): void

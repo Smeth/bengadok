@@ -2,9 +2,11 @@
 
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Support\UploadLimits;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
@@ -41,5 +43,19 @@ return Application::configure(basePath: dirname(__DIR__))
                 'error',
                 'Cette page a expiré. Actualisez-la ou réessayez la connexion.',
             );
+        });
+
+        $exceptions->render(function (PostTooLargeException $e, Request $request) {
+            $message = UploadLimits::payloadTooLargeMessage();
+
+            if ($request->header('X-Inertia')) {
+                return back()->with('error', $message);
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 413);
+            }
+
+            return back()->with('error', $message);
         });
     })->create();

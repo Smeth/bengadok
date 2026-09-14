@@ -13,6 +13,7 @@ use App\Models\Produit;
 use App\Services\CommandeMontantCalculator;
 use App\Services\CommandeService;
 use App\Services\PharmacieProximiteService;
+use App\Support\PharmaciePartenaireRules;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,7 +28,7 @@ class AgentController extends Controller
     public function nouvelleCommande(Request $request): Response
     {
         return Inertia::render('Agent/NouvelleCommande', [
-            'pharmacies' => Pharmacie::with(['zone', 'typePharmacie', 'heurs'])->get(),
+            'pharmacies' => Pharmacie::with(['zone', 'typePharmacie', 'heurs'])->partenaires()->get(),
             'modesPaiement' => ModePaiement::all(),
             'montantsLivraison' => MontantLivraison::orderBy('designation')->get(),
             'livreurs' => Livreur::all(),
@@ -146,7 +147,7 @@ class AgentController extends Controller
         }
 
         $validated = $request->validate([
-            'pharmacie_id' => 'required|exists:pharmacies,id',
+            'pharmacie_id' => PharmaciePartenaireRules::partenaireIdRules(),
             'lignes' => 'required|array|min:1',
             'lignes.*.produit_id' => 'required|exists:produits,id',
             'lignes.*.quantite' => 'required|integer|min:1',

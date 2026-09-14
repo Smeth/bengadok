@@ -145,9 +145,10 @@ const motifLabelBySlug = computed(() =>
 const searchQuery = ref(props.filters.search ?? '');
 const activeTab = ref<'gestion' | 'statistiques'>('gestion');
 const commandeTabs = [
-    { id: 'gestion', label: 'Gestion commandes' },
+    { id: 'gestion', label: 'Suivi opérationnel' },
     { id: 'statistiques', label: 'Statistiques' },
 ] as const;
+
 const detailDrawerRef = ref<CommandeDetailDrawerExpose | null>(null);
 
 /** Monte tiroir + modales uniquement quand nécessaire (réduit le JS initial). */
@@ -310,7 +311,7 @@ function filtrer(key: string, value: string) {
 </script>
 
 <template>
-    <Head title="Gestion des commandes - BengaDok" />
+    <Head title="Commandes — suivi opérationnel - BengaDok" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div :class="modulePageClass">

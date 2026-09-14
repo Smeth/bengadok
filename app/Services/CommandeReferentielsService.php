@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Cache;
 
 class CommandeReferentielsService
 {
-    public const CACHE_KEY = 'commandes.referentiels.v1';
+    public const CACHE_KEY = 'commandes.referentiels.v2';
 
     /** TTL court : données peu volatiles, invalidation explicite à la modification. */
     public const TTL_SECONDS = 600;
@@ -29,14 +29,21 @@ class CommandeReferentielsService
      *     parapharma_produit_types: list<string>
      * }
      */
-    public function all(): array
+    public function all(bool $partenairesUniquement = true): array
     {
-        return Cache::remember(self::CACHE_KEY, self::TTL_SECONDS, fn (): array => $this->loadFresh());
+        $suffix = $partenairesUniquement ? 'partenaires' : 'toutes';
+
+        return Cache::remember(
+            self::CACHE_KEY.'.'.$suffix,
+            self::TTL_SECONDS,
+            fn (): array => $this->loadFresh($partenairesUniquement),
+        );
     }
 
     public static function invalidateCache(): void
     {
-        Cache::forget(self::CACHE_KEY);
+        Cache::forget(self::CACHE_KEY.'.partenaires');
+        Cache::forget(self::CACHE_KEY.'.toutes');
     }
 
     /**
@@ -50,11 +57,26 @@ class CommandeReferentielsService
      *     parapharma_produit_types: list<string>
      * }
      */
-    private function loadFresh(): array
+    private function loadFresh(bool $partenairesUniquement): array
     {
+        $pharmaciesQuery = Pharmacie::query()
+            ->with(['zone', 'typePharmacie', 'heurs'])
+            ->orderBy('designation');
+
+        if ($partenairesUniquement) {
+            $pharmaciesQuery->partenaires();
+        }
+
+        $zonesQuery = Zone::query()->orderBy('designation');
+        if ($partenairesUniquement) {
+            $zonesQuery->withCount(['pharmacies as pharmacies_count' => fn ($q) => $q->partenaires()]);
+        } else {
+            $zonesQuery->withCount('pharmacies');
+        }
+
         return [
-            'pharmacies' => Pharmacie::with(['zone', 'typePharmacie', 'heurs'])->get()->all(),
-            'zones' => Zone::withCount('pharmacies')->get()->all(),
+            'pharmacies' => $pharmaciesQuery->get()->all(),
+            'zones' => $zonesQuery->get()->all(),
             'montantsLivraison' => MontantLivraison::all()->all(),
             'modesPaiement' => ModePaiement::query()->orderBy('designation')->get()->all(),
             'livreurs' => Livreur::orderBy('nom')->orderBy('prenom')->get()->all(),

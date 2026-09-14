@@ -4,6 +4,7 @@ import { usePage } from '@inertiajs/vue3';
 import {
     Building2,
     ClipboardList,
+    Database,
     LayoutGrid,
     LogOut,
     Package,
@@ -69,6 +70,13 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: isPharma.value ? '/dok-pharma' : '/commandes',
             icon: ClipboardList,
         },
+        ...(isAdmin
+            ? [{
+                title: 'Gestion commandes',
+                href: '/db-commandes?tab=commandes',
+                icon: Database,
+            }]
+            : []),
         { title: 'Pharmacies', href: '/pharmacies', icon: Building2 },
         { title: 'Médicaments', href: '/medicaments', icon: Package },
         { title: 'Clients', href: '/clients', icon: Users },

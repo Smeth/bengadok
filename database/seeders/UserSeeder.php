@@ -60,7 +60,7 @@ class UserSeeder extends Seeder
         ];
 
         foreach ($users as $u) {
-            $user = User::firstOrCreate(
+            $user = User::query()->firstOrCreate(
                 ['email' => $u['email']],
                 [
                     'name' => $u['name'],
@@ -69,8 +69,17 @@ class UserSeeder extends Seeder
                     'password' => bcrypt('password'),
                     'email_verified_at' => now(),
                     'pharmacie_id' => $u['pharmacie_id'] ?? null,
-                ]
+                ],
             );
+
+            if (! $user->wasRecentlyCreated) {
+                $user->update([
+                    'name' => $u['name'],
+                    'phone' => $u['phone'] ?? $user->phone,
+                    'pharmacie_id' => $u['pharmacie_id'] ?? $user->pharmacie_id,
+                ]);
+            }
+
             $user->syncRoles([$u['role']]);
         }
     }

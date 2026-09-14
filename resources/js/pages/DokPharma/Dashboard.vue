@@ -37,8 +37,11 @@ withDefaults(
             designation: string;
             telephone?: string;
             email?: string | null;
+            est_partenaire?: boolean;
             credits_actif?: boolean;
         } | null;
+        parapharma_actif?: boolean;
+        parapharma_inactif_message?: string;
         pharmacies_disponibles?: Array<{ id: number; designation: string }>;
         mois: string;
         mois_label: string;
@@ -108,6 +111,8 @@ withDefaults(
                 :commandes_recentes="commandes_recentes"
                 :pharmacie_id="pharmacie_id"
                 :pharmacie="pharmacie"
+                :parapharma_actif="parapharma_actif ?? true"
+                :parapharma_inactif_message="parapharma_inactif_message ?? ''"
             />
         </div>
     </PharmacyLayout>

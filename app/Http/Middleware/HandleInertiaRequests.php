@@ -7,6 +7,7 @@ use App\Models\Commande;
 use App\Models\MotifAnnulation;
 use App\Models\OrdonnanceVerificationSetting;
 use App\Services\PharmacyDataResetService;
+use App\Support\UploadLimits;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Middleware;
@@ -52,6 +53,7 @@ class HandleInertiaRequests extends Middleware
              * @see https://inertiajs.com/shared-data#merging-shared-data
              */
             'csrf_token' => Inertia::always(fn () => csrf_token()),
+            'upload_limits' => Inertia::always(fn () => UploadLimits::inertiaPayload()),
             'flash' => [
                 'status' => fn () => $request->session()->get('status'),
                 'success' => fn () => $request->session()->get('success'),

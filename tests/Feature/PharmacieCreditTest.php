@@ -17,7 +17,10 @@ class PharmacieCreditTest extends TestCase
     public function test_recharge_increments_pharmacy_balance(): void
     {
         $admin = $this->userWithRole('admin');
-        $pharmacie = $this->createPharmacie(null, ['credits_solde' => 5]);
+        $pharmacie = $this->createPharmacie(null, [
+            'credits_solde' => 5,
+            'est_partenaire' => true,
+        ]);
 
         $service = app(PharmacieCreditService::class);
         $service->recharger($pharmacie, 10, 'especes', 'Test recharge', $admin);
@@ -28,7 +31,7 @@ class PharmacieCreditTest extends TestCase
     public function test_recharge_below_minimum_is_rejected(): void
     {
         $admin = $this->userWithRole('admin');
-        $pharmacie = $this->createPharmacie();
+        $pharmacie = $this->createPharmacie(null, ['est_partenaire' => true]);
 
         $this->expectException(\InvalidArgumentException::class);
 

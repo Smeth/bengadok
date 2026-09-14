@@ -120,6 +120,17 @@ class Commande extends Model
         );
     }
 
+    /**
+     * Commandes rattachées à une pharmacie partenaire (réseau opérationnel BengaDok).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<Commande>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<Commande>
+     */
+    public function scopePourReseauPartenaire($query)
+    {
+        return $query->whereHas('pharmacie', fn ($q) => $q->partenaires());
+    }
+
     // Statuts côté pharmacie
     public const STATUSES_PHARMACIE = [
         'nouvelle' => 'Nouvelle commande',

@@ -6,6 +6,7 @@ use App\Http\Controllers\ClientDoublonController;
 use App\Http\Controllers\CommandeController;
 use App\Http\Controllers\CommandePieceJointeController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DbCommandeController;
 use App\Http\Controllers\DbMedicamentController;
 use App\Http\Controllers\DokPharmaController;
 use App\Http\Controllers\MedicamentCatalogueMaintenanceController;
@@ -39,6 +40,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/', [PharmacieController::class, 'store'])->name('store');
             Route::get('{pharmacie}', [PharmacieController::class, 'show'])->name('show');
             Route::patch('{pharmacie}', [PharmacieController::class, 'update'])->name('update');
+            Route::patch('{pharmacie}/promote-partenaire', [PharmacieController::class, 'promotePartenaire'])
+                ->name('promote-partenaire')
+                ->middleware('role:admin|super_admin');
             Route::patch('{pharmacie}/toggle-garde', [PharmacieController::class, 'toggleGarde'])->name('toggle-garde');
             Route::delete('{pharmacie}', [PharmacieController::class, 'destroy'])->name('destroy');
             Route::post('{pharmacie}/users', [PharmacieController::class, 'storeUser'])->name('users.store')->middleware('role:admin|super_admin');
@@ -89,10 +93,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('{user}', [UtilisateurBackofficeController::class, 'destroy'])->name('destroy');
         });
 
+        Route::prefix('db-commandes')->name('db-commandes.')->group(function () {
+            Route::get('/', [DbCommandeController::class, 'index'])->name('index');
+            Route::get('modele', [DbCommandeController::class, 'downloadModele'])->name('modele');
+            Route::post('integrate-all', [DbCommandeController::class, 'integrateAll'])->name('integrate-all')->middleware('role:admin|super_admin');
+            Route::post('integrate-bulk', [DbCommandeController::class, 'integrateBulk'])->name('integrate-bulk')->middleware('role:admin|super_admin');
+            Route::post('import', [DbCommandeController::class, 'import'])->name('import')->middleware('role:admin|super_admin');
+            Route::get('export', [DbCommandeController::class, 'export'])->name('export');
+            Route::get('export-imports', [DbCommandeController::class, 'exportImports'])->name('export-imports')->middleware('role:admin|super_admin');
+            Route::post('commandes/destroy-bulk', [DbCommandeController::class, 'destroyCommandesBulk'])->name('commandes.destroy-bulk')->middleware('role:admin|super_admin');
+            Route::post('destroy-bulk', [DbCommandeController::class, 'destroyBulk'])->name('destroy-bulk')->middleware('role:admin|super_admin');
+            Route::post('purge-all', [DbCommandeController::class, 'purgeAll'])->name('purge-all')->middleware('role:admin|super_admin');
+            Route::post('{dbCommande}/integrate', [DbCommandeController::class, 'integrate'])->name('integrate')->middleware('role:admin|super_admin');
+            Route::delete('{dbCommande}', [DbCommandeController::class, 'destroy'])->name('destroy')->middleware('role:admin|super_admin');
+        });
+
         // Commande (back-office)
         Route::prefix('commandes')->name('commandes.')->group(function () {
             Route::get('/', [CommandeController::class, 'index'])->name('index');
             Route::get('referentiels', [CommandeController::class, 'referentiels'])->name('referentiels');
+            Route::post('pharmacies/quick-create', [CommandeController::class, 'quickCreatePharmacie'])
+                ->name('pharmacies.quick-create')
+                ->middleware('role:admin|super_admin');
             Route::get('recherche-pharmacie-proche', [CommandeController::class, 'rechercherPharmacieProche'])->name('recherche-pharmacie');
             Route::post('bulk-annuler', [CommandeController::class, 'bulkAnnuler'])->name('bulk-annuler')->middleware('role:admin|super_admin|agent_call_center');
             Route::post('/', [CommandeController::class, 'store'])->name('store')->middleware('role:admin|super_admin|agent_call_center');

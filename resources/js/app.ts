@@ -2,7 +2,9 @@ import './bootstrap-csrf';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
-import { createApp, h } from 'vue';
+import { createApp, h, Fragment } from 'vue';
+import GlobalToastHost from '@/components/GlobalToastHost.vue';
+import { syncUploadLimitsFromPage } from '@/lib/uploadLimits';
 import '../css/app.css';
 import { configureEcho } from '@laravel/echo-vue';
 import { initializeTheme } from './composables/useAppearance';
@@ -23,8 +25,18 @@ createInertiaApp({
             `./pages/${name}.vue`,
             import.meta.glob<DefineComponent>('./pages/**/*.vue'),
         ),
-    setup({ el, App, props, plugin }) {
-        createApp({ render: () => h(App, props) })
+    setup({ el, App, props: initialPage, plugin }) {
+        syncUploadLimitsFromPage(
+            (initialPage as { props?: Record<string, unknown> }).props,
+        );
+
+        createApp({
+            render: () =>
+                h(Fragment, null, [
+                    h(App, initialPage),
+                    h(GlobalToastHost),
+                ]),
+        })
             .use(plugin)
             .mount(el);
     },

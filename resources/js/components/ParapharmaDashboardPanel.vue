@@ -16,6 +16,7 @@ import {
     Wallet,
     X,
 } from 'lucide-vue-next';
+import { onClickOutside } from '@vueuse/core';
 import { computed, ref } from 'vue';
 import {
     moduleDetailPanelClass,
@@ -86,8 +87,11 @@ const props = withDefaults(
         designation: string;
         telephone?: string;
         email?: string | null;
+        est_partenaire?: boolean;
         credits_actif?: boolean;
     } | null;
+    parapharma_actif?: boolean;
+    parapharma_inactif_message?: string;
     mois: string;
     mois_label: string;
     mois_options: MoisOption[];
@@ -133,6 +137,8 @@ const props = withDefaults(
         context: 'admin',
         pharmacie_id: null,
         pharmacie: null,
+        parapharma_actif: true,
+        parapharma_inactif_message: '',
         commissions_par_pharmacie: () => [],
         ventes_par_pharmacie: () => [],
         credits_par_pharmacie: () => [],
@@ -142,16 +148,65 @@ const props = withDefaults(
 
 const vuePeriode = computed(() => props.vue_periode ?? 'mois');
 
-const moisDropdownOpen = ref(false);
+type MoisDropdownId = 'ventes' | 'credits' | 'pharmacie';
+
+const openMoisDropdown = ref<MoisDropdownId | null>(null);
+const ventesMoisDropdownRef = ref<HTMLElement | null>(null);
+const creditsMoisDropdownRef = ref<HTMLElement | null>(null);
+const pharmacieMoisDropdownRef = ref<HTMLElement | null>(null);
 const rechargeModalOpen = ref(false);
+
+function toggleMoisDropdown(id: MoisDropdownId) {
+    openMoisDropdown.value = openMoisDropdown.value === id ? null : id;
+}
+
+function closeMoisDropdown() {
+    openMoisDropdown.value = null;
+}
+
+onClickOutside(ventesMoisDropdownRef, () => {
+    if (openMoisDropdown.value === 'ventes') {
+        closeMoisDropdown();
+    }
+});
+onClickOutside(creditsMoisDropdownRef, () => {
+    if (openMoisDropdown.value === 'credits') {
+        closeMoisDropdown();
+    }
+});
+onClickOutside(pharmacieMoisDropdownRef, () => {
+    if (openMoisDropdown.value === 'pharmacie') {
+        closeMoisDropdown();
+    }
+});
 
 const isPharmacie = computed(() => props.context === 'pharmacie');
 const isAdmin = computed(() => props.context === 'admin');
 
-/** Crédits/commission désactivés pour cette pharmacie (réglage admin) : blocs masqués. */
-const creditsActifs = computed(
-    () => !isPharmacie.value || props.pharmacie?.credits_actif !== false,
+const parapharmaActif = computed(() => props.parapharma_actif !== false);
+
+const parapharmaInactifMessage = computed(
+    () =>
+        props.parapharma_inactif_message ||
+        (props.pharmacie?.est_partenaire === false
+            ? 'Le système crédits et commission parapharmacie est réservé aux pharmacies partenaires BengaDok.'
+            : 'Les crédits et la commission parapharmacie ne sont pas activés pour votre pharmacie. Contactez l\'administration BengaDok pour les activer.'),
 );
+
+/** Crédits/commission : partenaire avec opt-in admin activé. */
+const creditsActifs = computed(() => {
+    if (!isPharmacie.value) {
+        return true;
+    }
+    if (!parapharmaActif.value) {
+        return false;
+    }
+
+    return (
+        props.pharmacie?.est_partenaire !== false &&
+        props.pharmacie?.credits_actif !== false
+    );
+});
 
 const commandesHref = computed(() =>
     isPharmacie.value ? '/dok-pharma/commandes' : '/commandes',
@@ -196,7 +251,7 @@ function dashboardQuery(
 }
 
 function setMois(value: string) {
-    moisDropdownOpen.value = false;
+    closeMoisDropdown();
     const url = isPharmacie.value ? '/dok-pharma' : dashboard();
     router.get(url, dashboardQuery(value), { preserveState: true });
 }
@@ -349,6 +404,16 @@ function statutBadgeClass(statut: string): string {
                     À verser pour la période, toutes pharmacies
                 </p>
             </div>
+        </div>
+
+        <!-- Pharmacie : système crédits/commission non activé -->
+        <div
+            v-else-if="!parapharmaActif"
+            class="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center dark:border-amber-800 dark:bg-amber-950/30"
+        >
+            <p class="text-sm font-medium text-amber-900 dark:text-amber-100">
+                {{ parapharmaInactifMessage }}
+            </p>
         </div>
 
         <!-- KPIs : vue pharmacie (un seul établissement) -->
@@ -666,19 +731,17 @@ function statutBadgeClass(statut: string): string {
                                     Semaine
                                 </button>
                             </div>
-                            <div class="relative">
+                            <div ref="ventesMoisDropdownRef" class="relative">
                                 <button
                                     type="button"
                                     class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold dark:border-border dark:bg-input dark:text-foreground"
-                                    @click="
-                                        moisDropdownOpen = !moisDropdownOpen
-                                    "
+                                    @click="toggleMoisDropdown('ventes')"
                                 >
                                     {{ mois_label }}
                                     <ChevronDown class="size-4" />
                                 </button>
                                 <div
-                                    v-show="moisDropdownOpen"
+                                    v-show="openMoisDropdown === 'ventes'"
                                     class="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border border-border bg-popover py-1 shadow-lg"
                                 >
                                     <button
@@ -865,17 +928,17 @@ function statutBadgeClass(statut: string): string {
                                 Semaine
                             </button>
                         </div>
-                        <div class="relative">
+                        <div ref="creditsMoisDropdownRef" class="relative">
                             <button
                                 type="button"
                                 class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold dark:border-border dark:bg-input dark:text-foreground"
-                                @click="moisDropdownOpen = !moisDropdownOpen"
+                                @click="toggleMoisDropdown('credits')"
                             >
                                 {{ mois_label }}
                                 <ChevronDown class="size-4" />
                             </button>
                             <div
-                                v-show="moisDropdownOpen"
+                                v-show="openMoisDropdown === 'credits'"
                                 class="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border border-border bg-popover py-1 shadow-lg"
                             >
                                 <button
@@ -973,25 +1036,28 @@ function statutBadgeClass(statut: string): string {
         </template>
 
         <!-- Pharmacie : ventes détaillées + sidebar crédits -->
-        <div v-else class="grid gap-6 lg:grid-cols-3">
+        <div v-else-if="parapharmaActif" class="grid gap-6 lg:grid-cols-3">
             <div
-                :class="['lg:col-span-2', moduleDetailPanelLgClass]"
+                :class="[
+                    creditsActifs ? 'lg:col-span-2' : 'lg:col-span-3',
+                    moduleDetailPanelLgClass,
+                ]"
             >
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-foreground">
                         Détail des ventes (médicaments + parapharmacie)
                     </h3>
-                    <div class="relative">
+                    <div ref="pharmacieMoisDropdownRef" class="relative">
                         <button
                             type="button"
                             class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold dark:border-border dark:bg-input dark:text-foreground"
-                            @click="moisDropdownOpen = !moisDropdownOpen"
+                            @click="toggleMoisDropdown('pharmacie')"
                         >
                             Afficher : {{ mois_label }}
                             <ChevronDown class="size-4" />
                         </button>
                         <div
-                            v-show="moisDropdownOpen"
+                            v-show="openMoisDropdown === 'pharmacie'"
                             class="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border bg-white py-1 shadow-lg"
                         >
                             <button
@@ -1018,10 +1084,16 @@ function statutBadgeClass(statut: string): string {
                                 <th class="pb-3 pr-4 pt-1 text-right">
                                     Montant (XAF)
                                 </th>
-                                <th class="pb-3 pt-1 text-center">
+                                <th
+                                    v-if="creditsActifs"
+                                    class="pb-3 pt-1 text-center"
+                                >
                                     Éligible crédit
                                 </th>
-                                <th class="pb-3 pt-1 text-center">
+                                <th
+                                    v-if="creditsActifs"
+                                    class="pb-3 pt-1 text-center"
+                                >
                                     Crédit utilisé
                                 </th>
                             </tr>
@@ -1031,7 +1103,10 @@ function statutBadgeClass(statut: string): string {
                                 v-if="ventes.length === 0"
                                 class="text-gray-500"
                             >
-                                <td colspan="6" class="py-8 text-center">
+                                <td
+                                    :colspan="creditsActifs ? 6 : 4"
+                                    class="py-8 text-center"
+                                >
                                     Aucune vente sur la période
                                 </td>
                             </tr>
@@ -1055,7 +1130,7 @@ function statutBadgeClass(statut: string): string {
                                 <td class="py-3 pr-4 text-right font-semibold">
                                     {{ formatXaf(v.montant) }}
                                 </td>
-                                <td class="py-3 text-center">
+                                <td v-if="creditsActifs" class="py-3 text-center">
                                     <span
                                         class="inline-flex rounded-full px-2 py-0.5 text-xs font-bold"
                                         :class="
@@ -1071,7 +1146,10 @@ function statutBadgeClass(statut: string): string {
                                         }}
                                     </span>
                                 </td>
-                                <td class="py-3 text-center text-sm font-semibold text-gray-800">
+                                <td
+                                    v-if="creditsActifs"
+                                    class="py-3 text-center text-sm font-semibold text-gray-800"
+                                >
                                     {{ v.credit_utilise ? '1' : '—' }}
                                 </td>
                             </tr>
@@ -1079,7 +1157,7 @@ function statutBadgeClass(statut: string): string {
                     </table>
                 </div>
                 <div
-                    v-if="ventes.length > 0"
+                    v-if="creditsActifs && ventes.length > 0"
                     class="mt-3 flex flex-wrap items-center justify-end gap-x-4 gap-y-1 border-t border-gray-100 pt-3"
                 >
                     <p class="text-sm font-bold text-gray-700">
@@ -1092,7 +1170,7 @@ function statutBadgeClass(statut: string): string {
                 </div>
             </div>
 
-            <div class="flex flex-col gap-4">
+            <div v-if="creditsActifs" class="flex flex-col gap-4">
                 <div
                     class="rounded-2xl border-2 border-[#E9D5FF] bg-[#FAF5FF] p-5 dark:border-violet-900/40 dark:bg-violet-950/35"
                 >
@@ -1141,7 +1219,7 @@ function statutBadgeClass(statut: string): string {
         </div>
 
         <!-- Historique + commandes récentes (pharmacie uniquement) -->
-        <div v-if="isPharmacie" class="grid gap-6 lg:grid-cols-2">
+        <div v-if="isPharmacie && creditsActifs" class="grid gap-6 lg:grid-cols-2">
             <div
                     :class="moduleDetailPanelLgClass"
             >

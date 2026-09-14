@@ -26,8 +26,14 @@ class UpdateCommandeRequest extends FormRequest
         }
 
         foreach (['client_nom', 'client_prenom', 'client_arrondissement'] as $key) {
-            if ($this->input($key) === '') {
+            if ($this->input($key) === '' || $this->input($key) === null) {
                 $this->merge([$key => null]);
+            }
+        }
+
+        foreach (['client_tel', 'client_adresse'] as $key) {
+            if ($this->input($key) === null || $this->input($key) === '') {
+                $this->merge([$key => '']);
             }
         }
     }

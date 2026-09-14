@@ -6,6 +6,7 @@ use App\Models\AppSetting;
 use App\Models\Commande;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreCommandeRequest extends FormRequest
 {
@@ -32,12 +33,31 @@ class StoreCommandeRequest extends FormRequest
             $this->merge(['client_arrondissement' => null]);
         }
 
-        // Date et heure : toujours fixées côté serveur à la création.
-        $this->request->remove('date');
-        $this->request->remove('heurs');
+        foreach (['client_tel', 'client_adresse'] as $key) {
+            if ($this->has($key) && ($this->input($key) === null || $this->input($key) === '')) {
+                $this->merge([$key => '']);
+            }
+        }
+
+        if (! $this->allowsHistoricalEntry()) {
+            $this->request->remove('date');
+            $this->request->remove('heurs');
+            $this->request->remove('initial_status');
+        }
     }
 
-    private function normalizeAgentInput(): void
+    private function allowsHistoricalEntry(): bool
+    {
+        if ($this->input('_return_hub') !== 'gestion') {
+            return false;
+        }
+
+        $user = $this->user();
+
+        return $user !== null && $user->hasAnyRole(['admin', 'super_admin']);
+    }
+
+    protected function normalizeAgentInput(): void
     {
         $produits = $this->input('produits');
         if (is_string($produits)) {
@@ -60,7 +80,7 @@ class StoreCommandeRequest extends FormRequest
         }
     }
 
-    private function normalizeCommandesInput(): void
+    protected function normalizeCommandesInput(): void
     {
         $produits = $this->input('produits');
         if (is_string($produits)) {
@@ -149,7 +169,16 @@ class StoreCommandeRequest extends FormRequest
 
     public function rules(): array
     {
-        return \App\Support\CommandeCreationFields::validationRules($this);
+        $rules = \App\Support\CommandeCreationFields::validationRules($this);
+
+        if ($this->allowsHistoricalEntry()) {
+            $rules['initial_status'] = ['nullable', 'string', Rule::in(array_keys(Commande::STATUSES))];
+            $rules['date'] = ['nullable', 'date'];
+            $rules['heurs'] = ['nullable', 'date_format:H:i'];
+            $rules['_return_hub'] = ['required', 'in:gestion'];
+        }
+
+        return $rules;
     }
 
     /**

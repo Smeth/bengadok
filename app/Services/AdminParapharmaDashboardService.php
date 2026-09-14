@@ -28,12 +28,23 @@ class AdminParapharmaDashboardService
         $this->pharmacieId = $pharmacieId;
         $cfg = $this->config();
         $ref = $this->resolveMoisReference($moisParam);
+        $vuePeriode = in_array($vuePeriode, ['mois', 'semaine'], true) ? $vuePeriode : 'mois';
+
+        if ($pharmacieId !== null) {
+            $pharmacieCourante = Pharmacie::query()->find($pharmacieId, [
+                'id', 'designation', 'telephone', 'email', 'est_partenaire', 'credits_actif',
+            ]);
+            if ($pharmacieCourante && ! $pharmacieCourante->parapharmaActif()) {
+                return $this->buildParapharmaInactifPayload($pharmacieCourante, $ref, $vuePeriode, $cfg);
+            }
+        }
+
         [$debutMois, $finMois] = AppSetting::parapharmaPeriodeBounds($ref);
         [$debut, $finPeriode] = $this->resolvePeriodeBounds($ref, $vuePeriode);
 
         $caParapharma = $this->sommeCaParapharma($debutMois, $finMois);
         $caMedicaments = $this->sommeCaMedicaments($debutMois, $finMois);
-        $montantCommission = (int) round($caParapharma * $cfg['commission_percent'] / 100);
+        $montantCommission = $this->montantCommissionPeriode($debutMois, $finMois, $cfg);
 
         $periode = $this->syncCommissionPeriode($ref, $montantCommission);
 
@@ -42,7 +53,7 @@ class AdminParapharmaDashboardService
         $creditsUtilises = $this->nbDeductionsPeriode($debut, $finPeriode);
         $creditsDisponibles = $this->pharmacieId !== null
             ? (int) (Pharmacie::query()->find($this->pharmacieId)?->credits_solde ?? 0)
-            : (int) Pharmacie::query()->sum('credits_solde');
+            : (int) Pharmacie::query()->partenaires()->sum('credits_solde');
         $creditsPrepayesTotal = $this->totalRecharges();
         $creditsConsommesTotal = $this->totalDeductions();
 
@@ -73,23 +84,27 @@ class AdminParapharmaDashboardService
         );
 
         $pharmacie = $this->pharmacieId !== null
-            ? Pharmacie::query()->find($this->pharmacieId, ['id', 'designation', 'telephone', 'email', 'credits_actif'])
+            ? Pharmacie::query()->find($this->pharmacieId, [
+                'id', 'designation', 'telephone', 'email', 'est_partenaire', 'credits_actif',
+            ])
             : null;
 
         return [
             'mode' => $this->pharmacieId !== null ? 'parapharma_pharmacie' : 'parapharma_admin',
             'pharmacie_id' => $this->pharmacieId,
+            'parapharma_actif' => true,
             'pharmacie' => $pharmacie ? [
                 'id' => $pharmacie->id,
                 'designation' => $pharmacie->designation,
                 'telephone' => $pharmacie->telephone,
                 'email' => $pharmacie->email,
+                'est_partenaire' => (bool) $pharmacie->est_partenaire,
                 'credits_actif' => (bool) $pharmacie->credits_actif,
             ] : null,
             'mois' => $ref->format('Y-m'),
             'mois_label' => $this->formatMoisFrancais($ref),
             'mois_options' => $this->moisSelectOptions($ref),
-            'vue_periode' => in_array($vuePeriode, ['mois', 'semaine'], true) ? $vuePeriode : 'mois',
+            'vue_periode' => $vuePeriode,
             'config' => $cfg,
             'kpis' => [
                 'nb_commandes' => $nbCommandes,
@@ -182,7 +197,7 @@ class AdminParapharmaDashboardService
         $cfg = $this->config();
         [$debut, $fin] = AppSetting::parapharmaPeriodeBounds($ref);
         $ca = $this->sommeCaParapharma($debut, $fin);
-        $montant = (int) round($ca * $cfg['commission_percent'] / 100);
+        $montant = $this->montantCommissionPeriode($debut, $fin, $cfg);
 
         $this->pharmacieId = $pharmacieIdCourant;
 
@@ -190,6 +205,39 @@ class AdminParapharmaDashboardService
             'ca' => $ca,
             'montant' => $montant,
         ];
+    }
+
+    /**
+     * Commission due sur la période (partenaires avec crédits/commission activés uniquement).
+     */
+    private function montantCommissionPeriode(
+        CarbonInterface $debut,
+        CarbonInterface $fin,
+        array $cfg,
+    ): int {
+        if ($this->pharmacieId !== null) {
+            $pharmacie = Pharmacie::query()->find($this->pharmacieId, ['id', 'est_partenaire', 'credits_actif']);
+            if (! $pharmacie?->parapharmaActif()) {
+                return 0;
+            }
+
+            $ca = $this->sommeCaParapharma($debut, $fin);
+
+            return (int) round($ca * $cfg['commission_percent'] / 100);
+        }
+
+        $total = 0;
+        $pharmacieIdCourant = $this->pharmacieId;
+
+        foreach (Pharmacie::query()->parapharmaActif()->orderBy('id')->get(['id']) as $pharmacie) {
+            $this->pharmacieId = (int) $pharmacie->id;
+            $ca = $this->sommeCaParapharma($debut, $fin);
+            $total += (int) round($ca * $cfg['commission_percent'] / 100);
+        }
+
+        $this->pharmacieId = $pharmacieIdCourant;
+
+        return $total;
     }
 
     /**
@@ -219,6 +267,11 @@ class AdminParapharmaDashboardService
     public function commandeEligibleCredit(Commande $commande, ?int $seuil = null): bool
     {
         $seuil ??= $this->config()['credit_seuil_medicament_xaf'];
+        $commande->loadMissing('pharmacie');
+
+        if (! $commande->pharmacie?->parapharmaActif()) {
+            return false;
+        }
 
         return $commande->status_pharmacie === Commande::STATUT_PHARMACIE_CA_COMPTABILISE
             && $commande->montantPanier() >= $seuil;
@@ -231,6 +284,8 @@ class AdminParapharmaDashboardService
 
         if ($this->pharmacieId !== null) {
             $query->where('pharmacie_id', $this->pharmacieId);
+        } else {
+            $this->appliqueFiltreOperationsPartenaires($query);
         }
 
         return (int) $query->sum('credits_delta');
@@ -243,6 +298,8 @@ class AdminParapharmaDashboardService
 
         if ($this->pharmacieId !== null) {
             $query->where('pharmacie_id', $this->pharmacieId);
+        } else {
+            $this->appliqueFiltreOperationsPartenaires($query);
         }
 
         return (int) $query->sum(DB::raw('ABS(credits_delta)'));
@@ -261,6 +318,8 @@ class AdminParapharmaDashboardService
 
         if ($this->pharmacieId !== null) {
             $opsQuery->where('pharmacie_id', $this->pharmacieId);
+        } else {
+            $this->appliqueFiltreOperationsPartenaires($opsQuery);
         }
 
         $depuisOps = (int) $opsQuery->sum(DB::raw('ABS(credits_delta)'));
@@ -284,6 +343,8 @@ class AdminParapharmaDashboardService
 
         if ($this->pharmacieId !== null) {
             $opsQuery->where('pharmacie_id', $this->pharmacieId);
+        } else {
+            $this->appliqueFiltreOperationsPartenaires($opsQuery);
         }
 
         $cout = (int) $opsQuery->sum('cout_xaf');
@@ -330,6 +391,7 @@ class AdminParapharmaDashboardService
     ): array {
         $query = DB::table('commandes')
             ->join('pharmacies', 'pharmacies.id', '=', 'commandes.pharmacie_id')
+            ->where('pharmacies.est_partenaire', true)
             ->whereBetween('commandes.date', [$debut, $fin]);
 
         $rows = $this->whereCaComptabilise($query)
@@ -381,7 +443,7 @@ class AdminParapharmaDashboardService
         $seuil = $cfg['credit_seuil_medicament_xaf'];
         $items = [];
 
-        foreach (Pharmacie::query()->orderBy('designation')->get(['id', 'designation']) as $pharmacie) {
+        foreach (Pharmacie::query()->partenaires()->orderBy('designation')->get(['id', 'designation', 'credits_actif']) as $pharmacie) {
             $ops = PharmacieCreditOperation::query()
                 ->where('pharmacie_id', $pharmacie->id)
                 ->where('type', PharmacieCreditOperation::TYPE_DEDUCTION)
@@ -409,6 +471,7 @@ class AdminParapharmaDashboardService
             $items[] = [
                 'pharmacie_id' => (int) $pharmacie->id,
                 'pharmacie' => $pharmacie->designation,
+                'credits_actif' => (bool) $pharmacie->credits_actif,
                 'credits_medicaments' => $creditsMedicaments,
                 'credits_parapharmacie' => $creditsParapharmacie,
                 'credits_total' => $creditsMedicaments + $creditsParapharmacie,
@@ -480,6 +543,8 @@ class AdminParapharmaDashboardService
 
         if ($this->pharmacieId !== null) {
             $query->where('commandes.pharmacie_id', $this->pharmacieId);
+        } else {
+            $this->appliqueFiltreReseauPartenaire($query);
         }
 
         $this->scopeProduitParapharma($query);
@@ -506,6 +571,8 @@ class AdminParapharmaDashboardService
 
         if ($this->pharmacieId !== null) {
             $query->where('commandes.pharmacie_id', $this->pharmacieId);
+        } else {
+            $this->appliqueFiltreReseauPartenaire($query);
         }
 
         $this->scopeProduitMedicament($query);
@@ -549,6 +616,8 @@ class AdminParapharmaDashboardService
 
         if ($this->pharmacieId !== null) {
             $query->where('commandes.pharmacie_id', $this->pharmacieId);
+        } else {
+            $this->appliqueFiltreReseauPartenaire($query);
         }
 
         return (int) $query->count();
@@ -566,6 +635,9 @@ class AdminParapharmaDashboardService
 
         if ($this->pharmacieId !== null) {
             $query->where('pharmacie_id', $this->pharmacieId);
+        } else {
+            $query->pourReseauPartenaire()
+                ->whereHas('pharmacie', fn ($q) => $q->parapharmaActif());
         }
 
         return $query->count();
@@ -597,6 +669,8 @@ class AdminParapharmaDashboardService
 
         if ($this->pharmacieId !== null) {
             $query->where('commandes.pharmacie_id', $this->pharmacieId);
+        } else {
+            $this->appliqueFiltreReseauPartenaire($query);
         }
 
         $rows = $query
@@ -647,6 +721,8 @@ class AdminParapharmaDashboardService
 
         if ($this->pharmacieId !== null) {
             $query->where('pharmacie_id', $this->pharmacieId);
+        } else {
+            $query->pourReseauPartenaire();
         }
 
         return $query->orderByDesc('date')
@@ -743,17 +819,20 @@ class AdminParapharmaDashboardService
         $pharmacieIdCourant = $this->pharmacieId;
         $items = [];
 
-        foreach (Pharmacie::query()->orderBy('designation')->get(['id', 'designation']) as $pharmacie) {
+        foreach (Pharmacie::query()->partenaires()->orderBy('designation')->get(['id', 'designation', 'credits_actif']) as $pharmacie) {
             $this->pharmacieId = (int) $pharmacie->id;
 
             $ca = $this->sommeCaParapharma($debut, $fin);
-            $montant = (int) round($ca * $cfg['commission_percent'] / 100);
+            $montant = $pharmacie->credits_actif
+                ? (int) round($ca * $cfg['commission_percent'] / 100)
+                : 0;
             $periode = $this->findCommissionPeriode($ref->year, $ref->month, (int) $pharmacie->id);
             $statut = $periode?->statut ?? CommissionPeriode::STATUT_EN_COURS;
 
             $items[] = [
                 'pharmacie_id' => (int) $pharmacie->id,
                 'pharmacie' => $pharmacie->designation,
+                'credits_actif' => (bool) $pharmacie->credits_actif,
                 'ca_parapharma' => $ca,
                 'montant_commission' => $montant,
                 'statut' => $statut,
@@ -772,6 +851,109 @@ class AdminParapharmaDashboardService
     private function inListSql(array $values): string
     {
         return collect($values)->map(fn (string $s) => "'".addslashes($s)."'")->implode(',');
+    }
+
+    /**
+     * Payload minimal lorsque la pharmacie n'est pas éligible au système crédits/commission.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildParapharmaInactifPayload(
+        Pharmacie $pharmacie,
+        CarbonInterface $ref,
+        string $vuePeriode,
+        array $cfg,
+    ): array {
+        $raison = ! $pharmacie->est_partenaire ? 'non_partenaire' : 'credits_inactifs';
+        $message = $raison === 'non_partenaire'
+            ? 'Le système crédits et commission parapharmacie est réservé aux pharmacies partenaires BengaDok.'
+            : 'Les crédits et la commission parapharmacie ne sont pas activés pour votre pharmacie. Contactez l\'administration BengaDok pour les activer.';
+
+        return [
+            'mode' => 'parapharma_pharmacie',
+            'pharmacie_id' => (int) $pharmacie->id,
+            'parapharma_actif' => false,
+            'parapharma_inactif_raison' => $raison,
+            'parapharma_inactif_message' => $message,
+            'pharmacie' => [
+                'id' => $pharmacie->id,
+                'designation' => $pharmacie->designation,
+                'telephone' => $pharmacie->telephone,
+                'email' => $pharmacie->email,
+                'est_partenaire' => (bool) $pharmacie->est_partenaire,
+                'credits_actif' => (bool) $pharmacie->credits_actif,
+            ],
+            'mois' => $ref->format('Y-m'),
+            'mois_label' => $this->formatMoisFrancais($ref),
+            'mois_options' => $this->moisSelectOptions($ref),
+            'vue_periode' => $vuePeriode,
+            'config' => $cfg,
+            'kpis' => [
+                'nb_commandes' => 0,
+                'ca_medicaments' => 0.0,
+                'ca_parapharma' => 0.0,
+                'ca_total' => 0.0,
+                'credits_disponibles' => 0,
+                'credits_utilises' => 0,
+                'credits_prepayes_total' => 0,
+                'credits_consommes_total' => 0,
+                'cout_credits_consommes' => 0,
+                'commandes_eligibles_credit' => 0,
+                'montant_commission' => 0,
+            ],
+            'commission_courante' => [
+                'periode_label' => sprintf(
+                    '01 → %02d %s %d',
+                    min($cfg['periode_jour_fin'], $ref->daysInMonth),
+                    $this->formatMoisFrancais($ref, false),
+                    $ref->year
+                ),
+                'echeance_label' => sprintf(
+                    '%02d %s %d',
+                    $cfg['commission_jour_echeance'],
+                    $this->formatMoisFrancais($ref, false),
+                    $ref->year
+                ),
+                'montant' => 0,
+                'statut' => CommissionPeriode::STATUT_EN_COURS,
+                'statut_label' => 'Non applicable',
+                'paye_le' => null,
+            ],
+            'ventes' => [],
+            'ventes_par_pharmacie' => [],
+            'credits_par_pharmacie' => [],
+            'historique_commissions' => [],
+            'commissions_par_pharmacie' => [],
+            'commandes_recentes' => [],
+        ];
+    }
+
+    /**
+     * @param  QueryBuilder|Builder<Commande>  $query
+     */
+    private function appliqueFiltreReseauPartenaire(QueryBuilder|Builder $query, string $commandesAlias = 'commandes'): void
+    {
+        if ($this->pharmacieId !== null) {
+            return;
+        }
+
+        $query->whereIn("{$commandesAlias}.pharmacie_id", function ($sub) {
+            $sub->select('id')->from('pharmacies')->where('est_partenaire', true);
+        });
+    }
+
+    /**
+     * @param  QueryBuilder|Builder<PharmacieCreditOperation>  $query
+     */
+    private function appliqueFiltreOperationsPartenaires(QueryBuilder|Builder $query): void
+    {
+        if ($this->pharmacieId !== null) {
+            return;
+        }
+
+        $query->whereIn('pharmacie_id', function ($sub) {
+            $sub->select('id')->from('pharmacies')->where('est_partenaire', true);
+        });
     }
 
     /**
@@ -840,7 +1022,7 @@ class AdminParapharmaDashboardService
             $m = $ref->copy()->subMonths($i);
             $options[] = [
                 'value' => $m->format('Y-m'),
-                'label' => $this->formatMoisFrancais($m).' '.$m->year,
+                'label' => $this->formatMoisFrancais($m),
             ];
         }
 

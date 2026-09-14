@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Actions\PromoteClientsFromSuccessfulOrdersAction;
 use App\Models\Client;
 use App\Models\Commande;
+use App\Support\ClientPayloadNormalizer;
 use App\Models\MontantLivraison;
 use App\Models\Ordonnance;
 use App\Models\Produit;
@@ -16,9 +18,12 @@ class CommandeService
      * Données normalisées pour créer une commande.
      * client_id OU (client_nom, client_prenom, client_tel, client_adresse)
      */
-    public function create(array $data, ?UploadedFile $ordonnance = null): Commande
+    /**
+     * @param  array<string, mixed>  $overrides  numero, date, heurs, status, status_pharmacie, livree_at, validee_admin_at
+     */
+    public function create(array $data, ?UploadedFile $ordonnance = null, array $overrides = []): Commande
     {
-        return DB::transaction(function () use ($data, $ordonnance) {
+        return DB::transaction(function () use ($data, $ordonnance, $overrides) {
             $client = $this->resolveClient($data);
             $ordonnanceId = $this->resolveOrdonnanceId($data, $ordonnance);
 
@@ -26,7 +31,7 @@ class CommandeService
             $reuseId = ($reuseId === null || $reuseId === '') ? null : (int) $reuseId;
 
             $commande = Commande::create([
-                'numero' => 'BDK'.now()->format('ymdHis').rand(100, 999),
+                'numero' => $overrides['numero'] ?? ('BDK'.now()->format('ymdHis').rand(100, 999)),
                 'client_id' => $client->id,
                 'pharmacie_id' => $data['pharmacie_id'],
                 'ordonnance_id' => $ordonnanceId,
@@ -34,12 +39,14 @@ class CommandeService
                 'mode_paiement_id' => $data['mode_paiement_id'] ?? null,
                 'montant_livraison_id' => $data['montant_livraison_id'] ?? null,
                 'livreur_id' => $data['livreur_id'] ?? null,
-                'date' => now(),
-                'heurs' => now()->format('H:i'),
+                'date' => $overrides['date'] ?? now(),
+                'heurs' => $overrides['heurs'] ?? now()->format('H:i'),
                 'commentaire' => $data['commentaire'] ?? null,
                 'beneficiaire' => $data['beneficiaire'] ?? null,
-                'status' => 'nouvelle',
-                'status_pharmacie' => 'nouvelle',
+                'status' => $overrides['status'] ?? 'nouvelle',
+                'status_pharmacie' => $overrides['status_pharmacie'] ?? 'nouvelle',
+                'livree_at' => $overrides['livree_at'] ?? null,
+                'validee_admin_at' => $overrides['validee_admin_at'] ?? null,
             ]);
 
             $montants = $this->attachProduits($commande, $data['produits']);
@@ -53,7 +60,11 @@ class CommandeService
                 'prix_total' => $montants['prix_lignes'] + $liv,
             ]);
 
-            return $commande;
+            if ($commande->status_pharmacie === Commande::STATUT_PHARMACIE_CA_COMPTABILISE) {
+                PromoteClientsFromSuccessfulOrdersAction::afterPharmacieRetrait($commande);
+            }
+
+            return $commande->fresh();
         });
     }
 
@@ -61,7 +72,7 @@ class CommandeService
     {
         if (! empty($data['client_id'])) {
             $client = Client::findOrFail($data['client_id']);
-            $attrs = $this->clientAttributesFromPayload($data, onlyPresentKeys: true);
+            $attrs = ClientPayloadNormalizer::attributesFromCommandePayload($data, onlyPresentKeys: true);
 
             if ($attrs !== []) {
                 $client->update($attrs);
@@ -70,57 +81,7 @@ class CommandeService
             return $client;
         }
 
-        return Client::create($this->clientAttributesFromPayload($data));
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function clientAttributesFromPayload(array $data, bool $onlyPresentKeys = false): array
-    {
-        $map = [
-            'client_nom' => 'nom',
-            'client_prenom' => 'prenom',
-            'client_tel' => 'tel',
-            'client_adresse' => 'adresse',
-            'client_arrondissement' => 'arrondissement',
-        ];
-
-        $attrs = [];
-
-        foreach ($map as $inputKey => $column) {
-            if ($onlyPresentKeys && ! array_key_exists($inputKey, $data)) {
-                continue;
-            }
-
-            $value = $this->trimOrNull($data[$inputKey] ?? null);
-
-            if ($column === 'tel' || $column === 'adresse') {
-                if ($value === null && ! $onlyPresentKeys) {
-                    $value = '';
-                }
-                if ($value !== null) {
-                    $attrs[$column] = $value;
-                }
-
-                continue;
-            }
-
-            if ($value !== null || ! $onlyPresentKeys) {
-                $attrs[$column] = $value;
-            }
-        }
-
-        if (! $onlyPresentKeys || array_key_exists('client_sexe', $data)) {
-            $attrs['sexe'] = ! empty($data['client_sexe']) ? $data['client_sexe'] : null;
-        }
-
-        return $attrs;
-    }
-
-    private function trimOrNull(?string $value): ?string
-    {
-        return $value !== null && trim($value) !== '' ? trim($value) : null;
+        return Client::create(ClientPayloadNormalizer::attributesFromCommandePayload($data));
     }
 
     private function resolveOrdonnanceId(array $data, ?UploadedFile $file): ?int
@@ -184,27 +145,7 @@ class CommandeService
     public function update(Commande $commande, array $validated, ?UploadedFile $ordonnance = null): Commande
     {
         return DB::transaction(function () use ($commande, $validated, $ordonnance) {
-            $client = ! empty($validated['client_id'])
-                ? Client::findOrFail($validated['client_id'])
-                : Client::create([
-                    'nom' => $this->trimOrNull($validated['client_nom'] ?? null),
-                    'prenom' => $this->trimOrNull($validated['client_prenom'] ?? null),
-                    'tel' => $validated['client_tel'],
-                    'adresse' => $validated['client_adresse'],
-                    'arrondissement' => $validated['client_arrondissement'] ?? null,
-                    'sexe' => ! empty($validated['client_sexe']) ? $validated['client_sexe'] : null,
-                ]);
-
-            if (! empty($validated['client_id'])) {
-                $client->update([
-                    'nom' => $this->trimOrNull($validated['client_nom'] ?? null),
-                    'prenom' => $this->trimOrNull($validated['client_prenom'] ?? null),
-                    'tel' => $validated['client_tel'],
-                    'adresse' => $validated['client_adresse'],
-                    'arrondissement' => $validated['client_arrondissement'] ?? null,
-                    'sexe' => ! empty($validated['client_sexe']) ? $validated['client_sexe'] : null,
-                ]);
-            }
+            $client = $this->resolveClient($validated);
 
             $ordonnanceId = $commande->ordonnance_id;
             if ($ordonnance !== null) {

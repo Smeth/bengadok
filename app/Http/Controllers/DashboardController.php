@@ -52,7 +52,12 @@ class DashboardController extends Controller
             $parapharmaKpis = $parapharma['kpis'];
             unset($parapharma['kpis']);
 
-            $operations = $statsService->build(null, $period);
+            $operations = $statsService->build(
+                null,
+                $period,
+                is_string($request->input('date_from')) ? $request->input('date_from') : null,
+                is_string($request->input('date_to')) ? $request->input('date_to') : null,
+            );
 
             return Inertia::render('Dashboard', array_merge($parapharma, $operations, [
                 'active_tab' => $activeTab,
@@ -61,7 +66,12 @@ class DashboardController extends Controller
         }
 
         $period = $request->get('period', 'month');
-        $stats = $statsService->build($user->pharmacie_id, is_string($period) ? $period : 'month');
+        $stats = $statsService->build(
+            $user->pharmacie_id,
+            is_string($period) ? $period : 'month',
+            is_string($request->input('date_from')) ? $request->input('date_from') : null,
+            is_string($request->input('date_to')) ? $request->input('date_to') : null,
+        );
 
         return Inertia::render('Dashboard', $stats);
     }

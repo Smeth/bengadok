@@ -8,6 +8,9 @@ import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vu
 import '@uppy/core/css/style.css';
 import '@uppy/dashboard/css/style.css';
 import { moduleTabFocusClass } from '@/lib/bengadokUi';
+import { getUploadLimits, uploadMaxSizeNote } from '@/lib/uploadLimits';
+
+const uploadLimits = getUploadLimits();
 
 const ALLOWED_TYPES = [
     'image/jpeg',
@@ -16,7 +19,7 @@ const ALLOWED_TYPES = [
     'image/webp',
     'application/pdf',
 ];
-const MAX_SIZE = 10 * 1024 * 1024;
+const MAX_SIZE = uploadLimits.max_bytes;
 
 const props = withDefaults(
     defineProps<{
@@ -53,7 +56,10 @@ const dashboardProps = computed(() => ({
     hideUploadButton: true,
     disableStatusBar: true,
     height: props.variant === 'card' ? 132 : 220,
-    note: props.variant === 'card' ? '' : 'JPG, PNG, GIF, WebP ou PDF — max. 10 Mo.',
+    note:
+        props.variant === 'card'
+            ? ''
+            : uploadMaxSizeNote('JPG, PNG, GIF, WebP ou PDF'),
 }));
 
 function fileFromUppy(file: UppyFile): File {

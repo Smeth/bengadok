@@ -11,15 +11,18 @@ use App\Models\Client;
 use App\Models\Commande;
 use App\Models\ModePaiement;
 use App\Models\Pharmacie;
+use App\Models\Zone;
 use App\Services\CommandeAdminService;
 use App\Services\CommandeDateFormatter;
 use App\Services\CommandeDetailPresenter;
+use App\Services\CommandeEntityResolverService;
 use App\Services\CommandeIndexService;
 use App\Services\CommandeMontantCalculator;
 use App\Services\CommandeReferentielsService;
 use App\Services\CommandeService;
 use App\Services\PharmacieProximiteService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -63,7 +66,58 @@ class CommandeController extends Controller
             abort(403);
         }
 
-        return response()->json($this->referentielsService->all());
+        $partenairesUniquement = $request->query('pharmacies', 'partenaires') !== 'toutes';
+
+        return response()->json($this->referentielsService->all($partenairesUniquement));
+    }
+
+    public function quickCreatePharmacie(
+        Request $request,
+        CommandeEntityResolverService $resolver,
+    ): JsonResponse {
+        $user = $request->user();
+        abort_unless($user?->hasAnyRole(['admin', 'super_admin']), 403);
+
+        $validated = $request->validate([
+            'designation' => 'required|string|max:200',
+            'arrondissement' => 'nullable|string|max:100',
+            'zone_id' => 'nullable|integer|exists:zones,id',
+            'telephone' => 'nullable|string|max:20',
+            'adresse' => 'nullable|string|max:500',
+        ]);
+
+        $name = trim($validated['designation']);
+        $existing = $resolver->findPharmacieByName($name);
+        if ($existing) {
+            $existing->load(['zone', 'typePharmacie', 'heurs']);
+
+            return response()->json([
+                'pharmacie' => $existing,
+                'created' => false,
+                'message' => 'Une pharmacie correspondante existe déjà et a été sélectionnée.',
+            ]);
+        }
+
+        $arrondissement = $validated['arrondissement'] ?? null;
+        if (($arrondissement === null || $arrondissement === '') && ! empty($validated['zone_id'])) {
+            $arrondissement = Zone::query()->find((int) $validated['zone_id'])?->designation;
+        }
+
+        $pharmacie = $resolver->createMinimalPharmacie(
+            $name,
+            $arrondissement,
+            $validated['telephone'] ?? null,
+            $validated['adresse'] ?? null,
+            'Créée depuis la saisie manuelle (Gestion commandes).',
+            estPartenaire: false,
+        );
+        $pharmacie->load(['zone', 'typePharmacie', 'heurs']);
+
+        return response()->json([
+            'pharmacie' => $pharmacie,
+            'created' => true,
+            'message' => 'Pharmacie non partenaire créée. Complétez la fiche dans le module Pharmacies si besoin.',
+        ], 201);
     }
 
     public function show(Request $request, Commande $commande)
@@ -123,7 +177,7 @@ class CommandeController extends Controller
 
         return Inertia::render('Commandes/Edit', [
             'commande' => $commande,
-            'pharmacies' => Pharmacie::with('zone')->get(),
+            'pharmacies' => Pharmacie::with('zone')->partenaires()->get(),
             'modesPaiement' => ModePaiement::all(),
             'arrondissements' => Client::ARRONDISSEMENTS,
         ]);
@@ -169,11 +223,28 @@ class CommandeController extends Controller
     {
         try {
             $data = $request->getDataForService();
-            $commande = $this->commandeService->create($data, $request->file('ordonnance'));
+            $overrides = [];
+            if ($request->input('_return_hub') === 'gestion' && $request->user()?->hasAnyRole(['admin', 'super_admin'])) {
+                $overrides = \App\Support\CommandeInitialStatusOverrides::fromManualEntry(
+                    (string) ($data['initial_status'] ?? 'nouvelle'),
+                    $data['date'] ?? null,
+                    isset($data['heurs']) ? (string) $data['heurs'] : null,
+                );
+            }
+            $commande = $this->commandeService->create($data, $request->file('ordonnance'), $overrides);
         } catch (\RuntimeException $e) {
             return back()
                 ->withInput()
                 ->with('error', $e->getMessage());
+        }
+
+        if ($request->input('_return_hub') === 'gestion') {
+            return redirect()
+                ->route('db-commandes.index', [
+                    'tab' => 'commandes',
+                    'detail' => $commande->id,
+                ])
+                ->with('status', "Commande {$commande->numero} créée avec succès.");
         }
 
         return redirect()->route('commandes.index')->with(

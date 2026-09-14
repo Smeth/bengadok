@@ -5,6 +5,8 @@ import { onBeforeUnmount, ref, watch } from 'vue';
 import PharmaciePhotosUpload from '@/components/dok-pharma/PharmaciePhotosUpload.vue';
 import { useImageZoomPan } from '@/composables/useImageZoomPan';
 import { moduleModalSurfaceClass, modulePrimaryTextClass } from '@/lib/bengadokUi';
+import { showGlobalErrorToast } from '@/lib/globalToast';
+import { validateFileSize } from '@/lib/uploadLimits';
 
 export type PieceJointeImage = {
     id: number;
@@ -66,6 +68,12 @@ function closeViewer() {
 }
 
 function uploadFile(file: File) {
+    const sizeError = validateFileSize(file);
+    if (sizeError) {
+        showGlobalErrorToast(sizeError);
+        return;
+    }
+
     if (uploadingCount.value >= 3) {
         window.setTimeout(() => uploadFile(file), 400);
         return;

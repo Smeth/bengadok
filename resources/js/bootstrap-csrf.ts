@@ -8,6 +8,11 @@
 import { router } from '@inertiajs/vue3';
 import type { AxiosError } from 'axios';
 import axios from 'axios';
+import { showGlobalErrorToast } from '@/lib/globalToast';
+import {
+    payloadTooLargeMessage,
+    syncUploadLimitsFromPage,
+} from '@/lib/uploadLimits';
 
 axios.defaults.withCredentials = true;
 
@@ -32,6 +37,8 @@ function applyCsrfToken(token: string | undefined | null): void {
 function syncCsrfFromInertiaPage(page: {
     props?: Record<string, unknown>;
 }): void {
+    syncUploadLimitsFromPage(page.props);
+
     const raw = page.props?.csrf_token;
     if (typeof raw === 'string' && raw.length > 0) {
         applyCsrfToken(raw);
@@ -75,7 +82,9 @@ function reloadPageAfter419(): void {
 axios.interceptors.response.use(
     (res) => res,
     (error: AxiosError) => {
-        if (error.response?.status === 419) {
+        if (error.response?.status === 413) {
+            showGlobalErrorToast(payloadTooLargeMessage());
+        } else if (error.response?.status === 419) {
             reloadPageAfter419();
         }
         return Promise.reject(error);
@@ -87,6 +96,11 @@ axios.interceptors.response.use(
  */
 router.on('invalid', (event) => {
     const status = event.detail.response?.status;
+    if (status === 413) {
+        event.preventDefault();
+        showGlobalErrorToast(payloadTooLargeMessage());
+        return;
+    }
     if (status === 419) {
         reloadPageAfter419();
     }

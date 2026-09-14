@@ -30,6 +30,9 @@ import {
     moduleNativeSelectClass,
 } from '@/lib/bengadokUi';
 import { useCommandeCreationFields } from '@/composables/useCommandeCreationFields';
+import { quickCreatePharmacie } from '@/lib/commandePharmacieQuickCreate';
+import type { CommandeReferentielPharmacie } from '@/lib/commandeEnregistrementTypes';
+import { STATUTS_COMMANDE } from '@/types';
 import type {
     CommandeRelance,
     FormEnregPayload,
@@ -56,6 +59,7 @@ type Pharmacie = {
     telephone: string;
     zone_id?: number;
     de_garde?: boolean;
+    est_partenaire?: boolean;
     type_pharmacie?: { designation: string };
     heurs?: { ouverture: string; fermeture: string };
 };
@@ -72,6 +76,14 @@ const props = withDefaults(
         /** Types produit considérés comme parapharmacie (paramètres app). */
         parapharmaProduitTypes?: string[];
         montantsLivraison?: Array<{ id: number; designation: number | string }>;
+        /** Mode de paiement + livreur (module DB commande / agent). */
+        showAgentFields?: boolean;
+        /** Saisie avec statut et date initiaux (Gestion commandes). */
+        historicalEntry?: boolean;
+        /** Création rapide d'une pharmacie absente du référentiel. */
+        allowCreatePharmacie?: boolean;
+        modesPaiement?: Array<{ id: number; designation: string }>;
+        livreurs?: Array<{ id: number; nom: string; prenom: string }>;
     }>(),
     {
         mode: 'nouvelle',
@@ -81,12 +93,20 @@ const props = withDefaults(
         arrondissements: () => [],
         parapharmaProduitTypes: () => ['Parapharmacie'],
         montantsLivraison: () => [],
+        showAgentFields: false,
+        historicalEntry: false,
+        allowCreatePharmacie: false,
+        modesPaiement: () => [],
+        livreurs: () => [],
     },
 );
+
+const statutsHistorique = STATUTS_COMMANDE;
 
 const emit = defineEmits<{
     'update:open': [value: boolean];
     submit: [payload: FormEnregPayload];
+    'pharmacie-created': [pharmacie: CommandeReferentielPharmacie];
 }>();
 
 /** Props parfois reçues comme Ref (lazy-load) — normalise en tableaux plats. */
@@ -103,6 +123,12 @@ const montantsLivraisonList = computed(
         asArray<{ id: number; designation: number | string }>(
             props.montantsLivraison,
         ),
+);
+const modesPaiementList = computed(() =>
+    asArray<{ id: number; designation: string }>(props.modesPaiement),
+);
+const livreursList = computed(() =>
+    asArray<{ id: number; nom: string; prenom: string }>(props.livreurs),
 );
 const parapharmaTypesList = computed(() =>
     asArray<string>(props.parapharmaProduitTypes),
@@ -212,6 +238,11 @@ const form = ref({
     produitsParapharma: [ligneProduitVide()] as ProduitEnreg[],
     ordonnance: null as File | null,
     commentaire: '',
+    mode_paiement_id: '',
+    livreur_id: '',
+    initial_status: 'nouvelle',
+    date_commande: '',
+    heurs_commande: '',
 });
 
 const errors = ref<Record<string, string>>({});
@@ -220,6 +251,15 @@ const ordonnanceUrlExistante = ref<string | null>(null);
 const zoneEnreg = ref<number | ''>('');
 const filtreTypeEnreg = ref<'tous' | 'jour' | 'nuit' | 'garde'>('tous');
 const searchPharmacieEnreg = ref('');
+const showCreatePharmacie = ref(false);
+const createPharmacieLoading = ref(false);
+const createPharmacieErrors = ref<Record<string, string>>({});
+const createPharmacieForm = ref({
+    designation: '',
+    arrondissement: '',
+    telephone: '',
+    adresse: '',
+});
 
 const pharmaciesZoneEnreg = computed(() => {
     if (!zoneEnreg.value) return [];
@@ -342,6 +382,11 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
             : [ligneProduitVide()],
         ordonnance: null,
         commentaire: '',
+        mode_paiement_id: '',
+        livreur_id: '',
+        initial_status: 'nouvelle',
+        date_commande: '',
+        heurs_commande: '',
     };
     ordonnanceUrlExistante.value = cmd.ordonnance?.file_url?.trim() || null;
     const ph = cmd.pharmacie;
@@ -367,6 +412,76 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
     errors.value = {};
 }
 
+function resetCreatePharmacieForm() {
+    createPharmacieForm.value = {
+        designation: '',
+        arrondissement: '',
+        telephone: '',
+        adresse: '',
+    };
+    createPharmacieErrors.value = {};
+    showCreatePharmacie.value = false;
+}
+
+function openCreatePharmaciePanel() {
+    const zone = zonesList.value.find((z) => z.id === zoneEnreg.value);
+    createPharmacieForm.value = {
+        designation: searchPharmacieEnreg.value.trim(),
+        arrondissement: zone?.designation ?? '',
+        telephone: '',
+        adresse: '',
+    };
+    createPharmacieErrors.value = {};
+    showCreatePharmacie.value = true;
+}
+
+function selectCreatedPharmacie(pharmacie: CommandeReferentielPharmacie) {
+    const zoneId = pharmacie.zone_id ?? pharmacie.zone?.id;
+    if (zoneId) {
+        zoneEnreg.value = zoneId;
+    }
+    form.value.pharmacie_id = String(pharmacie.id);
+    errors.value = { ...errors.value, pharmacie_id: '' };
+}
+
+async function submitCreatePharmacie() {
+    createPharmacieErrors.value = {};
+    const designation = createPharmacieForm.value.designation.trim();
+    if (!designation) {
+        createPharmacieErrors.value = {
+            designation: 'Indiquez le nom de la pharmacie.',
+        };
+        return;
+    }
+
+    createPharmacieLoading.value = true;
+    try {
+        const zone = zonesList.value.find((z) => z.id === zoneEnreg.value);
+        const result = await quickCreatePharmacie({
+            designation,
+            arrondissement:
+                createPharmacieForm.value.arrondissement.trim() ||
+                zone?.designation ||
+                undefined,
+            zone_id: zoneEnreg.value ? Number(zoneEnreg.value) : undefined,
+            telephone: createPharmacieForm.value.telephone.trim() || undefined,
+            adresse: createPharmacieForm.value.adresse.trim() || undefined,
+        });
+
+        emit('pharmacie-created', result.pharmacie);
+        selectCreatedPharmacie(result.pharmacie);
+        resetCreatePharmacieForm();
+    } catch (error) {
+        const message =
+            error instanceof Error
+                ? error.message
+                : 'Impossible de créer la pharmacie.';
+        createPharmacieErrors.value = { designation: message };
+    } finally {
+        createPharmacieLoading.value = false;
+    }
+}
+
 function resetForm() {
     form.value = {
         client_nom: '',
@@ -376,18 +491,24 @@ function resetForm() {
         client_arrondissement: '',
         client_sexe: '' as '' | 'M' | 'F',
         pharmacie_id: '',
-        beneficiaire: '',
+        beneficiaire: 'Soi-même',
         montant_livraison_id: '',
         produits: [ligneProduitVide()],
         produitsParapharma: [ligneProduitVide()],
         ordonnance: null,
         commentaire: '',
+        mode_paiement_id: '',
+        livreur_id: '',
+        initial_status: 'nouvelle',
+        date_commande: '',
+        heurs_commande: '',
     };
     zoneEnreg.value = '';
     filtreTypeEnreg.value = 'tous';
     searchPharmacieEnreg.value = '';
     errors.value = {};
     ordonnanceUrlExistante.value = null;
+    resetCreatePharmacieForm();
 }
 
 function close() {
@@ -531,6 +652,12 @@ function onSubmit() {
         produits: produitsValides,
         ordonnance: form.value.ordonnance,
         commentaire: form.value.commentaire || '',
+        mode_paiement_id: props.showAgentFields
+            ? form.value.mode_paiement_id || undefined
+            : undefined,
+        livreur_id: props.showAgentFields
+            ? form.value.livreur_id || undefined
+            : undefined,
     };
     if (props.mode === 'relance' && props.commande?.client?.id) {
         payload.client_id = props.commande.client.id;
@@ -542,6 +669,15 @@ function onSubmit() {
         ordonnanceUrlExistante.value
     ) {
         payload.reutiliser_ordonnance_commande_id = props.commande.id;
+    }
+    if (props.historicalEntry) {
+        payload.initial_status = form.value.initial_status || 'nouvelle';
+        payload.date =
+            form.value.date_commande ||
+            new Date().toISOString().slice(0, 10);
+        if (form.value.heurs_commande) {
+            payload.heurs = form.value.heurs_commande;
+        }
     }
     emit('submit', payload);
 }
@@ -615,6 +751,52 @@ watch(
                 @submit.prevent="onSubmit"
             >
                 <div class="flex flex-col gap-5 px-6 py-5">
+                    <div
+                        v-if="historicalEntry && mode !== 'relance'"
+                        :class="[moduleFormSectionClass, 'space-y-4']"
+                    >
+                        <h3 class="text-sm font-semibold text-[#459cd1]">
+                            Statut et date de la commande
+                        </h3>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div class="flex flex-col gap-1.5">
+                                <Label :class="moduleLabelClass">Statut initial</Label>
+                                <select
+                                    v-model="form.initial_status"
+                                    :class="moduleNativeSelectClass"
+                                >
+                                    <option
+                                        v-for="st in statutsHistorique"
+                                        :key="st.key"
+                                        :value="st.key"
+                                    >
+                                        {{ st.label }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <Label :class="moduleLabelClass">Date commande</Label>
+                                <input
+                                    v-model="form.date_commande"
+                                    type="date"
+                                    :class="moduleNativeInputClass"
+                                />
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <Label :class="moduleLabelClass">Heure (optionnel)</Label>
+                                <input
+                                    v-model="form.heurs_commande"
+                                    type="time"
+                                    :class="moduleNativeInputClass"
+                                />
+                            </div>
+                        </div>
+                        <p class="text-xs text-muted-foreground">
+                            Laissez la date vide pour aujourd’hui. Utile pour
+                            saisir une commande déjà livrée ou validée.
+                        </p>
+                    </div>
+
                     <!-- Section 1 — Infos Client (Figma: Nom, Prénom, Tél / Bénéficiaire, Adresse) -->
                     <div class="space-y-4">
                         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -780,13 +962,13 @@ watch(
                             </div>
                         </div>
                         <div
-                            v-if="fieldApplies('montant_livraison_id')"
+                            v-if="
+                                showAgentFields ||
+                                fieldApplies('montant_livraison_id')
+                            "
                             class="grid grid-cols-1 gap-4 md:grid-cols-3"
                         >
-                            <div
-                                v-if="fieldApplies('montant_livraison_id')"
-                                class="flex flex-col gap-1.5"
-                            >
+                            <div class="flex flex-col gap-1.5">
                                 <Label :class="moduleLabelClass"
                                     >Montant livraison
                                     <span
@@ -827,6 +1009,55 @@ watch(
                                 >
                                     {{ errors.montant_livraison_id }}
                                 </p>
+                            </div>
+                        </div>
+                        <div
+                            v-if="showAgentFields"
+                            class="grid grid-cols-1 gap-4 md:grid-cols-2"
+                        >
+                            <div class="flex flex-col gap-1.5">
+                                <Label :class="moduleLabelClass"
+                                    >Mode de paiement</Label
+                                >
+                                <div class="relative">
+                                    <select
+                                        v-model="form.mode_paiement_id"
+                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm dark:border-border dark:bg-input"
+                                    >
+                                        <option value="">—</option>
+                                        <option
+                                            v-for="m in modesPaiementList"
+                                            :key="m.id"
+                                            :value="String(m.id)"
+                                        >
+                                            {{ m.designation }}
+                                        </option>
+                                    </select>
+                                    <ChevronDown
+                                        class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]"
+                                    />
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <Label :class="moduleLabelClass">Livreur</Label>
+                                <div class="relative">
+                                    <select
+                                        v-model="form.livreur_id"
+                                        class="h-[42px] w-full appearance-none rounded-[10px] border border-[#ccc5c5] bg-white px-3 py-2 pr-10 text-sm dark:border-border dark:bg-input"
+                                    >
+                                        <option value="">—</option>
+                                        <option
+                                            v-for="l in livreursList"
+                                            :key="l.id"
+                                            :value="String(l.id)"
+                                        >
+                                            {{ l.prenom }} {{ l.nom }}
+                                        </option>
+                                    </select>
+                                    <ChevronDown
+                                        class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]"
+                                    />
+                                </div>
                             </div>
                         </div>
                         <div
@@ -910,20 +1141,135 @@ watch(
                         </div>
                     </div>
 
-                    <!-- Section 2 — Pharmacie Partenaire (Figma: border #ccc5c5, cartes sélectionnées vertes) -->
+                    <!-- Section 2 — Pharmacie -->
                     <div :class="moduleFormSectionClass">
                         <p
                             class="mb-1 text-[21px] font-black italic text-[rgba(92,89,89,0.4)]"
                         >
-                            Pharmacie Partenaire
+                            {{
+                                allowCreatePharmacie
+                                    ? 'Pharmacie'
+                                    : 'Pharmacie Partenaire'
+                            }}
                         </p>
                         <p class="mb-4 text-base text-black dark:text-foreground">
-                            Sélectionner une pharmacie
+                            <template v-if="allowCreatePharmacie">
+                                Choisissez une pharmacie existante ou créez-en
+                                une si elle n'est pas répertoriée
+                            </template>
+                            <template v-else>
+                                Sélectionner une pharmacie
+                            </template>
                             <span class="text-[#dc3545]">*</span>
                         </p>
 
                         <div
-                            v-if="!zoneEnreg"
+                            v-if="allowCreatePharmacie && showCreatePharmacie"
+                            class="rounded-[10px] border border-[#459cd1]/40 bg-[#459cd1]/5 p-4 space-y-3"
+                        >
+                            <p class="text-sm font-semibold text-[#459cd1]">
+                                Créer une pharmacie non partenaire
+                            </p>
+                            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                <div class="flex flex-col gap-1.5 md:col-span-2">
+                                    <Label :class="moduleLabelClass"
+                                        >Nom de la pharmacie
+                                        <span class="text-[#dc3545]">*</span></Label
+                                    >
+                                    <input
+                                        v-model="createPharmacieForm.designation"
+                                        type="text"
+                                        placeholder="Ex : Auréole"
+                                        class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                        :class="{
+                                            'border-[#dc3545]':
+                                                createPharmacieErrors.designation,
+                                        }"
+                                    />
+                                    <p
+                                        v-if="createPharmacieErrors.designation"
+                                        class="text-xs text-[#dc3545]"
+                                    >
+                                        {{ createPharmacieErrors.designation }}
+                                    </p>
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <Label :class="moduleLabelClass"
+                                        >Arrondissement</Label
+                                    >
+                                    <select
+                                        v-model="createPharmacieForm.arrondissement"
+                                        :class="moduleNativeSelectClass"
+                                    >
+                                        <option value="">
+                                            Sélectionner un arrondissement
+                                        </option>
+                                        <option
+                                            v-for="a in arrondissementsList"
+                                            :key="a"
+                                            :value="a"
+                                        >
+                                            {{ a }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <Label :class="moduleLabelClass"
+                                        >Téléphone (optionnel)</Label
+                                    >
+                                    <input
+                                        v-model="createPharmacieForm.telephone"
+                                        type="text"
+                                        placeholder="+242 06 000 00 00"
+                                        class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                    />
+                                </div>
+                                <div class="flex flex-col gap-1.5 md:col-span-2">
+                                    <Label :class="moduleLabelClass"
+                                        >Adresse (optionnel)</Label
+                                    >
+                                    <input
+                                        v-model="createPharmacieForm.adresse"
+                                        type="text"
+                                        placeholder="Rue, quartier…"
+                                        class="h-[42px] rounded-[10px] border border-[#ccc5c5] px-3 text-sm focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1]"
+                                    />
+                                </div>
+                            </div>
+                            <p class="text-xs text-muted-foreground">
+                                Seul le nom est obligatoire. La pharmacie sera
+                                enregistrée comme non partenaire ; horaires,
+                                gérant et crédits pourront être complétés dans
+                                le module Pharmacies.
+                            </p>
+                            <div class="flex flex-wrap gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    @click="resetCreatePharmacieForm"
+                                >
+                                    Annuler
+                                </Button>
+                                <Button
+                                    type="button"
+                                    class="bg-[#459cd1] text-white hover:bg-[#459cd1]/90"
+                                    :disabled="createPharmacieLoading"
+                                    @click="submitCreatePharmacie"
+                                >
+                                    {{
+                                        createPharmacieLoading
+                                            ? 'Création…'
+                                            : 'Créer et sélectionner'
+                                    }}
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div
+                            v-else-if="!zoneEnreg"
+                            class="space-y-4"
+                        >
+                        <div
                             class="grid grid-cols-2 gap-3 sm:grid-cols-4"
                         >
                             <button
@@ -952,6 +1298,24 @@ watch(
                                     Pharmacies</span
                                 >
                             </button>
+                        </div>
+                            <div
+                                v-if="allowCreatePharmacie"
+                                class="rounded-[10px] border border-dashed border-[#459cd1]/40 bg-[#459cd1]/5 p-4"
+                            >
+                                <p class="mb-2 text-sm text-muted-foreground">
+                                    La pharmacie n'est pas dans la liste ?
+                                </p>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    class="gap-2 border-[#459cd1] text-[#459cd1]"
+                                    @click="openCreatePharmaciePanel"
+                                >
+                                    <Building2 class="size-4" />
+                                    Créer une pharmacie absente
+                                </Button>
+                            </div>
                         </div>
 
                         <div v-else class="space-y-3">
@@ -985,6 +1349,16 @@ watch(
                                         class="min-w-0 flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-[rgba(102,102,102,0.6)]"
                                     />
                                 </div>
+                                <Button
+                                    v-if="allowCreatePharmacie"
+                                    type="button"
+                                    variant="outline"
+                                    class="h-[42px] shrink-0 gap-2 border-[#459cd1] text-[#459cd1]"
+                                    @click="openCreatePharmaciePanel"
+                                >
+                                    <Building2 class="size-4" />
+                                    Nouvelle pharmacie
+                                </Button>
                                 <div class="flex flex-wrap gap-2">
                                     <button
                                         v-for="f in filtresType"
@@ -1002,11 +1376,33 @@ watch(
                                     </button>
                                 </div>
                             </div>
+
                             <div
                                 class="grid max-h-48 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2"
                             >
+                                <div
+                                    v-if="
+                                        allowCreatePharmacie &&
+                                        !pharmaciesZoneEnreg.length &&
+                                        searchPharmacieEnreg.trim()
+                                    "
+                                    class="col-span-full rounded-[10px] border border-dashed border-[#459cd1]/40 bg-[#459cd1]/5 p-4 text-center"
+                                >
+                                    <p class="text-sm text-muted-foreground">
+                                        Aucun résultat pour «
+                                        {{ searchPharmacieEnreg.trim() }} ».
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        variant="link"
+                                        class="mt-1 text-[#459cd1]"
+                                        @click="openCreatePharmaciePanel"
+                                    >
+                                        Créer « {{ searchPharmacieEnreg.trim() }} »
+                                    </Button>
+                                </div>
                                 <p
-                                    v-if="!pharmaciesZoneEnreg.length"
+                                    v-else-if="!pharmaciesZoneEnreg.length"
                                     class="col-span-full py-6 text-center text-sm text-[rgba(92,89,89,0.4)]"
                                 >
                                     Aucune pharmacie disponible.
@@ -1037,11 +1433,19 @@ watch(
                                     "
                                 >
                                     <div class="min-w-0 flex-1">
-                                        <p
-                                            class="truncate text-[13px] font-bold text-[#374151]"
-                                        >
-                                            {{ p.designation }}
-                                        </p>
+                                        <div class="flex min-w-0 items-center gap-1.5">
+                                            <p
+                                                class="truncate text-[13px] font-bold text-[#374151]"
+                                            >
+                                                {{ p.designation }}
+                                            </p>
+                                            <span
+                                                v-if="p.est_partenaire === false"
+                                                class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-800"
+                                            >
+                                                Non partenaire
+                                            </span>
+                                        </div>
                                         <p
                                             class="truncate text-[11px] text-[#94a3b8]"
                                         >

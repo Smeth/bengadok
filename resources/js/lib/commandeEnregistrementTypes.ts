@@ -32,6 +32,12 @@ export type FormEnregPayload = {
     reutiliser_ordonnance_commande_id?: number;
     date?: string;
     heurs?: string;
+    /** Statut initial (saisie historique depuis Gestion commandes). */
+    initial_status?: string;
+    /** Redirection post-création vers le hub Gestion commandes. */
+    _return_hub?: 'gestion';
+    mode_paiement_id?: string | number;
+    livreur_id?: string | number;
 };
 
 export type CommandeRelance = {
@@ -65,6 +71,7 @@ export type CommandeReferentielPharmacie = {
     telephone: string;
     zone_id?: number;
     de_garde?: boolean;
+    est_partenaire?: boolean;
     zone?: { id: number; designation: string };
     type_pharmacie?: { designation: string };
     heurs?: { ouverture: string; fermeture: string };

@@ -1,8 +1,43 @@
 import { router } from '@inertiajs/vue3';
 import type { FormEnregPayload } from '@/lib/commandeEnregistrementTypes';
+import { validateFileSize } from '@/lib/uploadLimits';
 import { parseApiValidationErrors } from '@/lib/validationErrors';
 
 export { parseApiValidationErrors };
+
+function appendHistoricalFields(
+    target: FormData | Record<string, unknown>,
+    payload: FormEnregPayload,
+): void {
+    if (payload.date) {
+        if (target instanceof FormData) {
+            target.append('date', payload.date);
+        } else {
+            target.date = payload.date;
+        }
+    }
+    if (payload.heurs) {
+        if (target instanceof FormData) {
+            target.append('heurs', payload.heurs);
+        } else {
+            target.heurs = payload.heurs;
+        }
+    }
+    if (payload.initial_status) {
+        if (target instanceof FormData) {
+            target.append('initial_status', payload.initial_status);
+        } else {
+            target.initial_status = payload.initial_status;
+        }
+    }
+    if (payload._return_hub) {
+        if (target instanceof FormData) {
+            target.append('_return_hub', payload._return_hub);
+        } else {
+            target._return_hub = payload._return_hub;
+        }
+    }
+}
 
 export function appendEnregistrementFields(
     formData: FormData,
@@ -31,6 +66,7 @@ export function appendEnregistrementFields(
     if (payload.montant_livraison_id) {
         formData.append('montant_livraison_id', payload.montant_livraison_id);
     }
+    appendHistoricalFields(formData, payload);
 }
 
 type SubmitCallbacks = {
@@ -38,11 +74,28 @@ type SubmitCallbacks = {
     onError: (errors: Record<string, string>) => void;
 };
 
+function rejectOversizedOrdonnance(
+    file: File,
+    callbacks: SubmitCallbacks,
+): boolean {
+    const sizeError = validateFileSize(file);
+    if (!sizeError) {
+        return false;
+    }
+
+    callbacks.onError({ ordonnance: sizeError });
+    return true;
+}
+
 export function submitCommandeEnregistrement(
     payload: FormEnregPayload,
     callbacks: SubmitCallbacks,
 ): void {
     if (payload.ordonnance) {
+        if (rejectOversizedOrdonnance(payload.ordonnance, callbacks)) {
+            return;
+        }
+
         const formData = new FormData();
         appendEnregistrementFields(formData, payload);
         formData.append('ordonnance', payload.ordonnance);
@@ -74,6 +127,7 @@ export function submitCommandeEnregistrement(
     if (payload.client_id) {
         data.client_id = payload.client_id;
     }
+    appendHistoricalFields(data, payload);
 
     router.post('/commandes', data, {
         preserveScroll: true,
@@ -107,6 +161,10 @@ export function submitCommandeRelance(
     }
 
     if (payload.ordonnance) {
+        if (rejectOversizedOrdonnance(payload.ordonnance, callbacks)) {
+            return;
+        }
+
         const formData = new FormData();
         if (payload.client_id) {
             formData.append('client_id', String(payload.client_id));

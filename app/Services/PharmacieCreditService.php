@@ -83,6 +83,10 @@ class PharmacieCreditService
         $minimum = $cfg['credit_minimum_achat'];
         $prixUnitaire = $cfg['credit_prix_unitaire_xaf'];
 
+        if (! $pharmacie->est_partenaire) {
+            throw new \InvalidArgumentException('Les crédits ne sont disponibles que pour les pharmacies partenaires.');
+        }
+
         if ($nombreCredits < $minimum) {
             throw new \InvalidArgumentException("L'achat minimum est de {$minimum} crédits.");
         }
@@ -156,7 +160,7 @@ class PharmacieCreditService
             }
 
             $pharmacie = Pharmacie::query()->whereKey($commande->pharmacie_id)->lockForUpdate()->first();
-            if (! $pharmacie || ! $pharmacie->credits_actif || (int) $pharmacie->credits_solde < 1) {
+            if (! $pharmacie || ! $pharmacie->parapharmaActif() || (int) $pharmacie->credits_solde < 1) {
                 return null;
             }
 
@@ -235,6 +239,7 @@ class PharmacieCreditService
         [$debutPeriode, $finPeriode] = AppSetting::parapharmaPeriodeBounds();
 
         return Pharmacie::query()
+            ->partenaires()
             ->with('zone:id,designation')
             ->orderBy('designation')
             ->get()
@@ -248,6 +253,7 @@ class PharmacieCreditService
                     'designation' => $pharmacie->designation,
                     'zone' => $pharmacie->zone?->designation,
                     'adresse' => $pharmacie->adresse,
+                    'credits_actif' => (bool) $pharmacie->credits_actif,
                     'credits_solde' => $solde,
                     'credits_utilises_mois' => $utilises,
                     'cout_mois_xaf' => $utilises * $prixUnitaire,

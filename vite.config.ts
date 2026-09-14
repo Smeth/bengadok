@@ -4,14 +4,15 @@ import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
 
+/**
+ * Front Inertia : une seule entrée Vite (app.ts) + pages résolues via import.meta.glob.
+ * Ne pas réintroduire @vite(['app.ts', 'pages/…']) dans app.blade.php (manifest manquant → 500).
+ * Dev Windows : host localhost (pas [::1]) — voir scripts/vite-predev.mjs.
+ */
 export default defineConfig({
     plugins: [
         laravel({
-            input: [
-                'resources/js/app.ts',
-                // Collision de chunk « Index » : entrée explicite pour que @vite retrouve la page en CI.
-                'resources/js/pages/Commandes/Index.vue',
-            ],
+            input: ['resources/js/app.ts'],
             ssr: 'resources/js/ssr.ts',
             refresh: true,
         }),
@@ -33,7 +34,10 @@ export default defineConfig({
         }),
     ],
     server: {
+        // Évite [::1]:5173 (souvent bloqué / NS_BINDING_ABORTED sous Firefox Windows)
+        host: 'localhost',
         hmr: {
+            host: 'localhost',
             overlay: true,
         },
     },

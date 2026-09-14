@@ -1,6 +1,9 @@
 import { router } from '@inertiajs/vue3';
-import { type ComputedRef, type Ref, reactive, ref, watch } from 'vue';
-import { useCommandeReferentiels } from '@/composables/useCommandeReferentiels';
+import { type ComputedRef, type Ref, computed, reactive, ref, unref, watch } from 'vue';
+import {
+    type CommandePharmacyScope,
+    useCommandeReferentiels,
+} from '@/composables/useCommandeReferentiels';
 import type { FormEnregPayload } from '@/lib/commandeEnregistrementTypes';
 import {
     submitCommandeEnregistrement,
@@ -19,8 +22,15 @@ export function useCommandeModals(options: {
     selectedIds: Ref<Set<number>>;
     clearSelection: () => void;
     onRelanceSuccess?: () => void;
+    returnHub?: ComputedRef<'gestion' | undefined> | Ref<'gestion' | undefined>;
 }) {
-    const referentiels = useCommandeReferentiels(options.canManageCommandes);
+    const pharmacyScope = computed<CommandePharmacyScope>(() =>
+        unref(options.returnHub) === 'gestion' ? 'toutes' : 'partenaires',
+    );
+    const referentiels = useCommandeReferentiels(
+        options.canManageCommandes,
+        pharmacyScope,
+    );
 
     const relancerCommande = ref<CommandeDetail | null>(null);
     const recuCommande = ref<CommandeDetail | null>(null);
@@ -75,6 +85,10 @@ export function useCommandeModals(options: {
 
     function submitEnregistrementFromModal(payload: FormEnregPayload) {
         apiErrorsEnreg.value = {};
+        const returnHub = unref(options.returnHub);
+        if (returnHub) {
+            payload._return_hub = returnHub;
+        }
         submitCommandeEnregistrement(payload, {
             onSuccess: () => {
                 showEnregistrementModal.value = false;

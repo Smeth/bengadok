@@ -11,7 +11,7 @@ class Pharmacie extends Model
 {
     protected $fillable = [
         'zone_id', 'type_pharmacie_id', 'heurs_id',
-        'designation', 'telephone', 'adresse', 'latitude', 'longitude', 'email',
+        'designation', 'est_partenaire', 'telephone', 'adresse', 'latitude', 'longitude', 'email',
         'de_garde', 'proprio_nom', 'proprio_tel', 'proprio_email',
         'credits_solde',
         'note_interne',
@@ -21,10 +21,45 @@ class Pharmacie extends Model
 
     protected $casts = [
         'de_garde' => 'boolean',
+        'est_partenaire' => 'boolean',
         'credits_solde' => 'integer',
         'credits_alerte_seuil' => 'integer',
         'credits_actif' => 'boolean',
     ];
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<Pharmacie>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<Pharmacie>
+     */
+    public function scopePartenaires($query)
+    {
+        return $query->where('est_partenaire', true);
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<Pharmacie>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<Pharmacie>
+     */
+    public function scopeNonPartenaires($query)
+    {
+        return $query->where('est_partenaire', false);
+    }
+
+    /**
+     * Partenaires avec crédits / commission parapharmacie activés.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<Pharmacie>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<Pharmacie>
+     */
+    public function scopeParapharmaActif($query)
+    {
+        return $query->partenaires()->where('credits_actif', true);
+    }
+
+    public function parapharmaActif(): bool
+    {
+        return $this->est_partenaire && $this->credits_actif;
+    }
 
     public function creditOperations(): HasMany
     {

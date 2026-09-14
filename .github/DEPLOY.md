@@ -165,7 +165,7 @@ server {
     ssl_certificate     /etc/letsencrypt/live/bengadok.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/bengadok.com/privkey.pem;
 
-    # Taille max upload (ordonnances)
+    # Taille max upload (ordonnances, imports Excel) — >= limite app (10 Mo)
     client_max_body_size 15M;
 
     # Logs
@@ -223,6 +223,22 @@ sudo systemctl reload nginx
 sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d bengadok.com -d www.bengadok.com
 ```
+
+### PHP-FPM (obligatoire pour éviter les erreurs 413)
+
+Les limites nginx seules ne suffisent pas : PHP doit autoriser au moins **12M** par fichier et **14M** par requête POST.
+
+```bash
+# Ex. /etc/php/8.4/fpm/php.ini et /etc/php/8.4/cli/php.ini
+upload_max_filesize = 12M
+post_max_size = 14M
+
+sudo systemctl reload php8.4-fpm
+php -i | findstr /i "upload_max_filesize post_max_size"   # Windows dev
+php -i | grep -E 'upload_max_filesize|post_max_size'      # Linux
+```
+
+L’application BengaDok expose la **limite effective** au frontend (`upload_limits`) et affiche un toast explicite au lieu de la page brute « 413 Request Entity Too Large ».
 
 > **Firewall** : ne pas ouvrir le port **8080** publiquement. Seul Nginx (443) doit être accessible ; le proxy `/app` relaie vers `127.0.0.1:8080`.
 

@@ -63,7 +63,7 @@ final class AuthRedirectPaths
     /** Préfixes URL considérés comme back-office (garde-fou routes + tests). */
     public static function backofficePathPrefixes(): array
     {
-        return ['/clients', '/medicaments', '/pharmacies', '/commandes', '/utilisateurs', '/agent', '/dashboard'];
+        return ['/clients', '/medicaments', '/pharmacies', '/commandes', '/db-commandes', '/utilisateurs', '/agent', '/dashboard'];
     }
 
     public static function pathAllowedForUser(?User $user, mixed $path): bool
@@ -158,7 +158,7 @@ final class AuthRedirectPaths
 
     private static function isAgentBackofficePath(string $path): bool
     {
-        foreach (['/commandes', '/medicaments', '/clients', '/agent', '/dashboard'] as $prefix) {
+        foreach (['/commandes', '/db-commandes', '/medicaments', '/clients', '/agent', '/dashboard'] as $prefix) {
             if ($path === $prefix || str_starts_with($path, $prefix.'/')) {
                 return true;
             }

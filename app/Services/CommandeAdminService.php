@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Actions\PromoteClientsFromSuccessfulOrdersAction;
 use App\Models\Commande;
+use App\Models\DbCommande;
 use App\Models\MontantLivraison;
 use App\Models\User;
 
@@ -21,6 +22,28 @@ class CommandeAdminService
                 ? trim((string) $validated['commentaire'])
                 : null,
         ]);
+    }
+
+    /**
+     * @param  list<int>  $ids
+     */
+    public function bulkDelete(User $user, array $ids): int
+    {
+        if (! $user->hasAnyRole(['admin', 'super_admin', 'agent_call_center'])) {
+            abort(403);
+        }
+
+        DbCommande::query()
+            ->whereIn('commande_id', $ids)
+            ->update([
+                'commande_id' => null,
+                'integrated_at' => null,
+                'integration_error' => null,
+            ]);
+
+        $query = Commande::query()->whereIn('id', $ids)->whereNull('parent_id');
+
+        return (int) $query->delete();
     }
 
     /**

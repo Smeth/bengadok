@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ClientPayloadNormalizer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -56,6 +57,17 @@ class Client extends Model
         'promu_client_le' => 'datetime',
         'niches' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Client $client): void {
+            foreach (ClientPayloadNormalizer::NOT_NULL_STRING_FIELDS as $field) {
+                if ($client->{$field} === null) {
+                    $client->{$field} = '';
+                }
+            }
+        });
+    }
 
     public function zone(): BelongsTo
     {

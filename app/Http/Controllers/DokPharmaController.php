@@ -90,6 +90,13 @@ class DokPharmaController extends Controller
         $context = $this->dashboardContext->resolve($request);
         abort_unless($context['pharmacie_id'] !== null, 403);
 
+        $pharmacie = Pharmacie::query()->findOrFail($context['pharmacie_id']);
+        abort_unless(
+            $pharmacie->parapharmaActif(),
+            403,
+            'Les crédits et commissions ne concernent que les pharmacies partenaires avec le système activé.',
+        );
+
         $validated = $request->validate([
             'mois' => ['required', 'regex:/^\d{4}-\d{2}$/'],
         ]);

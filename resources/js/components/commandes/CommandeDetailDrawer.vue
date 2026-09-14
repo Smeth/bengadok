@@ -66,6 +66,8 @@ type ReferentielLivreur = {
 const props = defineProps<{
     canManageCommandes: boolean;
     canCreateCommande: boolean;
+    /** Consultation seule (hub Gestion commandes) — pas de validation / annulation ici. */
+    consultationOnly?: boolean;
     livreurs: ReferentielLivreur[];
     montantsLivraison: Array<{ id: number; designation: number }>;
     modesPaiement: Array<{ id: number; designation: string }>;
@@ -83,6 +85,9 @@ const emit = defineEmits<{
 
 const canCreateCommandeRef = computed(() => props.canCreateCommande);
 const canManageCommandesRef = computed(() => props.canManageCommandes);
+const showOperationalActions = computed(
+    () => props.canManageCommandes && !props.consultationOnly,
+);
 const motifOptionsRef = computed(() => props.motifOptions);
 const motifsRelanceRef = computed(() => props.motifsRelance);
 const motifLabelBySlugRef = computed(() => props.motifLabelBySlug);
@@ -953,7 +958,7 @@ defineExpose({
                     </h3>
 
                     <div
-                        class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                        class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <span class="text-[13px] text-gray-500"
                             >Mode de paiement</span
@@ -1015,6 +1020,77 @@ defineExpose({
                         </template>
                     </div>
 
+                    <div
+                        class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                        <span class="text-[13px] text-gray-500"
+                            >Montant de livraison</span
+                        >
+                        <template
+                            v-if="
+                                detailCommande.status ===
+                                    'en_attente' &&
+                                canCreateCommande &&
+                                montantsLivraison.length &&
+                                !enAttentePharmacieToutIndisponible
+                            "
+                        >
+                            <select
+                                class="h-10 min-w-[12rem] max-w-full rounded-xl border border-gray-200 bg-white px-3 text-[13px] font-semibold text-gray-900 focus:border-[#459cd1] focus:outline-none focus:ring-1 focus:ring-[#459cd1] dark:border-border dark:bg-input dark:text-foreground"
+                                :value="
+                                    detailCommande.montant_livraison
+                                        ?.id ?? ''
+                                "
+                                @change="
+                                    ($event) => {
+                                        const v = (
+                                            $event.target as HTMLSelectElement
+                                        ).value;
+                                        if (v)
+                                            setMontantLivraison(
+                                                Number(v),
+                                            );
+                                    }
+                                "
+                            >
+                                <option value="" disabled>
+                                    Choisir un montant
+                                </option>
+                                <option
+                                    v-for="m in montantsLivraison"
+                                    :key="m.id"
+                                    :value="m.id"
+                                >
+                                    {{
+                                        Number(
+                                            m.designation,
+                                        ).toLocaleString('fr-FR')
+                                    }}
+                                    FCFA
+                                </option>
+                            </select>
+                        </template>
+                        <template v-else>
+                            <span
+                                v-if="detailCommande.montant_livraison"
+                                class="rounded-full border border-[#016630] bg-[#e1f3e7] px-3 py-1 text-[12px] font-bold text-[#016630]"
+                            >
+                                {{
+                                    Number(
+                                        detailCommande.montant_livraison
+                                            .designation,
+                                    ).toLocaleString('fr-FR')
+                                }}
+                                FCFA
+                            </span>
+                            <span
+                                v-else
+                                class="text-[13px] font-medium text-gray-400"
+                                >Non défini</span
+                            >
+                        </template>
+                    </div>
+
                     <div class="space-y-2 text-[14px]">
                         <div
                             v-if="detailSplit.sousTotalMedicaments > 0"
@@ -1061,38 +1137,7 @@ defineExpose({
                         </div>
 
                         <div
-                            v-if="
-                                detailCommande.status ===
-                                    'en_attente' &&
-                                !detailCommande.montant_livraison &&
-                                !enAttentePharmacieToutIndisponible
-                            "
-                            class="flex flex-col gap-2 pt-1 border-t border-gray-100"
-                        >
-                            <span class="text-gray-500"
-                                >Définir Livraison :</span
-                            >
-                            <div class="flex flex-wrap gap-2">
-                                <button
-                                    v-for="m in montantsLivraison"
-                                    :key="m.id"
-                                    type="button"
-                                    class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-[12px] font-bold text-gray-700 transition-colors hover:border-[#459cd1] hover:bg-blue-50 hover:text-[#459cd1] dark:border-border dark:bg-muted dark:text-foreground dark:hover:bg-[#459cd1]/15"
-                                    @click.stop="
-                                        setMontantLivraison(m.id)
-                                    "
-                                >
-                                    {{
-                                        Number(
-                                            m.designation,
-                                        ).toLocaleString('fr-FR')
-                                    }}
-                                    FCFA
-                                </button>
-                            </div>
-                        </div>
-                        <div
-                            v-else-if="detailCommande.montant_livraison"
+                            v-if="detailCommande.montant_livraison"
                             class="flex items-center justify-between"
                         >
                             <span class="text-gray-500">Livraison</span>
@@ -1196,9 +1241,29 @@ defineExpose({
                     </p>
                 </div>
 
-                <!-- Actions (suite du scroll, pas de barre fixe) -->
+                <!-- Actions opérationnelles (module Commandes uniquement) -->
                 <div class="border-t border-gray-200 bg-white pt-5 dark:border-border dark:bg-card">
-                    <div class="flex flex-col gap-3">
+                    <div
+                        v-if="consultationOnly"
+                        class="flex flex-col gap-3"
+                    >
+                        <p class="text-[13px] leading-relaxed text-gray-600">
+                            La validation, l'annulation et le suivi opérationnel
+                            se font dans le module
+                            <Link
+                                :href="`/commandes?detail=${detailCommande.id}`"
+                                class="font-semibold text-[#459cd1] underline-offset-2 hover:underline"
+                            >
+                                Commandes
+                            </Link>.
+                        </p>
+                        <Button variant="outline" class="w-full" as-child>
+                            <Link :href="`/commandes?detail=${detailCommande.id}`">
+                                Ouvrir dans Commandes
+                            </Link>
+                        </Button>
+                    </div>
+                    <div v-else-if="showOperationalActions" class="flex flex-col gap-3">
                         <template
                             v-if="
                                 detailCommande.status === 'en_attente'
@@ -1232,9 +1297,9 @@ defineExpose({
                                     "
                                     class="text-center text-[12px] font-medium text-amber-800"
                                 >
-                                    Définissez le montant de la
-                                    livraison (section paiement
-                                    ci-dessus) avant de valider.
+                                    Choisissez le montant de livraison
+                                    (liste déroulante ci-dessus) avant
+                                    de valider.
                                 </p>
                                 <p
                                     v-else-if="
@@ -1344,6 +1409,7 @@ defineExpose({
 
 <!-- Modal confirmation validation commande -->
 <Dialog
+    v-if="showOperationalActions"
     :open="showValiderModal"
     @update:open="showValiderModal = $event"
 >
@@ -1395,6 +1461,7 @@ defineExpose({
 
 <!-- Modal Annuler -->
 <Dialog
+    v-if="showOperationalActions"
     :open="showAnnulerModal"
     @update:open="showAnnulerModal = $event"
 >

@@ -21,7 +21,7 @@ class PharmacieProximiteService
             return str_contains($adresseLower, mb_strtolower($zone->designation));
         });
 
-        $query = Pharmacie::with('zone', 'typePharmacie');
+        $query = Pharmacie::with('zone', 'typePharmacie')->partenaires();
 
         if ($zoneMatch) {
             $query->where('zone_id', $zoneMatch->id);
@@ -82,7 +82,9 @@ class PharmacieProximiteService
      */
     public function pharmaciesParZone(int $zoneId): Collection
     {
-        return Pharmacie::where('zone_id', $zoneId)
+        return Pharmacie::query()
+            ->where('zone_id', $zoneId)
+            ->partenaires()
             ->with('zone', 'typePharmacie')
             ->get();
     }

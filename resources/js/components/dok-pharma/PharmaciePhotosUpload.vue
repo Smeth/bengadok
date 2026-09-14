@@ -8,6 +8,9 @@ import { onBeforeUnmount, onMounted, ref, shallowRef } from 'vue';
 import '@uppy/core/css/style.css';
 import '@uppy/dashboard/css/style.css';
 import { moduleTabFocusClass } from '@/lib/bengadokUi';
+import { getUploadLimits, uploadMaxSizeNote } from '@/lib/uploadLimits';
+
+const uploadLimits = getUploadLimits();
 
 const ALLOWED_TYPES = [
     'image/jpeg',
@@ -15,7 +18,7 @@ const ALLOWED_TYPES = [
     'image/gif',
     'image/webp',
 ];
-const MAX_SIZE = 10 * 1024 * 1024;
+const MAX_SIZE = uploadLimits.max_bytes;
 const MAX_FILES = 10;
 
 const props = withDefaults(
@@ -110,7 +113,7 @@ onBeforeUnmount(() => {
                         Ajouter une ou plusieurs photos
                     </span>
                     <span class="text-[11px] font-medium text-[#94a3b8]">
-                        JPG, PNG, GIF ou WebP — max. 10 Mo
+                        {{ uploadMaxSizeNote('JPG, PNG, GIF ou WebP') }}
                     </span>
                 </button>
             </div>

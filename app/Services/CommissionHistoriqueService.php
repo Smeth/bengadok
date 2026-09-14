@@ -78,7 +78,7 @@ final class CommissionHistoriqueService
         ];
 
         $pharmacieIds = [null];
-        foreach (Pharmacie::query()->orderBy('id')->pluck('id') as $id) {
+        foreach (Pharmacie::query()->parapharmaActif()->orderBy('id')->pluck('id') as $id) {
             $pharmacieIds[] = (int) $id;
         }
 

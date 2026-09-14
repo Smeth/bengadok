@@ -1,8 +1,11 @@
-import { type ComputedRef, type Ref, ref } from 'vue';
+import { type ComputedRef, type Ref, computed, ref, unref } from 'vue';
 import type { CommandeReferentielPharmacie } from '@/lib/commandeEnregistrementTypes';
+
+export type CommandePharmacyScope = 'partenaires' | 'toutes';
 
 export function useCommandeReferentiels(
     canManageCommandes: ComputedRef<boolean> | Ref<boolean>,
+    pharmacyScope: ComputedRef<CommandePharmacyScope> | Ref<CommandePharmacyScope> = ref('partenaires'),
 ) {
     const pharmacies = ref<CommandeReferentielPharmacie[]>([]);
     const zones = ref<
@@ -18,18 +21,26 @@ export function useCommandeReferentiels(
     const arrondissements = ref<string[]>([]);
     const parapharmaProduitTypes = ref<string[]>(['Parapharmacie']);
     const referentielsLoading = ref(false);
-    let referentielsLoaded = false;
+    let referentielsLoadedScope: CommandePharmacyScope | null = null;
+
+    const scopeKey = computed(() => unref(pharmacyScope));
 
     async function loadReferentiels(): Promise<void> {
         if (!canManageCommandes.value) {
             return;
         }
-        if (referentielsLoaded || referentielsLoading.value) {
+        const scope = scopeKey.value;
+        if (
+            (referentielsLoadedScope === scope && pharmacies.value.length > 0) ||
+            referentielsLoading.value
+        ) {
             return;
         }
         referentielsLoading.value = true;
         try {
-            const r = await fetch('/commandes/referentiels', {
+            const params =
+                scope === 'toutes' ? '?pharmacies=toutes' : '';
+            const r = await fetch(`/commandes/referentiels${params}`, {
                 headers: {
                     Accept: 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
@@ -48,7 +59,7 @@ export function useCommandeReferentiels(
             arrondissements.value = json.arrondissements ?? [];
             parapharmaProduitTypes.value =
                 json.parapharma_produit_types ?? ['Parapharmacie'];
-            referentielsLoaded = true;
+            referentielsLoadedScope = scope;
         } finally {
             referentielsLoading.value = false;
         }
@@ -56,6 +67,26 @@ export function useCommandeReferentiels(
 
     function ensureReferentiels(): void {
         void loadReferentiels();
+    }
+
+    function addPharmacie(pharmacie: CommandeReferentielPharmacie): void {
+        if (pharmacies.value.some((p) => p.id === pharmacie.id)) {
+            return;
+        }
+
+        pharmacies.value = [...pharmacies.value, pharmacie];
+
+        const zoneId = pharmacie.zone_id ?? pharmacie.zone?.id;
+        if (zoneId) {
+            zones.value = zones.value.map((zone) =>
+                zone.id === zoneId
+                    ? {
+                          ...zone,
+                          pharmacies_count: (zone.pharmacies_count ?? 0) + 1,
+                      }
+                    : zone,
+            );
+        }
     }
 
     return {
@@ -68,5 +99,6 @@ export function useCommandeReferentiels(
         parapharmaProduitTypes,
         referentielsLoading,
         ensureReferentiels,
+        addPharmacie,
     };
 }

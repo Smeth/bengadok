@@ -58,6 +58,7 @@ type Pharmacie = {
     latitude: number;
     longitude: number;
     de_garde: boolean;
+    est_partenaire?: boolean;
     proprio_nom: string | null;
     proprio_tel: string | null;
     zone: { designation: string } | null;
@@ -94,7 +95,7 @@ const props = withDefaults(
         pharmacies: PaginatedData<Pharmacie>;
         googleMyMapsEmbedUrl: string;
         googleMyMapsViewerUrl?: string;
-        filters: { search?: string };
+        filters: { search?: string; partenaire?: string };
         stats: { de_garde: number; total: number };
         zones: Array<{ id: number; designation: string }>;
         types: Array<{
@@ -156,10 +157,7 @@ function setModuleTab(tab: ModuleTabId) {
     activeModuleTab.value = tab;
     router.get(
         '/pharmacies',
-        {
-            onglet: tab,
-            search: props.filters.search || undefined,
-        },
+        pharmaciesListQuery({ onglet: tab }),
         { preserveState: true, preserveScroll: true },
     );
 }
@@ -189,11 +187,10 @@ const pharmacyModuleTabs = computed(() => {
 function ouvrirGestionCredits(pharmacieId: number) {
     router.get(
         '/pharmacies',
-        {
+        pharmaciesListQuery({
             onglet: 'credits',
             pharmacie_id: pharmacieId,
-            search: props.filters.search || undefined,
-        },
+        }),
         { preserveState: true, preserveScroll: true },
     );
 }
@@ -201,10 +198,7 @@ function ouvrirGestionCredits(pharmacieId: number) {
 function retourListeCredits() {
     router.get(
         '/pharmacies',
-        {
-            onglet: 'credits',
-            search: props.filters.search || undefined,
-        },
+        pharmaciesListQuery({ onglet: 'credits' }),
         { preserveState: true, preserveScroll: true },
     );
 }
@@ -214,6 +208,29 @@ function formatXaf(n: number): string {
 }
 
 const searchQuery = ref(props.filters.search ?? '');
+const partenaireFilter = ref(props.filters.partenaire ?? '');
+
+const partenaireFilterOptions = [
+    { key: '', label: 'Toutes' },
+    { key: '1', label: 'Partenaires' },
+    { key: '0', label: 'Non partenaires' },
+] as const;
+
+watch(
+    () => props.filters.partenaire,
+    (value) => {
+        partenaireFilter.value = value ?? '';
+    },
+);
+
+function pharmaciesListQuery(extra: Record<string, unknown> = {}) {
+    return {
+        onglet: activeModuleTab.value,
+        search: searchQuery.value || undefined,
+        partenaire: partenaireFilter.value || undefined,
+        ...extra,
+    };
+}
 const showModal = ref(false);
 const showDeleteModal = ref(false);
 const pharmacieToDelete = ref<Pharmacie | null>(null);
@@ -325,17 +342,20 @@ function normalizeInertiaErrors(e: unknown): Record<string, string> {
 function search() {
     router.get(
         '/pharmacies',
-        {
-            onglet: activeModuleTab.value,
+        pharmaciesListQuery({
             pharmacie_id:
                 activeModuleTab.value === 'credits' &&
                 props.pharmacieCreditsSelection?.id
                     ? props.pharmacieCreditsSelection.id
                     : undefined,
-            search: searchQuery.value || undefined,
-        },
+        }),
         { preserveState: true },
     );
+}
+
+function setPartenaireFilter(key: string) {
+    partenaireFilter.value = key;
+    search();
 }
 
 function openModal() {
@@ -460,6 +480,22 @@ watch(
                 counter-class="bg-[#459cd1]"
                 @submit="search"
             >
+                <div class="flex flex-wrap gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
+                    <button
+                        v-for="opt in partenaireFilterOptions"
+                        :key="opt.key || 'all'"
+                        type="button"
+                        class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
+                        :class="
+                            partenaireFilter === opt.key
+                                ? 'bg-[#459cd1] text-white'
+                                : 'text-gray-600 hover:bg-gray-100 dark:text-muted-foreground dark:hover:bg-muted'
+                        "
+                        @click="setPartenaireFilter(opt.key)"
+                    >
+                        {{ opt.label }}
+                    </button>
+                </div>
                 <div
                     class="flex items-center gap-1.5 rounded-lg border border-red-100 bg-white px-3 py-1.5 text-red-600 shadow-sm"
                     title="Pharmacies de garde"
@@ -637,6 +673,12 @@ watch(
                                             :title="pharmacie.designation"
                                             >{{ pharmacie.designation }}</span
                                         >
+                                        <span
+                                            v-if="pharmacie.est_partenaire === false"
+                                            class="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
+                                        >
+                                            Non partenaire
+                                        </span>
                                     </div>
                                 </td>
                                 <td
@@ -685,6 +727,18 @@ watch(
                                         >
                                             En Garde
                                         </span>
+                                        <span
+                                            v-if="pharmacie.est_partenaire === false"
+                                            class="whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800"
+                                        >
+                                            Non partenaire
+                                        </span>
+                                        <span
+                                            v-else
+                                            class="whitespace-nowrap rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
+                                        >
+                                            Partenaire
+                                        </span>
                                     </div>
                                 </td>
                                 <td
@@ -707,7 +761,7 @@ watch(
                                             >
                                         </Button>
                                         <Button
-                                            v-if="isAdmin"
+                                            v-if="isAdmin && pharmacie.est_partenaire !== false"
                                             variant="outline"
                                             size="sm"
                                             class="gap-1 border-[#459cd1]/40 text-[#459cd1]"
@@ -811,6 +865,12 @@ watch(
                         >
                             De Garde
                         </span>
+                        <span
+                            v-if="pharmacie.est_partenaire === false"
+                            class="rounded-lg bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 uppercase tracking-wider"
+                        >
+                            Non partenaire
+                        </span>
                     </div>
 
                     <!-- Infos détaillées -->
@@ -904,7 +964,7 @@ watch(
                                 >
                             </Button>
                             <Button
-                                v-if="isAdmin"
+                                v-if="isAdmin && pharmacie.est_partenaire !== false"
                                 variant="outline"
                                 class="h-10 shrink-0 gap-1 rounded-[10px] border-[#459cd1]/40 px-3 font-bold text-[#459cd1] shadow-sm"
                                 as-child

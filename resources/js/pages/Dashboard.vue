@@ -90,9 +90,29 @@ const props = defineProps<{
     mode?: string;
     active_tab?: 'parapharma' | 'operations';
     period?: string;
+    date_from?: string | null;
+    date_to?: string | null;
     mois?: string;
     mois_label?: string;
     mois_options?: ParapharmaAdminProps['mois_options'];
+    vue_periode?: 'mois' | 'semaine';
+    ventes_par_pharmacie?: Array<{
+        date: string;
+        pharmacie: string;
+        ca_medicaments: number;
+        ca_parapharma: number;
+        ca_total: number;
+        nb_commandes: number;
+    }>;
+    credits_par_pharmacie?: Array<{
+        pharmacie_id: number;
+        pharmacie: string;
+        credits_medicaments: number;
+        credits_parapharmacie: number;
+        credits_total: number;
+        cout_total: number;
+        commandes_eligibles: number;
+    }>;
     config?: ParapharmaAdminProps['config'];
     commission_courante?: ParapharmaAdminProps['commission_courante'];
     ventes?: ParapharmaAdminProps['ventes'];
@@ -159,6 +179,10 @@ const props = defineProps<{
     };
 }>();
 
+const showCustomPicker = ref(props.period === 'custom');
+const dateFrom = ref(props.date_from ?? '');
+const dateTo = ref(props.date_to ?? '');
+
 const isAdminDashboard = computed(() => props.mode === 'parapharma_admin');
 const activeTab = computed(() => props.active_tab ?? 'parapharma');
 const showParapharmaPanel = computed(
@@ -175,12 +199,20 @@ const period = computed(() => props.period ?? 'month');
 const periodLabel = computed(() => {
     if (period.value === 'day') return "Aujourd'hui";
     if (period.value === 'week') return 'Cette semaine';
+    if (period.value === 'year') return 'Cette année';
+    if (period.value === 'all') return "Tout l'historique";
+    if (period.value === 'custom' && props.date_from && props.date_to) {
+        return `${props.date_from} → ${props.date_to}`;
+    }
     return 'Ce mois';
 });
 
 const kpiEvolutionHint = computed(() => {
     if (period.value === 'day') return 'vs hier';
     if (period.value === 'week') return 'vs semaine précédente';
+    if (period.value === 'year') return 'vs année précédente';
+    if (period.value === 'all') return 'vs période précédente';
+    if (period.value === 'custom') return 'vs période précédente';
     return 'vs mois précédent';
 });
 
@@ -188,6 +220,9 @@ function setAdminTab(tab: 'parapharma' | 'operations') {
     const params: Record<string, string> = { tab };
     if (tab === 'parapharma' && props.mois) {
         params.mois = props.mois;
+        if (props.vue_periode) {
+            params.vue_periode = props.vue_periode;
+        }
     }
     if (tab === 'operations') {
         params.period = period.value;
@@ -197,7 +232,26 @@ function setAdminTab(tab: 'parapharma' | 'operations') {
 
 function setPeriod(p: string) {
     periodDropdownOpen.value = false;
+    showCustomPicker.value = false;
     const params: Record<string, string> = { period: p };
+    if (isAdminDashboard.value) {
+        params.tab = 'operations';
+    }
+    router.get(dashboard(), params, { preserveState: true });
+}
+
+function selectCustomRange() {
+    periodDropdownOpen.value = false;
+    showCustomPicker.value = true;
+}
+
+function applyCustomRange() {
+    if (!dateFrom.value || !dateTo.value) return;
+    const params: Record<string, string> = {
+        period: 'custom',
+        date_from: dateFrom.value,
+        date_to: dateTo.value,
+    };
     if (isAdminDashboard.value) {
         params.tab = 'operations';
     }
@@ -397,10 +451,13 @@ function getPiePath(
                 :mois="mois!"
                 :mois_label="mois_label!"
                 :mois_options="mois_options!"
+                :vue_periode="vue_periode"
                 :config="config!"
                 :kpis="(parapharma_kpis ?? kpis) as ParapharmaAdminProps['kpis']"
                 :commission_courante="commission_courante!"
                 :ventes="ventes!"
+                :ventes_par_pharmacie="ventes_par_pharmacie ?? []"
+                :credits_par_pharmacie="credits_par_pharmacie ?? []"
                 :historique_commissions="historique_commissions!"
                 :commandes_recentes="commandes_recentes!"
                 :commissions_par_pharmacie="commissions_par_pharmacie ?? []"
@@ -468,8 +525,55 @@ function getPiePath(
                         >
                             Ce mois
                         </button>
+                        <button
+                            class="w-full px-4 py-2 text-left text-[14px] hover:bg-gray-100"
+                            @click="setPeriod('year')"
+                        >
+                            Cette année
+                        </button>
+                        <button
+                            class="w-full px-4 py-2 text-left text-[14px] hover:bg-gray-100"
+                            @click="setPeriod('all')"
+                        >
+                            Tout l'historique
+                        </button>
+                        <button
+                            class="w-full px-4 py-2 text-left text-[14px] hover:bg-gray-100 dark:hover:bg-muted"
+                            @click="selectCustomRange"
+                        >
+                            Plage personnalisée…
+                        </button>
                     </div>
                 </div>
+            </div>
+
+            <div
+                v-if="showCustomPicker || period === 'custom'"
+                class="mb-4 flex flex-wrap items-end justify-end gap-2"
+            >
+                <label class="flex flex-col gap-1 text-xs text-muted-foreground">
+                    Du
+                    <input
+                        v-model="dateFrom"
+                        type="date"
+                        class="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                </label>
+                <label class="flex flex-col gap-1 text-xs text-muted-foreground">
+                    Au
+                    <input
+                        v-model="dateTo"
+                        type="date"
+                        class="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                </label>
+                <button
+                    type="button"
+                    class="rounded-[13px] border border-gray-300 bg-white px-4 py-2 text-[14px] font-semibold text-gray-800 shadow-sm hover:bg-gray-50 dark:border-border dark:bg-input dark:text-foreground dark:hover:bg-muted"
+                    @click="applyCustomRange"
+                >
+                    Appliquer
+                </button>
             </div>
 
             <!-- Stats cards Admin - style Figma (legacy) -->

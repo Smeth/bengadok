@@ -15,6 +15,8 @@ class PharmacieCreditController extends Controller
 
     public function recharge(Request $request, Pharmacie $pharmacie): RedirectResponse
     {
+        $this->ensurePharmaciePartenaire($pharmacie);
+
         $validated = $request->validate([
             'nombre_credits' => 'required|integer|min:1|max:99999',
             'mode_paiement' => 'required|string|max:80',
@@ -43,6 +45,8 @@ class PharmacieCreditController extends Controller
 
     public function updateNote(Request $request, Pharmacie $pharmacie): RedirectResponse
     {
+        $this->ensurePharmaciePartenaire($pharmacie);
+
         $validated = $request->validate([
             'note_interne' => 'nullable|string|max:5000',
         ]);
@@ -54,6 +58,8 @@ class PharmacieCreditController extends Controller
 
     public function updateAlerteSeuil(Request $request, Pharmacie $pharmacie): RedirectResponse
     {
+        $this->ensurePharmaciePartenaire($pharmacie);
+
         $validated = $request->validate([
             'credits_alerte_seuil' => 'nullable|integer|min:1|max:9999',
         ]);
@@ -65,5 +71,14 @@ class PharmacieCreditController extends Controller
         $this->creditService->updateAlerteSeuil($pharmacie, $seuil);
 
         return back()->with('status', 'Seuil d\'alerte mis à jour.');
+    }
+
+    private function ensurePharmaciePartenaire(Pharmacie $pharmacie): void
+    {
+        abort_unless(
+            $pharmacie->est_partenaire,
+            403,
+            'Les crédits et commissions ne concernent que les pharmacies partenaires.',
+        );
     }
 }

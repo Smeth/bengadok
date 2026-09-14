@@ -68,6 +68,7 @@ const props = defineProps<{
         telephone: string;
         email: string | null;
         de_garde: boolean;
+        est_partenaire?: boolean;
         proprio_nom: string | null;
         proprio_tel: string | null;
         proprio_email: string | null;
@@ -85,6 +86,7 @@ const props = defineProps<{
     types: TypePharmacie[];
     nextUserId?: number;
     onglet?: 'informations' | 'credits';
+    creditsIndisponible?: boolean;
     creditGestion?: {
         resume: Record<string, unknown>;
         config: Record<string, unknown>;
@@ -102,7 +104,7 @@ const ongletActif = ref<'informations' | 'credits'>(
 watch(
     () => props.onglet,
     (o) => {
-        if (o === 'credits' && isAdmin.value) {
+        if (o === 'credits' && isAdmin.value && !isNonPartenaire.value) {
             ongletActif.value = 'credits';
         } else if (o === 'informations' || o === 'credits') {
             ongletActif.value = 'informations';
@@ -132,6 +134,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const showEditModal = ref(false);
+const showPromoteModal = ref(false);
 const modalCreateUser = ref(false);
 const showPasswordManual = ref(false);
 const showResetPasswordModal = ref(false);
@@ -158,8 +161,22 @@ const form = ref({
     proprio_email: props.pharmacie.proprio_email ?? '',
     proprio_tel: props.pharmacie.proprio_tel ?? '',
     credits_actif: props.pharmacie.credits_actif,
+    est_partenaire: props.pharmacie.est_partenaire !== false,
 });
 const errors = ref<Record<string, string>>({});
+
+const isNonPartenaire = computed(
+    () => props.pharmacie.est_partenaire === false,
+);
+
+watch(
+    () => form.value.est_partenaire,
+    (estPartenaire) => {
+        if (!estPartenaire) {
+            form.value.credits_actif = false;
+        }
+    },
+);
 
 /** Toast après création d’utilisateur (visible en bas à droite) */
 const userCreateToast = ref<{
@@ -207,9 +224,23 @@ function openEditModal() {
         proprio_email: props.pharmacie.proprio_email ?? '',
         proprio_tel: props.pharmacie.proprio_tel ?? '',
         credits_actif: props.pharmacie.credits_actif,
+        est_partenaire: props.pharmacie.est_partenaire !== false,
     };
     errors.value = {};
     showEditModal.value = true;
+}
+
+function promotePartenaire() {
+    router.patch(
+        `/pharmacies/${props.pharmacie.id}/promote-partenaire`,
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showPromoteModal.value = false;
+            },
+        },
+    );
 }
 
 function submitEdit() {
@@ -428,6 +459,41 @@ function creerUtilisateur() {
 
             <FlashToastHost inline-password-reset />
 
+            <div
+                v-if="isAdmin && isNonPartenaire && ongletActif === 'informations'"
+                class="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 dark:border-amber-800 dark:bg-amber-900/20"
+            >
+                <div
+                    class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                    <div>
+                        <p class="font-semibold text-amber-900 dark:text-amber-100">
+                            Pharmacie non partenaire
+                        </p>
+                        <p class="mt-1 text-sm text-amber-800/90 dark:text-amber-100/80">
+                            Elle n’apparaît pas dans le module Commandes. Promouvez-la
+                            en partenaire une fois la fiche complétée.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <Button
+                            variant="outline"
+                            class="border-amber-300 bg-white"
+                            @click="openEditModal"
+                        >
+                            Compléter la fiche
+                        </Button>
+                        <Button
+                            class="bg-emerald-600 text-white hover:bg-emerald-700"
+                            @click="showPromoteModal = true"
+                        >
+                            <ShieldCheck class="mr-2 size-4" />
+                            Promouvoir en partenaire
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Onglets fiche pharmacie (même style que Médicaments / Clients) -->
             <div class="flex flex-wrap items-center gap-4">
                 <div class="flex flex-wrap gap-2">
@@ -445,7 +511,7 @@ function creerUtilisateur() {
                         Informations
                     </button>
                     <button
-                        v-if="isAdmin"
+                        v-if="isAdmin && !isNonPartenaire"
                         type="button"
                         class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
                         :class="
@@ -478,8 +544,16 @@ function creerUtilisateur() {
                 v-else-if="isAdmin && ongletActif === 'credits'"
                 class="rounded-xl border border-amber-200 bg-amber-50 px-6 py-8 text-center text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100"
             >
-                Impossible de charger la gestion des crédits pour cette
-                pharmacie. Rechargez la page ou contactez le support.
+                <template v-if="creditsIndisponible || isNonPartenaire">
+                    Les crédits et la commission parapharmacie ne concernent
+                    que les pharmacies partenaires. Promouvez d'abord cette
+                    pharmacie en partenaire, puis activez le système depuis
+                    la fiche.
+                </template>
+                <template v-else>
+                    Impossible de charger la gestion des crédits pour cette
+                    pharmacie. Rechargez la page ou contactez le support.
+                </template>
             </div>
 
             <div
@@ -509,6 +583,18 @@ function creerUtilisateur() {
                                     class="rounded-full bg-blue-500 px-3 py-0.5 text-sm text-white"
                                 >
                                     {{ pharmacie.type_pharmacie.designation }}
+                                </span>
+                                <span
+                                    v-if="isNonPartenaire"
+                                    class="rounded-full bg-amber-100 px-3 py-0.5 text-sm font-medium text-amber-800"
+                                >
+                                    Non partenaire
+                                </span>
+                                <span
+                                    v-else
+                                    class="rounded-full bg-emerald-100 px-3 py-0.5 text-sm font-medium text-emerald-800"
+                                >
+                                    Partenaire
                                 </span>
                             </div>
                         </div>
@@ -719,189 +805,240 @@ function creerUtilisateur() {
 
         <!-- Modal édition -->
         <Dialog :open="showEditModal" @update:open="showEditModal = $event">
-            <DialogContent class="max-w-lg">
-                <DialogHeader>
-                    <DialogTitle class="flex items-center gap-2">
-                        <Pencil class="size-5 text-[#459cd1]" />
+            <DialogContent
+                class="flex max-h-[min(90vh,36rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
+            >
+                <DialogHeader class="shrink-0 border-b px-5 py-4">
+                    <DialogTitle class="flex items-center gap-2 text-base">
+                        <Pencil class="size-4 text-[#459cd1]" />
                         Modifier la pharmacie
                     </DialogTitle>
                 </DialogHeader>
 
-                <form class="space-y-6" @submit.prevent="submitEdit">
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div class="space-y-2 sm:col-span-2">
-                            <Label for="edit-designation"
-                                >Nom de la pharmacie *</Label
-                            >
-                            <Input
-                                id="edit-designation"
-                                v-model="form.designation"
-                            />
-                            <p
-                                v-if="errors.designation"
-                                class="text-sm text-red-600"
-                            >
-                                {{ errors.designation }}
-                            </p>
-                        </div>
-                        <div class="space-y-2 sm:col-span-2">
-                            <Label for="edit-adresse">Adresse *</Label>
-                            <Input id="edit-adresse" v-model="form.adresse" />
-                            <p
-                                v-if="errors.adresse"
-                                class="text-sm text-red-600"
-                            >
-                                {{ errors.adresse }}
-                            </p>
-                        </div>
-                        <div class="space-y-2 sm:col-span-2">
-                            <Label for="edit-zone">Arrondissement</Label>
-                            <select
-                                id="edit-zone"
-                                v-model="form.zone_id"
-                                class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-                            >
-                                <option value="">Sélectionner un arrondissement</option>
-                                <option
-                                    v-for="z in zones"
-                                    :key="z.id"
-                                    :value="String(z.id)"
+                <form
+                    class="flex min-h-0 flex-1 flex-col"
+                    @submit.prevent="submitEdit"
+                >
+                    <div
+                        class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4"
+                    >
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <div class="space-y-1.5 sm:col-span-2">
+                                <Label for="edit-designation"
+                                    >Nom de la pharmacie *</Label
                                 >
-                                    {{ z.designation }}
-                                </option>
-                            </select>
-                        </div>
-                        <div class="space-y-2">
-                            <Label for="edit-telephone">Téléphone *</Label>
-                            <Input
-                                id="edit-telephone"
-                                v-model="form.telephone"
-                            />
-                        </div>
-                        <div class="space-y-2">
-                            <Label for="edit-email">Email</Label>
-                            <Input
-                                id="edit-email"
-                                v-model="form.email"
-                                type="email"
-                            />
-                        </div>
-                        <div class="space-y-2 sm:col-span-2">
-                            <Label>Type de pharmacie *</Label>
-                            <div class="flex gap-4">
-                                <label
-                                    class="flex flex-1 cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm"
-                                    :class="
-                                        form.type_pharmacie_id ===
-                                        (typeJour?.id?.toString() ?? '')
-                                            ? 'border-amber-400 bg-amber-50'
-                                            : 'border-input'
-                                    "
-                                >
-                                    <input
-                                        v-model="form.type_pharmacie_id"
-                                        type="radio"
-                                        :value="typeJour?.id?.toString() ?? ''"
-                                    />
-                                    Pharmacie de jour
-                                </label>
-                                <label
-                                    class="flex flex-1 cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm"
-                                    :class="
-                                        form.type_pharmacie_id ===
-                                        (typeNuit?.id?.toString() ?? '')
-                                            ? 'border-blue-400 bg-blue-50'
-                                            : 'border-input'
-                                    "
-                                >
-                                    <input
-                                        v-model="form.type_pharmacie_id"
-                                        type="radio"
-                                        :value="typeNuit?.id?.toString() ?? ''"
-                                    />
-                                    Pharmacie de nuit
-                                </label>
-                            </div>
-                        </div>
-                        <div class="space-y-2">
-                            <Label for="edit-heure_ouverture"
-                                >Heure d'ouverture *</Label
-                            >
-                            <Input
-                                id="edit-heure_ouverture"
-                                v-model="form.heure_ouverture"
-                                type="time"
-                            />
-                        </div>
-                        <div class="space-y-2">
-                            <Label for="edit-heure_fermeture"
-                                >Heure de fermeture *</Label
-                            >
-                            <Input
-                                id="edit-heure_fermeture"
-                                v-model="form.heure_fermeture"
-                                type="time"
-                            />
-                        </div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <Label class="text-muted-foreground"
-                            >Propriétaire</Label
-                        >
-                        <div class="grid gap-4 sm:grid-cols-3">
-                            <div class="space-y-2">
-                                <Label for="edit-proprio_nom">Nom</Label>
                                 <Input
-                                    id="edit-proprio_nom"
-                                    v-model="form.proprio_nom"
+                                    id="edit-designation"
+                                    v-model="form.designation"
+                                />
+                                <p
+                                    v-if="errors.designation"
+                                    class="text-xs text-red-600"
+                                >
+                                    {{ errors.designation }}
+                                </p>
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label for="edit-adresse">Adresse *</Label>
+                                <Input
+                                    id="edit-adresse"
+                                    v-model="form.adresse"
+                                />
+                                <p
+                                    v-if="errors.adresse"
+                                    class="text-xs text-red-600"
+                                >
+                                    {{ errors.adresse }}
+                                </p>
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label for="edit-zone">Arrondissement</Label>
+                                <select
+                                    id="edit-zone"
+                                    v-model="form.zone_id"
+                                    class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                                >
+                                    <option value="">
+                                        Sélectionner un arrondissement
+                                    </option>
+                                    <option
+                                        v-for="z in zones"
+                                        :key="z.id"
+                                        :value="String(z.id)"
+                                    >
+                                        {{ z.designation }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label for="edit-telephone">Téléphone *</Label>
+                                <Input
+                                    id="edit-telephone"
+                                    v-model="form.telephone"
                                 />
                             </div>
-                            <div class="space-y-2">
-                                <Label for="edit-proprio_email">Email</Label>
+                            <div class="space-y-1.5">
+                                <Label for="edit-email">Email</Label>
                                 <Input
-                                    id="edit-proprio_email"
-                                    v-model="form.proprio_email"
+                                    id="edit-email"
+                                    v-model="form.email"
                                     type="email"
                                 />
                             </div>
-                            <div class="space-y-2">
-                                <Label for="edit-proprio_tel">Téléphone</Label>
+                            <div class="space-y-1.5 sm:col-span-2">
+                                <Label>Type de pharmacie *</Label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label
+                                        class="flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-2 text-xs sm:text-sm"
+                                        :class="
+                                            form.type_pharmacie_id ===
+                                            (typeJour?.id?.toString() ?? '')
+                                                ? 'border-amber-400 bg-amber-50'
+                                                : 'border-input'
+                                        "
+                                    >
+                                        <input
+                                            v-model="form.type_pharmacie_id"
+                                            type="radio"
+                                            :value="
+                                                typeJour?.id?.toString() ?? ''
+                                            "
+                                        />
+                                        Pharmacie de jour
+                                    </label>
+                                    <label
+                                        class="flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-2 text-xs sm:text-sm"
+                                        :class="
+                                            form.type_pharmacie_id ===
+                                            (typeNuit?.id?.toString() ?? '')
+                                                ? 'border-blue-400 bg-blue-50'
+                                                : 'border-input'
+                                        "
+                                    >
+                                        <input
+                                            v-model="form.type_pharmacie_id"
+                                            type="radio"
+                                            :value="
+                                                typeNuit?.id?.toString() ?? ''
+                                            "
+                                        />
+                                        Pharmacie de nuit
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label for="edit-heure_ouverture"
+                                    >Heure d'ouverture *</Label
+                                >
                                 <Input
-                                    id="edit-proprio_tel"
-                                    v-model="form.proprio_tel"
+                                    id="edit-heure_ouverture"
+                                    v-model="form.heure_ouverture"
+                                    type="time"
                                 />
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label for="edit-heure_fermeture"
+                                    >Heure de fermeture *</Label
+                                >
+                                <Input
+                                    id="edit-heure_fermeture"
+                                    v-model="form.heure_fermeture"
+                                    type="time"
+                                />
+                            </div>
+
+                            <div
+                                class="sm:col-span-2 border-t border-border/60 pt-3"
+                            >
+                                <p
+                                    class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                                >
+                                    Propriétaire
+                                </p>
+                                <div class="grid gap-3 sm:grid-cols-3">
+                                    <div class="space-y-1.5 sm:col-span-3">
+                                        <Label for="edit-proprio_nom">Nom</Label>
+                                        <Input
+                                            id="edit-proprio_nom"
+                                            v-model="form.proprio_nom"
+                                        />
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <Label for="edit-proprio_email"
+                                            >Email</Label
+                                        >
+                                        <Input
+                                            id="edit-proprio_email"
+                                            v-model="form.proprio_email"
+                                            type="email"
+                                        />
+                                    </div>
+                                    <div class="space-y-1.5 sm:col-span-2">
+                                        <Label for="edit-proprio_tel"
+                                            >Téléphone</Label
+                                        >
+                                        <Input
+                                            id="edit-proprio_tel"
+                                            v-model="form.proprio_tel"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div
+                                v-if="isAdmin"
+                                class="space-y-2 rounded-lg border px-3 py-2.5 sm:col-span-2"
+                            >
+                                <p
+                                    class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                                >
+                                    Réseau BengaDok
+                                </p>
+                                <div
+                                    class="flex flex-wrap items-center gap-x-5 gap-y-2"
+                                >
+                                    <label
+                                        class="flex cursor-pointer items-center gap-2 text-sm"
+                                        title="Proposée dans le module Commandes"
+                                    >
+                                        <input
+                                            v-model="form.est_partenaire"
+                                            type="checkbox"
+                                            class="size-4"
+                                        />
+                                        Partenaire
+                                    </label>
+                                    <label
+                                        v-if="form.est_partenaire"
+                                        class="flex cursor-pointer items-center gap-2 text-sm"
+                                        title="Active crédits et commission parapharmacie"
+                                    >
+                                        <input
+                                            v-model="form.credits_actif"
+                                            type="checkbox"
+                                            class="size-4"
+                                        />
+                                        Crédits / commission
+                                    </label>
+                                </div>
+                                <p class="text-[11px] leading-snug text-muted-foreground">
+                                    <template v-if="form.est_partenaire">
+                                        Les crédits désactivés masquent le
+                                        dashboard parapharma et bloquent les
+                                        déductions.
+                                    </template>
+                                    <template v-else>
+                                        Crédits et commission réservés aux
+                                        partenaires.
+                                    </template>
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    <div v-if="isAdmin" class="space-y-2 rounded-lg border p-3">
-                        <label
-                            class="flex cursor-pointer items-start gap-3"
-                        >
-                            <input
-                                v-model="form.credits_actif"
-                                type="checkbox"
-                                class="mt-1 size-4"
-                            />
-                            <span>
-                                <span
-                                    class="block text-sm font-medium text-foreground"
-                                    >Crédits et commission parapharmacie
-                                    actifs</span
-                                >
-                                <span
-                                    class="block text-xs text-muted-foreground"
-                                    >Si désactivé, les blocs crédits/commission
-                                    disparaissent du dashboard de cette
-                                    pharmacie et aucun crédit n'est
-                                    déduit.</span
-                                >
-                            </span>
-                        </label>
-                    </div>
-
-                    <DialogFooter class="gap-2">
+                    <DialogFooter
+                        class="shrink-0 gap-2 border-t bg-background px-5 py-3"
+                    >
                         <Button
                             type="button"
                             variant="outline"
@@ -1181,6 +1318,15 @@ function creerUtilisateur() {
             </DialogContent>
         </Dialog>
 
+        <ConfirmModal
+            :open="showPromoteModal"
+            title="Promouvoir en pharmacie partenaire"
+            :description="`Confirmer la promotion de « ${pharmacie.designation} » ? Elle sera visible dans le module Commandes.`"
+            confirm-text="Promouvoir"
+            variant="default"
+            @update:open="showPromoteModal = $event"
+            @confirm="promotePartenaire"
+        />
         <ConfirmModal
             :open="showResetPasswordModal"
             title="Réinitialiser le mot de passe"

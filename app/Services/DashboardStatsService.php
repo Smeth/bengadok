@@ -26,10 +26,19 @@ class DashboardStatsService
      *     delais: array{reponse_pharmacie_heures: float|null, livraison_heures: float|null, nb_reponse_pharmacie: int, nb_livraison: int}
      * }
      */
-    public function build(?int $pharmacieId, string $period): array
+    public function build(?int $pharmacieId, string $period, ?string $dateFrom = null, ?string $dateTo = null): array
     {
-        $period = in_array($period, ['day', 'week', 'month'], true) ? $period : 'month';
-        $bounds = $this->resolvePeriodBounds($period);
+        $allowed = ['day', 'week', 'month', 'year', 'all', 'custom'];
+        $period = in_array($period, $allowed, true) ? $period : 'month';
+
+        if ($period === 'custom' && $dateFrom && $dateTo) {
+            $bounds = $this->resolveCustomBounds($dateFrom, $dateTo);
+        } else {
+            if ($period === 'custom') {
+                $period = 'month';
+            }
+            $bounds = $this->resolvePeriodBounds($period);
+        }
         $currentStart = $bounds['currentStart'];
         $currentEnd = $bounds['currentEnd'];
         $prevStart = $bounds['prevStart'];
@@ -38,6 +47,8 @@ class DashboardStatsService
         $baseQuery = Commande::query();
         if ($pharmacieId) {
             $baseQuery->where('pharmacie_id', $pharmacieId);
+        } else {
+            $baseQuery->pourReseauPartenaire();
         }
 
         $colRevenu = $pharmacieId ? 'prix_medicaments' : 'prix_total';
@@ -52,7 +63,7 @@ class DashboardStatsService
             ->caComptabilise()
             ->sum($colRevenu);
 
-        $nbPharmacies = $pharmacieId ? 1 : Pharmacie::query()->count();
+        $nbPharmacies = $pharmacieId ? 1 : Pharmacie::query()->partenaires()->count();
 
         $nbPharmaciesActives = $pharmacieId
             ? 1
@@ -64,7 +75,7 @@ class DashboardStatsService
 
         $nbPharmaciesActivesPrec = $pharmacieId
             ? 1
-            : (int) Commande::query()
+            : (int) (clone $baseQuery)
                 ->whereBetween('date', [$prevStart, $prevEnd])
                 ->caComptabilise()
                 ->distinct('pharmacie_id')
@@ -160,6 +171,8 @@ class DashboardStatsService
 
         return [
             'period' => $period,
+            'date_from' => $period === 'custom' ? $dateFrom : null,
+            'date_to' => $period === 'custom' ? $dateTo : null,
             'kpis' => [
                 'revenuTotal' => $revenuTotal,
                 'nbPharmacies' => $nbPharmacies,
@@ -198,6 +211,33 @@ class DashboardStatsService
     /**
      * @return array{currentStart: CarbonInterface, currentEnd: CarbonInterface, prevStart: CarbonInterface, prevEnd: CarbonInterface}
      */
+    /**
+     * @return array{currentStart: CarbonInterface, currentEnd: CarbonInterface, prevStart: CarbonInterface, prevEnd: CarbonInterface}
+     */
+    private function resolveCustomBounds(string $dateFrom, string $dateTo): array
+    {
+        $currentStart = \Carbon\Carbon::parse($dateFrom)->startOfDay();
+        $currentEnd = \Carbon\Carbon::parse($dateTo)->endOfDay();
+
+        if ($currentEnd->lt($currentStart)) {
+            [$currentStart, $currentEnd] = [
+                $currentEnd->copy()->startOfDay(),
+                $currentStart->copy()->endOfDay(),
+            ];
+        }
+
+        $spanDays = max(1, (int) $currentStart->diffInDays($currentEnd) + 1);
+        $prevEnd = $currentStart->copy()->subDay()->endOfDay();
+        $prevStart = $prevEnd->copy()->subDays($spanDays - 1)->startOfDay();
+
+        return [
+            'currentStart' => $currentStart,
+            'currentEnd' => $currentEnd,
+            'prevStart' => $prevStart,
+            'prevEnd' => $prevEnd,
+        ];
+    }
+
     private function resolvePeriodBounds(string $period): array
     {
         $now = now();
@@ -221,6 +261,40 @@ class DashboardStatsService
                 'currentEnd' => $currentEnd,
                 'prevStart' => $currentStart->copy()->subWeek(),
                 'prevEnd' => $currentStart->copy()->subWeek()->addDays($nDays)->endOfDay(),
+            ];
+        }
+
+        if ($period === 'year') {
+            $currentStart = $now->copy()->startOfYear();
+            $currentEnd = $now->copy()->endOfDay();
+            $prevStart = $now->copy()->subYear()->startOfYear();
+            $prevEnd = $now->copy()->subYear()->endOfDay();
+
+            return [
+                'currentStart' => $currentStart,
+                'currentEnd' => $currentEnd,
+                'prevStart' => $prevStart,
+                'prevEnd' => $prevEnd,
+            ];
+        }
+
+        if ($period === 'all') {
+            $earliest = Commande::query()
+                ->whereNotNull('date')
+                ->min('date');
+            $currentStart = $earliest
+                ? \Carbon\Carbon::parse($earliest)->startOfDay()
+                : $now->copy()->startOfYear();
+            $currentEnd = $now->copy()->endOfDay();
+            $spanDays = max(1, (int) $currentStart->diffInDays($currentEnd) + 1);
+            $prevEnd = $currentStart->copy()->subDay()->endOfDay();
+            $prevStart = $prevEnd->copy()->subDays($spanDays - 1)->startOfDay();
+
+            return [
+                'currentStart' => $currentStart,
+                'currentEnd' => $currentEnd,
+                'prevStart' => $prevStart,
+                'prevEnd' => $prevEnd,
             ];
         }
 
@@ -332,6 +406,9 @@ class DashboardStatsService
 
         if ($pharmacieId) {
             $query->where('commandes.pharmacie_id', $pharmacieId);
+        } else {
+            $query->join('pharmacies', 'pharmacies.id', '=', 'commandes.pharmacie_id')
+                ->where('pharmacies.est_partenaire', true);
         }
 
         return $query
