@@ -120,7 +120,7 @@ class DashboardPartenaireStatsTest extends TestCase
 
         $this->assertFalse($payload['parapharma_actif']);
         $this->assertSame('non_partenaire', $payload['parapharma_inactif_raison']);
-        $this->assertSame([], $payload['ventes']);
-        $this->assertSame(0, $payload['kpis']['nb_commandes']);
+        $this->assertNotEmpty($payload['parapharma_inactif_message']);
+        $this->assertSame(0, $payload['kpis']['montant_commission']);
     }
 }

@@ -268,6 +268,7 @@ const activeTab = computed(() => props.tab);
 const searchQuery = ref(props.filters.search ?? '');
 const importSearchQuery = ref(props.importFilters.import_search ?? '');
 const importing = ref(false);
+const integratingAll = ref(false);
 const importForm = ref<{ file: File | null; skip_duplicates: boolean }>({
     file: null,
     skip_duplicates: true,
@@ -475,6 +476,9 @@ function retryIntegrateRow(id: number) {
 }
 
 function integrateAllPending() {
+    if (integratingAll.value) {
+        return;
+    }
     if (
         !confirm(
             `Intégrer ${props.importStats.pending ?? 0} commande(s) importée(s) dans le système ?`,
@@ -482,7 +486,13 @@ function integrateAllPending() {
     ) {
         return;
     }
-    router.post('/db-commandes/integrate-all', {}, { preserveScroll: true });
+    integratingAll.value = true;
+    router.post('/db-commandes/integrate-all', {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            integratingAll.value = false;
+        },
+    });
 }
 
 const pendingImportRowsOnPage = computed(() =>
@@ -849,10 +859,16 @@ const uploadLimits = getUploadLimits();
                         <Button
                             :class="[modulePrimaryButtonClass, 'gap-2']"
                             type="button"
+                            :disabled="integratingAll"
                             @click="integrateAllPending"
                         >
-                            <Link2 class="size-4" />
-                            Intégrer toutes les lignes en attente ({{ importStats.pending }})
+                            <Spinner v-if="integratingAll" class="size-4" />
+                            <Link2 v-else class="size-4" />
+                            {{
+                                integratingAll
+                                    ? 'Intégration en cours…'
+                                    : `Intégrer toutes les lignes en attente (${importStats.pending})`
+                            }}
                         </Button>
                     </div>
 

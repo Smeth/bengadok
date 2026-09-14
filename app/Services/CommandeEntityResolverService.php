@@ -18,6 +18,23 @@ use RuntimeException;
  */
 class CommandeEntityResolverService
 {
+    /** @var array<string, Client>|null */
+    private ?array $clientsByTelSuffix = null;
+
+    public function beginBulkClientLookup(): void
+    {
+        $this->clientsByTelSuffix = [];
+
+        foreach (Client::query()->whereNotNull('tel')->where('tel', '<>', '')->cursor() as $client) {
+            $this->rememberClient($client);
+        }
+    }
+
+    public function endBulkClientLookup(): void
+    {
+        $this->clientsByTelSuffix = null;
+    }
+
     /**
      * @return array{nom: ?string, prenom: ?string, sexe: ?string}
      */
@@ -67,19 +84,50 @@ class CommandeEntityResolverService
 
         $suffix = substr($digits, -8);
 
+        if ($this->clientsByTelSuffix !== null) {
+            if (isset($this->clientsByTelSuffix[$suffix])) {
+                return $this->clientsByTelSuffix[$suffix];
+            }
+
+            foreach ($this->clientsByTelSuffix as $client) {
+                if ($this->clientMatchesTelSuffix($client, $suffix)) {
+                    return $client;
+                }
+            }
+
+            return null;
+        }
+
         return Client::query()
             ->whereNotNull('tel')
             ->where('tel', '<>', '')
             ->get()
-            ->first(function (Client $client) use ($suffix) {
-                $clientDigits = $this->normalizeTelDigits($client->tel);
-                if ($clientDigits === '') {
-                    return false;
-                }
+            ->first(fn (Client $client) => $this->clientMatchesTelSuffix($client, $suffix));
+    }
 
-                return str_ends_with($clientDigits, $suffix)
-                    || str_ends_with($suffix, substr($clientDigits, -8));
-            });
+    private function clientMatchesTelSuffix(Client $client, string $suffix): bool
+    {
+        $clientDigits = $this->normalizeTelDigits($client->tel);
+        if ($clientDigits === '') {
+            return false;
+        }
+
+        return str_ends_with($clientDigits, $suffix)
+            || str_ends_with($suffix, substr($clientDigits, -8));
+    }
+
+    private function rememberClient(Client $client): void
+    {
+        if ($this->clientsByTelSuffix === null) {
+            return;
+        }
+
+        $digits = $this->normalizeTelDigits($client->tel);
+        if ($digits === '') {
+            return;
+        }
+
+        $this->clientsByTelSuffix[substr($digits, -8)] = $client;
     }
 
     public function normalizeArrondissement(?string $value): ?string
@@ -133,10 +181,16 @@ class CommandeEntityResolverService
                 $existing->update($attrs);
             }
 
-            return $existing->fresh();
+            $fresh = $existing->fresh();
+            $this->rememberClient($fresh);
+
+            return $fresh;
         }
 
-        return Client::query()->create($this->clientAttributesFromPayload($data));
+        $created = Client::query()->create($this->clientAttributesFromPayload($data));
+        $this->rememberClient($created);
+
+        return $created;
     }
 
     /**

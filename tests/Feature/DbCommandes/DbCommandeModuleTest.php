@@ -273,6 +273,75 @@ class DbCommandeModuleTest extends TestCase
         @unlink($path);
     }
 
+    public function test_admin_can_integrate_all_pending_creates_pharmacies_clients_and_promotes_delivered(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $this->createZone('Poto-Poto');
+        $heur = \App\Models\Heur::query()->create(['ouverture' => '08:00', 'fermeture' => '18:00']);
+        \App\Models\TypePharmacie::query()->create(['designation' => 'Standard', 'heurs_id' => $heur->id]);
+
+        $existingProspect = $this->createClient([
+            'nom' => 'Test',
+            'tel' => '06 111 22 33',
+            'promu_client_le' => null,
+        ]);
+
+        $delivered = DbCommande::query()->create([
+            'code_commande' => 'BDK-ALL-001',
+            'nom_client' => 'Madame Test',
+            'telephone' => '06 111 22 33',
+            'adresse_livraison' => 'Centre-ville',
+            'arrondissement' => 'Poto-Poto',
+            'pharmacie' => 'Auréole',
+            'medicaments' => 'Paracétamol 500 mg',
+            'quantite' => 1,
+            'montant_produits' => 2500,
+            'frais_livraison' => 1000,
+            'total_paye_client' => 3500,
+            'statut' => 'retiree',
+            'source' => DbCommande::SOURCE_IMPORT,
+            'empreinte' => hash('sha256', 'test-all-delivered'),
+        ]);
+
+        $nouvelle = DbCommande::query()->create([
+            'code_commande' => 'BDK-ALL-002',
+            'nom_client' => 'Nouveau Prospect',
+            'telephone' => '06 999 88 77',
+            'adresse_livraison' => 'Moungali',
+            'arrondissement' => 'Moungali',
+            'pharmacie' => 'Auréole',
+            'medicaments' => 'Vitamine C',
+            'quantite' => 1,
+            'montant_produits' => 1500,
+            'statut' => 'nouvelle',
+            'source' => DbCommande::SOURCE_IMPORT,
+            'empreinte' => hash('sha256', 'test-all-nouvelle'),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('db-commandes.integrate-all'))
+            ->assertRedirect(route('db-commandes.index', ['tab' => 'imports']));
+
+        $delivered->refresh();
+        $nouvelle->refresh();
+
+        $this->assertNotNull($delivered->commande_id);
+        $this->assertNotNull($nouvelle->commande_id);
+
+        $this->assertDatabaseHas('pharmacies', [
+            'designation' => 'Pharmacie Auréole',
+            'est_partenaire' => false,
+        ]);
+
+        $this->assertSame($existingProspect->id, Commande::query()->find($delivered->commande_id)?->client_id);
+        $this->assertNotNull($existingProspect->fresh()->promu_client_le);
+
+        $createdProspect = \App\Models\Client::query()->where('tel', '06 999 88 77')->first();
+        $this->assertNotNull($createdProspect);
+        $this->assertNull($createdProspect->promu_client_le);
+        $this->assertSame($createdProspect->id, Commande::query()->find($nouvelle->commande_id)?->client_id);
+    }
+
     public function test_integrate_maps_validee_statut_to_system_statuses(): void
     {
         $admin = $this->userWithRole('admin');

@@ -11,6 +11,30 @@ use Illuminate\Support\Facades\Log;
 
 class BroadcastCommandeNotificationTargets
 {
+    private static int $silenceDepth = 0;
+
+    private static bool $unavailableThisRequest = false;
+
+    /**
+     * Coupe les notifications temps réel (ex. import historique en lot).
+     */
+    public static function withoutBroadcasting(callable $callback): mixed
+    {
+        self::$silenceDepth++;
+
+        try {
+            return $callback();
+        } finally {
+            self::$silenceDepth--;
+        }
+    }
+
+    public static function resetForTesting(): void
+    {
+        self::$silenceDepth = 0;
+        self::$unavailableThisRequest = false;
+    }
+
     /**
      * Après création / mise à jour d’une commande (événement Eloquent).
      */
@@ -77,6 +101,10 @@ class BroadcastCommandeNotificationTargets
      */
     private static function broadcastToUserIds(Collection $userIds): void
     {
+        if (self::$silenceDepth > 0 || self::$unavailableThisRequest) {
+            return;
+        }
+
         $driver = config('broadcasting.default');
         if ($driver === null || $driver === '' || $driver === 'null') {
             return;
@@ -86,16 +114,23 @@ class BroadcastCommandeNotificationTargets
             try {
                 broadcast(new UserNotificationsRefresh((int) $userId));
             } catch (BroadcastException $e) {
-                Log::warning('Broadcast indisponible (notifications temps réel ignorées).', [
-                    'user_id' => $userId,
-                    'message' => $e->getMessage(),
-                ]);
+                self::markUnavailable((int) $userId, $e->getMessage());
+
+                return;
             } catch (\Throwable $e) {
-                Log::warning('Échec broadcast (notifications temps réel ignorées).', [
-                    'user_id' => $userId,
-                    'message' => $e->getMessage(),
-                ]);
+                self::markUnavailable((int) $userId, $e->getMessage());
+
+                return;
             }
         }
+    }
+
+    private static function markUnavailable(int $userId, string $message): void
+    {
+        self::$unavailableThisRequest = true;
+        Log::warning('Broadcast indisponible (notifications temps réel ignorées pour le reste de la requête).', [
+            'user_id' => $userId,
+            'message' => $message,
+        ]);
     }
 }

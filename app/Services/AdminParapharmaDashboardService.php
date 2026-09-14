@@ -30,12 +30,22 @@ class AdminParapharmaDashboardService
         $ref = $this->resolveMoisReference($moisParam);
         $vuePeriode = in_array($vuePeriode, ['mois', 'semaine'], true) ? $vuePeriode : 'mois';
 
+        $parapharmaActif = true;
+        $parapharmaInactifRaison = null;
+        $parapharmaInactifMessage = null;
+
         if ($pharmacieId !== null) {
             $pharmacieCourante = Pharmacie::query()->find($pharmacieId, [
                 'id', 'designation', 'telephone', 'email', 'est_partenaire', 'credits_actif',
             ]);
             if ($pharmacieCourante && ! $pharmacieCourante->parapharmaActif()) {
-                return $this->buildParapharmaInactifPayload($pharmacieCourante, $ref, $vuePeriode, $cfg);
+                $parapharmaActif = false;
+                $parapharmaInactifRaison = ! $pharmacieCourante->est_partenaire
+                    ? 'non_partenaire'
+                    : 'credits_inactifs';
+                $parapharmaInactifMessage = $parapharmaInactifRaison === 'non_partenaire'
+                    ? 'Le système crédits et commission parapharmacie est réservé aux pharmacies partenaires BengaDok.'
+                    : 'Les crédits et la commission parapharmacie ne sont pas activés pour votre pharmacie. Contactez l\'administration BengaDok pour les activer.';
             }
         }
 
@@ -92,7 +102,9 @@ class AdminParapharmaDashboardService
         return [
             'mode' => $this->pharmacieId !== null ? 'parapharma_pharmacie' : 'parapharma_admin',
             'pharmacie_id' => $this->pharmacieId,
-            'parapharma_actif' => true,
+            'parapharma_actif' => $parapharmaActif,
+            'parapharma_inactif_raison' => $parapharmaInactifRaison,
+            'parapharma_inactif_message' => $parapharmaInactifMessage,
             'pharmacie' => $pharmacie ? [
                 'id' => $pharmacie->id,
                 'designation' => $pharmacie->designation,
