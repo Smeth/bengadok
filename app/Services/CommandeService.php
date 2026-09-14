@@ -5,10 +5,10 @@ namespace App\Services;
 use App\Actions\PromoteClientsFromSuccessfulOrdersAction;
 use App\Models\Client;
 use App\Models\Commande;
-use App\Support\ClientPayloadNormalizer;
 use App\Models\MontantLivraison;
 use App\Models\Ordonnance;
 use App\Models\Produit;
+use App\Support\ClientPayloadNormalizer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 

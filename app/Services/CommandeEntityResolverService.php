@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Client;
-use App\Support\ClientPayloadNormalizer;
 use App\Models\Heur;
 use App\Models\Livreur;
 use App\Models\ModePaiement;
@@ -11,6 +10,7 @@ use App\Models\MontantLivraison;
 use App\Models\Pharmacie;
 use App\Models\TypePharmacie;
 use App\Models\Zone;
+use App\Support\ClientPayloadNormalizer;
 use RuntimeException;
 
 /**

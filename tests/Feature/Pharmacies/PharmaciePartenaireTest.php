@@ -3,7 +3,6 @@
 namespace Tests\Feature\Pharmacies;
 
 use App\Models\Heur;
-use App\Models\Pharmacie;
 use App\Models\TypePharmacie;
 use App\Services\CommandeReferentielsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
