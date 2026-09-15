@@ -11,10 +11,17 @@ class CommandePieceJointe extends Model
 {
     public const STORAGE_DISK = 'local';
 
+    public const KIND_PHARMACIE = 'pharmacie';
+
+    public const KIND_ORDONNANCE = 'ordonnance';
+
+    public const LABEL_ORDONNANCE_ARTICLE = 'Ordonnance/article';
+
     protected $table = 'commande_pieces_jointes';
 
     protected $fillable = [
         'commande_id',
+        'kind',
         'uploaded_by',
         'urlfile',
         'original_name',
@@ -25,6 +32,10 @@ class CommandePieceJointe extends Model
 
     protected $hidden = [
         'urlfile',
+    ];
+
+    protected $attributes = [
+        'kind' => self::KIND_PHARMACIE,
     ];
 
     protected $appends = [
@@ -64,10 +75,22 @@ class CommandePieceJointe extends Model
         return (bool) preg_match('/\.(jpe?g|png|gif|webp)$/i', $this->urlfile);
     }
 
-    /** @deprecated Toujours false pour les nouvelles pièces pharmacie (images uniquement). */
     public function getIsPdfAttribute(): bool
     {
-        return false;
+        if (is_string($this->mime_type) && $this->mime_type === 'application/pdf') {
+            return true;
+        }
+
+        if (! is_string($this->urlfile) || $this->urlfile === '') {
+            return false;
+        }
+
+        return str_ends_with(strtolower($this->urlfile), '.pdf');
+    }
+
+    public function isOrdonnanceKind(): bool
+    {
+        return $this->kind === self::KIND_ORDONNANCE;
     }
 
     public function resolveStorageDisk(): string
@@ -94,13 +117,23 @@ class CommandePieceJointe extends Model
         Commande $commande,
         ?User $user,
         ?string $label = null,
+        string $kind = self::KIND_PHARMACIE,
     ): self {
+        $kind = $kind === self::KIND_ORDONNANCE ? self::KIND_ORDONNANCE : self::KIND_PHARMACIE;
         $mime = $file->getMimeType() ?? '';
-        if (! str_starts_with($mime, 'image/')) {
+        $isImage = str_starts_with($mime, 'image/');
+        $isPdf = $mime === 'application/pdf'
+            || str_ends_with(strtolower($file->getClientOriginalName()), '.pdf');
+
+        if ($kind === self::KIND_PHARMACIE && ! $isImage) {
             throw new \InvalidArgumentException('Seules les images sont acceptées.');
         }
 
-        $ext = $file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'jpg';
+        if ($kind === self::KIND_ORDONNANCE && ! $isImage && ! $isPdf) {
+            throw new \InvalidArgumentException('Seules les images et les PDF sont acceptés.');
+        }
+
+        $ext = $file->getClientOriginalExtension() ?: $file->guessExtension() ?: ($isPdf ? 'pdf' : 'jpg');
         $path = $file->storeAs(
             'commandes-pieces-jointes/'.now()->format('Y-m'),
             uniqid('pj_', true).'.'.$ext,
@@ -113,6 +146,7 @@ class CommandePieceJointe extends Model
 
         return self::query()->create([
             'commande_id' => $commande->id,
+            'kind' => $kind,
             'uploaded_by' => $user?->id,
             'urlfile' => $path,
             'original_name' => $file->getClientOriginalName(),
@@ -129,10 +163,12 @@ class CommandePieceJointe extends Model
     {
         return [
             'id' => $this->id,
+            'kind' => $this->kind ?: self::KIND_PHARMACIE,
             'label' => $this->label,
             'original_name' => $this->original_name,
             'file_url' => $this->file_url,
             'is_image' => $this->is_image,
+            'is_pdf' => $this->is_pdf,
             'created_at' => $this->created_at?->format('d/m/Y H:i'),
             'uploaded_by' => $this->uploadedBy?->name,
         ];

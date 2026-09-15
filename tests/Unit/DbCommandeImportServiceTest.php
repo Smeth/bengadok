@@ -57,6 +57,21 @@ class DbCommandeImportServiceTest extends TestCase
         $this->assertSame(0.0, $payload['ca_parapharmacie']);
     }
 
+    public function test_map_imported_row_derives_montant_from_ca_columns(): void
+    {
+        $service = app(DbCommandeImportService::class);
+
+        $payload = $service->mapImportedRow([
+            'CA Médicaments' => '3 000',
+            'CA Parapharmacie' => '1 500',
+            'Nom du Client' => 'Madame Test',
+            'Médicaments Commandés' => 'Doliprane',
+        ]);
+
+        $this->assertNotNull($payload);
+        $this->assertSame(4500.0, $payload['montant_produits']);
+    }
+
     public function test_map_imported_row_reads_pharmacie_from_pharmacie_s_header(): void
     {
         $service = app(DbCommandeImportService::class);

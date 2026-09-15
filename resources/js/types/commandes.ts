@@ -73,6 +73,7 @@ export type CommandeDetail = {
     acceptation_client?: boolean;
     pieces_jointes?: Array<{
         id: number;
+        kind?: string | null;
         label?: string | null;
         original_name?: string | null;
         file_url?: string | null;

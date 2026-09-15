@@ -47,7 +47,7 @@ class DbCommandeIntegrationService
 
                 $commande = $this->commandeService->create($payload, null, $overrides);
 
-                $this->applyHistoricalAmounts($commande, $dbCommande);
+                $commande = $this->applyHistoricalAmounts($commande, $dbCommande);
 
                 $dbCommande->update([
                     'commande_id' => $commande->id,
@@ -150,18 +150,176 @@ class DbCommandeIntegrationService
         return $overrides;
     }
 
-    private function applyHistoricalAmounts(Commande $commande, DbCommande $dbCommande): void
+    private function applyHistoricalAmounts(Commande $commande, DbCommande $dbCommande): Commande
     {
-        $prixMed = $dbCommande->ca_medicaments ?? $dbCommande->montant_produits;
-        $prixPara = $dbCommande->ca_parapharmacie ?? 0;
         $livraison = (float) ($dbCommande->frais_livraison ?? 0);
         $total = $dbCommande->total_paye_client;
 
+        $this->syncIntegratedProduitPivotAmounts($commande, $dbCommande);
+        $this->applyHistoricalProduitPivotStatus($commande, $dbCommande);
+
+        $commande->load('produits');
+        $montants = CommandeMontantCalculator::fromProduitsRelation(
+            $commande->produits,
+            excludeIndisponible: true,
+            excludeEnAttente: false,
+        );
+
+        $targetMed = (float) ($dbCommande->ca_medicaments ?? $montants['prix_medicaments']);
+        $targetPara = (float) ($dbCommande->ca_parapharmacie ?? $montants['prix_parapharma']);
+        if ($dbCommande->ca_medicaments === null && $dbCommande->ca_parapharmacie === null && $dbCommande->montant_produits !== null) {
+            $targetMed = $montants['prix_medicaments'];
+            $targetPara = $montants['prix_parapharma'];
+        }
+
         $commande->update([
-            'prix_medicaments' => $prixMed ?? $commande->prix_medicaments,
-            'prix_parapharma' => $prixPara ?? $commande->prix_parapharma,
-            'prix_total' => $total ?? ((float) $prixMed + (float) $prixPara + $livraison),
+            'prix_medicaments' => $targetMed,
+            'prix_parapharma' => $targetPara,
+            'prix_total' => $total ?? ($targetMed + $targetPara + $livraison),
         ]);
+
+        return $commande->fresh(['produits']);
+    }
+
+    private function syncIntegratedProduitPivotAmounts(Commande $commande, DbCommande $dbCommande): void
+    {
+        $commande->load('produits');
+        if ($commande->produits->isEmpty()) {
+            return;
+        }
+
+        $med = [];
+        $para = [];
+
+        foreach ($commande->produits as $produit) {
+            if (CommandeMontantCalculator::isParapharmaType($produit->pivot->type ?? $produit->type)) {
+                $para[] = $produit;
+            } else {
+                $med[] = $produit;
+            }
+        }
+
+        $caMed = (float) ($dbCommande->ca_medicaments ?? 0);
+        $caPara = (float) ($dbCommande->ca_parapharmacie ?? 0);
+        $montant = (float) ($dbCommande->montant_produits ?? 0);
+
+        if ($caMed > 0 || $caPara > 0) {
+            $this->scalePivotGroupToTarget($commande, $med, $caMed);
+            $this->scalePivotGroupToTarget($commande, $para, $caPara);
+
+            return;
+        }
+
+        if ($montant <= 0) {
+            return;
+        }
+
+        $medSum = $this->sumPivotLineTotals($med);
+        $paraSum = $this->sumPivotLineTotals($para);
+        $combined = $medSum + $paraSum;
+
+        if ($combined <= 0) {
+            $this->scaleAllPivotsToTotal($commande, $montant);
+
+            return;
+        }
+
+        $this->scalePivotGroupToTarget($commande, $med, $montant * ($medSum / $combined));
+        $this->scalePivotGroupToTarget($commande, $para, $montant * ($paraSum / $combined));
+    }
+
+    private function applyHistoricalProduitPivotStatus(Commande $commande, DbCommande $dbCommande): void
+    {
+        if (DbCommande::resolveStatutSysteme($dbCommande->statut) !== 'retiree') {
+            return;
+        }
+
+        $commande->load('produits');
+
+        foreach ($commande->produits as $produit) {
+            $status = $produit->pivot->status ?? 'en_attente';
+            if ($status === 'indisponible') {
+                continue;
+            }
+
+            $quantite = max(1, (int) $produit->pivot->quantite);
+
+            $commande->produits()->updateExistingPivot($produit->id, [
+                'status' => 'disponible',
+                'quantite_confirmee' => $quantite,
+            ]);
+        }
+    }
+
+    /**
+     * @param  list<\App\Models\Produit>  $produits
+     */
+    private function sumPivotLineTotals(array $produits): float
+    {
+        $sum = 0.0;
+        foreach ($produits as $produit) {
+            $qte = (int) ($produit->pivot->quantite_confirmee ?? $produit->pivot->quantite);
+            $sum += $qte * (float) $produit->pivot->prix_unitaire;
+        }
+
+        return $sum;
+    }
+
+    private function scaleAllPivotsToTotal(Commande $commande, float $target): void
+    {
+        $produits = $commande->produits->all();
+        $this->scalePivotGroupToTarget($commande, $produits, $target);
+    }
+
+    /**
+     * @param  list<\App\Models\Produit>  $produits
+     */
+    private function scalePivotGroupToTarget(Commande $commande, array $produits, float $target): void
+    {
+        if ($produits === [] || $target < 0) {
+            return;
+        }
+
+        $current = 0.0;
+        foreach ($produits as $produit) {
+            $qte = (int) ($produit->pivot->quantite_confirmee ?? $produit->pivot->quantite);
+            $current += $qte * (float) $produit->pivot->prix_unitaire;
+        }
+
+        if ($target <= 0) {
+            foreach ($produits as $produit) {
+                $commande->produits()->updateExistingPivot($produit->id, [
+                    'prix_unitaire' => 0,
+                ]);
+            }
+
+            return;
+        }
+
+        if ($current <= 0) {
+            $weightSum = 0;
+            foreach ($produits as $produit) {
+                $weightSum += max(1, (int) ($produit->pivot->quantite_confirmee ?? $produit->pivot->quantite));
+            }
+            $weightSum = max(1, $weightSum);
+
+            foreach ($produits as $produit) {
+                $qte = max(1, (int) ($produit->pivot->quantite_confirmee ?? $produit->pivot->quantite));
+                $share = $target * $qte / $weightSum;
+                $commande->produits()->updateExistingPivot($produit->id, [
+                    'prix_unitaire' => round($share / $qte, 2),
+                ]);
+            }
+
+            return;
+        }
+
+        $factor = $target / $current;
+        foreach ($produits as $produit) {
+            $commande->produits()->updateExistingPivot($produit->id, [
+                'prix_unitaire' => round((float) $produit->pivot->prix_unitaire * $factor, 2),
+            ]);
+        }
     }
 
     private function buildLegacyComment(DbCommande $dbCommande): ?string

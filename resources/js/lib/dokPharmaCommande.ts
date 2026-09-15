@@ -25,11 +25,17 @@ export type DokPharmaCommande = {
     ordonnance_id?: number | null;
     ordonnance_url?: string | null;
     ordonnance_is_pdf?: boolean;
+    ordonnance_fichiers?: Array<{
+        file_url?: string | null;
+        is_pdf?: boolean;
+        label?: string;
+    }>;
     commentaire?: string | null;
     commentaire_pharmacie?: string | null;
     prix_medicaments?: number | null;
     pieces_jointes?: Array<{
         id: number;
+        kind?: string | null;
         label?: string | null;
         original_name?: string | null;
         file_url?: string | null;

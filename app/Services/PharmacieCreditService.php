@@ -35,6 +35,7 @@ class PharmacieCreditService
         $creditsUtilisesPeriode = $this->nbDeductionsPeriode($pharmacie->id, $debutPeriode, $finPeriode, $seuil);
         $coutPeriode = $creditsUtilisesPeriode * $prixUnitaire;
         $solde = (int) $pharmacie->credits_solde;
+        $statut = $this->creditStatutPayload($pharmacie, $solde, $alerteSeuil);
 
         $historique = PharmacieCreditOperation::query()
             ->where('pharmacie_id', $pharmacie->id)
@@ -50,9 +51,10 @@ class PharmacieCreditService
                 'valeur_disponible_xaf' => $solde * $prixUnitaire,
                 'credits_utilises_mois' => $creditsUtilisesPeriode,
                 'cout_mois_xaf' => $coutPeriode,
-                'statut' => $solde <= $alerteSeuil ? 'faible' : 'actif',
-                'statut_label' => $solde <= $alerteSeuil ? 'Crédits faibles' : 'Actif',
-                'statut_detail' => $solde <= $alerteSeuil ? 'À surveiller' : 'À jour',
+                'credits_actif' => (bool) $pharmacie->credits_actif,
+                'statut' => $statut['statut'],
+                'statut_label' => $statut['statut_label'],
+                'statut_detail' => $statut['statut_detail'],
             ],
             'config' => [
                 'prix_unitaire_xaf' => $prixUnitaire,
@@ -247,6 +249,7 @@ class PharmacieCreditService
                 $utilises = $this->nbDeductionsPeriode($pharmacie->id, $debutPeriode, $finPeriode, $seuil);
                 $solde = (int) $pharmacie->credits_solde;
                 $alerte = $pharmacie->credits_alerte_seuil ?? $cfg['credit_alerte_seuil'];
+                $statut = $this->creditStatutPayload($pharmacie, $solde, $alerte);
 
                 return [
                     'id' => $pharmacie->id,
@@ -257,8 +260,8 @@ class PharmacieCreditService
                     'credits_solde' => $solde,
                     'credits_utilises_mois' => $utilises,
                     'cout_mois_xaf' => $utilises * $prixUnitaire,
-                    'statut' => $solde <= $alerte ? 'faible' : 'actif',
-                    'statut_label' => $solde <= $alerte ? 'Crédits faibles' : 'Actif',
+                    'statut' => $statut['statut'],
+                    'statut_label' => $statut['statut_label'],
                 ];
             })
             ->all();
@@ -298,6 +301,34 @@ class PharmacieCreditService
             ->sum(DB::raw('ABS(credits_delta)'));
 
         return $depuisOps;
+    }
+
+    /**
+     * @return array{statut: string, statut_label: string, statut_detail: string}
+     */
+    private function creditStatutPayload(Pharmacie $pharmacie, int $solde, int $alerteSeuil): array
+    {
+        if (! $pharmacie->credits_actif) {
+            return [
+                'statut' => 'desactive',
+                'statut_label' => 'Désactivé',
+                'statut_detail' => 'Fonction crédits désactivée',
+            ];
+        }
+
+        if ($solde <= $alerteSeuil) {
+            return [
+                'statut' => 'faible',
+                'statut_label' => 'Crédits faibles',
+                'statut_detail' => 'À surveiller',
+            ];
+        }
+
+        return [
+            'statut' => 'actif',
+            'statut_label' => 'Actif',
+            'statut_detail' => 'À jour',
+        ];
     }
 
     /**

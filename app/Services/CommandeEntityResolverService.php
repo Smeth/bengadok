@@ -13,6 +13,9 @@ use App\Models\Zone;
 use App\Support\ClientPayloadNormalizer;
 use RuntimeException;
 
+/** @phpstan-type LegacyProduitSegment array{designation: string, quantite: int, prix_total: ?float} */
+/** @phpstan-type LegacyProduitLine array{designation: string, dosage: ?string, forme: ?string, quantite: int, prix_unitaire: float, type: ?string} */
+
 /**
  * Résolution / création d'entités BengaDok pour l'intégration des commandes historiques.
  */
@@ -408,7 +411,7 @@ class CommandeEntityResolverService
     }
 
     /**
-     * @return list<array{designation: string, dosage: ?string, forme: ?string, quantite: int, prix_unitaire: float, type: ?string}>
+     * @return list<LegacyProduitLine>
      */
     public function parseProduitLinesFromLegacyRow(array $row): array
     {
@@ -417,79 +420,70 @@ class CommandeEntityResolverService
             $raw = 'Article non détaillé';
         }
 
-        $raw = preg_replace('/\(\s*\d[\d\s.,]*\s*F\s*\)/iu', '', $raw) ?? $raw;
-        $raw = trim(preg_replace('/\s+/u', ' ', $raw) ?? $raw);
-
         $defaultQty = max(1, (int) ($row['quantite'] ?? 1));
-        $montant = (float) ($row['montant_produits'] ?? 0);
-        $caMed = (float) ($row['ca_medicaments'] ?? 0);
-        $caPara = (float) ($row['ca_parapharmacie'] ?? 0);
+        $caMed = max(0.0, (float) ($row['ca_medicaments'] ?? 0));
+        $caPara = max(0.0, (float) ($row['ca_parapharmacie'] ?? 0));
+        $montant = $this->resolveLegacyMontantProduits($row, $caMed, $caPara);
 
-        if ($caPara > 0 && $caMed > 0) {
-            return [
-                [
-                    'designation' => $raw,
-                    'dosage' => null,
-                    'forme' => null,
-                    'quantite' => $defaultQty,
-                    'prix_unitaire' => round($caMed / $defaultQty, 2),
-                    'type' => null,
-                ],
-                [
-                    'designation' => $raw,
-                    'dosage' => null,
-                    'forme' => null,
-                    'quantite' => 1,
-                    'prix_unitaire' => $caPara,
-                    'type' => 'Parapharmacie',
-                ],
-            ];
+        $segments = $this->parseMedicamentSegmentsWithPrices($raw);
+        if ($segments === []) {
+            $segments = [['designation' => $raw, 'quantite' => $defaultQty, 'prix_total' => null]];
         }
 
-        $type = ($caPara > 0 && $caMed <= 0) ? 'Parapharmacie' : null;
-        $segments = $this->splitLegacyMedicamentSegments($raw);
+        $lines = $this->buildLegacyProduitLinesFromSegments(
+            $segments,
+            $defaultQty,
+            $montant,
+            $caMed,
+            $caPara,
+        );
 
-        if (count($segments) <= 1) {
-            $unit = $defaultQty > 0 ? round($montant / $defaultQty, 2) : $montant;
-
-            return [[
-                'designation' => $segments[0]['designation'],
-                'dosage' => null,
-                'forme' => null,
-                'quantite' => $segments[0]['quantite'] ?? $defaultQty,
-                'prix_unitaire' => $unit,
-                'type' => $type,
-            ]];
-        }
-
-        $perLine = count($segments) > 0 ? round($montant / count($segments), 2) : $montant;
-
-        return array_map(static function (array $segment) use ($perLine, $type) {
-            $qty = max(1, (int) ($segment['quantite'] ?? 1));
-
-            return [
-                'designation' => $segment['designation'],
-                'dosage' => null,
-                'forme' => null,
-                'quantite' => $qty,
-                'prix_unitaire' => round($perLine / $qty, 2),
-                'type' => $type,
-            ];
-        }, $segments);
+        return $this->reconcileLegacyProduitLines($lines, $montant, $caMed, $caPara);
     }
 
     /**
-     * @return list<array{designation: string, quantite?: int}>
+     * @param  array<string, mixed>  $row
      */
-    private function splitLegacyMedicamentSegments(string $raw): array
+    private function resolveLegacyMontantProduits(array $row, float $caMed, float $caPara): float
     {
-        $parts = preg_split('/\s*(?:\+|;|\bet\b)\s*/iu', $raw) ?: [$raw];
+        $caSum = $caMed + $caPara;
+        $montantRaw = $row['montant_produits'] ?? null;
+        $montant = $montantRaw !== null && $montantRaw !== '' ? (float) $montantRaw : null;
+
+        if ($montant !== null && $montant > 0) {
+            if ($caSum > 0 && abs($montant - $caSum) > 1.0) {
+                return $caSum;
+            }
+
+            return $montant;
+        }
+
+        return $caSum > 0 ? $caSum : 0.0;
+    }
+
+    /**
+     * @return list<LegacyProduitSegment>
+     */
+    private function parseMedicamentSegmentsWithPrices(string $raw): array
+    {
+        if ($raw === '') {
+            return [];
+        }
+
+        $raw = str_replace(["\r\n", "\r"], "\n", $raw);
+        $parts = preg_split('/\s*(?:\+|;|\bet\b|\n)\s*/iu', $raw) ?: [$raw];
         $segments = [];
 
         foreach ($parts as $part) {
             $part = trim($part);
             if ($part === '') {
                 continue;
+            }
+
+            $prixTotal = null;
+            if (preg_match('/\(\s*([\d\s.,]+)\s*(?:f(?:cfa)?|xaf|cfa)?\s*\)/iu', $part, $priceMatch)) {
+                $prixTotal = $this->parseLegacyAmountToken($priceMatch[1]);
+                $part = trim(preg_replace('/\(\s*[\d\s.,]+\s*(?:f(?:cfa)?|xaf|cfa)?\s*\)/iu', '', $part) ?? $part);
             }
 
             $qty = 1;
@@ -500,11 +494,265 @@ class CommandeEntityResolverService
                 $qty = max(1, (int) $m[1]);
             }
 
-            if ($part !== '') {
-                $segments[] = ['designation' => $part, 'quantite' => $qty];
+            if ($part === '') {
+                continue;
+            }
+
+            $segments[] = [
+                'designation' => $part,
+                'quantite' => $qty,
+                'prix_total' => $prixTotal,
+            ];
+        }
+
+        return $segments;
+    }
+
+    private function parseLegacyAmountToken(string $token): ?float
+    {
+        $text = trim($token);
+        $text = str_replace(["\u{00a0}", ' '], '', $text);
+        $text = str_replace(',', '.', $text);
+        $text = preg_replace('/[^0-9.\-]/', '', $text) ?? '';
+
+        if ($text === '' || ! is_numeric($text)) {
+            return null;
+        }
+
+        return (float) $text;
+    }
+
+    /**
+     * @param  list<LegacyProduitSegment>  $segments
+     * @return list<LegacyProduitLine>
+     */
+    private function buildLegacyProduitLinesFromSegments(
+        array $segments,
+        int $defaultQty,
+        float $montant,
+        float $caMed,
+        float $caPara,
+    ): array {
+        $allHavePrices = $segments !== []
+            && collect($segments)->every(fn (array $s) => ($s['prix_total'] ?? null) !== null && (float) $s['prix_total'] > 0);
+
+        if ($allHavePrices) {
+            return array_map(function (array $segment): array {
+                $qty = max(1, (int) $segment['quantite']);
+                $total = (float) $segment['prix_total'];
+
+                return [
+                    'designation' => $segment['designation'],
+                    'dosage' => null,
+                    'forme' => null,
+                    'quantite' => $qty,
+                    'prix_unitaire' => round($total / $qty, 2),
+                    'type' => $this->guessLegacyProduitType($segment['designation']),
+                ];
+            }, $segments);
+        }
+
+        if (count($segments) === 1) {
+            $segment = $segments[0];
+            $qty = max(1, (int) ($segment['quantite'] ?? $defaultQty));
+            $designation = $segment['designation'];
+
+            if ($caMed > 0 && $caPara > 0) {
+                return [
+                    $this->legacyLine($designation, $qty, $caMed / $qty, null),
+                    $this->legacyLine('Parapharmacie (import Excel)', 1, $caPara, 'Parapharmacie'),
+                ];
+            }
+
+            $singleType = ($caPara > 0 && $caMed <= 0) ? 'Parapharmacie' : $this->guessLegacyProduitType($designation);
+            $lineTotal = $montant > 0 ? $montant : ($caPara > 0 ? $caPara : $caMed);
+
+            return [
+                $this->legacyLine($designation, $qty, $qty > 0 ? $lineTotal / $qty : $lineTotal, $singleType),
+            ];
+        }
+
+        $medSegments = [];
+        $paraSegments = [];
+        foreach ($segments as $segment) {
+            if ($this->guessLegacyProduitType($segment['designation']) === 'Parapharmacie') {
+                $paraSegments[] = $segment;
+            } else {
+                $medSegments[] = $segment;
             }
         }
 
-        return $segments !== [] ? $segments : [['designation' => $raw, 'quantite' => 1]];
+        if ($caPara > 0 && $paraSegments === [] && $medSegments !== []) {
+            $paraSegments[] = [
+                'designation' => 'Parapharmacie (import Excel)',
+                'quantite' => 1,
+                'prix_total' => null,
+            ];
+        }
+
+        $lines = [];
+
+        if ($caMed > 0 || $caPara > 0) {
+            $this->appendLegacyLinesForSegmentGroup($lines, $medSegments, $caMed > 0 ? $caMed : 0.0, null);
+            $this->appendLegacyLinesForSegmentGroup($lines, $paraSegments, $caPara > 0 ? $caPara : 0.0, 'Parapharmacie');
+
+            if ($lines !== []) {
+                return $lines;
+            }
+        }
+
+        $weightSum = 0;
+        foreach ($segments as $segment) {
+            $weightSum += max(1, (int) $segment['quantite']);
+        }
+        $weightSum = max(1, $weightSum);
+
+        foreach ($segments as $segment) {
+            $qty = max(1, (int) $segment['quantite']);
+            $share = $montant > 0 ? ($montant * $qty / $weightSum) : 0.0;
+
+            $lines[] = $this->legacyLine(
+                $segment['designation'],
+                $qty,
+                $qty > 0 ? $share / $qty : $share,
+                $this->guessLegacyProduitType($segment['designation']),
+            );
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @param  list<LegacyProduitLine>  $lines
+     * @param  list<LegacyProduitSegment>  $segments
+     */
+    private function appendLegacyLinesForSegmentGroup(
+        array &$lines,
+        array $segments,
+        float $targetTotal,
+        ?string $forcedType,
+    ): void {
+        if ($segments === [] || $targetTotal <= 0) {
+            return;
+        }
+
+        $weightSum = 0;
+        foreach ($segments as $segment) {
+            $weightSum += max(1, (int) $segment['quantite']);
+        }
+        $weightSum = max(1, $weightSum);
+
+        foreach ($segments as $segment) {
+            $qty = max(1, (int) $segment['quantite']);
+            $share = $targetTotal * $qty / $weightSum;
+
+            $lines[] = $this->legacyLine(
+                $segment['designation'],
+                $qty,
+                $qty > 0 ? $share / $qty : $share,
+                $forcedType ?? $this->guessLegacyProduitType($segment['designation']),
+            );
+        }
+    }
+
+    /**
+     * @return LegacyProduitLine
+     */
+    private function legacyLine(string $designation, int $quantite, float $prixUnitaire, ?string $type): array
+    {
+        return [
+            'designation' => $designation,
+            'dosage' => null,
+            'forme' => null,
+            'quantite' => max(1, $quantite),
+            'prix_unitaire' => round(max(0, $prixUnitaire), 2),
+            'type' => $type,
+        ];
+    }
+
+    private function guessLegacyProduitType(string $designation): ?string
+    {
+        $lower = mb_strtolower(trim($designation), 'UTF-8');
+        if ($lower === '') {
+            return null;
+        }
+
+        if (str_contains($lower, 'parapharm')) {
+            return 'Parapharmacie';
+        }
+
+        foreach ([
+            'vitamine', 'complément', 'complement', 'shampoo', 'shampoing', 'gel douche',
+            'crème', 'creme', 'lotion', 'savon', 'exfoliant', 'oxiprolane', 'dentifrice',
+            'brosse', 'pansement', 'sérum', 'serum', 'huile', 'spray', 'déodorant', 'deodorant',
+        ] as $keyword) {
+            if (str_contains($lower, $keyword)) {
+                return 'Parapharmacie';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  list<LegacyProduitLine>  $lines
+     * @return list<LegacyProduitLine>
+     */
+    private function reconcileLegacyProduitLines(
+        array $lines,
+        float $montant,
+        float $caMed,
+        float $caPara,
+    ): array {
+        if ($lines === []) {
+            return [$this->legacyLine('Article non détaillé', 1, max(0, $montant), null)];
+        }
+
+        if ($caMed > 0 || $caPara > 0) {
+            $this->scaleLegacyLineGroup($lines, false, $caMed);
+            $this->scaleLegacyLineGroup($lines, true, $caPara);
+        } elseif ($montant > 0) {
+            $this->scaleLegacyLineGroup($lines, null, $montant);
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @param  list<LegacyProduitLine>  $lines
+     */
+    private function scaleLegacyLineGroup(array &$lines, ?bool $parapharmaOnly, float $target): void
+    {
+        if ($target <= 0) {
+            return;
+        }
+
+        $indexes = [];
+        $current = 0.0;
+
+        foreach ($lines as $index => $line) {
+            $isPara = CommandeMontantCalculator::isParapharmaType($line['type'] ?? null);
+            if ($parapharmaOnly === null || $isPara === $parapharmaOnly) {
+                $indexes[] = $index;
+                $current += (float) $line['prix_unitaire'] * (int) $line['quantite'];
+            }
+        }
+
+        if ($indexes === []) {
+            return;
+        }
+
+        if ($current <= 0) {
+            $first = $indexes[0];
+            $qty = max(1, (int) $lines[$first]['quantite']);
+            $lines[$first]['prix_unitaire'] = round($target / $qty, 2);
+
+            return;
+        }
+
+        $factor = $target / $current;
+        foreach ($indexes as $index) {
+            $lines[$index]['prix_unitaire'] = round((float) $lines[$index]['prix_unitaire'] * $factor, 2);
+        }
     }
 }

@@ -54,7 +54,7 @@ class CommandeCreationFields
             'contexts' => ['admin'],
         ],
         'ordonnance' => [
-            'label' => 'Ordonnance (fichier)',
+            'label' => 'Ordonnance/article',
             'default' => false,
             'group' => 'commande',
             'contexts' => ['admin', 'agent'],
@@ -148,7 +148,9 @@ class CommandeCreationFields
     {
         $rules = self::baseValidationRules($request);
         $rules['produits.*.id'] = 'nullable|integer|exists:produits,id';
-        $rules['ordonnance'] = 'nullable|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240';
+        $rules['ordonnance'] = 'nullable|'.CommandeOrdonnanceUploads::FILE_RULE;
+        $rules['ordonnances'] = 'nullable|array|max:'.CommandeOrdonnanceUploads::MAX_FILES;
+        $rules['ordonnances.*'] = CommandeOrdonnanceUploads::FILE_RULE;
         unset($rules['reutiliser_ordonnance_commande_id']);
 
         return $rules;
@@ -201,8 +203,10 @@ class CommandeCreationFields
             'produits.*.prix_unitaire' => 'required|numeric|min:0',
             'produits.*.type' => 'nullable|string|max:100',
             'ordonnance' => self::isRequiredForRequest('ordonnance', $request)
-                ? 'required_without:reutiliser_ordonnance_commande_id|nullable|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240'
-                : 'nullable|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
+                ? 'required_without_all:reutiliser_ordonnance_commande_id,ordonnances.0|nullable|'.CommandeOrdonnanceUploads::FILE_RULE
+                : 'nullable|'.CommandeOrdonnanceUploads::FILE_RULE,
+            'ordonnances' => 'nullable|array|max:'.CommandeOrdonnanceUploads::MAX_FILES,
+            'ordonnances.*' => CommandeOrdonnanceUploads::FILE_RULE,
             'reutiliser_ordonnance_commande_id' => 'nullable|integer|exists:commandes,id',
             'mode_paiement_id' => $idRequired('mode_paiement_id'),
             'montant_livraison_id' => $idRequired('montant_livraison_id'),

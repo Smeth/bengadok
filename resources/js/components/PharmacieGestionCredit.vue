@@ -35,6 +35,7 @@ const props = defineProps<{
         telephone: string;
         email: string | null;
         de_garde: boolean;
+        credits_actif?: boolean;
     };
     creditGestion: {
         resume: {
@@ -45,6 +46,7 @@ const props = defineProps<{
             statut: string;
             statut_label: string;
             statut_detail: string;
+            credits_actif?: boolean;
         };
         config: {
             prix_unitaire_xaf: number;
@@ -91,6 +93,17 @@ const coutRecharge = computed(() => {
 const statutOk = computed(
     () => props.creditGestion.resume.statut === 'actif',
 );
+const statutDesactive = computed(
+    () =>
+        props.creditGestion.resume.statut === 'desactive' ||
+        props.pharmacie.credits_actif === false,
+);
+const headerBadgeLabel = computed(() => {
+    if (statutDesactive.value) {
+        return 'Désactivé';
+    }
+    return props.pharmacie.de_garde ? 'De garde' : 'Active';
+});
 
 function formatXaf(n: number): string {
     return Number(n).toLocaleString('fr-FR');
@@ -158,12 +171,14 @@ function submitAlerte() {
                     <span
                         class="mt-2 inline-flex rounded-full px-3 py-0.5 text-xs font-bold"
                         :class="
-                            pharmacie.de_garde
-                                ? 'bg-red-500 text-white'
-                                : 'bg-emerald-100 text-emerald-800'
+                            statutDesactive
+                                ? 'bg-gray-200 text-gray-700'
+                                : pharmacie.de_garde
+                                  ? 'bg-red-500 text-white'
+                                  : 'bg-emerald-100 text-emerald-800'
                         "
                     >
-                        {{ pharmacie.de_garde ? 'De garde' : 'Active' }}
+                        {{ headerBadgeLabel }}
                     </span>
                 </div>
             </div>
@@ -225,30 +240,44 @@ function submitAlerte() {
                 <div
                     class="rounded-xl border p-4"
                     :class="
-                        statutOk
-                            ? 'border-emerald-100 bg-emerald-50/50'
-                            : 'border-orange-100 bg-orange-50/50'
+                        statutDesactive
+                            ? 'border-gray-200 bg-gray-50/80'
+                            : statutOk
+                              ? 'border-emerald-100 bg-emerald-50/50'
+                              : 'border-orange-100 bg-orange-50/50'
                     "
                 >
                     <div class="mb-2 flex items-center justify-between">
                         <span
                             class="text-sm font-semibold"
                             :class="
-                                statutOk ? 'text-emerald-900' : 'text-orange-900'
+                                statutDesactive
+                                    ? 'text-gray-800'
+                                    : statutOk
+                                      ? 'text-emerald-900'
+                                      : 'text-orange-900'
                             "
                             >Statut des crédits</span
                         >
                         <CheckCircle2
                             class="size-5"
                             :class="
-                                statutOk ? 'text-emerald-600' : 'text-orange-600'
+                                statutDesactive
+                                    ? 'text-gray-500'
+                                    : statutOk
+                                      ? 'text-emerald-600'
+                                      : 'text-orange-600'
                             "
                         />
                     </div>
                     <p
                         class="text-2xl font-extrabold"
                         :class="
-                            statutOk ? 'text-emerald-900' : 'text-orange-900'
+                            statutDesactive
+                                ? 'text-gray-800'
+                                : statutOk
+                                  ? 'text-emerald-900'
+                                  : 'text-orange-900'
                         "
                     >
                         {{ creditGestion.resume.statut_label }}
@@ -256,7 +285,11 @@ function submitAlerte() {
                     <p
                         class="text-sm"
                         :class="
-                            statutOk ? 'text-emerald-700' : 'text-orange-700'
+                            statutDesactive
+                                ? 'text-gray-600'
+                                : statutOk
+                                  ? 'text-emerald-700'
+                                  : 'text-orange-700'
                         "
                     >
                         {{ creditGestion.resume.statut_detail }}
@@ -550,9 +583,11 @@ function submitAlerte() {
                             <span
                                 class="rounded-full px-2 py-0.5 text-xs font-bold"
                                 :class="
-                                    statutOk
-                                        ? 'bg-emerald-100 text-emerald-800'
-                                        : 'bg-orange-100 text-orange-800'
+                                    statutDesactive
+                                        ? 'bg-gray-200 text-gray-700'
+                                        : statutOk
+                                          ? 'bg-emerald-100 text-emerald-800'
+                                          : 'bg-orange-100 text-orange-800'
                                 "
                             >
                                 {{ creditGestion.resume.statut_label }}
@@ -569,7 +604,7 @@ function submitAlerte() {
                 </div>
 
                 <div
-                    v-if="!statutOk"
+                    v-if="!statutOk && !statutDesactive"
                     class="rounded-xl border border-orange-200 bg-orange-50 p-4"
                 >
                     <div class="mb-2 flex items-center gap-2 font-bold text-orange-900">

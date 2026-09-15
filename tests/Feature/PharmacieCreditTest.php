@@ -37,4 +37,26 @@ class PharmacieCreditTest extends TestCase
 
         app(PharmacieCreditService::class)->recharger($pharmacie, 1, 'especes', null, $admin);
     }
+
+    public function test_disabled_credits_show_desactive_status_instead_of_actif(): void
+    {
+        $pharmacie = $this->createPharmacie(null, [
+            'est_partenaire' => true,
+            'credits_actif' => false,
+            'credits_solde' => 50,
+        ]);
+
+        $payload = app(PharmacieCreditService::class)->buildGestionPayload($pharmacie);
+
+        $this->assertSame('desactive', $payload['resume']['statut']);
+        $this->assertSame('Désactivé', $payload['resume']['statut_label']);
+        $this->assertFalse($payload['resume']['credits_actif']);
+
+        $overview = app(PharmacieCreditService::class)->buildIndexCreditsOverview();
+        $row = collect($overview)->firstWhere('id', $pharmacie->id);
+
+        $this->assertNotNull($row);
+        $this->assertSame('desactive', $row['statut']);
+        $this->assertSame('Désactivé', $row['statut_label']);
+    }
 }

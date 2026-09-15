@@ -126,7 +126,7 @@ const beneficiaireOptions = computed(() => {
 });
 const commentaire = ref(props.commande.commentaire ?? '');
 const modePaiementId = ref(props.commande.mode_paiement?.id ?? '');
-const ordonnanceFile = ref<File | null>(null);
+const ordonnanceFile = ref<File[]>([]);
 const enSubmission = ref(false);
 
 const dateHeureAffichee = computed(() =>
@@ -147,7 +147,8 @@ const sansClientExistant = computed(() => !clientId.value);
 
 const skipOrdonnanceIfExisting = computed(
     () =>
-        Boolean(props.commande.ordonnance?.id) && ordonnanceFile.value === null,
+        Boolean(props.commande.ordonnance?.id) &&
+        ordonnanceFile.value.length === 0,
 );
 
 const errors = computed(() =>
@@ -182,7 +183,7 @@ const analysisNoticeText = computed(() => {
 
 const submitProgressLabel = computed(() => {
     const ov = ordonnanceVerificationSettings.value;
-    if (!ordonnanceFile.value || ov?.enabled === false) {
+    if (!ordonnanceFile.value.length || ov?.enabled === false) {
         return 'Enregistrement des modifications…';
     }
     if (ov?.execution_mode === 'immediate') {
@@ -194,7 +195,7 @@ const submitProgressLabel = computed(() => {
 const showSubmitAnalysisProgress = computed(
     () =>
         enSubmission.value &&
-        ordonnanceFile.value !== null &&
+        ordonnanceFile.value.length > 0 &&
         ordonnanceVerificationSettings.value?.enabled !== false,
 );
 
@@ -319,14 +320,17 @@ function submit() {
         commentaire: commentaire.value.trim(),
     };
 
-    if (ordonnanceFile.value) {
+    if (ordonnanceFile.value.length > 0) {
         const formData = new FormData();
         Object.entries(payload).forEach(([k, v]) => {
             if (v !== undefined && v !== '' && k !== 'produits')
                 formData.append(k, String(v));
         });
         formData.append('produits', JSON.stringify(produitsValides));
-        formData.append('ordonnance', ordonnanceFile.value);
+        formData.append('ordonnance', ordonnanceFile.value[0]);
+        ordonnanceFile.value.slice(1).forEach((file) => {
+            formData.append('ordonnances[]', file);
+        });
         formData.append('_method', 'PATCH');
         router.post(`/commandes/${props.commande.id}`, formData, {
             forceFormData: true,
@@ -946,7 +950,7 @@ function submit() {
                         class="rounded-[10px] border border-[#ccc5c5] p-5 dark:border-border"
                     >
                         <h2 :class="[sectionTitleClass, 'mb-4']">
-                            Ordonnance
+                            Ordonnance/article
                             <span
                                 v-if="
                                     isFieldRequired('ordonnance') &&
@@ -957,7 +961,7 @@ function submit() {
                             >
                         </h2>
                         <p class="mb-3 text-sm font-medium text-black">
-                            Nouvelle ordonnance (remplace l'actuelle)
+                            Nouvelle ordonnance/article (remplace l'actuelle)
                             <span
                                 v-if="
                                     !isFieldRequired('ordonnance') ||
@@ -971,7 +975,7 @@ function submit() {
                         <p
                             v-if="
                                 commande.ordonnance?.file_url &&
-                                !ordonnanceFile
+                                !ordonnanceFile.length
                             "
                             class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
                         >
@@ -994,7 +998,8 @@ function submit() {
                         </p>
                         <OrdonnanceUppy
                             v-model="ordonnanceFile"
-                            variant="card"
+                            variant="inline"
+                            multiple
                         />
                         <InputError :message="errors.ordonnance" />
                         <OrdonnanceAnalysisProgressBar
@@ -1003,8 +1008,8 @@ function submit() {
                             :label="submitProgressLabel"
                         />
                         <OrdonnanceFilePreview
-                            v-if="ordonnanceFile"
-                            :file="ordonnanceFile"
+                            v-if="ordonnanceFile[0]"
+                            :file="ordonnanceFile[0]"
                             class="mt-3"
                             max-height="14rem"
                         />

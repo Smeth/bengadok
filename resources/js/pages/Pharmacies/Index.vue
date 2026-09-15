@@ -88,6 +88,7 @@ type CreditsPharmacieRow = {
     cout_mois_xaf: number;
     statut: string;
     statut_label: string;
+    credits_actif?: boolean;
 };
 
 const props = withDefaults(
@@ -118,6 +119,7 @@ const props = withDefaults(
             telephone: string;
             email: string | null;
             de_garde: boolean;
+            credits_actif?: boolean;
         } | null;
     }>(),
     {
@@ -1147,9 +1149,11 @@ watch(
                                         <span
                                             class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
                                             :class="
-                                                row.statut === 'faible'
-                                                    ? 'bg-amber-100 text-amber-900'
-                                                    : 'bg-emerald-100 text-emerald-800'
+                                                row.statut === 'desactive'
+                                                    ? 'bg-gray-200 text-gray-700'
+                                                    : row.statut === 'faible'
+                                                      ? 'bg-amber-100 text-amber-900'
+                                                      : 'bg-emerald-100 text-emerald-800'
                                             "
                                         >
                                             {{ row.statut_label }}

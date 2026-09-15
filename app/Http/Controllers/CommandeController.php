@@ -21,6 +21,7 @@ use App\Services\CommandeMontantCalculator;
 use App\Services\CommandeReferentielsService;
 use App\Services\CommandeService;
 use App\Services\PharmacieProximiteService;
+use App\Support\CommandeOrdonnanceUploads;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -192,7 +193,7 @@ class CommandeController extends Controller
         $commande = $this->commandeService->update(
             $commande,
             $request->validated(),
-            $request->file('ordonnance'),
+            ...CommandeOrdonnanceUploads::split($request),
         );
 
         return redirect()->route('commandes.index', ['detail' => $commande->id])
@@ -231,7 +232,13 @@ class CommandeController extends Controller
                     isset($data['heurs']) ? (string) $data['heurs'] : null,
                 );
             }
-            $commande = $this->commandeService->create($data, $request->file('ordonnance'), $overrides);
+            [$ordonnanceFile, $extraOrdonnanceFiles] = CommandeOrdonnanceUploads::split($request);
+            $commande = $this->commandeService->create(
+                $data,
+                $ordonnanceFile,
+                $overrides,
+                $extraOrdonnanceFiles,
+            );
         } catch (\RuntimeException $e) {
             return back()
                 ->withInput()

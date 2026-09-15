@@ -13,6 +13,7 @@ use App\Models\Produit;
 use App\Services\CommandeMontantCalculator;
 use App\Services\CommandeService;
 use App\Services\PharmacieProximiteService;
+use App\Support\CommandeOrdonnanceUploads;
 use App\Support\PharmaciePartenaireRules;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -73,7 +74,13 @@ class AgentController extends Controller
         try {
             $data = $request->getDataForService();
             $data['livreur_id'] = $data['livreur_id'] ?? null;
-            $commande = $this->commandeService->create($data, $request->file('ordonnance'));
+            [$ordonnanceFile, $extraOrdonnanceFiles] = CommandeOrdonnanceUploads::split($request);
+            $commande = $this->commandeService->create(
+                $data,
+                $ordonnanceFile,
+                [],
+                $extraOrdonnanceFiles,
+            );
         } catch (\RuntimeException $e) {
             return back()
                 ->withInput()

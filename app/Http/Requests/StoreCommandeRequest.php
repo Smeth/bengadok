@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\AppSetting;
 use App\Models\Commande;
+use App\Support\CommandeOrdonnanceUploads;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -92,7 +93,7 @@ class StoreCommandeRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            if ($this->file('ordonnance')) {
+            if (CommandeOrdonnanceUploads::fromRequest($this) !== []) {
                 return;
             }
             $raw = $this->input('reutiliser_ordonnance_commande_id');

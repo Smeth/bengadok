@@ -88,7 +88,17 @@ const confirmModal = ref<{ open: boolean; cmd: DokPharmaCommande | null }>({
     cmd: null,
 });
 
-const ordModal = ref({ open: false, url: '', isPdf: false, numero: '' });
+const ordModal = ref<{
+    open: boolean;
+    url: string;
+    isPdf: boolean;
+    numero: string;
+    files: Array<{
+        file_url?: string | null;
+        is_pdf?: boolean;
+        label?: string;
+    }>;
+}>({ open: false, url: '', isPdf: false, numero: '', files: [] });
 
 const dispoSuccessToast = ref({ show: false, title: '', description: '' });
 const retraitSuccessToast = ref({ show: false, title: '', description: '' });
@@ -110,11 +120,24 @@ function onEnvoiSuccess() {
 }
 
 function openOrdonnance(cmd: DokPharmaCommande) {
+    const files =
+        cmd.ordonnance_fichiers && cmd.ordonnance_fichiers.length > 0
+            ? cmd.ordonnance_fichiers
+            : cmd.ordonnance_url
+              ? [
+                    {
+                        file_url: cmd.ordonnance_url,
+                        is_pdf: cmd.ordonnance_is_pdf ?? false,
+                        label: 'Ordonnance',
+                    },
+                ]
+              : [];
     ordModal.value = {
         open: true,
-        url: cmd.ordonnance_url ?? '',
-        isPdf: cmd.ordonnance_is_pdf ?? false,
+        url: files[0]?.file_url ?? cmd.ordonnance_url ?? '',
+        isPdf: files[0]?.is_pdf ?? cmd.ordonnance_is_pdf ?? false,
         numero: cmd.numero,
+        files,
     };
 }
 
@@ -249,6 +272,7 @@ function confirmerAchat() {
             :url="ordModal.url"
             :is-pdf="ordModal.isPdf"
             :numero="ordModal.numero"
+            :files="ordModal.files"
             @close="closeOrdonnance"
         />
 

@@ -5,11 +5,13 @@ namespace App\Services;
 use App\Actions\PromoteClientsFromSuccessfulOrdersAction;
 use App\Models\Client;
 use App\Models\Commande;
+use App\Models\CommandePieceJointe;
 use App\Models\MontantLivraison;
 use App\Models\Ordonnance;
 use App\Models\Produit;
 use App\Support\ClientPayloadNormalizer;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class CommandeService
@@ -21,9 +23,9 @@ class CommandeService
     /**
      * @param  array<string, mixed>  $overrides  numero, date, heurs, status, status_pharmacie, livree_at, validee_admin_at
      */
-    public function create(array $data, ?UploadedFile $ordonnance = null, array $overrides = []): Commande
+    public function create(array $data, ?UploadedFile $ordonnance = null, array $overrides = [], array $extraOrdonnanceFiles = []): Commande
     {
-        return DB::transaction(function () use ($data, $ordonnance, $overrides) {
+        return DB::transaction(function () use ($data, $ordonnance, $overrides, $extraOrdonnanceFiles) {
             $client = $this->resolveClient($data);
             $ordonnanceId = $this->resolveOrdonnanceId($data, $ordonnance);
 
@@ -63,6 +65,8 @@ class CommandeService
             if ($commande->status_pharmacie === Commande::STATUT_PHARMACIE_CA_COMPTABILISE) {
                 PromoteClientsFromSuccessfulOrdersAction::afterPharmacieRetrait($commande);
             }
+
+            $this->storeExtraOrdonnanceFiles($commande, $extraOrdonnanceFiles);
 
             return $commande->fresh();
         });
@@ -142,9 +146,9 @@ class CommandeService
      *
      * @param  array<string, mixed>  $validated
      */
-    public function update(Commande $commande, array $validated, ?UploadedFile $ordonnance = null): Commande
+    public function update(Commande $commande, array $validated, ?UploadedFile $ordonnance = null, array $extraOrdonnanceFiles = []): Commande
     {
-        return DB::transaction(function () use ($commande, $validated, $ordonnance) {
+        return DB::transaction(function () use ($commande, $validated, $ordonnance, $extraOrdonnanceFiles) {
             $client = $this->resolveClient($validated);
 
             $ordonnanceId = $commande->ordonnance_id;
@@ -179,6 +183,10 @@ class CommandeService
                 'prix_parapharma' => $montants['prix_parapharma'],
                 'prix_total' => $montants['prix_lignes'] + $montantLivraison,
             ]);
+
+            if ($extraOrdonnanceFiles !== []) {
+                $this->replaceExtraOrdonnanceFiles($commande, $extraOrdonnanceFiles);
+            }
 
             return $commande->fresh();
         });
@@ -217,5 +225,38 @@ class CommandeService
                 'vente_libre' => $existing?->pivot->vente_libre ?? false,
             ]);
         }
+    }
+
+    /**
+     * @param  list<UploadedFile>  $files
+     */
+    private function storeExtraOrdonnanceFiles(Commande $commande, array $files): void
+    {
+        foreach ($files as $file) {
+            CommandePieceJointe::storeFromUpload(
+                $file,
+                $commande,
+                Auth::user(),
+                CommandePieceJointe::LABEL_ORDONNANCE_ARTICLE,
+                CommandePieceJointe::KIND_ORDONNANCE,
+            );
+        }
+    }
+
+    /**
+     * @param  list<UploadedFile>  $files
+     */
+    private function replaceExtraOrdonnanceFiles(Commande $commande, array $files): void
+    {
+        $existing = $commande->piecesJointes()
+            ->where('kind', CommandePieceJointe::KIND_ORDONNANCE)
+            ->get();
+
+        foreach ($existing as $piece) {
+            $piece->deleteStoredFile();
+            $piece->delete();
+        }
+
+        $this->storeExtraOrdonnanceFiles($commande, $files);
     }
 }

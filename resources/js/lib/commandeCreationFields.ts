@@ -9,6 +9,20 @@ export type CommandeCreationFieldDefinition = {
     contexts: CommandeCreationContext[];
 };
 
+export function ordonnanceFilesFromValue(
+    value: unknown,
+): File[] {
+    if (Array.isArray(value)) {
+        return value.filter((file): file is File => file instanceof File);
+    }
+
+    return value instanceof File ? [value] : [];
+}
+
+export function primaryOrdonnanceFile(value: unknown): File | null {
+    return ordonnanceFilesFromValue(value)[0] ?? null;
+}
+
 export const COMMANDE_CREATION_FIELD_MESSAGES: Record<string, string> = {
     client_nom: 'Le nom du client est obligatoire.',
     client_prenom: 'Le prénom du client est obligatoire.',
@@ -97,7 +111,7 @@ export function validateCommandeCreationFields(
     if (
         isCommandeFieldRequired(definitions, 'ordonnance', context) &&
         !options.skipOrdonnanceIfReused &&
-        !values.ordonnance
+        ordonnanceFilesFromValue(values.ordonnance).length === 0
     ) {
         errors.ordonnance = COMMANDE_CREATION_FIELD_MESSAGES.ordonnance;
     }

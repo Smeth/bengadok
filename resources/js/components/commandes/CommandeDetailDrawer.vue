@@ -536,7 +536,7 @@ defineExpose({
                     <h3
                         class="mb-3 text-[14px] font-bold text-[#b4b4b4]"
                     >
-                        Ordonnance
+                        Ordonnance/article
                     </h3>
                     <div
                         v-if="detailCommande.ordonnance?.file_url"
@@ -549,10 +549,42 @@ defineExpose({
                         />
                     </div>
                     <div
-                        v-else
+                        v-else-if="
+                            !(detailCommande.pieces_jointes ?? []).some(
+                                (pj) => pj.kind === 'ordonnance',
+                            )
+                        "
                         class="flex h-24 items-center justify-center text-[13px] font-medium text-gray-400"
                     >
                         Aucune ordonnance fournie
+                    </div>
+                    <div
+                        v-if="
+                            (detailCommande.pieces_jointes ?? []).some(
+                                (pj) => pj.kind === 'ordonnance',
+                            )
+                        "
+                        class="mt-4 grid gap-3 sm:grid-cols-2"
+                    >
+                        <div
+                            v-for="pj in (
+                                detailCommande.pieces_jointes ?? []
+                            ).filter((p) => p.kind === 'ordonnance')"
+                            :key="pj.id"
+                            class="rounded-lg border border-gray-100 bg-gray-50 p-2"
+                        >
+                            <p
+                                class="mb-2 truncate px-1 text-[11px] font-medium text-gray-600"
+                            >
+                                {{ pj.label ?? pj.original_name }}
+                            </p>
+                            <OrdonnanceViewer
+                                v-if="pj.file_url"
+                                :file-url="pj.file_url"
+                                :is-pdf="pj.is_pdf"
+                                max-height="10rem"
+                            />
+                        </div>
                     </div>
                     <div
                         v-if="
@@ -845,7 +877,9 @@ defineExpose({
                     </div>
                     <div
                         v-if="
-                            detailCommande.pieces_jointes?.length
+                            (detailCommande.pieces_jointes ?? []).some(
+                                (pj) => pj.kind !== 'ordonnance',
+                            )
                         "
                     >
                         <h3
@@ -856,7 +890,9 @@ defineExpose({
                         </h3>
                         <div class="space-y-4">
                             <div
-                                v-for="pj in detailCommande.pieces_jointes"
+                                v-for="pj in (
+                                    detailCommande.pieces_jointes ?? []
+                                ).filter((p) => p.kind !== 'ordonnance')"
                                 :key="pj.id"
                                 class="rounded-lg border border-gray-100 bg-gray-50 p-2"
                             >
