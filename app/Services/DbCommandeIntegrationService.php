@@ -22,7 +22,7 @@ class DbCommandeIntegrationService
         }
 
         try {
-            $commande = DB::transaction(function () use ($dbCommande) {
+            $commande = BroadcastCommandeNotificationTargets::withoutBroadcasting(fn () => DB::transaction(function () use ($dbCommande) {
                 $client = $this->resolver->resolveClientFromLegacyRow($dbCommande->toArray());
                 $pharmacie = $this->resolver->resolvePharmacie(
                     null,
@@ -56,7 +56,7 @@ class DbCommandeIntegrationService
                 ]);
 
                 return $commande->fresh();
-            });
+            }));
         } catch (\Throwable $e) {
             $dbCommande->update(['integration_error' => $e->getMessage()]);
 
@@ -76,23 +76,29 @@ class DbCommandeIntegrationService
         $failed = 0;
         $errors = [];
 
-        foreach ($ids as $id) {
-            $row = DbCommande::query()->find($id);
-            if (! $row || $row->commande_id) {
-                continue;
-            }
+        $this->resolver->beginBulkClientLookup();
 
-            try {
-                $this->integrateDbCommande($row);
-                $integrated++;
-            } catch (\Throwable $e) {
-                $failed++;
-                $errors[] = sprintf(
-                    '%s : %s',
-                    $row->code_commande ?? ('#'.$row->id),
-                    $e->getMessage(),
-                );
+        try {
+            foreach ($ids as $id) {
+                $row = DbCommande::query()->find($id);
+                if (! $row || $row->commande_id) {
+                    continue;
+                }
+
+                try {
+                    $this->integrateDbCommande($row);
+                    $integrated++;
+                } catch (\Throwable $e) {
+                    $failed++;
+                    $errors[] = sprintf(
+                        '%s : %s',
+                        $row->code_commande ?? ('#'.$row->id),
+                        $e->getMessage(),
+                    );
+                }
             }
+        } finally {
+            $this->resolver->endBulkClientLookup();
         }
 
         return compact('integrated', 'failed', 'errors');
@@ -103,6 +109,10 @@ class DbCommandeIntegrationService
      */
     public function integrateAllPending(): array
     {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0);
+        }
+
         $ids = DbCommande::query()
             ->whereNull('commande_id')
             ->orderBy('date_commande')
@@ -110,7 +120,9 @@ class DbCommandeIntegrationService
             ->pluck('id')
             ->all();
 
-        return $this->integrateBulk($ids);
+        return BroadcastCommandeNotificationTargets::withoutBroadcasting(
+            fn () => $this->integrateBulk($ids),
+        );
     }
 
     /**

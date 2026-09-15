@@ -406,18 +406,20 @@ function statutBadgeClass(statut: string): string {
             </div>
         </div>
 
-        <!-- Pharmacie : système crédits/commission non activé -->
-        <div
-            v-else-if="!parapharmaActif"
-            class="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center dark:border-amber-800 dark:bg-amber-950/30"
-        >
-            <p class="text-sm font-medium text-amber-900 dark:text-amber-100">
-                {{ parapharmaInactifMessage }}
-            </p>
-        </div>
-
         <!-- KPIs : vue pharmacie (un seul établissement) -->
-        <div v-else class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <template v-else>
+            <div
+                v-if="!creditsActifs"
+                class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+            >
+                {{ parapharmaInactifMessage }}
+                <span class="mt-1 block font-normal text-amber-800/90 dark:text-amber-200/90">
+                    Vos indicateurs de commandes et de chiffre d'affaires restent
+                    disponibles ci-dessous.
+                </span>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div
                 :class="moduleDetailPanelClass"
             >
@@ -596,7 +598,8 @@ function statutBadgeClass(statut: string): string {
                     À verser pour la période
                 </p>
             </div>
-        </div>
+            </div>
+        </template>
 
         <!-- Bandeau commission -->
         <div
@@ -1036,7 +1039,7 @@ function statutBadgeClass(statut: string): string {
         </template>
 
         <!-- Pharmacie : ventes détaillées + sidebar crédits -->
-        <div v-else-if="parapharmaActif" class="grid gap-6 lg:grid-cols-3">
+        <div v-else-if="isPharmacie" class="grid gap-6 lg:grid-cols-3">
             <div
                 :class="[
                     creditsActifs ? 'lg:col-span-2' : 'lg:col-span-3',
@@ -1218,11 +1221,11 @@ function statutBadgeClass(statut: string): string {
             </div>
         </div>
 
-        <!-- Historique + commandes récentes (pharmacie uniquement) -->
-        <div v-if="isPharmacie && creditsActifs" class="grid gap-6 lg:grid-cols-2">
-            <div
-                    :class="moduleDetailPanelLgClass"
-            >
+        <!-- Historique commissions (pharmacie, crédits actifs) -->
+        <div
+            v-if="isPharmacie && creditsActifs"
+            :class="moduleDetailPanelLgClass"
+        >
                 <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-foreground">
                     Historique des commissions
                 </h3>
@@ -1273,11 +1276,12 @@ function statutBadgeClass(statut: string): string {
                         </tbody>
                     </table>
                 </div>
-            </div>
+        </div>
 
-            <div
-                    :class="moduleDetailPanelLgClass"
-            >
+        <div
+            v-if="isPharmacie"
+            :class="moduleDetailPanelLgClass"
+        >
                 <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-foreground">
                     Commandes récentes
                 </h3>
@@ -1340,7 +1344,6 @@ function statutBadgeClass(statut: string): string {
                 >
                     Voir toutes les commandes
                 </Link>
-            </div>
         </div>
 
         <!-- Modal recharge crédits (pharmacie) -->

@@ -17,6 +17,17 @@ import FlashToastHost from '@/components/FlashToastHost.vue';
 import ModuleEmptyState from '@/components/shared/ModuleEmptyState.vue';
 import ModuleFilterPanel from '@/components/shared/ModuleFilterPanel.vue';
 import ModulePagination from '@/components/shared/ModulePagination.vue';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -268,6 +279,7 @@ const activeTab = computed(() => props.tab);
 const searchQuery = ref(props.filters.search ?? '');
 const importSearchQuery = ref(props.importFilters.import_search ?? '');
 const importing = ref(false);
+const integratingAll = ref(false);
 const importForm = ref<{ file: File | null; skip_duplicates: boolean }>({
     file: null,
     skip_duplicates: true,
@@ -475,14 +487,16 @@ function retryIntegrateRow(id: number) {
 }
 
 function integrateAllPending() {
-    if (
-        !confirm(
-            `Intégrer ${props.importStats.pending ?? 0} commande(s) importée(s) dans le système ?`,
-        )
-    ) {
+    if (integratingAll.value) {
         return;
     }
-    router.post('/db-commandes/integrate-all', {}, { preserveScroll: true });
+    integratingAll.value = true;
+    router.post('/db-commandes/integrate-all', {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            integratingAll.value = false;
+        },
+    });
 }
 
 const pendingImportRowsOnPage = computed(() =>
@@ -846,14 +860,54 @@ const uploadLimits = getUploadLimits();
                         v-if="(importStats.pending ?? 0) > 0"
                         class="mb-4"
                     >
-                        <Button
-                            :class="[modulePrimaryButtonClass, 'gap-2']"
-                            type="button"
-                            @click="integrateAllPending"
-                        >
-                            <Link2 class="size-4" />
-                            Intégrer toutes les lignes en attente ({{ importStats.pending }})
-                        </Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger as-child>
+                                <Button
+                                    :class="[modulePrimaryButtonClass, 'gap-2']"
+                                    type="button"
+                                    :disabled="integratingAll"
+                                >
+                                    <Spinner v-if="integratingAll" class="size-4" />
+                                    <Link2 v-else class="size-4" />
+                                    {{
+                                        integratingAll
+                                            ? 'Intégration en cours…'
+                                            : `Intégrer toutes les lignes en attente (${importStats.pending})`
+                                    }}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                        Intégrer toutes les commandes en attente ?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        {{
+                                            importStats.pending ?? 0
+                                        }}
+                                        commande(s) importée(s) seront créées dans le
+                                        système (pharmacies, clients et commandes
+                                        live). Les lignes déjà intégrées ou en erreur
+                                        ne sont pas concernées. L’opération peut
+                                        prendre plusieurs minutes — ne fermez pas
+                                        l’onglet.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                        Annuler
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                        :class="modulePrimaryButtonClass"
+                                        @click="integrateAllPending"
+                                    >
+                                        Intégrer
+                                        {{ importStats.pending ?? 0 }}
+                                        commande(s)
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </div>
 
                     <ModuleFilterPanel
