@@ -236,7 +236,7 @@ const form = ref({
     montant_livraison_id: '',
     produits: [ligneProduitVide()] as ProduitEnreg[],
     produitsParapharma: [ligneProduitVide()] as ProduitEnreg[],
-    ordonnance: null as File | null,
+    ordonnance: [] as File[],
     commentaire: '',
     mode_paiement_id: '',
     livreur_id: '',
@@ -380,7 +380,7 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
         produitsParapharma: parapharma.length
             ? parapharma
             : [ligneProduitVide()],
-        ordonnance: null,
+        ordonnance: [],
         commentaire: '',
         mode_paiement_id: '',
         livreur_id: '',
@@ -495,7 +495,7 @@ function resetForm() {
         montant_livraison_id: '',
         produits: [ligneProduitVide()],
         produitsParapharma: [ligneProduitVide()],
-        ordonnance: null,
+        ordonnance: [],
         commentaire: '',
         mode_paiement_id: '',
         livreur_id: '',
@@ -526,7 +526,7 @@ function onSubmit() {
     const skipOrdonnanceIfReused =
         props.mode === 'relance' &&
         !!props.commande?.id &&
-        !form.value.ordonnance &&
+        form.value.ordonnance.length === 0 &&
         !!ordonnanceUrlExistante.value;
 
     const err: Record<string, string> = {
@@ -665,7 +665,7 @@ function onSubmit() {
     if (
         props.mode === 'relance' &&
         props.commande?.id &&
-        !form.value.ordonnance &&
+        !form.value.ordonnance.length &&
         ordonnanceUrlExistante.value
     ) {
         payload.reutiliser_ordonnance_commande_id = props.commande.id;
@@ -1948,18 +1948,18 @@ watch(
                         </div>
                     </div>
 
-                    <!-- Ordonnance (dashed #e2e8f0) + Commentaires (solid #e2e8f0) : deux blocs égaux côte à côte -->
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <!-- Ordonnance/article (pleine largeur, une ligne) + Commentaires -->
+                    <div class="flex flex-col gap-4">
                         <div class="flex flex-col gap-2">
                             <Label class="text-sm font-medium text-black dark:text-foreground"
-                                >Ordonnance
+                                >Ordonnance/article
                                 <span
                                     v-if="
                                         isFieldRequired('ordonnance') &&
                                         !(
                                             mode === 'relance' &&
                                             ordonnanceUrlExistante &&
-                                            !form.ordonnance
+                                            !form.ordonnance.length
                                         )
                                     "
                                     class="text-[#dc3545]"
@@ -1968,7 +1968,7 @@ watch(
                             >
                             <p
                                 v-if="
-                                    ordonnanceUrlExistante && !form.ordonnance
+                                    ordonnanceUrlExistante && !form.ordonnance.length
                                 "
                                 class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
                             >
@@ -1986,7 +1986,8 @@ watch(
                             </p>
                             <OrdonnanceUppy
                                 v-model="form.ordonnance"
-                                variant="card"
+                                variant="inline"
+                                multiple
                             />
                             <p
                                 v-if="errors.ordonnance"

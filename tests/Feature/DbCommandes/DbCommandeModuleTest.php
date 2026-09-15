@@ -90,6 +90,92 @@ class DbCommandeModuleTest extends TestCase
         $this->assertDatabaseHas('clients', [
             'tel' => '06 111 22 33',
         ]);
+
+        $commande = Commande::query()->find($row->commande_id);
+        $this->assertNotNull($commande);
+        $this->assertSame(2500.0, (float) $commande->prix_medicaments);
+        $this->assertSame(3500.0, (float) $commande->prix_total);
+        $commande->load('produits');
+        $this->assertCount(1, $commande->produits);
+        $this->assertSame(2500.0, (float) $commande->produits->first()->pivot->prix_unitaire);
+        $this->assertSame('disponible', $commande->produits->first()->pivot->status);
+    }
+
+    public function test_integrate_splits_montant_across_parapharma_lines(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $this->createPharmacie(null, ['designation' => 'Pharmacie Para']);
+
+        $row = DbCommande::query()->create([
+            'code_commande' => 'BDK-PARA-SPLIT',
+            'nom_client' => 'Client Para',
+            'telephone' => '06 777 66 55',
+            'pharmacie' => 'Para',
+            'medicaments' => "Oxiprolane Savon exfoliant\nOxiprolane eclat du teint\nOxiprolane repair",
+            'quantite' => 1,
+            'montant_produits' => 28200,
+            'statut' => 'retiree',
+            'source' => DbCommande::SOURCE_IMPORT,
+            'empreinte' => hash('sha256', 'test-para-split'),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('db-commandes.integrate', $row))
+            ->assertRedirect();
+
+        $commande = Commande::query()->with('produits')->find($row->fresh()->commande_id);
+        $this->assertNotNull($commande);
+        $this->assertCount(3, $commande->produits);
+
+        $pivotSum = $commande->produits->sum(
+            fn ($p) => (float) $p->pivot->prix_unitaire * (int) $p->pivot->quantite,
+        );
+        $this->assertSame(28200.0, round($pivotSum, 2));
+        $this->assertSame(9400.0, (float) $commande->produits->first()->pivot->prix_unitaire);
+
+        foreach ($commande->produits as $produit) {
+            $this->assertSame('disponible', $produit->pivot->status);
+        }
+    }
+
+    public function test_integrate_applies_ca_columns_and_product_line_prices(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $this->createPharmacie(null, ['designation' => 'Pharmacie Test Prix']);
+
+        $row = DbCommande::query()->create([
+            'code_commande' => 'BDK-PRIX-001',
+            'nom_client' => 'Client Prix',
+            'telephone' => '06 999 88 77',
+            'pharmacie' => 'Test Prix',
+            'medicaments' => 'Médicament A (3 000 F) + Crème solaire (2 000 F)',
+            'quantite' => 1,
+            'montant_produits' => 5000,
+            'ca_medicaments' => 3000,
+            'ca_parapharmacie' => 2000,
+            'frais_livraison' => 500,
+            'total_paye_client' => 5500,
+            'statut' => 'retiree',
+            'source' => DbCommande::SOURCE_IMPORT,
+            'empreinte' => hash('sha256', 'test-prix'),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('db-commandes.integrate', $row))
+            ->assertRedirect();
+
+        $commande = Commande::query()->find($row->fresh()->commande_id);
+        $this->assertNotNull($commande);
+        $this->assertSame(3000.0, (float) $commande->prix_medicaments);
+        $this->assertSame(2000.0, (float) $commande->prix_parapharma);
+        $this->assertSame(5500.0, (float) $commande->prix_total);
+
+        $commande->load('produits');
+        $this->assertGreaterThanOrEqual(2, $commande->produits->count());
+        $pivotSum = $commande->produits->sum(
+            fn ($p) => (float) $p->pivot->prix_unitaire * (int) $p->pivot->quantite,
+        );
+        $this->assertSame(5000.0, round($pivotSum, 2));
     }
 
     public function test_agent_can_view_db_commandes_but_not_import_tab(): void

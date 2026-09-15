@@ -323,4 +323,54 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
                 ],
             ]);
     }
+
+    public function test_store_accepts_multiple_ordonnance_article_files(): void
+    {
+        Storage::fake('local');
+        AppSetting::ensureRowExists()->update([
+            'commande_creation_champs' => [
+                'client_prenom' => true,
+                'client_tel' => true,
+                'client_adresse' => true,
+                'client_arrondissement' => true,
+            ],
+        ]);
+
+        $this->seedRoles();
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+
+        $this->actingAs($admin)
+            ->post('/commandes', [
+                'pharmacie_id' => $pharmacie->id,
+                'client_prenom' => 'Paul',
+                'client_tel' => '0611223344',
+                'client_adresse' => '12 rue test',
+                'client_arrondissement' => Client::ARRONDISSEMENTS[0],
+                'produits' => [
+                    [
+                        'designation' => 'Vitamine C',
+                        'quantite' => 1,
+                        'prix_unitaire' => 2000,
+                    ],
+                ],
+                'ordonnance' => UploadedFile::fake()->image('ord1.jpg', 200, 200),
+                'ordonnances' => [
+                    UploadedFile::fake()->image('article.jpg', 200, 200),
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $commande = Commande::query()->orderByDesc('id')->first();
+        $this->assertNotNull($commande);
+        $this->assertNotNull($commande->ordonnance_id);
+        $this->assertSame(
+            1,
+            CommandePieceJointe::query()
+                ->where('commande_id', $commande->id)
+                ->where('kind', CommandePieceJointe::KIND_ORDONNANCE)
+                ->count()
+        );
+    }
 }

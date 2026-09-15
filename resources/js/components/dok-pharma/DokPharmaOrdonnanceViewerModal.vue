@@ -1,19 +1,42 @@
 <script setup lang="ts">
 import { FileText, RefreshCw, X, ZoomIn, ZoomOut } from 'lucide-vue-next';
-import { watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useImageZoomPan } from '@/composables/useImageZoomPan';
 import { moduleModalSurfaceClass } from '@/lib/bengadokUi';
+
+type OrdonnanceFichier = {
+    file_url?: string | null;
+    is_pdf?: boolean;
+    label?: string;
+};
 
 const props = defineProps<{
     open: boolean;
     url?: string;
     isPdf?: boolean;
     numero?: string;
+    files?: OrdonnanceFichier[];
 }>();
 
 const emit = defineEmits<{
     close: [];
 }>();
+
+const activeIndex = ref(0);
+
+const resolvedFiles = computed((): OrdonnanceFichier[] => {
+    if (props.files && props.files.length > 0) {
+        return props.files;
+    }
+    if (props.url) {
+        return [{ file_url: props.url, is_pdf: props.isPdf, label: 'Ordonnance' }];
+    }
+    return [];
+});
+
+const currentFile = computed(() => resolvedFiles.value[activeIndex.value] ?? null);
+const currentUrl = computed(() => currentFile.value?.file_url ?? '');
+const currentIsPdf = computed(() => Boolean(currentFile.value?.is_pdf));
 
 const {
     zoomPercent,
@@ -33,10 +56,15 @@ watch(
     () => props.open,
     (isOpen) => {
         if (isOpen) {
+            activeIndex.value = 0;
             resetView();
         }
     },
 );
+
+watch(activeIndex, () => {
+    resetView();
+});
 
 function close() {
     resetView();
@@ -70,7 +98,7 @@ function close() {
                         <p
                             class="text-[14px] font-extrabold text-gray-900 dark:text-foreground"
                         >
-                            Ordonnance — Commande {{ numero }}
+                            Ordonnance/article — Commande {{ numero }}
                         </p>
                     </div>
                     <button
@@ -82,7 +110,26 @@ function close() {
                     </button>
                 </div>
                 <div
-                    v-if="!isPdf"
+                    v-if="resolvedFiles.length > 1"
+                    class="flex flex-wrap gap-2 border-b border-gray-100 px-5 py-2 dark:border-border"
+                >
+                    <button
+                        v-for="(fichier, index) in resolvedFiles"
+                        :key="`${fichier.file_url}-${index}`"
+                        type="button"
+                        class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                        :class="
+                            index === activeIndex
+                                ? 'bg-[#459cd1] text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        "
+                        @click="activeIndex = index"
+                    >
+                        {{ fichier.label || `Fichier ${index + 1}` }}
+                    </button>
+                </div>
+                <div
+                    v-if="!currentIsPdf"
                     class="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-2 dark:border-border dark:bg-muted/40"
                 >
                     <button
@@ -113,17 +160,17 @@ function close() {
                     </button>
                 </div>
                 <div
-                    v-if="url && isPdf"
+                    v-if="currentUrl && currentIsPdf"
                     class="flex min-h-[250px] flex-1 items-center justify-center overflow-auto bg-gray-100 p-4 dark:bg-muted/30"
                 >
                     <iframe
-                        :src="`${url}#toolbar=1`"
+                        :src="`${currentUrl}#toolbar=1`"
                         class="h-[min(70vh,520px)] w-full rounded-lg border-0 bg-white shadow"
                         title="Ordonnance PDF"
                     />
                 </div>
                 <div
-                    v-else-if="url"
+                    v-else-if="currentUrl"
                     class="relative h-[min(70vh,520px)] w-full overflow-hidden bg-gray-100 dark:bg-muted/30"
                     :class="
                         canPan
@@ -143,7 +190,7 @@ function close() {
                         class="flex h-full w-full items-center justify-center p-4"
                     >
                         <img
-                            :src="url"
+                            :src="currentUrl"
                             alt="Ordonnance"
                             class="max-h-full max-w-full select-none rounded-lg object-contain shadow"
                             :style="{

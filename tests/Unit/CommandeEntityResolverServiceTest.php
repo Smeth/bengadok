@@ -99,6 +99,61 @@ class CommandeEntityResolverServiceTest extends TestCase
         $this->assertSame('Temesta 2,5mg', $lines[1]['designation']);
     }
 
+    public function test_parse_produit_lines_reads_prices_in_parentheses(): void
+    {
+        $service = app(CommandeEntityResolverService::class);
+
+        $lines = $service->parseProduitLinesFromLegacyRow([
+            'medicaments' => 'Paracétamol (2 500 F) + Vitamine C (1 500 FCFA)',
+            'quantite' => 1,
+            'montant_produits' => 4000,
+        ]);
+
+        $this->assertCount(2, $lines);
+        $this->assertSame(2500.0, $lines[0]['prix_unitaire'] * $lines[0]['quantite']);
+        $this->assertSame(1500.0, $lines[1]['prix_unitaire'] * $lines[1]['quantite']);
+    }
+
+    public function test_parse_produit_lines_splits_on_newlines(): void
+    {
+        $service = app(CommandeEntityResolverService::class);
+
+        $lines = $service->parseProduitLinesFromLegacyRow([
+            'medicaments' => "Produit A\nProduit B\nProduit C",
+            'montant_produits' => 3000,
+        ]);
+
+        $this->assertCount(3, $lines);
+        $this->assertSame(1000.0, $lines[0]['prix_unitaire']);
+    }
+
+    public function test_parse_produit_lines_splits_ca_medicaments_and_parapharmacie(): void
+    {
+        $service = app(CommandeEntityResolverService::class);
+
+        $lines = $service->parseProduitLinesFromLegacyRow([
+            'medicaments' => 'Amoxicilline 500 mg + Gel hydroalcoolique',
+            'quantite' => 2,
+            'montant_produits' => 5500,
+            'ca_medicaments' => 4000,
+            'ca_parapharmacie' => 1500,
+        ]);
+
+        $medTotal = 0.0;
+        $paraTotal = 0.0;
+        foreach ($lines as $line) {
+            $amount = $line['prix_unitaire'] * $line['quantite'];
+            if (($line['type'] ?? null) === 'Parapharmacie') {
+                $paraTotal += $amount;
+            } else {
+                $medTotal += $amount;
+            }
+        }
+
+        $this->assertSame(4000.0, round($medTotal, 2));
+        $this->assertSame(1500.0, round($paraTotal, 2));
+    }
+
     public function test_resolve_pharmacie_creates_missing_pharmacy(): void
     {
         $service = app(CommandeEntityResolverService::class);

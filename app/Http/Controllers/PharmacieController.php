@@ -106,6 +106,7 @@ class PharmacieController extends Controller
                         'telephone' => $pharmacieCredits->telephone,
                         'email' => $pharmacieCredits->email,
                         'de_garde' => $pharmacieCredits->de_garde,
+                        'credits_actif' => (bool) $pharmacieCredits->credits_actif,
                     ];
                 }
             }

@@ -25,7 +25,7 @@ export type FormEnregPayload = {
         prix_unitaire: number;
         type?: string | null;
     }>;
-    ordonnance: File | null;
+    ordonnance: File | File[] | null;
     commentaire: string;
     client_id?: number;
     /** Relance sans nouveau fichier : réutiliser l’ordonnance de cette commande annulée */

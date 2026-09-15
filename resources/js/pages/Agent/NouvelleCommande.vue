@@ -253,7 +253,7 @@ const montantLivraisonId = ref<number | ''>('');
 
 // ─── Ordonnance ───────────────────────────────────────────────────────────────
 
-const ordonnanceFile = ref<File | null>(null);
+const ordonnanceFile = ref<File[]>([]);
 
 // ─── Commentaire ──────────────────────────────────────────────────────────────
 
@@ -265,7 +265,7 @@ const enSubmission = ref(false);
 
 const submitProgressLabel = computed(() => {
     const ov = ordonnanceVerificationSettings.value;
-    if (!ordonnanceFile.value || ov?.enabled === false) {
+    if (!ordonnanceFile.value.length || ov?.enabled === false) {
         return 'Enregistrement de la commande…';
     }
     if (ov?.execution_mode === 'immediate') {
@@ -277,7 +277,7 @@ const submitProgressLabel = computed(() => {
 const showSubmitAnalysisProgress = computed(
     () =>
         enSubmission.value &&
-        ordonnanceFile.value !== null &&
+        ordonnanceFile.value.length > 0 &&
         ordonnanceVerificationSettings.value?.enabled !== false,
 );
 
@@ -360,11 +360,14 @@ function submit() {
         },
     };
 
-    if (ordonnanceFile.value) {
+    if (ordonnanceFile.value.length > 0) {
         const formData = new FormData();
         formData.append('pharmacie_id', String(pharmacieId.value));
         formData.append('produits', JSON.stringify(produitsValides));
-        formData.append('ordonnance', ordonnanceFile.value);
+        formData.append('ordonnance', ordonnanceFile.value[0]);
+        ordonnanceFile.value.slice(1).forEach((file) => {
+            formData.append('ordonnances[]', file);
+        });
         formData.append('client_nouveau', JSON.stringify(clientNouveau));
         if (clientArrondissement.value) {
             formData.append(
@@ -1019,12 +1022,12 @@ function annuler() {
                         </div>
                     </div>
 
-                    <!-- ── Ordonnance + Commentaires ── -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <!-- Ordonnance (FilePond) -->
+                    <!-- ── Ordonnance/article + Commentaires ── -->
+                    <div class="flex flex-col gap-4">
+                        <!-- Ordonnance/article -->
                         <div class="flex flex-col gap-2">
                             <label class="text-sm font-medium text-gray-700"
-                                >Ordonnance
+                                >Ordonnance/article
                                 <span
                                     v-if="isFieldRequired('ordonnance')"
                                     class="text-red-600"
@@ -1033,7 +1036,8 @@ function annuler() {
                             >
                             <OrdonnanceUppy
                                 v-model="ordonnanceFile"
-                                label="Joindre un fichier"
+                                variant="inline"
+                                multiple
                                 show-analysis-notice
                                 :analysis-notice="analysisNoticeText"
                             />

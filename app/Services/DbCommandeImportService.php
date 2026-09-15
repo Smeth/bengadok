@@ -248,6 +248,13 @@ class DbCommandeImportService
             return null;
         }
 
+        if ($payload['montant_produits'] === null) {
+            $caSum = (float) ($payload['ca_medicaments'] ?? 0) + (float) ($payload['ca_parapharmacie'] ?? 0);
+            if ($caSum > 0) {
+                $payload['montant_produits'] = $caSum;
+            }
+        }
+
         return $payload;
     }
 

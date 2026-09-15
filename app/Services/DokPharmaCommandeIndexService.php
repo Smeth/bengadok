@@ -155,13 +155,43 @@ class DokPharmaCommandeIndexService
             'ordonnance_id' => $c->ordonnance_id,
             'ordonnance_url' => $c->ordonnance?->file_url,
             'ordonnance_is_pdf' => (bool) ($c->ordonnance?->is_pdf ?? false),
+            'ordonnance_fichiers' => $this->ordonnanceFichiersPayload($c),
             'commentaire' => $c->commentaire,
             'commentaire_pharmacie' => $c->commentaire_pharmacie,
             'prix_medicaments' => (float) ($c->prix_medicaments ?? 0),
             'pieces_jointes' => $c->piecesJointes
+                ->reject(fn (CommandePieceJointe $pj) => $pj->isOrdonnanceKind())
                 ->map(fn (CommandePieceJointe $pj) => $pj->toFrontendArray())
                 ->values()
                 ->all(),
         ];
+    }
+
+    /**
+     * @return list<array{file_url: string|null, is_pdf: bool, label: string}>
+     */
+    private function ordonnanceFichiersPayload(Commande $c): array
+    {
+        $files = [];
+        if ($c->ordonnance?->file_url) {
+            $files[] = [
+                'file_url' => $c->ordonnance->file_url,
+                'is_pdf' => (bool) $c->ordonnance->is_pdf,
+                'label' => 'Ordonnance',
+            ];
+        }
+
+        foreach ($c->piecesJointes as $pj) {
+            if (! $pj->isOrdonnanceKind()) {
+                continue;
+            }
+            $files[] = [
+                'file_url' => $pj->file_url,
+                'is_pdf' => (bool) $pj->is_pdf,
+                'label' => $pj->label ?: ($pj->original_name ?: 'Ordonnance/article'),
+            ];
+        }
+
+        return $files;
     }
 }

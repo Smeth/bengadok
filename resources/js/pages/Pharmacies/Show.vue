@@ -536,6 +536,7 @@ function creerUtilisateur() {
                     telephone: pharmacie.telephone,
                     email: pharmacie.email,
                     de_garde: pharmacie.de_garde,
+                    credits_actif: pharmacie.credits_actif,
                 }"
                 :credit-gestion="(creditGestion as any)"
             />

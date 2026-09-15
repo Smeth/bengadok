@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Commande;
 use App\Support\CommandeCreationFields;
+use App\Support\CommandeOrdonnanceUploads;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -41,7 +42,7 @@ class UpdateCommandeRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            if ($this->file('ordonnance')) {
+            if (CommandeOrdonnanceUploads::fromRequest($this) !== []) {
                 return;
             }
 

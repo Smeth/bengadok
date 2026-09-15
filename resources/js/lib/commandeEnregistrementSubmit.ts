@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/vue3';
+import { ordonnanceFilesFromValue } from '@/lib/commandeCreationFields';
 import type { FormEnregPayload } from '@/lib/commandeEnregistrementTypes';
 import { validateFileSize } from '@/lib/uploadLimits';
 import { parseApiValidationErrors } from '@/lib/validationErrors';
@@ -75,30 +76,44 @@ type SubmitCallbacks = {
 };
 
 function rejectOversizedOrdonnance(
-    file: File,
+    files: File[],
     callbacks: SubmitCallbacks,
 ): boolean {
-    const sizeError = validateFileSize(file);
-    if (!sizeError) {
-        return false;
+    for (const file of files) {
+        const sizeError = validateFileSize(file);
+        if (sizeError) {
+            callbacks.onError({ ordonnance: sizeError });
+            return true;
+        }
     }
 
-    callbacks.onError({ ordonnance: sizeError });
-    return true;
+    return false;
+}
+
+function appendOrdonnanceFiles(formData: FormData, files: File[]): void {
+    if (files.length === 0) {
+        return;
+    }
+
+    formData.append('ordonnance', files[0]);
+    files.slice(1).forEach((file) => {
+        formData.append('ordonnances[]', file);
+    });
 }
 
 export function submitCommandeEnregistrement(
     payload: FormEnregPayload,
     callbacks: SubmitCallbacks,
 ): void {
-    if (payload.ordonnance) {
-        if (rejectOversizedOrdonnance(payload.ordonnance, callbacks)) {
+    const ordonnanceFiles = ordonnanceFilesFromValue(payload.ordonnance);
+    if (ordonnanceFiles.length > 0) {
+        if (rejectOversizedOrdonnance(ordonnanceFiles, callbacks)) {
             return;
         }
 
         const formData = new FormData();
         appendEnregistrementFields(formData, payload);
-        formData.append('ordonnance', payload.ordonnance);
+        appendOrdonnanceFiles(formData, ordonnanceFiles);
 
         router.post('/commandes', formData, {
             preserveScroll: true,
@@ -160,8 +175,9 @@ export function submitCommandeRelance(
         data.client_arrondissement = payload.client_arrondissement;
     }
 
-    if (payload.ordonnance) {
-        if (rejectOversizedOrdonnance(payload.ordonnance, callbacks)) {
+    const ordonnanceFiles = ordonnanceFilesFromValue(payload.ordonnance);
+    if (ordonnanceFiles.length > 0) {
+        if (rejectOversizedOrdonnance(ordonnanceFiles, callbacks)) {
             return;
         }
 
@@ -190,7 +206,7 @@ export function submitCommandeRelance(
             formData.append('beneficiaire', payload.beneficiaire);
         }
         formData.append('produits', JSON.stringify(payload.produits));
-        formData.append('ordonnance', payload.ordonnance);
+        appendOrdonnanceFiles(formData, ordonnanceFiles);
         if (payload.commentaire) {
             formData.append('commentaire', payload.commentaire);
         }
