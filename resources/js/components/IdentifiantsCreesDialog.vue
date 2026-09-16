@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { Copy } from 'lucide-vue-next';
+import { ref } from 'vue';
 import { Button } from '@/components/ui/button';
+import {
+    showGlobalErrorToast,
+    showGlobalSuccessToast,
+} from '@/lib/globalToast';
 import {
     Dialog,
     DialogContent,
@@ -25,10 +30,36 @@ const emit = defineEmits<{
     'update:open': [value: boolean];
 }>();
 
-function copyCredentials() {
-    navigator.clipboard.writeText(
-        `Identifiant : ${props.username}\nMot de passe : ${props.password}`,
-    );
+const copying = ref(false);
+
+async function copyCredentials() {
+    if (copying.value) {
+        return;
+    }
+    const text = `Identifiant : ${props.username}\nMot de passe : ${props.password}`;
+    copying.value = true;
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            const area = document.createElement('textarea');
+            area.value = text;
+            area.setAttribute('readonly', '');
+            area.style.position = 'fixed';
+            area.style.left = '-9999px';
+            document.body.appendChild(area);
+            area.select();
+            document.execCommand('copy');
+            document.body.removeChild(area);
+        }
+        showGlobalSuccessToast('Identifiants copiés dans le presse-papiers.');
+    } catch {
+        showGlobalErrorToast(
+            'Impossible de copier automatiquement. Sélectionnez le texte ci-dessus.',
+        );
+    } finally {
+        copying.value = false;
+    }
 }
 </script>
 
@@ -53,10 +84,11 @@ function copyCredentials() {
                     type="button"
                     variant="outline"
                     class="border-sky-300 text-sky-700 hover:bg-sky-100"
+                    :disabled="copying"
                     @click="copyCredentials"
                 >
                     <Copy class="mr-2 size-4" />
-                    Copier les identifiants
+                    {{ copying ? 'Copie…' : 'Copier les identifiants' }}
                 </Button>
                 <Button type="button" @click="emit('update:open', false)">
                     Fermer

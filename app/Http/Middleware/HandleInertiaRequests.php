@@ -61,6 +61,12 @@ class HandleInertiaRequests extends Middleware
                 'createdUsername' => fn () => $request->session()->get('createdUsername'),
                 'createdPassword' => fn () => $request->session()->get('createdPassword'),
             ],
+            'features' => Inertia::always(fn () => [
+                'pharmacy_vendeur_self_service' => (bool) config(
+                    'bengadok.features.pharmacy_vendeur_self_service',
+                    false,
+                ),
+            ]),
             'name' => config('app.name'),
             'auth' => [
                 'user' => $user ? [

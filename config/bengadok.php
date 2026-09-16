@@ -39,4 +39,15 @@ return [
         'embed_ll' => env('GOOGLE_MYMAPS_EMBED_LL', '-4.235579039961612,15.264345391882372'),
         'embed_z' => (int) env('GOOGLE_MYMAPS_EMBED_Z', 13),
     ],
+
+    /*
+    | Fonctionnalités activables (prod : laisser false tant que non prêt).
+    */
+    'features' => [
+        /** Gérant : onglet « Vendeurs » et création de vendeurs côté pharmacie. */
+        'pharmacy_vendeur_self_service' => filter_var(
+            env('BENGADOK_PHARMACY_VENDEUR_SELF_SERVICE', false),
+            FILTER_VALIDATE_BOOL
+        ),
+    ],
 ];

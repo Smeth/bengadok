@@ -172,7 +172,7 @@ function openOrdonnance(cmd: DokPharmaCommande) {
                         <p
                             class="text-[13px] font-semibold text-gray-800"
                         >
-                            Ordonnance médicale jointe
+                            Ordonnance Médicale/Articles
                         </p>
                         <p
                             class="text-[11px] text-[#22C55E] font-medium"

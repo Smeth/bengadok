@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\PharmacieUsernameGenerator;
+use App\Support\PharmacyVendeurSelfService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -15,6 +16,8 @@ class PharmacieVendeurController extends Controller
 {
     public function index(Request $request): Response
     {
+        PharmacyVendeurSelfService::ensureEnabled();
+
         $pharmacieId = $request->user()?->pharmacie_id;
         if (! $pharmacieId || ! $request->user()?->hasRole('gerant')) {
             abort(403);
@@ -34,6 +37,8 @@ class PharmacieVendeurController extends Controller
 
     public function store(Request $request)
     {
+        PharmacyVendeurSelfService::ensureEnabled();
+
         $user = $request->user();
         $pharmacieId = $user?->pharmacie_id;
         if (! $pharmacieId || ! $user?->hasRole('gerant')) {

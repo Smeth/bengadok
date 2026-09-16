@@ -81,6 +81,28 @@ class PharmaciePartenaireTest extends TestCase
         $this->assertContains($pharmacie->id, $ids);
     }
 
+    public function test_admin_can_create_pharmacy_user_with_credentials_flash(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie(null, ['est_partenaire' => true]);
+
+        $this->actingAs($admin)
+            ->post("/pharmacies/{$pharmacie->id}/users", [
+                'name' => 'Jean Dupont',
+                'phone' => '+241060000001',
+                'role' => 'gerant',
+                'password' => 'Secret123!',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('createdUsername')
+            ->assertSessionHas('createdPassword', 'Secret123!');
+
+        $this->assertDatabaseHas('users', [
+            'pharmacie_id' => $pharmacie->id,
+            'phone' => '+241060000001',
+        ]);
+    }
+
     public function test_admin_can_toggle_est_partenaire_via_update(): void
     {
         $admin = $this->userWithRole('admin');

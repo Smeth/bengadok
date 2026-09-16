@@ -24,6 +24,7 @@ import {
     SidebarMenuItem,
     SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { useBengadokFeatures } from '@/composables/useBengadokFeatures';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
@@ -31,6 +32,7 @@ import AppLogo from './AppLogo.vue';
 
 const page = usePage();
 const { isCurrentUrl, currentUrl } = useCurrentUrl();
+const { pharmacyVendeurSelfService } = useBengadokFeatures();
 const roles = computed(
     () =>
         (page.props.auth as { user?: { roles?: string[] } })?.user?.roles ?? [],
@@ -94,15 +96,22 @@ const mainNavItems = computed<NavItem[]>(() => {
         ];
     }
     if (isGerant && !isAdmin) {
-        return [
+        const gerantItems: NavItem[] = [
             { title: 'Tableau de bord', href: '/dok-pharma', icon: LayoutGrid },
             {
                 title: 'Commandes',
                 href: '/dok-pharma/commandes',
                 icon: ClipboardList,
             },
-            { title: 'Vendeurs', href: '/pharmacie/vendeurs', icon: UserCog },
         ];
+        if (pharmacyVendeurSelfService.value) {
+            gerantItems.push({
+                title: 'Vendeurs',
+                href: '/pharmacie/vendeurs',
+                icon: UserCog,
+            });
+        }
+        return gerantItems;
     }
     if (isVendeur && !isAdmin) {
         return [

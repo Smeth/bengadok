@@ -17,7 +17,7 @@ class CommandeOrdonnanceFichiers
             $files[] = [
                 'file_url' => $commande->ordonnance->file_url,
                 'is_pdf' => (bool) $commande->ordonnance->is_pdf,
-                'label' => 'Ordonnance',
+                'label' => 'Ordonnance/article',
             ];
         }
 
