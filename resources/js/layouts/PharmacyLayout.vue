@@ -23,6 +23,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import UserMenuContent from '@/components/UserMenuContent.vue';
+import { useBengadokFeatures } from '@/composables/useBengadokFeatures';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 
 /** Aligné sur la sidebar admin : 16rem + mode icône 5rem (app.css) */
@@ -48,6 +49,7 @@ const props = withDefaults(
 
 const page = usePage();
 const { isCurrentUrl } = useCurrentUrl();
+const { pharmacyVendeurSelfService } = useBengadokFeatures();
 
 const pharmacieSelectorOpen = ref(false);
 
@@ -339,7 +341,7 @@ function logout() {
                     </Link>
 
                     <Link
-                        v-if="!isVendeurSeul"
+                        v-if="pharmacyVendeurSelfService && !isVendeurSeul"
                         href="/pharmacie/vendeurs"
                         class="sidebar-menu-btn-react group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150"
                         :class="

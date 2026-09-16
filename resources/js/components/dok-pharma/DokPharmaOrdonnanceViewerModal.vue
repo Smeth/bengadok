@@ -22,14 +22,26 @@ const emit = defineEmits<{
     close: [];
 }>();
 
+const ORDONNANCE_TAB_LABEL = 'Ordonnance/article';
+
 const activeIndex = ref(0);
+
+function tabLabel(_index: number): string {
+    return ORDONNANCE_TAB_LABEL;
+}
 
 const resolvedFiles = computed((): OrdonnanceFichier[] => {
     if (props.files && props.files.length > 0) {
         return props.files;
     }
     if (props.url) {
-        return [{ file_url: props.url, is_pdf: props.isPdf, label: 'Ordonnance' }];
+        return [
+            {
+                file_url: props.url,
+                is_pdf: props.isPdf,
+                label: ORDONNANCE_TAB_LABEL,
+            },
+        ];
     }
     return [];
 });
@@ -123,9 +135,10 @@ function close() {
                                 ? 'bg-[#459cd1] text-white'
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         "
+                        :aria-label="`${ORDONNANCE_TAB_LABEL} — fichier ${index + 1}`"
                         @click="activeIndex = index"
                     >
-                        {{ fichier.label || `Fichier ${index + 1}` }}
+                        {{ tabLabel(index) }}
                     </button>
                 </div>
                 <div

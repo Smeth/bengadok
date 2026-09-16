@@ -25,12 +25,26 @@ class PharmacyRoleAccessTest extends TestCase
 
     public function test_vendeur_cannot_access_vendeurs_management(): void
     {
+        config(['bengadok.features.pharmacy_vendeur_self_service' => true]);
+
         $pharmacie = $this->createPharmacie();
         $vendeur = $this->userWithRole('vendeur', ['pharmacie_id' => $pharmacie->id]);
 
         $this->actingAs($vendeur)
             ->get('/pharmacie/vendeurs')
             ->assertRedirect('/dok-pharma/commandes');
+    }
+
+    public function test_gerant_vendeurs_route_hidden_when_self_service_disabled(): void
+    {
+        config(['bengadok.features.pharmacy_vendeur_self_service' => false]);
+
+        $pharmacie = $this->createPharmacie();
+        $gerant = $this->userWithRole('gerant', ['pharmacie_id' => $pharmacie->id]);
+
+        $this->actingAs($gerant)
+            ->get('/pharmacie/vendeurs')
+            ->assertNotFound();
     }
 
     public function test_vendeur_is_redirected_from_livrees_historique(): void
@@ -78,6 +92,8 @@ class PharmacyRoleAccessTest extends TestCase
         $this->actingAs($gerant)
             ->get('/dok-pharma')
             ->assertOk();
+
+        config(['bengadok.features.pharmacy_vendeur_self_service' => true]);
 
         $this->actingAs($gerant)
             ->get('/pharmacie/vendeurs')

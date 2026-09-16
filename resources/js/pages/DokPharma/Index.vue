@@ -128,7 +128,7 @@ function openOrdonnance(cmd: DokPharmaCommande) {
                     {
                         file_url: cmd.ordonnance_url,
                         is_pdf: cmd.ordonnance_is_pdf ?? false,
-                        label: 'Ordonnance',
+                        label: 'Ordonnance/article',
                     },
                 ]
               : [];
