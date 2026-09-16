@@ -253,9 +253,11 @@ const blockDialogOutsideClose = ref(false);
 const ordonnanceUrlExistante = ref<string | null>(null);
 
 function onDialogDismissOutside(event: { preventDefault: () => void }) {
-    if (blockDialogOutsideClose.value) {
-        event.preventDefault();
-    }
+    event.preventDefault();
+}
+
+function onDialogEscapeKeyDown(event: { preventDefault: () => void }) {
+    event.preventDefault();
 }
 const zoneEnreg = ref<number | ''>('');
 const filtreTypeEnreg = ref<'tous' | 'jour' | 'nuit' | 'garde'>('tous');
@@ -732,6 +734,7 @@ watch(
             @pointer-down-outside="onDialogDismissOutside"
             @focus-outside="onDialogDismissOutside"
             @interact-outside="onDialogDismissOutside"
+            @escape-key-down="onDialogEscapeKeyDown"
         >
             <!-- Header sticky : rounded-t pour épouser le parent (clip par overflow-hidden) -->
             <div

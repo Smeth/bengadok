@@ -542,7 +542,7 @@ function openOrdonnance(cmd: DokPharmaCommande) {
                 >
                     {{
                         cmd.commentaire?.trim() ||
-                        'Aucun commentaire du back-office.'
+                        'Aucun commentaire.'
                     }}
                 </p>
             </div>
