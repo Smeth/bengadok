@@ -17,7 +17,7 @@ import {
     X,
 } from 'lucide-vue-next';
 import { onClickOutside } from '@vueuse/core';
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import {
     moduleDetailPanelClass,
     moduleDetailPanelLgClass,
@@ -42,6 +42,8 @@ type HistoriqueItem = {
     montant: number;
     statut: string;
     statut_label: string;
+    annee?: number;
+    mois_num?: number;
 };
 type CommandeRecente = {
     numero: string;
@@ -269,6 +271,44 @@ function marquerPaye() {
         ? '/dok-pharma/commission/payee'
         : '/dashboard/commission/payee';
     payForm.post(url, { preserveScroll: true });
+}
+
+const ventesDetailPharmacieRef = ref<HTMLElement | null>(null);
+const ventesDetailAdminRef = ref<HTMLElement | null>(null);
+
+function scrollToCommissionDetailSection() {
+    const el = isPharmacie.value
+        ? ventesDetailPharmacieRef.value
+        : ventesDetailAdminRef.value;
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function moisQueryFromHistorique(h: HistoriqueItem): string | null {
+    if (h.annee != null && h.mois_num != null) {
+        return `${h.annee}-${String(h.mois_num).padStart(2, '0')}`;
+    }
+    const match = props.mois_options.find((opt) => opt.label === h.mois);
+    return match?.value ?? null;
+}
+
+function voirDetailCommission(moisCible?: string) {
+    const target = moisCible?.trim() || props.mois;
+    if (target && target !== props.mois) {
+        const url = isPharmacie.value ? '/dok-pharma' : dashboard();
+        router.get(url, dashboardQuery(target), {
+            preserveState: true,
+            onSuccess: () => {
+                nextTick(() => scrollToCommissionDetailSection());
+            },
+        });
+        return;
+    }
+    scrollToCommissionDetailSection();
+}
+
+function voirDetailHistoriqueCommission(h: HistoriqueItem) {
+    const moisValue = moisQueryFromHistorique(h);
+    voirDetailCommission(moisValue ?? undefined);
 }
 
 function submitRecharge() {
@@ -673,6 +713,7 @@ function statutBadgeClass(statut: string): string {
                         <button
                             type="button"
                             class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 dark:border-border dark:bg-input dark:text-foreground dark:hover:bg-muted"
+                            @click="voirDetailCommission()"
                         >
                             <Eye class="size-4" />
                             Voir détails
@@ -696,7 +737,8 @@ function statutBadgeClass(statut: string): string {
         <template v-if="isAdmin">
             <div class="grid gap-6 lg:grid-cols-3">
                 <div
-                    :class="['lg:col-span-2', moduleDetailPanelLgClass]"
+                    ref="ventesDetailAdminRef"
+                    :class="['lg:col-span-2 scroll-mt-24', moduleDetailPanelLgClass]"
                 >
                     <div
                         class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
@@ -1041,8 +1083,10 @@ function statutBadgeClass(statut: string): string {
         <!-- Pharmacie : ventes détaillées + sidebar crédits -->
         <div v-else-if="isPharmacie" class="grid gap-6 lg:grid-cols-3">
             <div
+                ref="ventesDetailPharmacieRef"
                 :class="[
                     creditsActifs ? 'lg:col-span-2' : 'lg:col-span-3',
+                    'scroll-mt-24',
                     moduleDetailPanelLgClass,
                 ]"
             >
@@ -1267,7 +1311,8 @@ function statutBadgeClass(statut: string): string {
                                     <button
                                         type="button"
                                         class="text-gray-500 hover:text-gray-800"
-                                        aria-label="Voir"
+                                        aria-label="Voir le détail des ventes pour ce mois"
+                                        @click="voirDetailHistoriqueCommission(h)"
                                     >
                                         <Eye class="size-4" />
                                     </button>
