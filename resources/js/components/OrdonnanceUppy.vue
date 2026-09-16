@@ -4,7 +4,16 @@ import fr_FR from '@uppy/locales/lib/fr_FR.js';
 import type { UppyFile } from '@uppy/utils';
 import Dashboard from '@uppy/vue/dashboard';
 import { ClipboardList, FileText, Paperclip, Pill, X } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
+import {
+    computed,
+    markRaw,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    shallowRef,
+    toRaw,
+    watch,
+} from 'vue';
 import '@uppy/core/css/style.css';
 import '@uppy/dashboard/css/style.css';
 import { ordonnanceFilesFromValue } from '@/lib/commandeCreationFields';
@@ -58,6 +67,8 @@ const props = withDefaults(
 
 const emit = defineEmits<{
     'update:modelValue': [value: File | File[] | null];
+    /** Évite la fermeture de la modale quand le sélecteur de fichiers natif s’ouvre */
+    'file-picker-active': [active: boolean];
 }>();
 
 const uppy = shallowRef<InstanceType<typeof Uppy> | null>(null);
@@ -97,29 +108,93 @@ function isAllowedType(file: File): boolean {
 }
 
 function fileKey(file: File): string {
-    return `${file.name}:${file.size}:${file.lastModified}`;
+    const raw = toRaw(file);
+    return `${raw.name}:${raw.size}:${raw.lastModified}`;
+}
+
+function previewKeysFromFiles(files: File[]): string {
+    return files
+        .map((file) => fileKey(file))
+        .sort()
+        .join('\0');
+}
+
+function filesMatchInlinePreviews(files: File[]): boolean {
+    return (
+        previewKeysFromFiles(files) ===
+        previewKeysFromFiles(inlinePreviews.value.map((item) => item.file))
+    );
+}
+
+/** Dernière sélection émise — évite d’effacer l’aperçu si le parent n’a pas encore synchronisé le v-model */
+const lastEmittedPreviewKeys = ref<string | null>(null);
+
+function setFilePickerActive(active: boolean) {
+    emit('file-picker-active', active);
 }
 
 function emitFiles(files: File[]) {
+    const rawFiles = files.map((file) => markRaw(toRaw(file)));
+    lastEmittedPreviewKeys.value = previewKeysFromFiles(rawFiles);
     if (props.multiple) {
-        emit('update:modelValue', files);
+        emit('update:modelValue', rawFiles);
         return;
     }
-    emit('update:modelValue', files[0] ?? null);
+    emit('update:modelValue', rawFiles[0] ?? null);
 }
 
 function revokeInlinePreviews() {
     inlinePreviews.value.forEach((item) => URL.revokeObjectURL(item.url));
 }
 
-function setInlineFiles(files: File[]) {
+function rebuildInlinePreviews(files: File[]) {
     revokeInlinePreviews();
-    inlinePreviews.value = files.map((file) => ({
-        file,
-        url: URL.createObjectURL(file),
-        isPdf: isPdfFile(file),
-    }));
+    inlinePreviews.value = files.map((file) => {
+        const raw = markRaw(toRaw(file));
+        return {
+            file: raw,
+            url: URL.createObjectURL(raw),
+            isPdf: isPdfFile(raw),
+        };
+    });
+}
+
+function setInlineFiles(files: File[]) {
+    rebuildInlinePreviews(files);
     emitFiles(files);
+}
+
+function syncInlineFromModelValue(
+    value: File | File[] | null,
+    previousValue: File | File[] | null | undefined,
+) {
+    const files = ordonnanceFilesFromValue(value);
+    const previousFiles = ordonnanceFilesFromValue(previousValue);
+
+    if (files.length === 0) {
+        if (inlinePreviews.value.length === 0) {
+            lastEmittedPreviewKeys.value = null;
+            return;
+        }
+        const localKeys = previewKeysFromFiles(
+            inlinePreviews.value.map((item) => item.file),
+        );
+        if (
+            previousFiles.length === 0 &&
+            lastEmittedPreviewKeys.value === localKeys
+        ) {
+            return;
+        }
+        revokeInlinePreviews();
+        inlinePreviews.value = [];
+        lastEmittedPreviewKeys.value = null;
+        return;
+    }
+
+    lastEmittedPreviewKeys.value = null;
+    if (!filesMatchInlinePreviews(files)) {
+        rebuildInlinePreviews(files);
+    }
 }
 
 function addNativeFiles(list: FileList | File[]) {
@@ -167,6 +242,17 @@ function onNativeInputChange(event: Event) {
         addNativeFiles(input.files);
     }
     input.value = '';
+    setFilePickerActive(false);
+}
+
+function openNativePicker() {
+    setFilePickerActive(true);
+    nativeInputRef.value?.click();
+    const onWindowFocus = () => {
+        window.removeEventListener('focus', onWindowFocus);
+        window.setTimeout(() => setFilePickerActive(false), 300);
+    };
+    window.addEventListener('focus', onWindowFocus);
 }
 
 function removeInlineFile(index: number) {
@@ -213,6 +299,7 @@ function openFilePickerFromCard(): void {
 
 onMounted(() => {
     if (isInline.value) {
+        syncInlineFromModelValue(props.modelValue, undefined);
         return;
     }
 
@@ -257,17 +344,15 @@ onBeforeUnmount(() => {
 
 watch(
     () => props.modelValue,
-    (value) => {
-        if (ordonnanceFilesFromValue(value).length > 0) return;
+    (value, previousValue) => {
         if (isInline.value) {
-            if (inlinePreviews.value.length > 0) {
-                revokeInlinePreviews();
-                inlinePreviews.value = [];
-            }
+            syncInlineFromModelValue(value, previousValue);
             return;
         }
+        if (ordonnanceFilesFromValue(value).length > 0) return;
         clearFiles();
     },
+    { flush: 'post' },
 );
 </script>
 
@@ -311,34 +396,45 @@ watch(
                 :multiple="multiple"
                 @change="onNativeInputChange"
             />
-            <div class="flex flex-wrap items-start gap-2">
-                <label
-                    :for="nativeInputId"
+            <div class="flex flex-wrap items-start gap-3">
+                <button
+                    type="button"
                     :class="[
-                        'inline-flex h-20 shrink-0 cursor-pointer items-center gap-1.5 self-center rounded-lg border border-[#cbd5e1] bg-[#f8fafc] px-3 text-sm font-semibold text-[#475569] hover:bg-[#f1f5f9]',
+                        'inline-flex h-24 shrink-0 cursor-pointer items-center gap-1.5 self-center rounded-lg border border-[#cbd5e1] bg-[#f8fafc] px-3 text-sm font-semibold text-[#475569] hover:bg-[#f1f5f9]',
                         moduleTabFocusClass,
                     ]"
+                    @click.stop.prevent="openNativePicker"
                 >
                     <Paperclip class="size-4" />
                     Ajouter
-                </label>
+                </button>
                 <p
                     v-if="inlinePreviews.length === 0"
                     class="self-center text-xs text-[#94a3b8]"
                 >
                     JPG, PNG, GIF, WebP ou PDF — plusieurs fichiers
                 </p>
+                <p
+                    v-else
+                    class="w-full text-xs font-medium text-[#64748b]"
+                >
+                    {{ inlinePreviews.length }} fichier{{
+                        inlinePreviews.length > 1 ? 's' : ''
+                    }}
+                    — aperçu ci-dessous
+                </p>
                 <div
                     v-for="(item, index) in inlinePreviews"
-                    :key="`${item.file.name}-${index}`"
-                    class="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-[#e2e8f0] bg-[#f8fafc]"
+                    :key="`${fileKey(item.file)}-${index}`"
+                    class="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-[#e2e8f0] bg-[#f8fafc] shadow-sm"
                 >
-                    <iframe
+                    <div
                         v-if="item.isPdf"
-                        :src="`${item.url}#toolbar=0`"
-                        class="pointer-events-none h-full w-full border-0"
-                        title="Aperçu PDF"
-                    />
+                        class="flex h-full w-full flex-col items-center justify-center gap-1 bg-[#eef2ff] text-[#475569]"
+                    >
+                        <FileText class="size-7" />
+                        <span class="px-1 text-[9px] font-bold">PDF</span>
+                    </div>
                     <img
                         v-else
                         :src="item.url"
@@ -350,13 +446,6 @@ watch(
                     >
                         {{ item.file.name }}
                     </div>
-                    <span
-                        v-if="item.isPdf"
-                        class="pointer-events-none absolute left-1 top-1 inline-flex items-center gap-0.5 rounded bg-white/90 px-1 py-0.5 text-[9px] font-bold text-[#475569]"
-                    >
-                        <FileText class="size-3" />
-                        PDF
-                    </span>
                     <button
                         type="button"
                         class="absolute right-0.5 top-0.5 inline-flex size-5 items-center justify-center rounded-full bg-black/70 text-white hover:bg-[#dc3545]"

@@ -278,7 +278,7 @@ function formatDate(d: string) {
                             class="max-w-0 min-w-0 py-3 pl-2 pr-3 align-middle"
                         >
                             <span
-                                class="inline-block max-w-full min-w-0 rounded-[10px] px-2 py-1.5 text-center text-[12px] font-bold leading-snug break-words whitespace-normal"
+                                class="inline-block max-w-full min-w-0 rounded-[10px] px-2 py-1.5 text-center text-[12px] font-bold leading-snug whitespace-nowrap"
                                 :style="commandeStatutBadgeStyle(cmd.status)"
                                 :title="commandeStatutLabel(cmd.status)"
                             >
