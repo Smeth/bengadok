@@ -16,7 +16,7 @@ import {
     Link2,
     FileText,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, shallowRef } from 'vue';
 import InputError from '@/components/InputError.vue';
 import OrdonnanceAnalysisProgressBar from '@/components/OrdonnanceAnalysisProgressBar.vue';
 import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
@@ -253,7 +253,7 @@ const montantLivraisonId = ref<number | ''>('');
 
 // ─── Ordonnance ───────────────────────────────────────────────────────────────
 
-const ordonnanceFile = ref<File[]>([]);
+const ordonnanceFile = shallowRef<File[]>([]);
 
 // ─── Commentaire ──────────────────────────────────────────────────────────────
 

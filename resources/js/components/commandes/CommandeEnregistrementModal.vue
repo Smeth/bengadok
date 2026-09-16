@@ -13,7 +13,7 @@ import {
     ShoppingBag,
     X,
 } from 'lucide-vue-next';
-import { computed, ref, unref, watch } from 'vue';
+import { computed, ref, shallowRef, unref, watch } from 'vue';
 import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -236,7 +236,6 @@ const form = ref({
     montant_livraison_id: '',
     produits: [ligneProduitVide()] as ProduitEnreg[],
     produitsParapharma: [ligneProduitVide()] as ProduitEnreg[],
-    ordonnance: [] as File[],
     commentaire: '',
     mode_paiement_id: '',
     livreur_id: '',
@@ -246,8 +245,18 @@ const form = ref({
 });
 
 const errors = ref<Record<string, string>>({});
+/** Fichiers ordonnance/article (hors objet réactif profond pour préserver les aperçus) */
+const ordonnanceFiles = shallowRef<File[]>([]);
+/** Empêche la modale de se fermer quand le sélecteur de fichiers natif s’ouvre */
+const blockDialogOutsideClose = ref(false);
 /** Fichier déjà enregistré (relance) — affichage tant qu’aucun nouveau fichier n’est choisi */
 const ordonnanceUrlExistante = ref<string | null>(null);
+
+function onDialogDismissOutside(event: { preventDefault: () => void }) {
+    if (blockDialogOutsideClose.value) {
+        event.preventDefault();
+    }
+}
 const zoneEnreg = ref<number | ''>('');
 const filtreTypeEnreg = ref<'tous' | 'jour' | 'nuit' | 'garde'>('tous');
 const searchPharmacieEnreg = ref('');
@@ -380,7 +389,6 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
         produitsParapharma: parapharma.length
             ? parapharma
             : [ligneProduitVide()],
-        ordonnance: [],
         commentaire: '',
         mode_paiement_id: '',
         livreur_id: '',
@@ -388,6 +396,7 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
         date_commande: '',
         heurs_commande: '',
     };
+    ordonnanceFiles.value = [];
     ordonnanceUrlExistante.value = cmd.ordonnance?.file_url?.trim() || null;
     const ph = cmd.pharmacie;
     if (ph?.id && pharmaciesList.value.length) {
@@ -495,7 +504,6 @@ function resetForm() {
         montant_livraison_id: '',
         produits: [ligneProduitVide()],
         produitsParapharma: [ligneProduitVide()],
-        ordonnance: [],
         commentaire: '',
         mode_paiement_id: '',
         livreur_id: '',
@@ -503,6 +511,7 @@ function resetForm() {
         date_commande: '',
         heurs_commande: '',
     };
+    ordonnanceFiles.value = [];
     zoneEnreg.value = '';
     filtreTypeEnreg.value = 'tous';
     searchPharmacieEnreg.value = '';
@@ -518,6 +527,7 @@ function close() {
 function onDialogOpenChange(open: boolean) {
     emit('update:open', open);
     if (!open) {
+        blockDialogOutsideClose.value = false;
         resetForm();
     }
 }
@@ -526,7 +536,7 @@ function onSubmit() {
     const skipOrdonnanceIfReused =
         props.mode === 'relance' &&
         !!props.commande?.id &&
-        form.value.ordonnance.length === 0 &&
+        ordonnanceFiles.value.length === 0 &&
         !!ordonnanceUrlExistante.value;
 
     const err: Record<string, string> = {
@@ -540,7 +550,7 @@ function onSubmit() {
                 client_sexe: form.value.client_sexe,
                 beneficiaire: form.value.beneficiaire,
                 montant_livraison_id: form.value.montant_livraison_id,
-                ordonnance: form.value.ordonnance,
+                ordonnance: ordonnanceFiles.value,
                 commentaire: form.value.commentaire,
             },
             {
@@ -650,7 +660,7 @@ function onSubmit() {
             ? form.value.montant_livraison_id || undefined
             : undefined,
         produits: produitsValides,
-        ordonnance: form.value.ordonnance,
+        ordonnance: ordonnanceFiles.value,
         commentaire: form.value.commentaire || '',
         mode_paiement_id: props.showAgentFields
             ? form.value.mode_paiement_id || undefined
@@ -665,7 +675,7 @@ function onSubmit() {
     if (
         props.mode === 'relance' &&
         props.commande?.id &&
-        !form.value.ordonnance.length &&
+        !ordonnanceFiles.value.length &&
         ordonnanceUrlExistante.value
     ) {
         payload.reutiliser_ordonnance_commande_id = props.commande.id;
@@ -682,12 +692,11 @@ function onSubmit() {
     emit('submit', payload);
 }
 
-watch(
-    () => form.value.ordonnance,
-    (f) => {
-        if (f) ordonnanceUrlExistante.value = null;
-    },
-);
+watch(ordonnanceFiles, (files) => {
+    if (files.length > 0) {
+        ordonnanceUrlExistante.value = null;
+    }
+});
 
 watch(
     () => props.open,
@@ -720,6 +729,9 @@ watch(
         <DialogContent
             :class="commandeModalShellClass"
             :show-close-button="false"
+            @pointer-down-outside="onDialogDismissOutside"
+            @focus-outside="onDialogDismissOutside"
+            @interact-outside="onDialogDismissOutside"
         >
             <!-- Header sticky : rounded-t pour épouser le parent (clip par overflow-hidden) -->
             <div
@@ -1959,7 +1971,7 @@ watch(
                                         !(
                                             mode === 'relance' &&
                                             ordonnanceUrlExistante &&
-                                            !form.ordonnance.length
+                                            !ordonnanceFiles.length
                                         )
                                     "
                                     class="text-[#dc3545]"
@@ -1968,7 +1980,7 @@ watch(
                             >
                             <p
                                 v-if="
-                                    ordonnanceUrlExistante && !form.ordonnance.length
+                                    ordonnanceUrlExistante && !ordonnanceFiles.length
                                 "
                                 class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
                             >
@@ -1985,9 +1997,12 @@ watch(
                                 remplacer (facultatif).
                             </p>
                             <OrdonnanceUppy
-                                v-model="form.ordonnance"
+                                v-model="ordonnanceFiles"
                                 variant="inline"
                                 multiple
+                                @file-picker-active="
+                                    blockDialogOutsideClose = $event
+                                "
                             />
                             <p
                                 v-if="errors.ordonnance"

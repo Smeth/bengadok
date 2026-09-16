@@ -68,6 +68,13 @@ class CommandeService
 
             $this->storeExtraOrdonnanceFiles($commande, $extraOrdonnanceFiles);
 
+            if ($extraOrdonnanceFiles !== []) {
+                BroadcastCommandeNotificationTargets::dispatchForCommande(
+                    $commande->fresh(),
+                    force: true,
+                );
+            }
+
             return $commande->fresh();
         });
     }
@@ -186,6 +193,10 @@ class CommandeService
 
             if ($extraOrdonnanceFiles !== []) {
                 $this->replaceExtraOrdonnanceFiles($commande, $extraOrdonnanceFiles);
+                BroadcastCommandeNotificationTargets::dispatchForCommande(
+                    $commande->fresh(),
+                    force: true,
+                );
             }
 
             return $commande->fresh();

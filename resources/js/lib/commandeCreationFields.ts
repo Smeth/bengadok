@@ -9,14 +9,31 @@ export type CommandeCreationFieldDefinition = {
     contexts: CommandeCreationContext[];
 };
 
+export function isFileLike(value: unknown): value is File {
+    if (value instanceof File) {
+        return true;
+    }
+
+    if (typeof value !== 'object' || value === null) {
+        return false;
+    }
+
+    const candidate = value as File;
+    return (
+        typeof candidate.name === 'string' &&
+        typeof candidate.size === 'number' &&
+        typeof candidate.arrayBuffer === 'function'
+    );
+}
+
 export function ordonnanceFilesFromValue(
     value: unknown,
 ): File[] {
     if (Array.isArray(value)) {
-        return value.filter((file): file is File => file instanceof File);
+        return value.filter(isFileLike);
     }
 
-    return value instanceof File ? [value] : [];
+    return isFileLike(value) ? [value] : [];
 }
 
 export function primaryOrdonnanceFile(value: unknown): File | null {

@@ -4,14 +4,19 @@ namespace App\Observers;
 
 use App\Models\Commande;
 use App\Services\BroadcastCommandeNotificationTargets;
+use App\Support\CommandePharmacyBroadcastFields;
 
 class CommandeObserver
 {
     public function saved(Commande $commande): void
     {
-        $champsNotification = ['status', 'status_pharmacie', 'pharmacie_id'];
+        if ($commande->wasRecentlyCreated) {
+            BroadcastCommandeNotificationTargets::dispatchForCommande($commande);
 
-        if ($commande->wasRecentlyCreated || $commande->wasChanged($champsNotification)) {
+            return;
+        }
+
+        if ($commande->wasChanged(CommandePharmacyBroadcastFields::FIELDS)) {
             BroadcastCommandeNotificationTargets::dispatchForCommande($commande);
         }
     }

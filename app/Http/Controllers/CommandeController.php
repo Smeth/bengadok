@@ -21,6 +21,7 @@ use App\Services\CommandeMontantCalculator;
 use App\Services\CommandeReferentielsService;
 use App\Services\CommandeService;
 use App\Services\PharmacieProximiteService;
+use App\Support\CommandeOrdonnanceFichiers;
 use App\Support\CommandeOrdonnanceUploads;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -174,10 +175,15 @@ class CommandeController extends Controller
                 ->with('error', 'Seules les commandes « nouvelle » ou « en attente » peuvent être modifiées.');
         }
 
-        $commande->load(['client', 'pharmacie', 'produits', 'ordonnance.verification', 'modePaiement', 'montantLivraison']);
+        $commande->load([
+            'client', 'pharmacie', 'produits', 'ordonnance.verification',
+            'modePaiement', 'montantLivraison', 'piecesJointes',
+        ]);
 
         return Inertia::render('Commandes/Edit', [
-            'commande' => $commande,
+            'commande' => array_merge($commande->toArray(), [
+                'ordonnance_fichiers' => CommandeOrdonnanceFichiers::forCommande($commande),
+            ]),
             'pharmacies' => Pharmacie::with('zone')->partenaires()->get(),
             'modesPaiement' => ModePaiement::all(),
             'arrondissements' => Client::ARRONDISSEMENTS,

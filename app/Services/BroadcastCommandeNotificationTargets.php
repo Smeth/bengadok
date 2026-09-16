@@ -15,6 +15,9 @@ class BroadcastCommandeNotificationTargets
 
     private static bool $unavailableThisRequest = false;
 
+    /** @var array<int, true> Au plus une diffusion par commande et par requête HTTP (sauf force). */
+    private static array $dispatchedForCommandeIds = [];
+
     /**
      * Coupe les notifications temps réel (ex. import historique en lot).
      */
@@ -33,13 +36,26 @@ class BroadcastCommandeNotificationTargets
     {
         self::$silenceDepth = 0;
         self::$unavailableThisRequest = false;
+        self::$dispatchedForCommandeIds = [];
     }
 
     /**
      * Après création / mise à jour d’une commande (événement Eloquent).
+     *
+     * @param  bool  $force  Relance même si déjà diffusé dans cette requête (ex. pièces jointes ordonnance).
      */
-    public static function dispatchForCommande(Commande $commande): void
+    public static function dispatchForCommande(Commande $commande, bool $force = false): void
     {
+        $commandeId = (int) $commande->id;
+        if ($commandeId === 0) {
+            return;
+        }
+
+        if (! $force && isset(self::$dispatchedForCommandeIds[$commandeId])) {
+            return;
+        }
+
+        self::$dispatchedForCommandeIds[$commandeId] = true;
         self::broadcastToUserIds(self::recipientUserIdsForCommande($commande));
     }
 

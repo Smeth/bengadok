@@ -141,7 +141,7 @@ export type PharmacieOption = {
 export const STATUTS_COMMANDE = [
     {
         key: 'nouvelle',
-        label: 'Nouvelles Commandes',
+        label: 'Nouvelle',
         statsKey: 'nouvelles',
         color: '#459cd1',
         textColor: 'white',

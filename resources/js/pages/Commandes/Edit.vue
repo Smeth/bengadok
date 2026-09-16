@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ChevronDown, FileEdit, Pill, X } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, shallowRef, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import OrdonnanceAnalysisProgressBar from '@/components/OrdonnanceAnalysisProgressBar.vue';
-import OrdonnanceFilePreview from '@/components/OrdonnanceFilePreview.vue';
 import OrdonnanceUppy from '@/components/OrdonnanceUppy.vue';
+import OrdonnanceViewer from '@/components/OrdonnanceViewer.vue';
 import PharmacieSearchPicker from '@/components/PharmacieSearchPicker.vue';
 import BackLink from '@/components/ui/BackLink.vue';
 import { Label } from '@/components/ui/label';
@@ -61,6 +61,11 @@ const props = defineProps<{
             file_url?: string | null;
             is_pdf?: boolean;
         } | null;
+        ordonnance_fichiers?: Array<{
+            file_url: string | null;
+            is_pdf: boolean;
+            label: string;
+        }>;
     };
     pharmacies: Array<{
         id: number;
@@ -126,7 +131,7 @@ const beneficiaireOptions = computed(() => {
 });
 const commentaire = ref(props.commande.commentaire ?? '');
 const modePaiementId = ref(props.commande.mode_paiement?.id ?? '');
-const ordonnanceFile = ref<File[]>([]);
+const ordonnanceFile = shallowRef<File[]>([]);
 const enSubmission = ref(false);
 
 const dateHeureAffichee = computed(() =>
@@ -145,9 +150,27 @@ const {
 
 const sansClientExistant = computed(() => !clientId.value);
 
+const ordonnanceFichiersEnregistres = computed(() => {
+    const list = props.commande.ordonnance_fichiers ?? [];
+    if (list.length > 0) {
+        return list.filter((f) => Boolean(f.file_url));
+    }
+    const url = props.commande.ordonnance?.file_url;
+    if (!url) {
+        return [];
+    }
+    return [
+        {
+            file_url: url,
+            is_pdf: Boolean(props.commande.ordonnance?.is_pdf),
+            label: 'Ordonnance',
+        },
+    ];
+});
+
 const skipOrdonnanceIfExisting = computed(
     () =>
-        Boolean(props.commande.ordonnance?.id) &&
+        ordonnanceFichiersEnregistres.value.length > 0 &&
         ordonnanceFile.value.length === 0,
 );
 
@@ -972,25 +995,42 @@ function submit() {
                                 — facultatif
                             </span>
                         </p>
-                        <p
+                        <div
                             v-if="
-                                commande.ordonnance?.file_url &&
+                                ordonnanceFichiersEnregistres.length &&
                                 !ordonnanceFile.length
                             "
-                            class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+                            class="mb-3 space-y-3"
                         >
-                            Ordonnance déjà enregistrée —
-                            <a
-                                :href="commande.ordonnance.file_url"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="font-medium text-amber-950 underline underline-offset-2 hover:text-amber-800"
+                            <p
+                                class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
                             >
-                                Ouvrir l'ordonnance
-                            </a>
-                            — ajoutez un fichier ci-dessous pour la remplacer
-                            (facultatif).
-                        </p>
+                                Fichier(s) déjà enregistré(s) — ajoutez un
+                                fichier ci-dessous pour remplacer
+                                (facultatif).
+                            </p>
+                            <div
+                                class="flex flex-wrap gap-4"
+                            >
+                                <div
+                                    v-for="(fichier, index) in ordonnanceFichiersEnregistres"
+                                    :key="`${fichier.file_url}-${index}`"
+                                    class="w-full min-w-[8rem] max-w-xs shrink-0 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-2"
+                                >
+                                    <p
+                                        class="mb-2 truncate px-1 text-xs font-medium text-[#64748b]"
+                                    >
+                                        {{ fichier.label }}
+                                    </p>
+                                    <OrdonnanceViewer
+                                        v-if="fichier.file_url"
+                                        :file-url="fichier.file_url"
+                                        :is-pdf="fichier.is_pdf"
+                                        max-height="10rem"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                         <p
                             class="mb-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-950"
                         >
@@ -1006,12 +1046,6 @@ function submit() {
                             class="mt-2"
                             :visible="showSubmitAnalysisProgress"
                             :label="submitProgressLabel"
-                        />
-                        <OrdonnanceFilePreview
-                            v-if="ordonnanceFile[0]"
-                            :file="ordonnanceFile[0]"
-                            class="mt-3"
-                            max-height="14rem"
                         />
                     </section>
 
