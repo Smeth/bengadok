@@ -368,7 +368,8 @@ function fillFromCommande(cmd: NonNullable<typeof props.commande>) {
             quantite: p.pivot?.quantite ?? 1,
             prix_unitaire: Number(p.pivot?.prix_unitaire) ?? 0,
         };
-        if (isParapharmaType(p.type, parapharmaTypesList.value)) {
+        const typeLigne = p.pivot?.type ?? p.type ?? null;
+        if (isParapharmaType(typeLigne, parapharmaTypesList.value)) {
             parapharma.push(base);
         } else {
             medicaments.push(base);
