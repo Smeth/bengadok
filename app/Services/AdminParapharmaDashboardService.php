@@ -28,7 +28,7 @@ class AdminParapharmaDashboardService
         $this->pharmacieId = $pharmacieId;
         $cfg = $this->config();
         $ref = $this->resolveMoisReference($moisParam);
-        $vuePeriode = in_array($vuePeriode, ['mois', 'semaine'], true) ? $vuePeriode : 'mois';
+        $vuePeriode = in_array($vuePeriode, ['mois', 'semaine', 'global'], true) ? $vuePeriode : 'mois';
 
         $parapharmaActif = true;
         $parapharmaInactifRaison = null;
@@ -49,16 +49,25 @@ class AdminParapharmaDashboardService
             }
         }
 
-        [$debutMois, $finMois] = AppSetting::parapharmaPeriodeBounds($ref);
-        [$debut, $finPeriode] = $this->resolvePeriodeBounds($ref, $vuePeriode);
+        [$debutMoisCommission, $finMoisCommission] = AppSetting::parapharmaPeriodeBounds($ref);
+        [$debutStats, $finStats] = $vuePeriode === 'global'
+            ? $this->statsPeriodeGlobale()
+            : AppSetting::parapharmaPeriodeBounds($ref);
+        [$debut, $finPeriode] = $vuePeriode === 'global'
+            ? [$debutStats, $finStats]
+            : $this->resolvePeriodeBounds($ref, $vuePeriode);
 
-        $caParapharma = $this->sommeCaParapharma($debutMois, $finMois);
-        $caMedicaments = $this->sommeCaMedicaments($debutMois, $finMois);
-        $montantCommission = $this->montantCommissionPeriode($debutMois, $finMois, $cfg);
+        $caParapharma = $this->sommeCaParapharma($debutStats, $finStats);
+        $caMedicaments = $this->sommeCaMedicaments($debutStats, $finStats);
+        $montantCommissionMois = $this->montantCommissionPeriode($debutMoisCommission, $finMoisCommission, $cfg);
 
-        $periode = $this->syncCommissionPeriode($ref, $montantCommission);
+        $periode = $this->syncCommissionPeriode($ref, $montantCommissionMois);
 
-        $nbCommandes = $this->nbCommandesTotal($debutMois, $finMois);
+        $montantCommissionKpi = $vuePeriode === 'global'
+            ? (int) round($caParapharma * $cfg['commission_percent'] / 100)
+            : $montantCommissionMois;
+
+        $nbCommandes = $this->nbCommandesTotal($debutStats, $finStats);
 
         $creditsUtilises = $this->nbDeductionsPeriode($debut, $finPeriode);
         $creditsDisponibles = $this->pharmacieId !== null
@@ -68,8 +77,8 @@ class AdminParapharmaDashboardService
         $creditsConsommesTotal = $this->totalDeductions();
 
         $ventesLignes = $this->ventesParLigne(
-            $debutMois,
-            $finMois,
+            $debutStats,
+            $finStats,
             $cfg['credit_seuil_medicament_xaf']
         );
 
@@ -84,12 +93,12 @@ class AdminParapharmaDashboardService
         $historique = $this->historiqueCommissions($ref, $cfg);
 
         $commissionsParPharmacie = $this->pharmacieId === null
-            ? $this->commissionsParPharmacie($debutMois, $finMois, $cfg, $ref)
+            ? $this->commissionsParPharmacie($debutStats, $finStats, $cfg, $ref, $vuePeriode === 'global')
             : [];
 
         $commandesRecentes = $this->commandesRecentes(
-            $debutMois,
-            $finMois,
+            $debutStats,
+            $finStats,
             $cfg['credit_seuil_medicament_xaf']
         );
 
@@ -114,9 +123,12 @@ class AdminParapharmaDashboardService
                 'credits_actif' => (bool) $pharmacie->credits_actif,
             ] : null,
             'mois' => $ref->format('Y-m'),
-            'mois_label' => $this->formatMoisFrancais($ref),
+            'mois_label' => $vuePeriode === 'global'
+                ? 'Tout l\'historique'
+                : $this->formatMoisFrancais($ref),
             'mois_options' => $this->moisSelectOptions($ref),
             'vue_periode' => $vuePeriode,
+            'periode_stats_label' => $this->periodeStatsLabel($vuePeriode),
             'config' => $cfg,
             'kpis' => [
                 'nb_commandes' => $nbCommandes,
@@ -129,11 +141,11 @@ class AdminParapharmaDashboardService
                 'credits_consommes_total' => $creditsConsommesTotal,
                 'cout_credits_consommes' => $this->coutDeductionsPeriode($debut, $finPeriode, $cfg['credit_prix_unitaire_xaf']),
                 'commandes_eligibles_credit' => $this->nbCommandesEligiblesCredit(
-                    $debutMois,
-                    $finMois,
+                    $debutStats,
+                    $finStats,
                     $cfg['credit_seuil_medicament_xaf']
                 ),
-                'montant_commission' => $montantCommission,
+                'montant_commission' => $montantCommissionKpi,
             ],
             'commission_courante' => [
                 'periode_label' => sprintf(
@@ -148,7 +160,7 @@ class AdminParapharmaDashboardService
                     $this->formatMoisFrancais($ref, false),
                     $ref->year
                 ),
-                'montant' => $montantCommission,
+                'montant' => $montantCommissionMois,
                 'statut' => $periode->statut,
                 'statut_label' => $periode->statut === CommissionPeriode::STATUT_PAYE ? 'Payé' : 'En attente',
                 'paye_le' => $periode->paye_le?->format('d/m/Y'),
@@ -372,6 +384,10 @@ class AdminParapharmaDashboardService
      */
     private function resolvePeriodeBounds(CarbonInterface $ref, string $vuePeriode): array
     {
+        if ($vuePeriode === 'global') {
+            return $this->statsPeriodeGlobale();
+        }
+
         [$debutMois, $finMois] = AppSetting::parapharmaPeriodeBounds($ref);
 
         if ($vuePeriode !== 'semaine') {
@@ -827,6 +843,7 @@ class AdminParapharmaDashboardService
         CarbonInterface $fin,
         array $cfg,
         CarbonInterface $ref,
+        bool $cumulGlobal = false,
     ): array {
         $pharmacieIdCourant = $this->pharmacieId;
         $items = [];
@@ -838,8 +855,12 @@ class AdminParapharmaDashboardService
             $montant = $pharmacie->credits_actif
                 ? (int) round($ca * $cfg['commission_percent'] / 100)
                 : 0;
-            $periode = $this->findCommissionPeriode($ref->year, $ref->month, (int) $pharmacie->id);
-            $statut = $periode?->statut ?? CommissionPeriode::STATUT_EN_COURS;
+            $periode = $cumulGlobal
+                ? null
+                : $this->findCommissionPeriode($ref->year, $ref->month, (int) $pharmacie->id);
+            $statut = $cumulGlobal
+                ? 'cumul'
+                : ($periode?->statut ?? CommissionPeriode::STATUT_EN_COURS);
 
             $items[] = [
                 'pharmacie_id' => (int) $pharmacie->id,
@@ -848,7 +869,9 @@ class AdminParapharmaDashboardService
                 'ca_parapharma' => $ca,
                 'montant_commission' => $montant,
                 'statut' => $statut,
-                'statut_label' => $statut === CommissionPeriode::STATUT_PAYE ? 'Payé' : 'En cours',
+                'statut_label' => $cumulGlobal
+                    ? 'Cumul'
+                    : ($statut === CommissionPeriode::STATUT_PAYE ? 'Payé' : 'En cours'),
             ];
         }
 
@@ -981,6 +1004,26 @@ class AdminParapharmaDashboardService
             ->where("{$commandesAlias}.status", '<>', 'annulee');
     }
 
+    /**
+     * @return array{0: CarbonInterface, 1: CarbonInterface}
+     */
+    private function statsPeriodeGlobale(): array
+    {
+        return [
+            Carbon::create(2000, 1, 1)->startOfDay(),
+            now()->endOfDay(),
+        ];
+    }
+
+    private function periodeStatsLabel(string $vuePeriode): string
+    {
+        return match ($vuePeriode) {
+            'global' => 'cumul (toutes périodes)',
+            'semaine' => '7 derniers jours du mois affiché',
+            default => 'mois sélectionné',
+        };
+    }
+
     private function resolveMoisReference(?string $moisParam): CarbonInterface
     {
         if (is_string($moisParam) && preg_match('/^\d{4}-\d{2}$/', $moisParam)) {
@@ -1029,13 +1072,27 @@ class AdminParapharmaDashboardService
      */
     private function moisSelectOptions(CarbonInterface $ref): array
     {
+        /** Fenêtre glissante sur le mois courant (pas sur le mois sélectionné), pour pouvoir revenir en arrière. */
+        $anchor = now()->startOfMonth();
         $options = [];
+        $values = [];
+
         for ($i = 0; $i < 12; $i++) {
-            $m = $ref->copy()->subMonths($i);
+            $m = $anchor->copy()->subMonths($i);
+            $value = $m->format('Y-m');
+            $values[$value] = true;
             $options[] = [
-                'value' => $m->format('Y-m'),
+                'value' => $value,
                 'label' => $this->formatMoisFrancais($m),
             ];
+        }
+
+        $selected = $ref->copy()->startOfMonth()->format('Y-m');
+        if (! isset($values[$selected])) {
+            array_unshift($options, [
+                'value' => $selected,
+                'label' => $this->formatMoisFrancais($ref),
+            ]);
         }
 
         return $options;

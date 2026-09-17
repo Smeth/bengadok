@@ -17,7 +17,7 @@ import {
     X,
 } from 'lucide-vue-next';
 import { onClickOutside } from '@vueuse/core';
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import {
     moduleDetailPanelClass,
     moduleDetailPanelLgClass,
@@ -42,6 +42,8 @@ type HistoriqueItem = {
     montant: number;
     statut: string;
     statut_label: string;
+    annee?: number;
+    mois_num?: number;
 };
 type CommandeRecente = {
     numero: string;
@@ -95,7 +97,8 @@ const props = withDefaults(
     mois: string;
     mois_label: string;
     mois_options: MoisOption[];
-    vue_periode?: 'mois' | 'semaine';
+    vue_periode?: 'mois' | 'semaine' | 'global';
+    periode_stats_label?: string;
     config: {
         commission_percent: number;
         commission_jour_echeance: number;
@@ -146,7 +149,24 @@ const props = withDefaults(
     },
 );
 
+type VuePeriode = 'mois' | 'semaine' | 'global';
+
 const vuePeriode = computed(() => props.vue_periode ?? 'mois');
+
+const periodeStatsHint = computed(
+    () => props.periode_stats_label ?? 'mois sélectionné',
+);
+
+const commissionMoisLabel = computed(() => {
+    const match = props.mois_options.find((opt) => opt.value === props.mois);
+    return match?.label ?? props.mois;
+});
+
+function periodeToggleClass(active: boolean): string {
+    return active
+        ? 'bg-[#198754] text-white shadow-sm'
+        : 'text-gray-600 hover:text-gray-900 dark:text-muted-foreground dark:hover:text-foreground';
+}
 
 type MoisDropdownId = 'ventes' | 'credits' | 'pharmacie';
 
@@ -213,15 +233,16 @@ const commandesHref = computed(() =>
 );
 
 const creditProgressPct = computed(() => {
+    const utilises =
+        vuePeriode.value === 'global'
+            ? props.kpis.credits_consommes_total
+            : props.kpis.credits_utilises;
     const denom = Math.max(
         props.kpis.credits_prepayes_total,
-        props.kpis.credits_utilises + props.kpis.credits_disponibles,
+        utilises + props.kpis.credits_disponibles,
         1,
     );
-    return Math.min(
-        100,
-        Math.round((props.kpis.credits_utilises / denom) * 100),
-    );
+    return Math.min(100, Math.round((utilises / denom) * 100));
 });
 
 const creditProgressLabel = computed(() => {
@@ -229,6 +250,9 @@ const creditProgressLabel = computed(() => {
         props.kpis.credits_prepayes_total,
         props.kpis.credits_utilises + props.kpis.credits_disponibles,
     );
+    if (vuePeriode.value === 'global') {
+        return `${props.kpis.credits_consommes_total} crédits utilisés (cumul)`;
+    }
     return `${props.kpis.credits_utilises} / ${denom} crédits utilisés ce mois`;
 });
 
@@ -242,7 +266,7 @@ const rechargeForm = useForm({
 
 function dashboardQuery(
     mois: string,
-    periode: 'mois' | 'semaine' = vuePeriode.value,
+    periode: VuePeriode = vuePeriode.value,
 ): Record<string, string | number> {
     if (isPharmacie.value && props.pharmacie_id) {
         return { mois, pharmacie_id: props.pharmacie_id, vue_periode: periode };
@@ -253,15 +277,15 @@ function dashboardQuery(
 function setMois(value: string) {
     closeMoisDropdown();
     const url = isPharmacie.value ? '/dok-pharma' : dashboard();
-    router.get(url, dashboardQuery(value), { preserveState: true });
+    router.get(url, dashboardQuery(value), { preserveScroll: true });
 }
 
-function setVuePeriode(periode: 'mois' | 'semaine') {
+function setVuePeriode(periode: VuePeriode) {
     if (periode === vuePeriode.value) {
         return;
     }
     const url = isPharmacie.value ? '/dok-pharma' : dashboard();
-    router.get(url, dashboardQuery(props.mois, periode), { preserveState: true });
+    router.get(url, dashboardQuery(props.mois, periode), { preserveScroll: true });
 }
 
 function marquerPaye() {
@@ -269,6 +293,44 @@ function marquerPaye() {
         ? '/dok-pharma/commission/payee'
         : '/dashboard/commission/payee';
     payForm.post(url, { preserveScroll: true });
+}
+
+const ventesDetailPharmacieRef = ref<HTMLElement | null>(null);
+const ventesDetailAdminRef = ref<HTMLElement | null>(null);
+
+function scrollToCommissionDetailSection() {
+    const el = isPharmacie.value
+        ? ventesDetailPharmacieRef.value
+        : ventesDetailAdminRef.value;
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function moisQueryFromHistorique(h: HistoriqueItem): string | null {
+    if (h.annee != null && h.mois_num != null) {
+        return `${h.annee}-${String(h.mois_num).padStart(2, '0')}`;
+    }
+    const match = props.mois_options.find((opt) => opt.label === h.mois);
+    return match?.value ?? null;
+}
+
+function voirDetailCommission(moisCible?: string) {
+    const target = moisCible?.trim() || props.mois;
+    if (target && target !== props.mois) {
+        const url = isPharmacie.value ? '/dok-pharma' : dashboard();
+        router.get(url, dashboardQuery(target), {
+            preserveScroll: true,
+            onSuccess: () => {
+                nextTick(() => scrollToCommissionDetailSection());
+            },
+        });
+        return;
+    }
+    scrollToCommissionDetailSection();
+}
+
+function voirDetailHistoriqueCommission(h: HistoriqueItem) {
+    const moisValue = moisQueryFromHistorique(h);
+    voirDetailCommission(moisValue ?? undefined);
 }
 
 function submitRecharge() {
@@ -298,6 +360,76 @@ function statutBadgeClass(statut: string): string {
 
 <template>
     <div class="space-y-6">
+        <div
+            v-if="isAdmin"
+            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+            <p class="text-sm text-gray-600 dark:text-muted-foreground">
+                Période des indicateurs :
+                <span class="font-semibold text-gray-900 dark:text-foreground">{{
+                    periodeStatsHint
+                }}</span>
+            </p>
+            <div class="flex flex-wrap items-center gap-2">
+                <div
+                    class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 dark:border-white/10 dark:bg-white/8"
+                >
+                    <button
+                        type="button"
+                        class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                        :class="periodeToggleClass(vuePeriode === 'mois')"
+                        @click="setVuePeriode('mois')"
+                    >
+                        Mois
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                        :class="periodeToggleClass(vuePeriode === 'semaine')"
+                        @click="setVuePeriode('semaine')"
+                    >
+                        Semaine
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                        :class="periodeToggleClass(vuePeriode === 'global')"
+                        @click="setVuePeriode('global')"
+                    >
+                        Global
+                    </button>
+                </div>
+                <div
+                    v-if="vuePeriode !== 'global'"
+                    ref="pharmacieMoisDropdownRef"
+                    class="relative"
+                >
+                    <button
+                        type="button"
+                        class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold dark:border-border dark:bg-input dark:text-foreground"
+                        @click="toggleMoisDropdown('pharmacie')"
+                    >
+                        {{ mois_label }}
+                        <ChevronDown class="size-4" />
+                    </button>
+                    <div
+                        v-show="openMoisDropdown === 'pharmacie'"
+                        class="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border bg-white py-1 shadow-lg dark:border-border dark:bg-popover"
+                    >
+                        <button
+                            v-for="opt in mois_options"
+                            :key="`admin-kpi-${opt.value}`"
+                            type="button"
+                            class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-muted"
+                            @click="setMois(opt.value)"
+                        >
+                            {{ opt.label }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- KPIs : vue admin (toutes pharmacies) -->
         <div v-if="isAdmin" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div
@@ -419,6 +551,75 @@ function statutBadgeClass(statut: string): string {
                 </span>
             </div>
 
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <p class="text-sm text-gray-600 dark:text-muted-foreground">
+                    Période des indicateurs :
+                    <span class="font-semibold text-gray-900 dark:text-foreground">{{
+                        periodeStatsHint
+                    }}</span>
+                </p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <div
+                        class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 dark:border-white/10 dark:bg-white/8"
+                    >
+                        <button
+                            type="button"
+                            class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                            :class="periodeToggleClass(vuePeriode === 'mois')"
+                            @click="setVuePeriode('mois')"
+                        >
+                            Mois
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                            :class="periodeToggleClass(vuePeriode === 'semaine')"
+                            @click="setVuePeriode('semaine')"
+                        >
+                            Semaine
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                            :class="periodeToggleClass(vuePeriode === 'global')"
+                            @click="setVuePeriode('global')"
+                        >
+                            Global
+                        </button>
+                    </div>
+                    <div
+                        v-if="vuePeriode !== 'global'"
+                        ref="pharmacieMoisDropdownRef"
+                        class="relative"
+                    >
+                        <button
+                            type="button"
+                            class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold dark:border-border dark:bg-input dark:text-foreground"
+                            @click="toggleMoisDropdown('pharmacie')"
+                        >
+                            {{ mois_label }}
+                            <ChevronDown class="size-4" />
+                        </button>
+                        <div
+                            v-show="openMoisDropdown === 'pharmacie'"
+                            class="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border bg-white py-1 shadow-lg dark:border-border dark:bg-popover"
+                        >
+                            <button
+                                v-for="opt in mois_options"
+                                :key="`pharma-kpi-${opt.value}`"
+                                type="button"
+                                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-muted"
+                                @click="setMois(opt.value)"
+                            >
+                                {{ opt.label }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div
                 :class="moduleDetailPanelClass"
@@ -428,7 +629,7 @@ function statutBadgeClass(statut: string): string {
                         <p class="text-sm font-semibold text-gray-600">
                             Commandes
                         </p>
-                        <p class="text-xs text-gray-500">(mois en cours)</p>
+                        <p class="text-xs text-gray-500">({{ periodeStatsHint }})</p>
                     </div>
                     <div
                         class="flex size-10 items-center justify-center rounded-xl bg-[#E8F5E9]"
@@ -644,6 +845,15 @@ function statutBadgeClass(statut: string): string {
                             </p>
                         </div>
                     </div>
+                    <p
+                        v-if="vuePeriode === 'global'"
+                        class="mt-2 text-xs text-gray-500 dark:text-muted-foreground"
+                    >
+                        Les CA et tableaux de ventes sont en cumul. Cette
+                        commission concerne le mois
+                        {{ commissionMoisLabel }} (changez le mois en vue
+                        « Mois » ou « Semaine »).
+                    </p>
                 </div>
                 <div class="flex flex-wrap items-center gap-6">
                     <div class="text-center sm:text-right">
@@ -673,6 +883,7 @@ function statutBadgeClass(statut: string): string {
                         <button
                             type="button"
                             class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 dark:border-border dark:bg-input dark:text-foreground dark:hover:bg-muted"
+                            @click="voirDetailCommission()"
                         >
                             <Eye class="size-4" />
                             Voir détails
@@ -696,7 +907,8 @@ function statutBadgeClass(statut: string): string {
         <template v-if="isAdmin">
             <div class="grid gap-6 lg:grid-cols-3">
                 <div
-                    :class="['lg:col-span-2', moduleDetailPanelLgClass]"
+                    ref="ventesDetailAdminRef"
+                    :class="['lg:col-span-2 scroll-mt-24', moduleDetailPanelLgClass]"
                 >
                     <div
                         class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
@@ -729,12 +941,26 @@ function statutBadgeClass(statut: string): string {
                                             ? 'bg-[#198754] text-white shadow-sm'
                                             : 'text-gray-600 hover:text-gray-900 dark:text-muted-foreground dark:hover:text-foreground'
                                     "
-                                    @click="setVuePeriode('semaine')"
-                                >
-                                    Semaine
-                                </button>
-                            </div>
-                            <div ref="ventesMoisDropdownRef" class="relative">
+                                @click="setVuePeriode('semaine')"
+                            >
+                                Semaine
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                                :class="
+                                    periodeToggleClass(vuePeriode === 'global')
+                                "
+                                @click="setVuePeriode('global')"
+                            >
+                                Global
+                            </button>
+                        </div>
+                            <div
+                                v-if="vuePeriode !== 'global'"
+                                ref="ventesMoisDropdownRef"
+                                class="relative"
+                            >
                                 <button
                                     type="button"
                                     class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold dark:border-border dark:bg-input dark:text-foreground"
@@ -930,8 +1156,22 @@ function statutBadgeClass(statut: string): string {
                             >
                                 Semaine
                             </button>
+                            <button
+                                type="button"
+                                class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                                :class="
+                                    periodeToggleClass(vuePeriode === 'global')
+                                "
+                                @click="setVuePeriode('global')"
+                            >
+                                Global
+                            </button>
                         </div>
-                        <div ref="creditsMoisDropdownRef" class="relative">
+                        <div
+                            v-if="vuePeriode !== 'global'"
+                            ref="creditsMoisDropdownRef"
+                            class="relative"
+                        >
                             <button
                                 type="button"
                                 class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold dark:border-border dark:bg-input dark:text-foreground"
@@ -1041,8 +1281,10 @@ function statutBadgeClass(statut: string): string {
         <!-- Pharmacie : ventes détaillées + sidebar crédits -->
         <div v-else-if="isPharmacie" class="grid gap-6 lg:grid-cols-3">
             <div
+                ref="ventesDetailPharmacieRef"
                 :class="[
                     creditsActifs ? 'lg:col-span-2' : 'lg:col-span-3',
+                    'scroll-mt-24',
                     moduleDetailPanelLgClass,
                 ]"
             >
@@ -1050,30 +1292,11 @@ function statutBadgeClass(statut: string): string {
                     <h3 class="text-lg font-bold text-gray-900 dark:text-foreground">
                         Détail des ventes (médicaments + parapharmacie)
                     </h3>
-                    <div ref="pharmacieMoisDropdownRef" class="relative">
-                        <button
-                            type="button"
-                            class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold dark:border-border dark:bg-input dark:text-foreground"
-                            @click="toggleMoisDropdown('pharmacie')"
-                        >
-                            Afficher : {{ mois_label }}
-                            <ChevronDown class="size-4" />
-                        </button>
-                        <div
-                            v-show="openMoisDropdown === 'pharmacie'"
-                            class="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border bg-white py-1 shadow-lg"
-                        >
-                            <button
-                                v-for="opt in mois_options"
-                                :key="opt.value"
-                                type="button"
-                                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
-                                @click="setMois(opt.value)"
-                            >
-                                {{ opt.label }}
-                            </button>
-                        </div>
-                    </div>
+                    <p
+                        class="text-sm font-semibold text-gray-600 dark:text-muted-foreground"
+                    >
+                        {{ vuePeriode === 'global' ? 'Cumul' : `Afficher : ${mois_label}` }}
+                    </p>
                 </div>
                 <div
                     class="max-h-[min(380px,50vh)] overflow-auto rounded-lg border border-gray-100"
@@ -1267,7 +1490,8 @@ function statutBadgeClass(statut: string): string {
                                     <button
                                         type="button"
                                         class="text-gray-500 hover:text-gray-800"
-                                        aria-label="Voir"
+                                        aria-label="Voir le détail des ventes pour ce mois"
+                                        @click="voirDetailHistoriqueCommission(h)"
                                     >
                                         <Eye class="size-4" />
                                     </button>

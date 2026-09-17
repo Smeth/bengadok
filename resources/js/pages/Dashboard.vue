@@ -95,7 +95,8 @@ const props = defineProps<{
     mois?: string;
     mois_label?: string;
     mois_options?: ParapharmaAdminProps['mois_options'];
-    vue_periode?: 'mois' | 'semaine';
+    vue_periode?: 'mois' | 'semaine' | 'global';
+    periode_stats_label?: string;
     ventes_par_pharmacie?: Array<{
         date: string;
         pharmacie: string;
@@ -452,6 +453,7 @@ function getPiePath(
                 :mois_label="mois_label!"
                 :mois_options="mois_options!"
                 :vue_periode="vue_periode"
+                :periode_stats_label="periode_stats_label"
                 :config="config!"
                 :kpis="(parapharma_kpis ?? kpis) as ParapharmaAdminProps['kpis']"
                 :commission_courante="commission_courante!"

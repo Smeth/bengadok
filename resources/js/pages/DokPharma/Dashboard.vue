@@ -46,6 +46,8 @@ withDefaults(
         mois: string;
         mois_label: string;
         mois_options: MoisOption[];
+        vue_periode?: 'mois' | 'semaine' | 'global';
+        periode_stats_label?: string;
         config: {
             commission_percent: number;
             commission_jour_echeance: number;
@@ -103,6 +105,8 @@ withDefaults(
                 :mois="mois"
                 :mois_label="mois_label"
                 :mois_options="mois_options"
+                :vue_periode="vue_periode"
+                :periode_stats_label="periode_stats_label"
                 :config="config"
                 :kpis="kpis"
                 :commission_courante="commission_courante"

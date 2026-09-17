@@ -71,9 +71,13 @@ class DokPharmaController extends Controller
             ]);
         }
 
+        $vuePeriode = $request->input('vue_periode', 'mois');
+        $vuePeriode = in_array($vuePeriode, ['mois', 'semaine', 'global'], true) ? $vuePeriode : 'mois';
+
         $payload = $parapharmaService->build(
             is_string($mois) ? $mois : null,
             $context['pharmacie_id'],
+            $vuePeriode,
         );
 
         return Inertia::render('DokPharma/Dashboard', array_merge($payload, [
@@ -148,16 +152,6 @@ class DokPharmaController extends Controller
 
     public function index(Request $request): Response|RedirectResponse
     {
-        if ($this->commandeIndexService->userIsVendeurSeul($request)
-            && $request->input('onglet', 'nouvelles') === 'livrees') {
-            $search = trim((string) $request->input('search', ''));
-
-            return redirect()->route('dok-pharma.commandes', array_filter([
-                'onglet' => 'nouvelles',
-                'search' => $search !== '' ? $search : null,
-            ]));
-        }
-
         return Inertia::render('DokPharma/Index', $this->commandeIndexService->paginatedIndex($request));
     }
 

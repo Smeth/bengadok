@@ -47,14 +47,19 @@ class PharmacyRoleAccessTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_vendeur_is_redirected_from_livrees_historique(): void
+    public function test_vendeur_can_access_livrees_tab(): void
     {
         $pharmacie = $this->createPharmacie();
         $vendeur = $this->userWithRole('vendeur', ['pharmacie_id' => $pharmacie->id]);
 
         $this->actingAs($vendeur)
             ->get('/dok-pharma/commandes?onglet=livrees')
-            ->assertRedirect('/dok-pharma/commandes?onglet=nouvelles');
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('DokPharma/Index')
+                ->where('canViewHistorique', true)
+                ->where('onglet', 'livrees')
+            );
     }
 
     public function test_vendeur_cannot_recharge_credits_or_mark_commission_paid(): void
@@ -109,7 +114,7 @@ class PharmacyRoleAccessTest extends TestCase
             );
     }
 
-    public function test_vendeur_commandes_page_hides_historique_flag(): void
+    public function test_vendeur_commandes_page_shows_all_status_tabs(): void
     {
         $pharmacie = $this->createPharmacie();
         $vendeur = $this->userWithRole('vendeur', ['pharmacie_id' => $pharmacie->id]);
@@ -119,7 +124,7 @@ class PharmacyRoleAccessTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('DokPharma/Index')
-                ->where('canViewHistorique', false)
+                ->where('canViewHistorique', true)
             );
     }
 }
