@@ -28,7 +28,8 @@ class DokPharmaCommandeIndexService
     public function paginatedIndex(Request $request): array
     {
         $pharmacieId = $request->user()?->pharmacie_id;
-        $canViewHistorique = ! $this->userIsVendeurSeul($request);
+        /** Vendeurs et gérants voient les 4 onglets (dont Retirées). */
+        $canViewHistorique = true;
 
         if (! $pharmacieId) {
             return [

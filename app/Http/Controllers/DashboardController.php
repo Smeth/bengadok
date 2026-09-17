@@ -40,7 +40,7 @@ class DashboardController extends Controller
             $period = $request->get('period', 'month');
             $period = is_string($period) ? $period : 'month';
             $vuePeriode = $request->input('vue_periode', 'mois');
-            $vuePeriode = is_string($vuePeriode) && in_array($vuePeriode, ['mois', 'semaine'], true)
+            $vuePeriode = is_string($vuePeriode) && in_array($vuePeriode, ['mois', 'semaine', 'global'], true)
                 ? $vuePeriode
                 : 'mois';
 

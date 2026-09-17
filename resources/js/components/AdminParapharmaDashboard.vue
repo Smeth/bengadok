@@ -56,7 +56,8 @@ defineProps<{
     mois: string;
     mois_label: string;
     mois_options: MoisOption[];
-    vue_periode?: 'mois' | 'semaine';
+    vue_periode?: 'mois' | 'semaine' | 'global';
+    periode_stats_label?: string;
     config: {
         commission_percent: number;
         commission_jour_echeance: number;
