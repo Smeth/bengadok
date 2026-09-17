@@ -167,6 +167,28 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
         $this->assertSame(1500.0, (float) $commande->prix_total);
     }
 
+    public function test_edit_page_includes_parapharma_produit_types(): void
+    {
+        $this->seedRoles();
+        AppSetting::ensureRowExists()->update([
+            'parapharma_produit_types' => ['Parapharmacie'],
+        ]);
+
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+        $client = $this->createClient();
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'nouvelle',
+        ]);
+
+        $this->actingAs($admin)
+            ->get("/commandes/{$commande->id}/edit")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Commandes/Edit')
+                ->where('parapharma_produit_types', ['Parapharmacie']));
+    }
+
     public function test_update_commande_en_attente_accepts_empty_client_tel_and_adresse(): void
     {
         $this->seedRoles();

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { ChevronDown, FileEdit, Pill, X } from 'lucide-vue-next';
+import { ChevronDown, FileEdit, Pill, ShoppingBag, X } from 'lucide-vue-next';
 import { computed, ref, shallowRef, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import OrdonnanceAnalysisProgressBar from '@/components/OrdonnanceAnalysisProgressBar.vue';
@@ -11,6 +11,7 @@ import BackLink from '@/components/ui/BackLink.vue';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useCommandeCreationFields } from '@/composables/useCommandeCreationFields';
+import { isParapharmaType } from '@/lib/commandeTotals';
 import { fieldError, normalizeInertiaErrors } from '@/lib/validationErrors';
 import { formatCommandeDateHeure } from '@/lib/formatDateLocal';
 import {
@@ -77,6 +78,7 @@ const props = defineProps<{
     }>;
     modesPaiement: Array<{ id: number; designation: string }>;
     arrondissements: string[];
+    parapharma_produit_types?: string[];
 }>();
 
 const inputClass = moduleFormInputClass;
@@ -184,6 +186,18 @@ function produitErr(i: number, field: string): string | undefined {
     return fieldError(errors.value, `produits.${i}.${field}`);
 }
 
+function produitParapharmaErr(i: number, field: string): string | undefined {
+    return fieldError(errors.value, `produits_parapharma.${i}.${field}`);
+}
+
+const parapharmaTypesList = computed(
+    () => props.parapharma_produit_types ?? ['Parapharmacie'],
+);
+
+const defaultParapharmaType = computed(
+    () => parapharmaTypesList.value[0] ?? 'Parapharmacie',
+);
+
 function fieldHasError(key: string): boolean {
     return Boolean(errors.value[key]);
 }
@@ -231,7 +245,18 @@ type ProduitLigne = {
     quantite: number;
     prix_unitaire: number;
 };
-const produitsSelection = ref<ProduitLigne[]>([]);
+function ligneProduitVide(): ProduitLigne {
+    return {
+        designation: '',
+        dosage: '',
+        forme: '',
+        quantite: 1,
+        prix_unitaire: 0,
+    };
+}
+
+const produitsMedicaments = ref<ProduitLigne[]>([]);
+const produitsParapharma = ref<ProduitLigne[]>([]);
 
 const formesPharmaceutiques = [
     'Comprimé',
@@ -247,10 +272,12 @@ const formesPharmaceutiques = [
     'Patch',
 ] as const;
 
-watch(
-    () => props.commande?.produits,
-    () => {
-        produitsSelection.value = (props.commande?.produits ?? []).map((p) => ({
+function hydrateProduitsFromCommande() {
+    const medicaments: ProduitLigne[] = [];
+    const parapharma: ProduitLigne[] = [];
+
+    for (const p of props.commande?.produits ?? []) {
+        const line: ProduitLigne = {
             id: p.id,
             designation: p.designation ?? '',
             dosage: p.dosage ?? '',
@@ -258,8 +285,27 @@ watch(
             type: p.pivot?.type ?? p.type ?? '',
             quantite: p.pivot?.quantite ?? 1,
             prix_unitaire: Number(p.pivot?.prix_unitaire ?? 0),
-        }));
-    },
+        };
+        if (
+            isParapharmaType(line.type ?? null, parapharmaTypesList.value)
+        ) {
+            parapharma.push(line);
+        } else {
+            medicaments.push(line);
+        }
+    }
+
+    produitsMedicaments.value = medicaments.length
+        ? medicaments
+        : [ligneProduitVide()];
+    produitsParapharma.value = parapharma.length
+        ? parapharma
+        : [ligneProduitVide()];
+}
+
+watch(
+    () => [props.commande?.produits, props.parapharma_produit_types] as const,
+    () => hydrateProduitsFromCommande(),
     { immediate: true },
 );
 
@@ -270,21 +316,35 @@ function ligneTotal(p: ProduitLigne): string {
 }
 
 function ajouterProduit() {
-    produitsSelection.value.push({
-        designation: '',
-        dosage: '',
-        forme: '',
-        quantite: 1,
-        prix_unitaire: 0,
-    });
+    produitsMedicaments.value.push(ligneProduitVide());
 }
 
 function supprimerProduit(i: number) {
-    produitsSelection.value.splice(i, 1);
+    produitsMedicaments.value.splice(i, 1);
+}
+
+function ajouterProduitParapharma() {
+    produitsParapharma.value.push(ligneProduitVide());
+}
+
+function supprimerProduitParapharma(i: number) {
+    produitsParapharma.value.splice(i, 1);
+}
+
+function ligneProduitPartiellementRemplie(p: ProduitLigne): boolean {
+    return Boolean(
+        p.designation?.trim() ||
+            p.dosage?.trim() ||
+            p.forme?.trim() ||
+            Number(p.prix_unitaire) > 0 ||
+            p.quantite !== 1,
+    );
 }
 
 function submit() {
-    const produitsValides = produitsSelection.value
+    const err: Record<string, string> = {};
+
+    const produitsMedicamentsValides = produitsMedicaments.value
         .filter(
             (p) =>
                 p.designation.trim() &&
@@ -296,14 +356,79 @@ function submit() {
             designation: p.designation.trim(),
             dosage: (p.dosage ?? '').trim() || null,
             forme: (p.forme ?? '').trim() || null,
-            type: (p.type ?? '').trim() || null,
+            type: null as string | null,
             quantite: p.quantite,
             prix_unitaire: Number(p.prix_unitaire),
         }));
-    if (!produitsValides.length) return;
-    if (!pharmacieId.value) return;
 
-    localErrors.value = validateCreationFields(
+    const produitsParapharmaValides = produitsParapharma.value
+        .filter(
+            (p) =>
+                p.designation.trim() &&
+                p.quantite > 0 &&
+                Number(p.prix_unitaire) >= 0,
+        )
+        .map((p) => ({
+            id: p.id,
+            designation: p.designation.trim(),
+            dosage: (p.dosage ?? '').trim() || null,
+            forme: (p.forme ?? '').trim() || null,
+            type: defaultParapharmaType.value,
+            quantite: p.quantite,
+            prix_unitaire: Number(p.prix_unitaire),
+        }));
+
+    const produitsValides = [
+        ...produitsMedicamentsValides,
+        ...produitsParapharmaValides,
+    ];
+
+    if (!produitsValides.length) {
+        err.produits =
+            'Ajoutez au moins un médicament ou un produit parapharmacie avec désignation, quantité et prix unitaire.';
+    }
+
+    produitsMedicaments.value.forEach((p, i) => {
+        if (!ligneProduitPartiellementRemplie(p)) {
+            return;
+        }
+        if (!p.designation?.trim()) {
+            err[`produits.${i}.designation`] =
+                'La désignation est obligatoire.';
+        }
+        if (!p.quantite || p.quantite < 1) {
+            err[`produits.${i}.quantite`] =
+                'La quantité doit être au moins 1.';
+        }
+        if (Number(p.prix_unitaire) < 0) {
+            err[`produits.${i}.prix_unitaire`] =
+                'Le prix unitaire doit être ≥ 0.';
+        }
+    });
+
+    produitsParapharma.value.forEach((p, i) => {
+        if (!ligneProduitPartiellementRemplie(p)) {
+            return;
+        }
+        if (!p.designation?.trim()) {
+            err[`produits_parapharma.${i}.designation`] =
+                'La désignation est obligatoire.';
+        }
+        if (!p.quantite || p.quantite < 1) {
+            err[`produits_parapharma.${i}.quantite`] =
+                'La quantité doit être au moins 1.';
+        }
+        if (Number(p.prix_unitaire) < 0) {
+            err[`produits_parapharma.${i}.prix_unitaire`] =
+                'Le prix unitaire doit être ≥ 0.';
+        }
+    });
+
+    if (!pharmacieId.value) {
+        err.pharmacie_id = 'Veuillez sélectionner une pharmacie.';
+    }
+
+    const fieldErrors = validateCreationFields(
         {
             client_nom: clientNom.value,
             client_prenom: clientPrenom.value,
@@ -322,7 +447,9 @@ function submit() {
         },
     );
 
-    if (Object.keys(localErrors.value).length > 0) {
+    localErrors.value = { ...fieldErrors, ...err };
+
+    if (!produitsValides.length || Object.keys(localErrors.value).length > 0) {
         return;
     }
 
@@ -799,9 +926,14 @@ function submit() {
                         </div>
                         <InputError :message="errors.produits" />
 
+                        <p class="mb-3 text-xs text-[rgba(92,89,89,0.65)]">
+                            Au moins une ligne médicament ou parapharmacie
+                            (section ci-dessous) est requise.
+                        </p>
+
                         <div
-                            v-for="(p, i) in produitsSelection"
-                            :key="i"
+                            v-for="(p, i) in produitsMedicaments"
+                            :key="`med-${i}`"
                             class="mb-4 rounded-[10px] border border-[#ccc5c5] bg-[#fafafa] p-4 last:mb-0 dark:border-border dark:bg-muted/30"
                         >
                             <div
@@ -956,11 +1088,209 @@ function submit() {
                                     </div>
                                 </div>
                                 <button
-                                    v-if="produitsSelection.length > 1"
+                                    v-if="produitsMedicaments.length > 1"
                                     type="button"
                                     class="mt-1 shrink-0 rounded-lg p-2 text-[rgba(92,89,89,0.5)] transition-colors hover:bg-red-50 hover:text-[#dc3545]"
                                     aria-label="Supprimer la ligne"
                                     @click="supprimerProduit(i)"
+                                >
+                                    <X class="size-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Parapharmacie -->
+                    <section
+                        class="rounded-[10px] border border-[#ccc5c5] p-5 dark:border-border"
+                    >
+                        <div
+                            class="mb-4 flex flex-wrap items-center justify-between gap-2"
+                        >
+                            <h2 :class="sectionTitleClass">Parapharmacie</h2>
+                            <button
+                                type="button"
+                                class="flex items-center gap-2 rounded-[10px] bg-[#459cd1] px-3.5 py-2 text-sm font-black text-white transition-colors hover:bg-[#3a87b8]"
+                                @click="ajouterProduitParapharma"
+                            >
+                                <ShoppingBag class="size-5" />
+                                Ajouter un produit parapharmacie
+                            </button>
+                        </div>
+
+                        <div
+                            v-for="(p, i) in produitsParapharma"
+                            :key="`para-${i}`"
+                            class="mb-4 rounded-[10px] border border-[#ccc5c5] bg-[#fafafa] p-4 last:mb-0 dark:border-border dark:bg-muted/30"
+                        >
+                            <div
+                                class="flex items-start justify-between gap-3"
+                            >
+                                <div
+                                    class="grid min-w-0 flex-1 grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-[minmax(9.5rem,1.35fr)_minmax(5.75rem,0.85fr)_minmax(6.5rem,0.95fr)_minmax(7.25rem,1.05fr)]"
+                                >
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Nom produit
+                                            <span class="text-[#dc3545]"
+                                                >*</span
+                                            ></Label
+                                        >
+                                        <input
+                                            v-model="p.designation"
+                                            placeholder="Ex : Lait Cerave"
+                                            :class="[
+                                                inputClass,
+                                                {
+                                                    'border-[#dc3545]':
+                                                        produitParapharmaErr(
+                                                            i,
+                                                            'designation',
+                                                        ),
+                                                },
+                                            ]"
+                                        />
+                                        <InputError
+                                            :message="
+                                                produitParapharmaErr(
+                                                    i,
+                                                    'designation',
+                                                )
+                                            "
+                                        />
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Dosage</Label
+                                        >
+                                        <input
+                                            v-model="p.dosage"
+                                            placeholder="Ex : 400 ml"
+                                            :class="inputClass"
+                                        />
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Forme</Label
+                                        >
+                                        <div class="relative">
+                                            <select
+                                                v-model="p.forme"
+                                                :class="selectClass"
+                                            >
+                                                <option value="">
+                                                    Choisir…
+                                                </option>
+                                                <option
+                                                    v-for="f in formesPharmaceutiques"
+                                                    :key="f"
+                                                    :value="f"
+                                                >
+                                                    {{ f }}
+                                                </option>
+                                            </select>
+                                            <ChevronDown
+                                                class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(92,89,89,0.4)]"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Quantité
+                                            <span class="text-[#dc3545]"
+                                                >*</span
+                                            ></Label
+                                        >
+                                        <input
+                                            v-model.number="p.quantite"
+                                            type="number"
+                                            min="1"
+                                            :class="[
+                                                inputClass,
+                                                'text-center md:max-w-[7.5rem]',
+                                                {
+                                                    'border-[#dc3545]':
+                                                        produitParapharmaErr(
+                                                            i,
+                                                            'quantite',
+                                                        ),
+                                                },
+                                            ]"
+                                        />
+                                        <InputError
+                                            :message="
+                                                produitParapharmaErr(
+                                                    i,
+                                                    'quantite',
+                                                )
+                                            "
+                                        />
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Prix unitaire
+                                            <span class="text-[#dc3545]"
+                                                >*</span
+                                            ></Label
+                                        >
+                                        <div
+                                            class="flex h-[42px] items-center overflow-hidden rounded-[10px] border border-[#ccc5c5] bg-white"
+                                            :class="{
+                                                'border-[#dc3545]':
+                                                    produitParapharmaErr(
+                                                        i,
+                                                        'prix_unitaire',
+                                                    ),
+                                            }"
+                                        >
+                                            <input
+                                                v-model.number="p.prix_unitaire"
+                                                type="number"
+                                                min="0"
+                                                step="1"
+                                                placeholder="0"
+                                                class="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm outline-none focus:ring-0"
+                                            />
+                                            <span
+                                                class="pr-3 text-sm font-medium text-black"
+                                                >xaf</span
+                                            >
+                                        </div>
+                                        <InputError
+                                            :message="
+                                                produitParapharmaErr(
+                                                    i,
+                                                    'prix_unitaire',
+                                                )
+                                            "
+                                        />
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Total</Label
+                                        >
+                                        <div
+                                            class="flex h-[42px] items-center rounded-[10px] border border-[#ccc5c5] bg-[#f8fafc] px-3 text-sm tabular-nums text-black"
+                                        >
+                                            {{ ligneTotal(p) }}
+                                            <span class="ml-1 font-medium"
+                                                >xaf</span
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    v-if="produitsParapharma.length > 1"
+                                    type="button"
+                                    class="mt-1 shrink-0 rounded-lg p-2 text-[rgba(92,89,89,0.5)] transition-colors hover:bg-red-50 hover:text-[#dc3545]"
+                                    aria-label="Supprimer la ligne"
+                                    @click="supprimerProduitParapharma(i)"
                                 >
                                     <X class="size-4" />
                                 </button>

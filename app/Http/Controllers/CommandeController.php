@@ -180,6 +180,8 @@ class CommandeController extends Controller
             'modePaiement', 'montantLivraison', 'piecesJointes',
         ]);
 
+        $referentiels = app(CommandeReferentielsService::class)->all();
+
         return Inertia::render('Commandes/Edit', [
             'commande' => array_merge($commande->toArray(), [
                 'ordonnance_fichiers' => CommandeOrdonnanceFichiers::forCommande($commande),
@@ -187,6 +189,7 @@ class CommandeController extends Controller
             'pharmacies' => Pharmacie::with('zone')->partenaires()->get(),
             'modesPaiement' => ModePaiement::all(),
             'arrondissements' => Client::ARRONDISSEMENTS,
+            'parapharma_produit_types' => $referentiels['parapharma_produit_types'],
         ]);
     }
 
