@@ -285,6 +285,119 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
         $this->assertSame(0.0, (float) $commande->prix_parapharma);
     }
 
+    public function test_update_does_not_promote_status_when_some_lignes_remain_en_attente(): void
+    {
+        $this->seedRoles();
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+        $client = $this->createClient();
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'nouvelle',
+            'status_pharmacie' => 'nouvelle',
+        ]);
+
+        $med = Produit::query()->create(['designation' => 'Stilnox']);
+        $para = Produit::query()->create([
+            'designation' => 'Lait Cerave',
+            'type' => 'Parapharmacie',
+        ]);
+        $commande->produits()->attach($med->id, [
+            'quantite' => 1,
+            'prix_unitaire' => 5000,
+            'status' => 'en_attente',
+        ]);
+        $commande->produits()->attach($para->id, [
+            'quantite' => 1,
+            'prix_unitaire' => 3000,
+            'status' => 'en_attente',
+            'type' => 'Parapharmacie',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch("/commandes/{$commande->id}", [
+                'client_id' => $client->id,
+                'client_nom' => $client->nom,
+                'client_prenom' => $client->prenom,
+                'client_tel' => $client->tel,
+                'client_adresse' => $client->adresse,
+                'pharmacie_id' => $pharmacie->id,
+                'produits' => [
+                    [
+                        'id' => $med->id,
+                        'designation' => 'Stilnox',
+                        'quantite' => 1,
+                        'prix_unitaire' => 5000,
+                        'status' => 'disponible',
+                    ],
+                    [
+                        'id' => $para->id,
+                        'designation' => 'Lait Cerave',
+                        'type' => 'Parapharmacie',
+                        'quantite' => 1,
+                        'prix_unitaire' => 3000,
+                        'status' => 'en_attente',
+                    ],
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $commande->refresh()->load('produits');
+
+        $this->assertSame('disponible', $commande->produits->firstWhere('id', $med->id)?->pivot->status);
+        $this->assertSame('en_attente', $commande->produits->firstWhere('id', $para->id)?->pivot->status);
+        $this->assertSame('nouvelle', $commande->status);
+        $this->assertSame('nouvelle', $commande->status_pharmacie);
+    }
+
+    public function test_update_preserves_quantite_confirmee_for_partiel(): void
+    {
+        $this->seedRoles();
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+        $client = $this->createClient();
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'en_attente',
+            'status_pharmacie' => 'attente_confirmation',
+        ]);
+
+        $med = Produit::query()->create(['designation' => 'Stilnox']);
+        $commande->produits()->attach($med->id, [
+            'quantite' => 3,
+            'quantite_confirmee' => 1,
+            'prix_unitaire' => 6000,
+            'status' => 'partiel',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch("/commandes/{$commande->id}", [
+                'client_id' => $client->id,
+                'client_nom' => $client->nom,
+                'client_prenom' => $client->prenom,
+                'client_tel' => $client->tel,
+                'client_adresse' => $client->adresse,
+                'pharmacie_id' => $pharmacie->id,
+                'produits' => [
+                    [
+                        'id' => $med->id,
+                        'designation' => 'Stilnox',
+                        'quantite' => 3,
+                        'prix_unitaire' => 6000,
+                        'status' => 'partiel',
+                    ],
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $commande->refresh()->load('produits');
+        $pivot = $commande->produits->firstWhere('id', $med->id)?->pivot;
+
+        $this->assertSame('partiel', $pivot?->status);
+        $this->assertSame(1, (int) $pivot?->quantite_confirmee);
+        $this->assertSame(6000.0, (float) $commande->prix_medicaments);
+    }
+
     public function test_update_commande_en_attente_accepts_empty_client_tel_and_adresse(): void
     {
         $this->seedRoles();

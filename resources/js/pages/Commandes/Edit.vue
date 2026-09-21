@@ -365,8 +365,25 @@ function ligneProduitPartiellementRemplie(p: ProduitLigne): boolean {
     );
 }
 
+function ligneDisponibiliteResolue(p: ProduitLigne): boolean {
+    return p.status !== 'en_attente';
+}
+
 function submit() {
     const err: Record<string, string> = {};
+
+    const lignesRemplies = [
+        ...produitsMedicaments.value.filter(ligneProduitPartiellementRemplie),
+        ...produitsParapharma.value.filter(ligneProduitPartiellementRemplie),
+    ];
+    const uneDispoTouchee = lignesRemplies.some(ligneDisponibiliteResolue);
+    if (
+        uneDispoTouchee &&
+        lignesRemplies.some((p) => !ligneDisponibiliteResolue(p))
+    ) {
+        err.produits =
+            'Indiquez la disponibilité de chaque médicament / produit (disponible ou indisponible), comme côté pharmacie.';
+    }
 
     const produitsMedicamentsValides = produitsMedicaments.value
         .filter(
@@ -954,7 +971,10 @@ function submit() {
 
                         <p class="mb-3 text-xs text-[rgba(92,89,89,0.65)]">
                             Au moins une ligne médicament ou parapharmacie
-                            (section ci-dessous) est requise.
+                            (section ci-dessous) est requise. Si vous renseignez
+                            la disponibilité, indiquez-la pour
+                            <span class="font-semibold">chaque</span> ligne
+                            (comme côté pharmacie).
                         </p>
 
                         <div

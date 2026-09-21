@@ -244,8 +244,13 @@ class CommandeService
                 : ($existing?->pivot->type ?? $produit->type);
 
             $quantiteConfirmee = $existing?->pivot->quantite_confirmee;
-            if (in_array($pivotStatus, ['disponible', 'partiel'], true)) {
+            if ($pivotStatus === 'disponible') {
                 $quantiteConfirmee = $quantite;
+            } elseif ($pivotStatus === 'partiel') {
+                $existingQte = $existing?->pivot->quantite_confirmee;
+                $quantiteConfirmee = $existingQte !== null
+                    ? min((int) $existingQte, $quantite)
+                    : $quantite;
             } elseif (in_array($pivotStatus, ['indisponible', 'en_attente'], true)) {
                 $quantiteConfirmee = null;
             }
@@ -262,27 +267,26 @@ class CommandeService
     }
 
     /**
-     * Si au moins une ligne a une disponibilité renseignée (comme côté pharmacie),
-     * aligne status_pharmacie pour le workflow back-office « en attente ».
+     * N’aligne status_pharmacie que si toutes les lignes sont tranchées
+     * (comme l’envoi disponibilité côté pharmacie : aucune ligne « en_attente » restante).
      */
     private function resolveStatusPharmacieApresEdition(Commande $commande): ?string
     {
         $nbDispo = 0;
-        $nbResolu = 0;
+        $nbLignes = 0;
 
         foreach ($commande->produits as $produit) {
+            $nbLignes++;
             $status = $produit->pivot->status ?? 'en_attente';
             if ($status === 'en_attente') {
-                continue;
+                return null;
             }
-
-            $nbResolu++;
             if (in_array($status, ['disponible', 'partiel'], true)) {
                 $nbDispo++;
             }
         }
 
-        if ($nbResolu === 0) {
+        if ($nbLignes === 0) {
             return null;
         }
 
