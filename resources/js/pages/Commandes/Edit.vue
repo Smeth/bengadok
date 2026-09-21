@@ -12,6 +12,12 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useCommandeCreationFields } from '@/composables/useCommandeCreationFields';
 import { isParapharmaType } from '@/lib/commandeTotals';
+import {
+    classesStatutDisponibiliteLigne,
+    libelleStatutDisponibiliteLigne,
+    normaliserStatutDisponibiliteLigne,
+    type StatutDisponibiliteLigne,
+} from '@/lib/commandeProduitStatus';
 import { fieldError, normalizeInertiaErrors } from '@/lib/validationErrors';
 import { formatCommandeDateHeure } from '@/lib/formatDateLocal';
 import {
@@ -54,6 +60,8 @@ const props = defineProps<{
                 quantite: number;
                 prix_unitaire: number;
                 type?: string | null;
+                status?: string | null;
+                quantite_confirmee?: number | null;
             };
         }>;
         mode_paiement?: { id: number; designation: string };
@@ -244,6 +252,7 @@ type ProduitLigne = {
     type?: string;
     quantite: number;
     prix_unitaire: number;
+    status: StatutDisponibiliteLigne;
 };
 function ligneProduitVide(): ProduitLigne {
     return {
@@ -252,6 +261,7 @@ function ligneProduitVide(): ProduitLigne {
         forme: '',
         quantite: 1,
         prix_unitaire: 0,
+        status: 'en_attente',
     };
 }
 
@@ -285,6 +295,7 @@ function hydrateProduitsFromCommande() {
             type: p.pivot?.type ?? p.type ?? '',
             quantite: p.pivot?.quantite ?? 1,
             prix_unitaire: Number(p.pivot?.prix_unitaire ?? 0),
+            status: normaliserStatutDisponibiliteLigne(p.pivot?.status),
         };
         if (
             isParapharmaType(line.type ?? null, parapharmaTypesList.value)
@@ -310,9 +321,22 @@ watch(
 );
 
 function ligneTotal(p: ProduitLigne): string {
+    if (p.status === 'indisponible') {
+        return '0';
+    }
     return String(
         Math.round((Number(p.prix_unitaire) || 0) * (p.quantite || 0)),
     );
+}
+
+function toggleDisponibilite(p: ProduitLigne) {
+    if (p.status === 'en_attente' || p.status === 'partiel') {
+        p.status = 'disponible';
+    } else if (p.status === 'disponible') {
+        p.status = 'indisponible';
+    } else {
+        p.status = 'disponible';
+    }
 }
 
 function ajouterProduit() {
@@ -341,8 +365,25 @@ function ligneProduitPartiellementRemplie(p: ProduitLigne): boolean {
     );
 }
 
+function ligneDisponibiliteResolue(p: ProduitLigne): boolean {
+    return p.status !== 'en_attente';
+}
+
 function submit() {
     const err: Record<string, string> = {};
+
+    const lignesRemplies = [
+        ...produitsMedicaments.value.filter(ligneProduitPartiellementRemplie),
+        ...produitsParapharma.value.filter(ligneProduitPartiellementRemplie),
+    ];
+    const uneDispoTouchee = lignesRemplies.some(ligneDisponibiliteResolue);
+    if (
+        uneDispoTouchee &&
+        lignesRemplies.some((p) => !ligneDisponibiliteResolue(p))
+    ) {
+        err.produits =
+            'Indiquez la disponibilité de chaque médicament / produit (disponible ou indisponible), comme côté pharmacie.';
+    }
 
     const produitsMedicamentsValides = produitsMedicaments.value
         .filter(
@@ -359,6 +400,7 @@ function submit() {
             type: null as string | null,
             quantite: p.quantite,
             prix_unitaire: Number(p.prix_unitaire),
+            status: p.status,
         }));
 
     const produitsParapharmaValides = produitsParapharma.value
@@ -376,6 +418,7 @@ function submit() {
             type: defaultParapharmaType.value,
             quantite: p.quantite,
             prix_unitaire: Number(p.prix_unitaire),
+            status: p.status,
         }));
 
     const produitsValides = [
@@ -928,7 +971,10 @@ function submit() {
 
                         <p class="mb-3 text-xs text-[rgba(92,89,89,0.65)]">
                             Au moins une ligne médicament ou parapharmacie
-                            (section ci-dessous) est requise.
+                            (section ci-dessous) est requise. Si vous renseignez
+                            la disponibilité, indiquez-la pour
+                            <span class="font-semibold">chaque</span> ligne
+                            (comme côté pharmacie).
                         </p>
 
                         <div
@@ -1084,6 +1130,58 @@ function submit() {
                                             <span class="ml-1 font-medium"
                                                 >xaf</span
                                             >
+                                        </div>
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Disponibilité</Label
+                                        >
+                                        <div
+                                            class="flex h-[42px] items-center gap-2"
+                                        >
+                                            <span
+                                                class="inline-flex w-fit rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
+                                                :class="
+                                                    classesStatutDisponibiliteLigne(
+                                                        p.status,
+                                                    )
+                                                "
+                                            >
+                                                {{
+                                                    libelleStatutDisponibiliteLigne(
+                                                        p.status,
+                                                    )
+                                                }}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none"
+                                                :class="
+                                                    p.status === 'disponible' ||
+                                                    p.status === 'partiel'
+                                                        ? 'bg-[#22C55E]'
+                                                        : 'bg-gray-200'
+                                                "
+                                                :title="
+                                                    p.status === 'en_attente'
+                                                        ? 'En attente — cliquer pour indiquer disponible ou indisponible'
+                                                        : undefined
+                                                "
+                                                :aria-label="`Disponibilité : ${libelleStatutDisponibiliteLigne(p.status)}`"
+                                                @click="toggleDisponibilite(p)"
+                                            >
+                                                <span
+                                                    class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                                                    :class="
+                                                        p.status ===
+                                                            'disponible' ||
+                                                        p.status === 'partiel'
+                                                            ? 'translate-x-4'
+                                                            : 'translate-x-0.5'
+                                                    "
+                                                />
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -1282,6 +1380,58 @@ function submit() {
                                             <span class="ml-1 font-medium"
                                                 >xaf</span
                                             >
+                                        </div>
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <Label
+                                            class="text-base font-light text-black"
+                                            >Disponibilité</Label
+                                        >
+                                        <div
+                                            class="flex h-[42px] items-center gap-2"
+                                        >
+                                            <span
+                                                class="inline-flex w-fit rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
+                                                :class="
+                                                    classesStatutDisponibiliteLigne(
+                                                        p.status,
+                                                    )
+                                                "
+                                            >
+                                                {{
+                                                    libelleStatutDisponibiliteLigne(
+                                                        p.status,
+                                                    )
+                                                }}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none"
+                                                :class="
+                                                    p.status === 'disponible' ||
+                                                    p.status === 'partiel'
+                                                        ? 'bg-[#22C55E]'
+                                                        : 'bg-gray-200'
+                                                "
+                                                :title="
+                                                    p.status === 'en_attente'
+                                                        ? 'En attente — cliquer pour indiquer disponible ou indisponible'
+                                                        : undefined
+                                                "
+                                                :aria-label="`Disponibilité : ${libelleStatutDisponibiliteLigne(p.status)}`"
+                                                @click="toggleDisponibilite(p)"
+                                            >
+                                                <span
+                                                    class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                                                    :class="
+                                                        p.status ===
+                                                            'disponible' ||
+                                                        p.status === 'partiel'
+                                                            ? 'translate-x-4'
+                                                            : 'translate-x-0.5'
+                                                    "
+                                                />
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
