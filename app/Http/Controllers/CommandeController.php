@@ -169,11 +169,12 @@ class CommandeController extends Controller
 
     public function edit(Request $request, Commande $commande): Response|RedirectResponse
     {
-        $this->authorize('update', $commande);
-        if (! in_array($commande->status, ['nouvelle', 'en_attente'])) {
+        if (! in_array($commande->status, ['nouvelle', 'en_attente'], true)) {
             return redirect()->route('commandes.index', ['detail' => $commande->id])
                 ->with('error', 'Seules les commandes « nouvelle » ou « en attente » peuvent être modifiées.');
         }
+
+        $this->authorize('update', $commande);
 
         $commande->load([
             'client', 'pharmacie', 'produits', 'ordonnance.verification',

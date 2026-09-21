@@ -148,6 +148,7 @@ class CommandeCreationFields
     {
         $rules = self::baseValidationRules($request);
         $rules['produits.*.id'] = 'nullable|integer|exists:produits,id';
+        $rules['produits.*.status'] = 'nullable|in:en_attente,disponible,indisponible,partiel';
         $rules['ordonnance'] = 'nullable|'.CommandeOrdonnanceUploads::FILE_RULE;
         $rules['ordonnances'] = 'nullable|array|max:'.CommandeOrdonnanceUploads::MAX_FILES;
         $rules['ordonnances.*'] = CommandeOrdonnanceUploads::FILE_RULE;

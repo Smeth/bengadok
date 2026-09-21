@@ -185,11 +185,20 @@ class CommandeService
             $montantLivraison = $commande->montant_livraison_id
                 ? (float) (MontantLivraison::find($commande->montant_livraison_id)?->designation ?? 0)
                 : 0.0;
-            $commande->update([
+
+            $updates = [
                 'prix_medicaments' => $montants['prix_medicaments'],
                 'prix_parapharma' => $montants['prix_parapharma'],
                 'prix_total' => $montants['prix_lignes'] + $montantLivraison,
-            ]);
+            ];
+
+            $statusPharmacie = $this->resolveStatusPharmacieApresEdition($commande);
+            if ($statusPharmacie !== null) {
+                $updates['status'] = 'en_attente';
+                $updates['status_pharmacie'] = $statusPharmacie;
+            }
+
+            $commande->update($updates);
 
             if ($extraOrdonnanceFiles !== []) {
                 $this->replaceExtraOrdonnanceFiles($commande, $extraOrdonnanceFiles);
@@ -210,6 +219,7 @@ class CommandeService
     {
         $commande->load('produits');
         $existingByProduitId = $commande->produits->keyBy('id');
+        $allowedStatuses = ['en_attente', 'disponible', 'indisponible', 'partiel'];
 
         $commande->produits()->detach();
         foreach ($produits as $p) {
@@ -224,18 +234,59 @@ class CommandeService
             $prixUnitaire = (float) $p['prix_unitaire'];
             $existing = isset($p['id']) ? $existingByProduitId->get((int) $p['id']) : null;
 
-            $pivotStatus = $existing?->pivot->status ?? 'en_attente';
-            $pivotType = $existing?->pivot->type ?? $produit->type;
+            $requestedStatus = $p['status'] ?? null;
+            $pivotStatus = is_string($requestedStatus) && in_array($requestedStatus, $allowedStatuses, true)
+                ? $requestedStatus
+                : ($existing?->pivot->status ?? 'en_attente');
+
+            $pivotType = ! empty($p['type'])
+                ? (string) $p['type']
+                : ($existing?->pivot->type ?? $produit->type);
+
+            $quantiteConfirmee = $existing?->pivot->quantite_confirmee;
+            if (in_array($pivotStatus, ['disponible', 'partiel'], true)) {
+                $quantiteConfirmee = $quantite;
+            } elseif (in_array($pivotStatus, ['indisponible', 'en_attente'], true)) {
+                $quantiteConfirmee = null;
+            }
 
             $commande->produits()->attach($produit->id, [
                 'quantite' => $quantite,
-                'quantite_confirmee' => $existing?->pivot->quantite_confirmee,
+                'quantite_confirmee' => $quantiteConfirmee,
                 'prix_unitaire' => $prixUnitaire,
                 'status' => $pivotStatus,
                 'type' => $pivotType,
                 'vente_libre' => $existing?->pivot->vente_libre ?? false,
             ]);
         }
+    }
+
+    /**
+     * Si au moins une ligne a une disponibilité renseignée (comme côté pharmacie),
+     * aligne status_pharmacie pour le workflow back-office « en attente ».
+     */
+    private function resolveStatusPharmacieApresEdition(Commande $commande): ?string
+    {
+        $nbDispo = 0;
+        $nbResolu = 0;
+
+        foreach ($commande->produits as $produit) {
+            $status = $produit->pivot->status ?? 'en_attente';
+            if ($status === 'en_attente') {
+                continue;
+            }
+
+            $nbResolu++;
+            if (in_array($status, ['disponible', 'partiel'], true)) {
+                $nbDispo++;
+            }
+        }
+
+        if ($nbResolu === 0) {
+            return null;
+        }
+
+        return $nbDispo === 0 ? 'indisponible' : 'attente_confirmation';
     }
 
     /**

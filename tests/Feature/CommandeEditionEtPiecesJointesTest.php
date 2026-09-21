@@ -167,6 +167,22 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
         $this->assertSame(1500.0, (float) $commande->prix_total);
     }
 
+    public function test_edit_redirects_when_commande_is_not_editable_status(): void
+    {
+        $this->seedRoles();
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+        $client = $this->createClient();
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'validee',
+        ]);
+
+        $this->actingAs($admin)
+            ->get("/commandes/{$commande->id}/edit")
+            ->assertRedirect(route('commandes.index', ['detail' => $commande->id]))
+            ->assertSessionHas('error');
+    }
+
     public function test_edit_page_includes_parapharma_produit_types(): void
     {
         $this->seedRoles();
@@ -187,6 +203,86 @@ class CommandeEditionEtPiecesJointesTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Commandes/Edit')
                 ->where('parapharma_produit_types', ['Parapharmacie']));
+    }
+
+    public function test_update_commande_persists_ligne_disponibilite_status(): void
+    {
+        $this->seedRoles();
+        $admin = $this->userWithRole('admin');
+        $pharmacie = $this->createPharmacie();
+        $client = $this->createClient();
+        $commande = $this->createCommande($client, $pharmacie, [
+            'status' => 'nouvelle',
+            'status_pharmacie' => 'nouvelle',
+        ]);
+
+        $med = Produit::query()->create([
+            'designation' => 'Stilnox',
+            'dosage' => '10mg',
+            'forme' => 'Comprimé',
+        ]);
+        $para = Produit::query()->create([
+            'designation' => 'Lait Cerave',
+            'type' => 'Parapharmacie',
+        ]);
+        $commande->produits()->attach($med->id, [
+            'quantite' => 2,
+            'prix_unitaire' => 5000,
+            'status' => 'en_attente',
+        ]);
+        $commande->produits()->attach($para->id, [
+            'quantite' => 1,
+            'prix_unitaire' => 3000,
+            'status' => 'en_attente',
+            'type' => 'Parapharmacie',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch("/commandes/{$commande->id}", [
+                'client_id' => $client->id,
+                'client_nom' => $client->nom,
+                'client_prenom' => $client->prenom,
+                'client_tel' => $client->tel,
+                'client_adresse' => $client->adresse,
+                'pharmacie_id' => $pharmacie->id,
+                'produits' => [
+                    [
+                        'id' => $med->id,
+                        'designation' => 'Stilnox',
+                        'dosage' => '10mg',
+                        'forme' => 'Comprimé',
+                        'quantite' => 2,
+                        'prix_unitaire' => 5000,
+                        'status' => 'disponible',
+                    ],
+                    [
+                        'id' => $para->id,
+                        'designation' => 'Lait Cerave',
+                        'type' => 'Parapharmacie',
+                        'quantite' => 1,
+                        'prix_unitaire' => 3000,
+                        'status' => 'indisponible',
+                    ],
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $commande->refresh()->load('produits');
+
+        $medPivot = $commande->produits->firstWhere('id', $med->id)?->pivot;
+        $paraPivot = $commande->produits->firstWhere('id', $para->id)?->pivot;
+
+        $this->assertNotNull($medPivot);
+        $this->assertNotNull($paraPivot);
+        $this->assertSame('disponible', $medPivot->status);
+        $this->assertSame(2, (int) $medPivot->quantite_confirmee);
+        $this->assertSame('indisponible', $paraPivot->status);
+        $this->assertNull($paraPivot->quantite_confirmee);
+        $this->assertSame('en_attente', $commande->status);
+        $this->assertSame('attente_confirmation', $commande->status_pharmacie);
+        $this->assertSame(10000.0, (float) $commande->prix_medicaments);
+        $this->assertSame(0.0, (float) $commande->prix_parapharma);
     }
 
     public function test_update_commande_en_attente_accepts_empty_client_tel_and_adresse(): void
